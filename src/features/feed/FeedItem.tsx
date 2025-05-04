@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -44,9 +44,10 @@ type FeedItemProps = {
   };
   onAnswer?: (answerIndex: number, isCorrect: boolean) => void;
   showExplanation?: () => void;
+  onNextQuestion?: () => void;
 };
 
-const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation }) => {
+const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, onNextQuestion }) => {
   const [liked, setLiked] = useState(false);
   const [showLearningCapsule, setShowLearningCapsule] = useState(false);
   const [hoveredAnswerIndex, setHoveredAnswerIndex] = useState<number | null>(null);
@@ -132,31 +133,31 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation }) 
     return item.answers[questionState.answerIndex].isCorrect;
   };
 
-  // Handle hover events for web
-  const handleMouseEnter = (index: number) => {
+  // Use useCallback for hover handlers to stabilize function references
+  const handleMouseEnter = useCallback((index: number) => {
     if (Platform.OS === 'web' && !isAnswered() && !isSkipped()) {
       setHoveredAnswerIndex(index);
     }
-  };
+  }, [isAnswered, isSkipped]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     if (Platform.OS === 'web') {
       setHoveredAnswerIndex(null);
     }
-  };
+  }, []);
 
-  // Handle action button hover events
-  const handleActionMouseEnter = (action: string) => {
+  // Handle action button hover events with useCallback
+  const handleActionMouseEnter = useCallback((action: string) => {
     if (Platform.OS === 'web') {
       setHoveredAction(action);
     }
-  };
+  }, []);
 
-  const handleActionMouseLeave = () => {
+  const handleActionMouseLeave = useCallback(() => {
     if (Platform.OS === 'web') {
       setHoveredAction(null);
     }
-  };
+  }, []);
 
   // Handle image loading error
   const handleImageError = (error: NativeSyntheticEvent<ImageErrorEventData>) => {
@@ -178,12 +179,22 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation }) 
   const imageStyles = StyleSheet.create({
     backgroundImage: {
       ...StyleSheet.absoluteFillObject,
-      width: Platform.OS === 'web' ? '100vw' : '100%',
+      width: Platform.OS === 'web' ? '100%' : '100%',
       height: '100%',
       left: Platform.OS === 'web' ? '50%' : 0,
       transform: Platform.OS === 'web' ? [{ translateX: '-50%' }] : []
     }
   });
+
+  // Ensure the Next Question button doesn't trigger scrolling within the component
+  const handleNextQuestion = useCallback(() => {
+    if (onNextQuestion) {
+      // Prevent default behavior
+      setTimeout(() => {
+        onNextQuestion();
+      }, 50);
+    }
+  }, [onNextQuestion]);
 
   return (
     <View style={styles.container}>
@@ -199,6 +210,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation }) 
           height: '100%' 
         }}
         onError={handleImageError}
+        defaultSource={fallbackImage}
         resizeMode="cover"
       />
       
@@ -237,7 +249,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation }) 
             <>
               {item.answers.map((answer, index) => (
                 <TouchableOpacity
-                  key={index}
+                  key={`${item.id}-answer-${index}`}
                   style={[
                     styles.answerOption,
                     { backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.2)' },
@@ -290,12 +302,29 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation }) 
               ))}
               
               {isAnswered() && (
-                <ThemedText style={[
-                  styles.resultText, 
-                  isSelectedAnswerCorrect() ? styles.correctResultText : styles.incorrectResultText
-                ]}>
-                  {getResultText()}
-                </ThemedText>
+                <>
+                  <ThemedText style={[
+                    styles.resultText, 
+                    isSelectedAnswerCorrect() ? styles.correctResultText : styles.incorrectResultText
+                  ]}>
+                    {getResultText()}
+                  </ThemedText>
+                  
+                  {/* Add Next Question button */}
+                  {onNextQuestion && (
+                    <TouchableOpacity
+                      style={styles.nextQuestionButton}
+                      onPress={handleNextQuestion}
+                      {...(Platform.OS === 'web' ? {
+                        onMouseEnter: () => handleActionMouseEnter('next'),
+                        onMouseLeave: handleActionMouseLeave
+                      } : {})}
+                    >
+                      <ThemedText style={styles.nextQuestionButtonText}>Next Question</ThemedText>
+                      <FeatherIcon name="chevron-down" size={20} color="white" />
+                    </TouchableOpacity>
+                  )}
+                </>
               )}
             </>
           </View>
@@ -684,6 +713,36 @@ const styles = StyleSheet.create({
       default: 'Inter-Regular',
     }),
     lineHeight: 26,
+  },
+  nextQuestionButton: {
+    marginTop: 20,
+    backgroundColor: '#0a7ea4',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 3,
+      elevation: 3,
+    }),
+  },
+  nextQuestionButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontFamily: Platform.select({
+      ios: 'System-Bold',
+      default: 'Inter-Bold',
+    }),
+    marginRight: 8,
   },
 });
 

@@ -79,11 +79,19 @@ const FeedScreen: React.FC = () => {
       setLoadError(null);
       try {
         const allQuestions = await fetchTriviaQuestions(); // Get all available questions
-        setFeedData(allQuestions); // Store all questions
+        
+        // Filter out duplicates by ID
+        const uniqueQuestions = allQuestions.filter((item, index, self) => 
+          index === self.findIndex(t => t.id === item.id)
+        );
+        
+        setFeedData(uniqueQuestions); // Store unique questions
         
         // Apply personalization if we have questions
-        if (allQuestions.length > 0) {
-          const { items, explanations } = getPersonalizedFeed(allQuestions, userProfile);
+        if (uniqueQuestions.length > 0) {
+          const { items, explanations } = getPersonalizedFeed(uniqueQuestions, userProfile);
+          
+          // Store the feed items in a stable order
           dispatch(setPersonalizedFeed({ items, explanations }));
         }
       } catch (error) {
@@ -96,6 +104,16 @@ const FeedScreen: React.FC = () => {
 
     loadTriviaQuestions();
   }, []); // Only run on mount
+
+  // Update effect to prevent reordering of feed after initial load
+  useEffect(() => {
+    // Only refresh personalized feed when userProfile changes and we don't have a feed yet
+    if (feedData.length > 0 && personalizedFeed.length === 0) {
+      const { items, explanations } = getPersonalizedFeed(feedData, userProfile);
+      dispatch(setPersonalizedFeed({ items, explanations }));
+      console.log('Initial personalized feed with', items.length, 'items');
+    }
+  }, [userProfile, feedData, personalizedFeed.length, dispatch]);
 
   const fingerPosition = useRef(new Animated.Value(0)).current;
   const phoneFrame = useRef(new Animated.Value(0)).current;
@@ -324,21 +342,6 @@ const FeedScreen: React.FC = () => {
     console.log(`Scroll transition time: ${scrollTime}ms`);
   }, []);
 
-  // Add a function to refresh the personalized feed
-  const refreshPersonalizedFeed = useCallback(() => {
-    if (feedData.length > 0) {
-      // Get personalized feed based on updated profile
-      const { items, explanations } = getPersonalizedFeed(feedData, userProfile);
-      dispatch(setPersonalizedFeed({ items, explanations }));
-      console.log('Refreshed personalized feed with', items.length, 'items');
-    }
-  }, [feedData, userProfile, dispatch]);
-
-  // Update effect to watch for profile changes and refresh feed
-  useEffect(() => {
-    refreshPersonalizedFeed();
-  }, [userProfile, refreshPersonalizedFeed]);
-
   // Add function to handle answering questions
   const handleAnswerQuestion = useCallback((questionId: string, answerIndex: number, isCorrect: boolean) => {
     // First find the question in our feed
@@ -364,15 +367,8 @@ const FeedScreen: React.FC = () => {
     // Save updated profile to Redux
     dispatch(updateUserProfileAction(updatedProfile));
     
-    // Scroll to next question after answering
-    setTimeout(() => {
-      if (flatListRef.current && currentIndex < personalizedFeed.length - 1) {
-        flatListRef.current.scrollToIndex({
-          index: currentIndex + 1,
-          animated: true
-        });
-      }
-    }, 1000);
+    // Remove auto-scrolling behavior - let users control when to move to next question
+    // The user can swipe up manually when ready to see the next question
     
     console.log(
       'Answered question:', 
@@ -386,6 +382,22 @@ const FeedScreen: React.FC = () => {
     );
   }, [dispatch, personalizedFeed, questions, userProfile, currentIndex]);
 
+  // Modify handleNextQuestion to be more controlled and prevent unexpected scrolling
+  const handleNextQuestion = useCallback(() => {
+    // Only scroll to next question when explicitly requested via the button
+    if (flatListRef.current && currentIndex < personalizedFeed.length - 1) {
+      const targetIndex = currentIndex + 1;
+      
+      // Use scrollToOffset instead of scrollToIndex for more stable scrolling
+      const offset = viewportHeight * targetIndex;
+      
+      flatListRef.current.scrollToOffset({
+        offset,
+        animated: true
+      });
+    }
+  }, [currentIndex, personalizedFeed.length, viewportHeight]);
+
   const renderItem = ({ item }: { item: FeedItemType }) => {
     return (
       <FeedItem 
@@ -398,12 +410,16 @@ const FeedScreen: React.FC = () => {
             setCurrentExplanation(feedExplanations[item.id]);
             setShowExplanationModal(true);
           }
-        }} 
+        }}
+        onNextQuestion={handleNextQuestion} 
       />
     );
   };
 
-  const keyExtractor = (item: FeedItemType) => item.id;
+  const keyExtractor = (item: FeedItemType, index: number) => {
+    // Ensure key is always unique even if duplicate IDs exist
+    return `${item.id}-${index}`;
+  };
 
   // Get item layout with responsive height
   const getItemLayout = (_: any, index: number) => {
@@ -412,6 +428,48 @@ const FeedScreen: React.FC = () => {
       offset: viewportHeight * index,
       index,
     };
+  };
+
+  // Add this function inside FeedScreen component to determine if we're in cold start mode
+  const getColdStartPhaseInfo = useCallback(() => {
+    const totalInteractions = Object.keys(userProfile.interactions).length;
+    const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
+    
+    if (!userProfile.coldStartComplete && (totalInteractions < 20 || totalQuestionsAnswered < 20)) {
+      let phase = 1;
+      if (totalQuestionsAnswered >= 12) {
+        phase = 3;
+      } else if (totalQuestionsAnswered >= 3) {
+        phase = 2;
+      } else {
+        phase = 1;
+      }
+      
+      return {
+        inColdStart: true,
+        phase,
+        questionsInPhase: totalQuestionsAnswered,
+        phaseDescription: getPhaseDescription(phase)
+      };
+    }
+    
+    return { inColdStart: false };
+  }, [userProfile]);
+
+  // Helper function to get phase description
+  const getPhaseDescription = (phase: number) => {
+    switch (phase) {
+      case 1:
+        return "Seeding: Detecting your preferences";
+      case 2:
+        return "Initial Branching: Learning your interests";
+      case 3:
+        return "Adaptive Personalization: Refining your feed";
+      case 4:
+        return "Steady State: Optimized for you";
+      default:
+        return "Personalizing your feed";
+    }
   };
 
   // Loading state
@@ -495,6 +553,10 @@ const FeedScreen: React.FC = () => {
         snapToInterval={viewportHeight}
         style={styles.flatList}
         contentContainerStyle={Platform.OS === 'web' ? { minHeight: '100%' } : undefined}
+        removeClippedSubviews={false}
+        maxToRenderPerBatch={3}
+        windowSize={3}
+        initialNumToRender={2}
       />
 
       {/* Debugging Modal for Personalization Explanations (DEV only) */}
@@ -575,6 +637,17 @@ const FeedScreen: React.FC = () => {
             <Text style={styles.tooltipButtonText}>Got it</Text>
           </TouchableOpacity>
         </Animated.View>
+      )}
+
+      {__DEV__ && getColdStartPhaseInfo().inColdStart && (
+        <View style={styles.coldStartBanner}>
+          <Text style={styles.coldStartBannerText}>
+            Cold Start Phase {getColdStartPhaseInfo().phase}: {getColdStartPhaseInfo().phaseDescription}
+          </Text>
+          <Text style={styles.coldStartBannerSubText}>
+            Question {getColdStartPhaseInfo().questionsInPhase} of 20
+          </Text>
+        </View>
       )}
     </View>
   );
@@ -811,6 +884,27 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  coldStartBanner: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(10, 126, 164, 0.8)',
+    padding: 10,
+    borderRadius: 8,
+    zIndex: 100,
+  },
+  coldStartBannerText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  coldStartBannerSubText: {
+    color: 'white',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
 
