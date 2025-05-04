@@ -1,8 +1,16 @@
-# Welcome to your Expo app 👋
+# Trivia Feed App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A modern trivia application with a TikTok-style feed interface that helps users learn while having fun.
 
-## Get started
+## Features
+
+- TikTok-style vertical swipe feed for trivia questions
+- Multiple-choice questions with instant feedback
+- Learning capsules with additional information after answering
+- Stats tracking for performance across categories and difficulty levels
+- Supabase backend integration for dynamic content
+
+## Setup Instructions
 
 1. Install dependencies
 
@@ -10,41 +18,62 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Set up Supabase
 
-   ```bash
-    npx expo start
+   - Create a [Supabase](https://supabase.com) account and project
+   - Execute the SQL in `scripts/create_table.sql` to create the trivia questions table
+   - Import sample questions using the script in `scripts/import-to-supabase.js`
+   - Create a `.env` file with your Supabase credentials:
+
+   ```
+   EXPO_PUBLIC_SUPABASE_URL=your_supabase_url_here
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
    ```
 
-In the output, you'll find options to open the app in a
+3. Start the app
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+   ```bash
+   npx expo start
+   ```
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Importing Trivia Questions
 
-## Get a fresh project
+The app includes a script to import trivia questions from a CSV file to your Supabase database:
 
-When you're ready, run:
+1. Make sure your Supabase credentials are in the `.env` file
+2. Run the import script:
 
 ```bash
-npm run reset-project
+node scripts/import-to-supabase.js
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+See `scripts/README.md` for more details on the import process and CSV format.
 
-## Learn more
+## Technologies Used
 
-To learn more about developing your project with Expo, look at the following resources:
+- React Native with Expo
+- React Navigation
+- Redux Toolkit for state management
+- Supabase for backend storage
+- React Native Reanimated for animations
+- React Native Paper for UI components
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Development
 
-## Join the community
+The app follows a feature-based structure:
 
-Join our community of developers creating universal apps.
+- `src/features/feed` - Main trivia feed components
+- `src/features/stats` - Stats and analytics screens
+- `src/store` - Redux store configuration
+- `src/lib` - Utilities and service functions
+- `scripts` - Database utilities and import tools
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
