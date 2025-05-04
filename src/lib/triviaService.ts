@@ -33,6 +33,7 @@ export interface FeedItem {
   views: number;
   backgroundImage: string;
   learningCapsule: string;
+  tags?: string[];
 }
 
 // Mock data to use if Supabase fails
