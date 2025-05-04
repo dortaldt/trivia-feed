@@ -446,6 +446,7 @@ const FeedScreen: React.FC = () => {
     if (!questionItem) return;
     
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     // Calculate time spent
     const startTime = interactionStartTimes[questionId];
     let timeSpent = 0;
@@ -456,6 +457,10 @@ const FeedScreen: React.FC = () => {
     } else {
       console.log(`Warning: No start time recorded for answered question ${questionId}`);
     }
+=======
+    // Get the user ID from auth context
+    const userId = user?.id;
+>>>>>>> Stashed changes
 =======
     // Get the user ID from auth context
     const userId = user?.id;
