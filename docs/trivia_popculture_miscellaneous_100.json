@@ -1,0 +1,2712 @@
+[
+  {
+    "id": "qpc01",
+    "question_text": "Who won the Academy Award for Best Actor in 2024?",
+    "answer_choices": [
+      "Austin Butler",
+      "Brendan Fraser",
+      "Colin Farrell",
+      "Paul Mescal"
+    ],
+    "correct_answer": "Brendan Fraser",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Celebrities",
+    "branch": "Awards & Cinema",
+    "tags": [
+      "Brendan Fraser",
+      "celebrities",
+      "film"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Brendan Fraser made a comeback and won Best Actor for his role in 'The Whale' at the 2024 Oscars.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpc02",
+    "question_text": "Which singer released the album 'Midnights' in 2022?",
+    "answer_choices": [
+      "Adele",
+      "Taylor Swift",
+      "Billie Eilish",
+      "Dua Lipa"
+    ],
+    "correct_answer": "Taylor Swift",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Celebrities",
+    "branch": "Awards & Cinema",
+    "tags": [
+      "Taylor Swift",
+      "celebrities",
+      "film"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "'Midnights' is a concept album by Taylor Swift, exploring themes of anxiety and fame.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpc03",
+    "question_text": "Who played the character of Elvis Presley in the 2022 biopic 'Elvis'?",
+    "answer_choices": [
+      "Ansel Elgort",
+      "Harry Styles",
+      "Austin Butler",
+      "Timoth\u00e9e Chalamet"
+    ],
+    "correct_answer": "Austin Butler",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Celebrities",
+    "branch": "Awards & Cinema",
+    "tags": [
+      "Austin Butler",
+      "celebrities",
+      "film"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Austin Butler received widespread praise for his role as Elvis Presley in Baz Luhrmann\u2019s film.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpc04",
+    "question_text": "Which actor portrayed Oppenheimer in the 2023 film directed by Christopher Nolan?",
+    "answer_choices": [
+      "Cillian Murphy",
+      "Benedict Cumberbatch",
+      "Christian Bale",
+      "Robert Pattinson"
+    ],
+    "correct_answer": "Cillian Murphy",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Celebrities",
+    "branch": "Awards & Cinema",
+    "tags": [
+      "Cillian Murphy",
+      "celebrities",
+      "film"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Cillian Murphy played the lead in Christopher Nolan\u2019s film about the atomic bomb.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpc05",
+    "question_text": "Who is the youngest person to win an EGOT (Emmy, Grammy, Oscar, Tony)?",
+    "answer_choices": [
+      "Jennifer Hudson",
+      "Audrey Hepburn",
+      "Whoopi Goldberg",
+      "John Legend"
+    ],
+    "correct_answer": "Jennifer Hudson",
+    "difficulty": "hard",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Celebrities",
+    "branch": "Awards & Cinema",
+    "tags": [
+      "Jennifer Hudson",
+      "celebrities",
+      "film"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Jennifer Hudson earned all four major entertainment awards, making her the youngest EGOT winner.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpc06",
+    "question_text": "Which actress starred as Barbie in the 2023 film 'Barbie'?",
+    "answer_choices": [
+      "Margot Robbie",
+      "Emma Stone",
+      "Scarlett Johansson",
+      "Anne Hathaway"
+    ],
+    "correct_answer": "Margot Robbie",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Celebrities",
+    "branch": "Awards & Cinema",
+    "tags": [
+      "Margot Robbie",
+      "celebrities",
+      "film"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Margot Robbie starred as Barbie in Greta Gerwig\u2019s 2023 film.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpc07",
+    "question_text": "Who hosted the 2024 Oscars ceremony?",
+    "answer_choices": [
+      "Jimmy Kimmel",
+      "Ellen DeGeneres",
+      "Trevor Noah",
+      "Amy Schumer"
+    ],
+    "correct_answer": "Jimmy Kimmel",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Celebrities",
+    "branch": "Awards & Cinema",
+    "tags": [
+      "Jimmy Kimmel",
+      "celebrities",
+      "film"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Jimmy Kimmel returned as the host for the 2024 Oscars.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpc08",
+    "question_text": "Which celebrity couple announced their divorce in 2023 after a brief reconciliation?",
+    "answer_choices": [
+      "Ben Affleck and Jennifer Lopez",
+      "Kanye West and Kim Kardashian",
+      "Tom Brady and Gisele B\u00fcndchen",
+      "Joe Jonas and Sophie Turner"
+    ],
+    "correct_answer": "Ben Affleck and Jennifer Lopez",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Celebrities",
+    "branch": "Awards & Cinema",
+    "tags": [
+      "Ben Affleck and Jennifer Lopez",
+      "celebrities",
+      "film"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Ben Affleck and Jennifer Lopez ended their relationship in 2023.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpc09",
+    "question_text": "Who won the Nobel Prize in Literature in 2023?",
+    "answer_choices": [
+      "Annie Ernaux",
+      "Abdulrazak Gurnah",
+      "Jon Fosse",
+      "Olga Tokarczuk"
+    ],
+    "correct_answer": "Jon Fosse",
+    "difficulty": "hard",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Celebrities",
+    "branch": "Awards & Cinema",
+    "tags": [
+      "Jon Fosse",
+      "celebrities",
+      "film"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Jon Fosse, a Norwegian playwright and author, won the 2023 Nobel Prize in Literature.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpc10",
+    "question_text": "Which actor reprised his role as Indiana Jones in the 2023 film 'Indiana Jones and the Dial of Destiny'?",
+    "answer_choices": [
+      "Harrison Ford",
+      "Chris Pratt",
+      "Tom Holland",
+      "Mark Wahlberg"
+    ],
+    "correct_answer": "Harrison Ford",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Celebrities",
+    "branch": "Awards & Cinema",
+    "tags": [
+      "Harrison Ford",
+      "celebrities",
+      "film"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Harrison Ford returned as the iconic Indiana Jones in 2023.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qsmt01",
+    "question_text": "Which social media platform introduced 'Threads' in 2023?",
+    "answer_choices": [
+      "Twitter",
+      "Instagram",
+      "TikTok",
+      "Snapchat"
+    ],
+    "correct_answer": "Instagram",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Social Media Trends",
+    "branch": "Viral Trends",
+    "tags": [
+      "social media trends",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Meta's Instagram launched Threads in 2023 as a Twitter alternative.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qsmt02",
+    "question_text": "What does the acronym 'FYP' stand for on TikTok?",
+    "answer_choices": [
+      "For Your Page",
+      "Find Your People",
+      "Follow Your Passion",
+      "Featured Young Performers"
+    ],
+    "correct_answer": "For Your Page",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Social Media Trends",
+    "branch": "Viral Trends",
+    "tags": [
+      "social media trends",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "FYP means 'For Your Page', TikTok\u2019s main recommendation feed.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qsmt03",
+    "question_text": "Which AI chatbot went viral on TikTok in 2023?",
+    "answer_choices": [
+      "ChatGPT",
+      "Replika",
+      "Bard",
+      "Claude"
+    ],
+    "correct_answer": "ChatGPT",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Social Media Trends",
+    "branch": "Viral Trends",
+    "tags": [
+      "social media trends",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "ChatGPT gained massive popularity in late 2022 and throughout 2023.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qsmt04",
+    "question_text": "Which song sparked a popular TikTok dance challenge in 2023?",
+    "answer_choices": [
+      "Cupid",
+      "Running Up That Hill",
+      "Dreams",
+      "Bloody Mary"
+    ],
+    "correct_answer": "Cupid",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Social Media Trends",
+    "branch": "Viral Trends",
+    "tags": [
+      "social media trends",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "'Cupid' by FIFTY FIFTY was a TikTok sensation in 2023.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qsmt05",
+    "question_text": "What filter shows your 'future baby' on Instagram?",
+    "answer_choices": [
+      "Future Me",
+      "AI Baby",
+      "Baby Predictor",
+      "Baby Face"
+    ],
+    "correct_answer": "AI Baby",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Social Media Trends",
+    "branch": "Viral Trends",
+    "tags": [
+      "social media trends",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The 'AI Baby' filter became a viral trend in 2023.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qsmt06",
+    "question_text": "Which platform added 'Notes' for short text updates in 2023?",
+    "answer_choices": [
+      "Snapchat",
+      "Instagram",
+      "Twitter",
+      "Facebook"
+    ],
+    "correct_answer": "Instagram",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Social Media Trends",
+    "branch": "Viral Trends",
+    "tags": [
+      "social media trends",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Instagram Notes allow users to post short text statuses.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qsmt07",
+    "question_text": "Which viral TikTok trend uses the song 'I\u2019m Just Ken'?",
+    "answer_choices": [
+      "Ken Challenge",
+      "Barbiecore",
+      "Meme Montage",
+      "Photo Dump"
+    ],
+    "correct_answer": "Barbiecore",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Social Media Trends",
+    "branch": "Viral Trends",
+    "tags": [
+      "social media trends",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Barbiecore features aesthetic visuals set to 'I\u2019m Just Ken'.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qsmt08",
+    "question_text": "What kind of media is a Reel?",
+    "answer_choices": [
+      "Short video",
+      "Blog post",
+      "Image",
+      "Poll"
+    ],
+    "correct_answer": "Short video",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Social Media Trends",
+    "branch": "Viral Trends",
+    "tags": [
+      "social media trends",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Reels are Instagram\u2019s answer to TikTok\u2019s short-form videos.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qsmt09",
+    "question_text": "What is the 10-Year Challenge?",
+    "answer_choices": [
+      "Then-and-now photo trend",
+      "Dance challenge",
+      "Hashtag story",
+      "Glow-up tweets"
+    ],
+    "correct_answer": "Then-and-now photo trend",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Social Media Trends",
+    "branch": "Viral Trends",
+    "tags": [
+      "social media trends",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The 10-Year Challenge compares 10-year-old photos with current ones.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qsmt10",
+    "question_text": "Which social network introduced disappearing Stories first?",
+    "answer_choices": [
+      "Instagram",
+      "Facebook",
+      "Snapchat",
+      "TikTok"
+    ],
+    "correct_answer": "Snapchat",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Social Media Trends",
+    "branch": "Viral Trends",
+    "tags": [
+      "social media trends",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Snapchat pioneered disappearing Stories, later adopted by others.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfash01",
+    "question_text": "Which designer is known for the iconic wrap dress?",
+    "answer_choices": [
+      "Coco Chanel",
+      "Diane von F\u00fcrstenberg",
+      "Donatella Versace",
+      "Stella McCartney"
+    ],
+    "correct_answer": "Diane von F\u00fcrstenberg",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Fashion Icons",
+    "branch": "Fashion & Design",
+    "tags": [
+      "fashion icons",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Diane von F\u00fcrstenberg revolutionized women\u2019s fashion with the wrap dress.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfash02",
+    "question_text": "Who became creative director for Louis Vuitton Men's in 2023?",
+    "answer_choices": [
+      "Virgil Abloh",
+      "Pharrell Williams",
+      "Kim Jones",
+      "Olivier Rousteing"
+    ],
+    "correct_answer": "Pharrell Williams",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Fashion Icons",
+    "branch": "Fashion & Design",
+    "tags": [
+      "fashion icons",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Pharrell brought his bold style to Louis Vuitton in 2023.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfash03",
+    "question_text": "Which model fronted Prada\u2019s 2024 spring campaign?",
+    "answer_choices": [
+      "Kaia Gerber",
+      "Gigi Hadid",
+      "Kendall Jenner",
+      "Bella Hadid"
+    ],
+    "correct_answer": "Kaia Gerber",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Fashion Icons",
+    "branch": "Fashion & Design",
+    "tags": [
+      "fashion icons",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Kaia Gerber became a face of Prada\u2019s 2024 collection.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfash04",
+    "question_text": "Which fashion brand is known for red-soled shoes?",
+    "answer_choices": [
+      "Jimmy Choo",
+      "Manolo Blahnik",
+      "Christian Louboutin",
+      "Gucci"
+    ],
+    "correct_answer": "Christian Louboutin",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Fashion Icons",
+    "branch": "Fashion & Design",
+    "tags": [
+      "fashion icons",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Louboutin\u2019s red soles are iconic in luxury footwear.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfash05",
+    "question_text": "Who founded the brand Off-White?",
+    "answer_choices": [
+      "Kanye West",
+      "Virgil Abloh",
+      "Riccardo Tisci",
+      "Alexander Wang"
+    ],
+    "correct_answer": "Virgil Abloh",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Fashion Icons",
+    "branch": "Fashion & Design",
+    "tags": [
+      "fashion icons",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Virgil Abloh created Off-White and became a major fashion figure.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfash06",
+    "question_text": "Who launched the fashion label Fenty?",
+    "answer_choices": [
+      "Rihanna",
+      "Beyonc\u00e9",
+      "Lady Gaga",
+      "Ariana Grande"
+    ],
+    "correct_answer": "Rihanna",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Fashion Icons",
+    "branch": "Fashion & Design",
+    "tags": [
+      "fashion icons",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Rihanna launched Fenty, a brand known for inclusivity.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfash07",
+    "question_text": "Which punk fashion icon passed away in 2022?",
+    "answer_choices": [
+      "Alexander McQueen",
+      "Vivienne Westwood",
+      "Stella McCartney",
+      "John Galliano"
+    ],
+    "correct_answer": "Vivienne Westwood",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Fashion Icons",
+    "branch": "Fashion & Design",
+    "tags": [
+      "fashion icons",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Vivienne Westwood shaped punk fashion.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfash08",
+    "question_text": "Who is known for a bob haircut and sunglasses?",
+    "answer_choices": [
+      "Anna Wintour",
+      "Grace Coddington",
+      "Donatella Versace",
+      "Miuccia Prada"
+    ],
+    "correct_answer": "Anna Wintour",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Fashion Icons",
+    "branch": "Fashion & Design",
+    "tags": [
+      "fashion icons",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Anna Wintour is a defining figure in fashion media.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfash09",
+    "question_text": "Which model was called 'The Body'?",
+    "answer_choices": [
+      "Naomi Campbell",
+      "Cindy Crawford",
+      "Elle Macpherson",
+      "Claudia Schiffer"
+    ],
+    "correct_answer": "Elle Macpherson",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Fashion Icons",
+    "branch": "Fashion & Design",
+    "tags": [
+      "fashion icons",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Elle earned the nickname 'The Body' in the 90s.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfash10",
+    "question_text": "Who won the first CFDA/Vogue Fashion Fund as a Black female designer?",
+    "answer_choices": [
+      "Aurora James",
+      "Tracy Reese",
+      "LaQuan Smith",
+      "Carly Cushnie"
+    ],
+    "correct_answer": "Aurora James",
+    "difficulty": "hard",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Fashion Icons",
+    "branch": "Fashion & Design",
+    "tags": [
+      "fashion icons",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Aurora James is a pioneer for Black female designers.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qviral01",
+    "question_text": "Which AI song mimicking Drake went viral in 2023?",
+    "answer_choices": [
+      "Heart on My Sleeve",
+      "Deepfake Dreams",
+      "Synthetic Soul",
+      "AI Love"
+    ],
+    "correct_answer": "Heart on My Sleeve",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Viral Moments",
+    "branch": "Trends",
+    "tags": [
+      "viral moments",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The song sparked debates about AI music.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qviral02",
+    "question_text": "Which actor\u2019s 2022 courtroom trial went viral?",
+    "answer_choices": [
+      "Johnny Depp",
+      "Leonardo DiCaprio",
+      "Tom Cruise",
+      "Brad Pitt"
+    ],
+    "correct_answer": "Johnny Depp",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Viral Moments",
+    "branch": "Trends",
+    "tags": [
+      "viral moments",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The Depp vs. Heard trial captivated the internet.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qviral03",
+    "question_text": "Which challenge involved stacking milk crates?",
+    "answer_choices": [
+      "Crate Challenge",
+      "Tower Climb",
+      "Milk Stack",
+      "Balance Test"
+    ],
+    "correct_answer": "Crate Challenge",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Viral Moments",
+    "branch": "Trends",
+    "tags": [
+      "viral moments",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The Crate Challenge caused many funny (and painful) videos.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qviral04",
+    "question_text": "What animal roamed the city after escaping a zoo in 2024?",
+    "answer_choices": [
+      "Tortoise",
+      "Kangaroo",
+      "Sloth",
+      "Penguin"
+    ],
+    "correct_answer": "Tortoise",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Viral Moments",
+    "branch": "Trends",
+    "tags": [
+      "viral moments",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The runaway tortoise trended globally.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qviral05",
+    "question_text": "Which Netflix docuseries sparked mass conversation in 2023?",
+    "answer_choices": [
+      "Beef",
+      "Harry & Meghan",
+      "The Tinder Swindler",
+      "MH370"
+    ],
+    "correct_answer": "MH370",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Viral Moments",
+    "branch": "Trends",
+    "tags": [
+      "viral moments",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The MH370 docu-series explored aviation mystery.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qviral06",
+    "question_text": "Which movie\u2019s press tour went viral due to cast drama?",
+    "answer_choices": [
+      "Don\u2019t Worry Darling",
+      "The Batman",
+      "Oppenheimer",
+      "Barbie"
+    ],
+    "correct_answer": "Don\u2019t Worry Darling",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Viral Moments",
+    "branch": "Trends",
+    "tags": [
+      "viral moments",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Press drama fueled curiosity for the film.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qviral07",
+    "question_text": "Which fruit was taped to a wall as viral art?",
+    "answer_choices": [
+      "Banana",
+      "Apple",
+      "Grapefruit",
+      "Mango"
+    ],
+    "correct_answer": "Banana",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Viral Moments",
+    "branch": "Trends",
+    "tags": [
+      "viral moments",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Maurizio Cattelan's banana caused a sensation.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qviral08",
+    "question_text": "What viral prank involves fake celebrity death edits?",
+    "answer_choices": [
+      "Death Hoax Trend",
+      "Celebrity RIP Trend",
+      "Fake News Filter",
+      "He\u2019s Dead Trend"
+    ],
+    "correct_answer": "Celebrity RIP Trend",
+    "difficulty": "hard",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Viral Moments",
+    "branch": "Trends",
+    "tags": [
+      "viral moments",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Many celebrities were falsely declared dead.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qviral09",
+    "question_text": "Which song by Fleetwood Mac resurged via longboarding TikTok?",
+    "answer_choices": [
+      "Dreams",
+      "Landslide",
+      "Go Your Own Way",
+      "The Chain"
+    ],
+    "correct_answer": "Dreams",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Viral Moments",
+    "branch": "Trends",
+    "tags": [
+      "viral moments",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "\u2018Dreams\u2019 made a comeback through viral skating.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qviral10",
+    "question_text": "Which Twitter clone surged in 2023 post-Elon takeover?",
+    "answer_choices": [
+      "BlueSky",
+      "Hive",
+      "Mastodon",
+      "Threads"
+    ],
+    "correct_answer": "Threads",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Viral Moments",
+    "branch": "Trends",
+    "tags": [
+      "viral moments",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Threads by Meta quickly gained traction.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmem01",
+    "question_text": "What is the name of the 'This is fine' dog meme\u2019s origin?",
+    "answer_choices": [
+      "Gunshow",
+      "Surreal Memes",
+      "Web Comics Weekly",
+      "ToonTime"
+    ],
+    "correct_answer": "Gunshow",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Memes & Internet Culture",
+    "branch": "Internet Memes",
+    "tags": [
+      "memes & internet culture",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The dog in the burning house originated from the webcomic Gunshow.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmem02",
+    "question_text": "Which meme features a distracted boyfriend looking at another woman?",
+    "answer_choices": [
+      "Temptation Meme",
+      "Distracted Boyfriend",
+      "Double Take",
+      "Jealousy Format"
+    ],
+    "correct_answer": "Distracted Boyfriend",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Memes & Internet Culture",
+    "branch": "Internet Memes",
+    "tags": [
+      "memes & internet culture",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It\u2019s one of the most repurposed stock photo memes.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmem03",
+    "question_text": "\u2018Hide the Pain Harold\u2019 is known for his...?",
+    "answer_choices": [
+      "Unsettling eyes",
+      "Blank stare",
+      "Forced smile",
+      "Crooked tie"
+    ],
+    "correct_answer": "Forced smile",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Memes & Internet Culture",
+    "branch": "Internet Memes",
+    "tags": [
+      "memes & internet culture",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Harold\u2019s awkward smile defines the meme\u2019s vibe.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmem04",
+    "question_text": "Which YouTube video features a dramatic prairie dog turn?",
+    "answer_choices": [
+      "Prairie Surprise",
+      "Shocked Gopher",
+      "Dramatic Chipmunk",
+      "Gasping Rodent"
+    ],
+    "correct_answer": "Dramatic Chipmunk",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Memes & Internet Culture",
+    "branch": "Internet Memes",
+    "tags": [
+      "memes & internet culture",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The 5-second zoom shocked the internet.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmem05",
+    "question_text": "What phrase is associated with Shia LaBeouf\u2019s motivational video?",
+    "answer_choices": [
+      "Push Yourself!",
+      "Get It Done!",
+      "Do It!",
+      "Never Stop!"
+    ],
+    "correct_answer": "Do It!",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Memes & Internet Culture",
+    "branch": "Internet Memes",
+    "tags": [
+      "memes & internet culture",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "\u201cJUST DO IT!\u201d became viral inspiration.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmem06",
+    "question_text": "Which phrase was humorously shouted in a 2007 viral video fight?",
+    "answer_choices": [
+      "Leave Britney Alone!",
+      "I like turtles!",
+      "Charlie bit me!",
+      "Leeroy Jenkins!"
+    ],
+    "correct_answer": "Leeroy Jenkins!",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Memes & Internet Culture",
+    "branch": "Internet Memes",
+    "tags": [
+      "memes & internet culture",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It became a legendary gaming meme.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmem07",
+    "question_text": "What color is the infamous dress in the viral optical illusion?",
+    "answer_choices": [
+      "White and Gold",
+      "Blue and Black",
+      "Depends on Lighting",
+      "Silver and Blue"
+    ],
+    "correct_answer": "Depends on Lighting",
+    "difficulty": "hard",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Memes & Internet Culture",
+    "branch": "Internet Memes",
+    "tags": [
+      "memes & internet culture",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Debate raged whether it\u2019s white/gold or blue/black.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmem08",
+    "question_text": "The 'Woman Yelling at a Cat' meme combines a Real Housewife and...?",
+    "answer_choices": [
+      "Confused dog",
+      "Smiling monkey",
+      "Grumpy cat",
+      "Cat at dinner table"
+    ],
+    "correct_answer": "Cat at dinner table",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Memes & Internet Culture",
+    "branch": "Internet Memes",
+    "tags": [
+      "memes & internet culture",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The cat is named Smudge.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmem09",
+    "question_text": "What phrase became viral from a 2020 Zoom courtroom mishap?",
+    "answer_choices": [
+      "I am not a cat",
+      "Sorry, you\u2019re muted",
+      "Can you hear me?",
+      "You froze!"
+    ],
+    "correct_answer": "I am not a cat",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Memes & Internet Culture",
+    "branch": "Internet Memes",
+    "tags": [
+      "memes & internet culture",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A lawyer appeared as a kitten on Zoom.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmem10",
+    "question_text": "Which meme song opens with 'Somebody once told me...'",
+    "answer_choices": [
+      "All Star",
+      "Smooth",
+      "Sugar, We\u2019re Goin Down",
+      "Stacy\u2019s Mom"
+    ],
+    "correct_answer": "All Star",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Pop Culture",
+    "subtopic": "Memes & Internet Culture",
+    "branch": "Internet Memes",
+    "tags": [
+      "memes & internet culture",
+      "pop culture"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "\u2018All Star\u2019 by Smash Mouth is the anthem of 2000s memes.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfood01",
+    "question_text": "Which country is the origin of sushi?",
+    "answer_choices": [
+      "Japan",
+      "China",
+      "Korea",
+      "Thailand"
+    ],
+    "correct_answer": "Japan",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Food & Cuisine",
+    "branch": "World Foods",
+    "tags": [
+      "food & cuisine",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Sushi originated in Japan, combining rice and raw fish.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfood02",
+    "question_text": "Which spice is the most expensive by weight?",
+    "answer_choices": [
+      "Saffron",
+      "Vanilla",
+      "Cardamom",
+      "Cinnamon"
+    ],
+    "correct_answer": "Saffron",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Food & Cuisine",
+    "branch": "World Foods",
+    "tags": [
+      "food & cuisine",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Saffron is hand-harvested from crocus flowers.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfood03",
+    "question_text": "What ingredient makes bread rise?",
+    "answer_choices": [
+      "Salt",
+      "Flour",
+      "Yeast",
+      "Sugar"
+    ],
+    "correct_answer": "Yeast",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Food & Cuisine",
+    "branch": "World Foods",
+    "tags": [
+      "food & cuisine",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Yeast ferments to produce air bubbles.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfood04",
+    "question_text": "What type of pasta is shaped like little ears?",
+    "answer_choices": [
+      "Penne",
+      "Farfalle",
+      "Orecchiette",
+      "Gnocchi"
+    ],
+    "correct_answer": "Orecchiette",
+    "difficulty": "hard",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Food & Cuisine",
+    "branch": "World Foods",
+    "tags": [
+      "food & cuisine",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "\u2018Orecchiette\u2019 means \u2018little ears\u2019 in Italian.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfood05",
+    "question_text": "Which fruit has seeds on the outside?",
+    "answer_choices": [
+      "Strawberry",
+      "Blueberry",
+      "Pineapple",
+      "Kiwi"
+    ],
+    "correct_answer": "Strawberry",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Food & Cuisine",
+    "branch": "World Foods",
+    "tags": [
+      "food & cuisine",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Strawberries wear their seeds on the outside.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfood06",
+    "question_text": "What is tofu made from?",
+    "answer_choices": [
+      "Rice",
+      "Soybeans",
+      "Milk",
+      "Corn"
+    ],
+    "correct_answer": "Soybeans",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Food & Cuisine",
+    "branch": "World Foods",
+    "tags": [
+      "food & cuisine",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Tofu is made by curdling fresh soy milk.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfood07",
+    "question_text": "Which dessert is also called a 'lava cake'?",
+    "answer_choices": [
+      "Molten chocolate cake",
+      "Brownie",
+      "Tiramisu",
+      "Souffl\u00e9"
+    ],
+    "correct_answer": "Molten chocolate cake",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Food & Cuisine",
+    "branch": "World Foods",
+    "tags": [
+      "food & cuisine",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It\u2019s named for the gooey center.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfood08",
+    "question_text": "Which cuisine features kimchi?",
+    "answer_choices": [
+      "Japanese",
+      "Thai",
+      "Korean",
+      "Vietnamese"
+    ],
+    "correct_answer": "Korean",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Food & Cuisine",
+    "branch": "World Foods",
+    "tags": [
+      "food & cuisine",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Kimchi is a fermented Korean staple.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfood09",
+    "question_text": "Which country invented croissants?",
+    "answer_choices": [
+      "France",
+      "Austria",
+      "Italy",
+      "Belgium"
+    ],
+    "correct_answer": "Austria",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Food & Cuisine",
+    "branch": "World Foods",
+    "tags": [
+      "food & cuisine",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The croissant originated in Austria before France popularized it.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qfood10",
+    "question_text": "Which nut is used to make marzipan?",
+    "answer_choices": [
+      "Almond",
+      "Hazelnut",
+      "Cashew",
+      "Pistachio"
+    ],
+    "correct_answer": "Almond",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Food & Cuisine",
+    "branch": "World Foods",
+    "tags": [
+      "food & cuisine",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Marzipan is a sweet almond paste.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qlang01",
+    "question_text": "What is the most spoken language in the world?",
+    "answer_choices": [
+      "English",
+      "Mandarin Chinese",
+      "Spanish",
+      "Hindi"
+    ],
+    "correct_answer": "Mandarin Chinese",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Languages",
+    "branch": "Linguistics",
+    "tags": [
+      "languages",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Mandarin has the highest number of native speakers.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qlang02",
+    "question_text": "Which language has the most words?",
+    "answer_choices": [
+      "English",
+      "German",
+      "French",
+      "Russian"
+    ],
+    "correct_answer": "English",
+    "difficulty": "hard",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Languages",
+    "branch": "Linguistics",
+    "tags": [
+      "languages",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "English leads with over 170,000 current words.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qlang03",
+    "question_text": "What language is primarily spoken in Brazil?",
+    "answer_choices": [
+      "Spanish",
+      "Portuguese",
+      "French",
+      "English"
+    ],
+    "correct_answer": "Portuguese",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Languages",
+    "branch": "Linguistics",
+    "tags": [
+      "languages",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Brazil is the largest Portuguese-speaking country.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qlang04",
+    "question_text": "What language uses Cyrillic script?",
+    "answer_choices": [
+      "Greek",
+      "Russian",
+      "Hebrew",
+      "Arabic"
+    ],
+    "correct_answer": "Russian",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Languages",
+    "branch": "Linguistics",
+    "tags": [
+      "languages",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Russian uses the Cyrillic alphabet.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qlang05",
+    "question_text": "Which language gave us the word 'algebra'?",
+    "answer_choices": [
+      "Latin",
+      "Greek",
+      "Arabic",
+      "Sanskrit"
+    ],
+    "correct_answer": "Arabic",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Languages",
+    "branch": "Linguistics",
+    "tags": [
+      "languages",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "\u2018Algebra\u2019 comes from the Arabic term 'al-jabr'.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qlang06",
+    "question_text": "What is the official language of Kenya?",
+    "answer_choices": [
+      "Swahili",
+      "Zulu",
+      "Amharic",
+      "Afrikaans"
+    ],
+    "correct_answer": "Swahili",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Languages",
+    "branch": "Linguistics",
+    "tags": [
+      "languages",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Swahili is an official language in Kenya.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qlang07",
+    "question_text": "Which constructed language was designed to be universal?",
+    "answer_choices": [
+      "Esperanto",
+      "Klingon",
+      "Elvish",
+      "Dothraki"
+    ],
+    "correct_answer": "Esperanto",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Languages",
+    "branch": "Linguistics",
+    "tags": [
+      "languages",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Esperanto was created in the 19th century.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qlang08",
+    "question_text": "Which language is written right to left?",
+    "answer_choices": [
+      "English",
+      "Korean",
+      "Arabic",
+      "Hindi"
+    ],
+    "correct_answer": "Arabic",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Languages",
+    "branch": "Linguistics",
+    "tags": [
+      "languages",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Arabic is read and written from right to left.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qlang09",
+    "question_text": "What is the smallest alphabet in use today?",
+    "answer_choices": [
+      "Rotokas",
+      "Hawaiian",
+      "Icelandic",
+      "Japanese"
+    ],
+    "correct_answer": "Rotokas",
+    "difficulty": "hard",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Languages",
+    "branch": "Linguistics",
+    "tags": [
+      "languages",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Rotokas has only 12 letters.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qlang10",
+    "question_text": "Which language is the origin of the word 'piano'?",
+    "answer_choices": [
+      "Italian",
+      "French",
+      "Latin",
+      "German"
+    ],
+    "correct_answer": "Italian",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Languages",
+    "branch": "Linguistics",
+    "tags": [
+      "languages",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "\u2018Piano\u2019 is short for 'pianoforte', an Italian term.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmyth01",
+    "question_text": "Who is the Greek god of the sea?",
+    "answer_choices": [
+      "Zeus",
+      "Apollo",
+      "Poseidon",
+      "Ares"
+    ],
+    "correct_answer": "Poseidon",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Mythology",
+    "branch": "World Mythologies",
+    "tags": [
+      "mythology",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Poseidon ruled the seas with his trident.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmyth02",
+    "question_text": "In Norse mythology, who wields the hammer Mj\u00f6lnir?",
+    "answer_choices": [
+      "Loki",
+      "Thor",
+      "Odin",
+      "Freyr"
+    ],
+    "correct_answer": "Thor",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Mythology",
+    "branch": "World Mythologies",
+    "tags": [
+      "mythology",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Thor's hammer is a symbol of protection.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmyth03",
+    "question_text": "Which creature is half lion, half eagle?",
+    "answer_choices": [
+      "Griffin",
+      "Minotaur",
+      "Hydra",
+      "Sphinx"
+    ],
+    "correct_answer": "Griffin",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Mythology",
+    "branch": "World Mythologies",
+    "tags": [
+      "mythology",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The griffin combines strength and vision.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmyth04",
+    "question_text": "Who is the Egyptian god of the underworld?",
+    "answer_choices": [
+      "Ra",
+      "Anubis",
+      "Osiris",
+      "Horus"
+    ],
+    "correct_answer": "Osiris",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Mythology",
+    "branch": "World Mythologies",
+    "tags": [
+      "mythology",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Osiris judged souls in the afterlife.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmyth05",
+    "question_text": "Which hero completed 12 labors in Greek myth?",
+    "answer_choices": [
+      "Achilles",
+      "Odysseus",
+      "Heracles",
+      "Perseus"
+    ],
+    "correct_answer": "Heracles",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Mythology",
+    "branch": "World Mythologies",
+    "tags": [
+      "mythology",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Heracles (Hercules) performed heroic feats.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmyth06",
+    "question_text": "What was the name of Odin\u2019s eight-legged horse?",
+    "answer_choices": [
+      "Sleipnir",
+      "Fenrir",
+      "Jormungandr",
+      "Huginn"
+    ],
+    "correct_answer": "Sleipnir",
+    "difficulty": "hard",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Mythology",
+    "branch": "World Mythologies",
+    "tags": [
+      "mythology",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Sleipnir could travel between worlds.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmyth07",
+    "question_text": "Which mythological bird is reborn from its ashes?",
+    "answer_choices": [
+      "Phoenix",
+      "Griffin",
+      "Pegasus",
+      "Harpie"
+    ],
+    "correct_answer": "Phoenix",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Mythology",
+    "branch": "World Mythologies",
+    "tags": [
+      "mythology",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The phoenix symbolizes rebirth.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmyth08",
+    "question_text": "In Roman mythology, who is the god of war?",
+    "answer_choices": [
+      "Neptune",
+      "Jupiter",
+      "Mars",
+      "Mercury"
+    ],
+    "correct_answer": "Mars",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Mythology",
+    "branch": "World Mythologies",
+    "tags": [
+      "mythology",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Mars is the Roman counterpart to Ares.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmyth09",
+    "question_text": "Which titan held up the sky in Greek mythology?",
+    "answer_choices": [
+      "Atlas",
+      "Cronus",
+      "Prometheus",
+      "Hyperion"
+    ],
+    "correct_answer": "Atlas",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Mythology",
+    "branch": "World Mythologies",
+    "tags": [
+      "mythology",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Atlas was punished to hold the heavens.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmyth10",
+    "question_text": "What is the name of the Norse end-of-days event?",
+    "answer_choices": [
+      "Ragnarok",
+      "Valhalla",
+      "Fimbulwinter",
+      "Sk\u00f6ll"
+    ],
+    "correct_answer": "Ragnarok",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Mythology",
+    "branch": "World Mythologies",
+    "tags": [
+      "mythology",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Ragnarok marks the final battle of gods.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrid01",
+    "question_text": "What has keys but can\u2019t open locks?",
+    "answer_choices": [
+      "Piano",
+      "Computer",
+      "Map",
+      "Clock"
+    ],
+    "correct_answer": "Piano",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Riddles & Brain Teasers",
+    "branch": "Logic & Riddles",
+    "tags": [
+      "riddles & brain teasers",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A piano has keys but no locks.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrid02",
+    "question_text": "What comes once in a minute, twice in a moment, but never in a thousand years?",
+    "answer_choices": [
+      "Letter M",
+      "Time",
+      "Echo",
+      "Shadow"
+    ],
+    "correct_answer": "Letter M",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Riddles & Brain Teasers",
+    "branch": "Logic & Riddles",
+    "tags": [
+      "riddles & brain teasers",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It\u2019s a classic letter-based riddle.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrid03",
+    "question_text": "The more you take, the more you leave behind. What am I?",
+    "answer_choices": [
+      "Steps",
+      "Time",
+      "Memories",
+      "Footprints"
+    ],
+    "correct_answer": "Footprints",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Riddles & Brain Teasers",
+    "branch": "Logic & Riddles",
+    "tags": [
+      "riddles & brain teasers",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Each step you take leaves a trace.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrid04",
+    "question_text": "I\u2019m tall when I\u2019m young, and short when I\u2019m old. What am I?",
+    "answer_choices": [
+      "Candle",
+      "Tree",
+      "Child",
+      "Mountain"
+    ],
+    "correct_answer": "Candle",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Riddles & Brain Teasers",
+    "branch": "Logic & Riddles",
+    "tags": [
+      "riddles & brain teasers",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A candle melts down as it burns.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrid05",
+    "question_text": "What can travel around the world while staying in the same corner?",
+    "answer_choices": [
+      "Stamp",
+      "Sun",
+      "Wind",
+      "Paper"
+    ],
+    "correct_answer": "Stamp",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Riddles & Brain Teasers",
+    "branch": "Logic & Riddles",
+    "tags": [
+      "riddles & brain teasers",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A stamp stays on the envelope in the corner.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrid06",
+    "question_text": "What is always in front of you but can\u2019t be seen?",
+    "answer_choices": [
+      "Future",
+      "Air",
+      "Shadow",
+      "Wind"
+    ],
+    "correct_answer": "Future",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Riddles & Brain Teasers",
+    "branch": "Logic & Riddles",
+    "tags": [
+      "riddles & brain teasers",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The future is ahead but invisible.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrid07",
+    "question_text": "What has a neck but no head?",
+    "answer_choices": [
+      "Bottle",
+      "Shirt",
+      "Drum",
+      "Guitar"
+    ],
+    "correct_answer": "Bottle",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Riddles & Brain Teasers",
+    "branch": "Logic & Riddles",
+    "tags": [
+      "riddles & brain teasers",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A bottle has a neck.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrid08",
+    "question_text": "I speak without a mouth and hear without ears. What am I?",
+    "answer_choices": [
+      "Echo",
+      "Wind",
+      "Shadow",
+      "Wave"
+    ],
+    "correct_answer": "Echo",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Riddles & Brain Teasers",
+    "branch": "Logic & Riddles",
+    "tags": [
+      "riddles & brain teasers",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "An echo reflects sound.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrid09",
+    "question_text": "What gets wetter as it dries?",
+    "answer_choices": [
+      "Towel",
+      "Sponge",
+      "Raincoat",
+      "Sink"
+    ],
+    "correct_answer": "Towel",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Riddles & Brain Teasers",
+    "branch": "Logic & Riddles",
+    "tags": [
+      "riddles & brain teasers",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Towels absorb water.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrid10",
+    "question_text": "The more there is, the less you see. What is it?",
+    "answer_choices": [
+      "Fog",
+      "Light",
+      "Darkness",
+      "Dust"
+    ],
+    "correct_answer": "Darkness",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "Riddles & Brain Teasers",
+    "branch": "Logic & Riddles",
+    "tags": [
+      "riddles & brain teasers",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Darkness obscures vision.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qgk01",
+    "question_text": "What is the largest planet in the solar system?",
+    "answer_choices": [
+      "Jupiter",
+      "Saturn",
+      "Earth",
+      "Neptune"
+    ],
+    "correct_answer": "Jupiter",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "General Knowledge",
+    "branch": "Trivia Facts",
+    "tags": [
+      "general knowledge",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Jupiter is the biggest by mass and volume.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qgk02",
+    "question_text": "Who painted the Mona Lisa?",
+    "answer_choices": [
+      "Leonardo da Vinci",
+      "Michelangelo",
+      "Van Gogh",
+      "Raphael"
+    ],
+    "correct_answer": "Leonardo da Vinci",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "General Knowledge",
+    "branch": "Trivia Facts",
+    "tags": [
+      "general knowledge",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "One of the most famous paintings ever.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qgk03",
+    "question_text": "Which element has the chemical symbol 'O'?",
+    "answer_choices": [
+      "Oxygen",
+      "Gold",
+      "Osmium",
+      "Oxide"
+    ],
+    "correct_answer": "Oxygen",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "General Knowledge",
+    "branch": "Trivia Facts",
+    "tags": [
+      "general knowledge",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "\u2018O\u2019 stands for oxygen.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qgk04",
+    "question_text": "How many continents are there?",
+    "answer_choices": [
+      "5",
+      "6",
+      "7",
+      "8"
+    ],
+    "correct_answer": "7",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "General Knowledge",
+    "branch": "Trivia Facts",
+    "tags": [
+      "general knowledge",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Seven continents span the globe.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qgk05",
+    "question_text": "Which country hosted the 2024 Summer Olympics?",
+    "answer_choices": [
+      "France",
+      "Japan",
+      "USA",
+      "Brazil"
+    ],
+    "correct_answer": "France",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "General Knowledge",
+    "branch": "Trivia Facts",
+    "tags": [
+      "general knowledge",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Paris hosted the 2024 Summer Games.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qgk06",
+    "question_text": "What is the capital of Canada?",
+    "answer_choices": [
+      "Ottawa",
+      "Toronto",
+      "Montreal",
+      "Vancouver"
+    ],
+    "correct_answer": "Ottawa",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "General Knowledge",
+    "branch": "Trivia Facts",
+    "tags": [
+      "general knowledge",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Ottawa is Canada\u2019s political center.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qgk07",
+    "question_text": "Who is the current King of the UK (2025)?",
+    "answer_choices": [
+      "Charles III",
+      "William V",
+      "George VII",
+      "Elizabeth II"
+    ],
+    "correct_answer": "Charles III",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "General Knowledge",
+    "branch": "Trivia Facts",
+    "tags": [
+      "general knowledge",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "King Charles III succeeded Queen Elizabeth II.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qgk08",
+    "question_text": "Which animal is known as the 'Ship of the Desert'?",
+    "answer_choices": [
+      "Camel",
+      "Horse",
+      "Elephant",
+      "Donkey"
+    ],
+    "correct_answer": "Camel",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "General Knowledge",
+    "branch": "Trivia Facts",
+    "tags": [
+      "general knowledge",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Camels are desert transporters.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qgk09",
+    "question_text": "Which gas do plants absorb from the atmosphere?",
+    "answer_choices": [
+      "Carbon Dioxide",
+      "Oxygen",
+      "Nitrogen",
+      "Helium"
+    ],
+    "correct_answer": "Carbon Dioxide",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "General Knowledge",
+    "branch": "Trivia Facts",
+    "tags": [
+      "general knowledge",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "CO\u2082 is used in photosynthesis.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qgk10",
+    "question_text": "What is the hardest natural substance?",
+    "answer_choices": [
+      "Diamond",
+      "Quartz",
+      "Obsidian",
+      "Granite"
+    ],
+    "correct_answer": "Diamond",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Miscellaneous",
+    "subtopic": "General Knowledge",
+    "branch": "Trivia Facts",
+    "tags": [
+      "general knowledge",
+      "miscellaneous"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Diamond ranks highest on the Mohs scale.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  }
+]
