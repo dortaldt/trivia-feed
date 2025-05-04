@@ -1,0 +1,772 @@
+import React, { useMemo } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+  Platform,
+  TouchableOpacity,
+} from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { useAppSelector } from '@/src/store/hooks';
+import { FeatherIcon } from '@/components/FeatherIcon';
+import { mockFeedData } from '@/src/data/mockData';
+import * as Haptics from 'expo-haptics';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming,
+  withSpring,
+  Easing 
+} from 'react-native-reanimated';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { WebContainer } from '@/components/WebContainer';
+
+const { width, height } = Dimensions.get('window');
+
+// Helper component for stat cards
+const StatCard = ({ 
+  icon, 
+  title, 
+  value, 
+  subtext, 
+  color = '#0a7ea4',
+  animate = false,
+  delay = 0,
+  valuePrefix = '',
+  valueSuffix = ''
+}) => {
+  // Get theme colors
+  const colorScheme = useColorScheme() ?? 'light';
+  const backgroundColor = useThemeColor({}, 'background');
+  
+  // Animation for card appearance
+  const opacity = useSharedValue(0);
+  const scale = useSharedValue(0.8);
+  
+  React.useEffect(() => {
+    opacity.value = withTiming(1, { 
+      duration: 600,
+      easing: Easing.out(Easing.quad),
+      delay
+    });
+    scale.value = withSpring(1, { 
+      damping: 12, 
+      stiffness: 90,
+      delay
+    });
+  }, []);
+  
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: opacity.value,
+      transform: [{ scale: scale.value }]
+    };
+  });
+
+  return (
+    <Animated.View style={[
+      styles.statCard, 
+      { backgroundColor },
+      animatedStyle
+    ]}>
+      <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
+        <FeatherIcon name={icon} size={24} color={color} />
+      </View>
+      <View style={styles.statContent}>
+        <ThemedText style={styles.statTitle}>{title}</ThemedText>
+        <ThemedText style={[styles.statValue, { color }]}>
+          {valuePrefix}{value}{valueSuffix}
+        </ThemedText>
+        {subtext ? <ThemedText style={styles.statSubtext}>{subtext}</ThemedText> : null}
+      </View>
+    </Animated.View>
+  );
+};
+
+// Category progress card
+const CategoryProgressCard = ({ category, answeredCount, totalCount, color }) => {
+  const colorScheme = useColorScheme() ?? 'light';
+  const backgroundColor = useThemeColor({}, 'background');
+  
+  const progressWidth = useMemo(() => {
+    return (answeredCount / totalCount) * 100;
+  }, [answeredCount, totalCount]);
+  
+  // Animation for progress bar
+  const progress = useSharedValue(0);
+  
+  React.useEffect(() => {
+    progress.value = withTiming(progressWidth, {
+      duration: 1000,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+    });
+  }, [progressWidth]);
+  
+  const progressStyle = useAnimatedStyle(() => {
+    return {
+      width: `${progress.value}%`,
+    };
+  });
+
+  return (
+    <View style={[styles.categoryCard, { backgroundColor }]}>
+      <View style={styles.categoryHeader}>
+        <ThemedText style={styles.categoryTitle}>{category}</ThemedText>
+        <ThemedText style={styles.categoryCount}>{answeredCount}/{totalCount}</ThemedText>
+      </View>
+      <View style={[
+        styles.progressContainer,
+        { backgroundColor: colorScheme === 'dark' ? '#333' : '#f0f0f0' }
+      ]}>
+        <Animated.View 
+          style={[
+            styles.progressBar, 
+            { backgroundColor: color },
+            progressStyle
+          ]} 
+        />
+      </View>
+    </View>
+  );
+};
+
+// Educational insight card
+const InsightCard = ({ title, content, index }) => {
+  const [expanded, setExpanded] = React.useState(false);
+  const contentHeight = useSharedValue(0);
+  const colorScheme = useColorScheme() ?? 'light';
+  
+  const toggleExpanded = () => {
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setExpanded(!expanded);
+    contentHeight.value = withTiming(expanded ? 0 : 500, {
+      duration: 300,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+    });
+  };
+  
+  const animatedContentStyle = useAnimatedStyle(() => {
+    return {
+      height: expanded ? 'auto' : 0,
+      opacity: withTiming(expanded ? 1 : 0, { duration: 200 }),
+    };
+  });
+
+  const insightBackgroundColor = expanded 
+    ? colorScheme === 'dark' ? '#0a7ea420' : '#0a7ea420'
+    : colorScheme === 'dark' ? '#333' : '#f0f0f0';
+
+  return (
+    <TouchableOpacity 
+      activeOpacity={0.9} 
+      onPress={toggleExpanded}
+      style={[
+        styles.insightCard, 
+        { backgroundColor: insightBackgroundColor }
+      ]}
+    >
+      <View style={styles.insightHeader}>
+        <ThemedText style={styles.insightTitle}>{title}</ThemedText>
+        <FeatherIcon 
+          name={expanded ? "chevron-up" : "chevron-down"} 
+          size={20} 
+          color={colorScheme === 'dark' ? '#ccc' : '#666'} 
+        />
+      </View>
+      {expanded && (
+        <Animated.View style={[styles.insightContent, animatedContentStyle]}>
+          <ThemedText style={styles.insightText}>{content}</ThemedText>
+        </Animated.View>
+      )}
+    </TouchableOpacity>
+  );
+};
+
+const StatsScreen: React.FC = () => {
+  const colorScheme = useColorScheme() ?? 'light';
+  const backgroundColor = useThemeColor({}, 'background');
+  
+  const questions = useAppSelector(state => state.trivia.questions);
+  
+  // Calculate stats from redux store
+  const stats = useMemo(() => {
+    const totalQuestions = mockFeedData.length;
+    let answered = 0;
+    let correct = 0;
+    let skipped = 0;
+    let categoryStats = {};
+    let difficultyStats = {
+      'Easy': { total: 0, correct: 0, answered: 0 },
+      'Medium': { total: 0, correct: 0, answered: 0 },
+      'Hard': { total: 0, correct: 0, answered: 0 },
+    };
+
+    // Count questions by category
+    mockFeedData.forEach(item => {
+      if (!categoryStats[item.category]) {
+        categoryStats[item.category] = { total: 0, correct: 0, answered: 0 };
+      }
+      categoryStats[item.category].total++;
+      difficultyStats[item.difficulty].total++;
+    });
+
+    // Process answered/skipped questions
+    Object.entries(questions).forEach(([questionId, questionState]) => {
+      const question = mockFeedData.find(q => q.id === questionId);
+      
+      if (!question) return;
+      
+      if (questionState.status === 'answered') {
+        answered++;
+        categoryStats[question.category].answered++;
+        difficultyStats[question.difficulty].answered++;
+        
+        if (questionState.answerIndex !== undefined && 
+            question.answers[questionState.answerIndex].isCorrect) {
+          correct++;
+          categoryStats[question.category].correct++;
+          difficultyStats[question.difficulty].correct++;
+        }
+      } else if (questionState.status === 'skipped') {
+        skipped++;
+      }
+    });
+
+    // Calculate accuracy
+    const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+    
+    // Calculate completion percentage
+    const completion = Math.round((answered / totalQuestions) * 100);
+    
+    // Format categories for display
+    const categories = Object.entries(categoryStats).map(([name, stats]) => ({
+      name,
+      ...stats,
+      percentage: stats.total > 0 ? Math.round((stats.answered / stats.total) * 100) : 0,
+    })).sort((a, b) => b.percentage - a.percentage);
+
+    // Calculate difficulty breakdown 
+    const difficultyBreakdown = Object.entries(difficultyStats).map(([difficulty, stats]) => ({
+      difficulty,
+      ...stats,
+      accuracy: stats.answered > 0 ? Math.round((stats.correct / stats.answered) * 100) : 0
+    }));
+
+    return {
+      totalQuestions,
+      answered,
+      correct,
+      skipped,
+      accuracy,
+      completion,
+      categories,
+      difficultyBreakdown
+    };
+  }, [questions]);
+
+  // Educational insights based on current stats
+  const educationalInsights = [
+    {
+      title: 'Spaced Repetition Matters',
+      content: 'Research shows that reviewing information at increasing intervals over time improves long-term retention by up to 200% compared to cramming. Try revisiting questions you\'ve answered incorrectly after a few days.'
+    },
+    {
+      title: 'The Testing Effect',
+      content: 'Taking quizzes actually helps you learn better than passive reading. When you retrieve information from memory during a quiz, you strengthen neural pathways associated with that knowledge, making it easier to recall in the future.'
+    },
+    {
+      title: 'Contextual Learning',
+      content: 'The "Did You Know" facts in this app use contextual learning - connecting new information to existing knowledge helps form stronger memory associations and improves comprehension by up to 40%.'
+    },
+    {
+      title: 'Mistake-Driven Learning',
+      content: 'Getting questions wrong is actually valuable! Studies show that learning from mistakes leads to better understanding and retention than simply memorizing correct answers. Review your mistakes carefully for maximum benefit.'
+    }
+  ];
+
+  // Get most improved category
+  const mostImprovedCategory = useMemo(() => {
+    if (stats.categories.length === 0) return null;
+    return stats.categories[0];
+  }, [stats.categories]);
+
+  // Calculate areas to focus on (categories with lowest completion)
+  const areasToFocus = useMemo(() => {
+    return stats.categories
+      .filter(cat => cat.answered > 0) // Only consider categories the user has started
+      .sort((a, b) => a.percentage - b.percentage) // Sort by completion percentage
+      .slice(0, 2); // Take the lowest 2
+  }, [stats.categories]);
+  
+  // Category colors
+  const categoryColors = {
+    'Science': '#4285F4',
+    'History': '#DB4437',
+    'Geography': '#0F9D58',
+    'Technology': '#9C27B0',
+    'Pop Culture': '#FF6D00',
+    'Literature': '#795548',
+    'Sports': '#00ACC1',
+    'Food & Drink': '#FF5722',
+    'Art': '#673AB7',
+    'Music': '#F44336',
+    'Movies': '#FFC107'
+  };
+
+  // We'll wrap our content in WebContainer for web users
+  const Content = (
+    <ThemedView style={styles.container}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <ThemedText type="title" style={styles.title}>Your Stats</ThemedText>
+        
+        {/* Main stats cards */}
+        <View style={styles.statsGrid}>
+          <StatCard 
+            icon="check-circle" 
+            title="Questions Answered" 
+            value={stats.answered} 
+            subtext={`${stats.completion}% completion`}
+            color="#4CAF50"
+            animate
+            delay={100}
+          />
+          <StatCard 
+            icon="award" 
+            title="Accuracy Rate" 
+            value={stats.accuracy} 
+            valueSuffix="%"
+            subtext={`${stats.correct} correct answers`}
+            color="#FFC107"
+            animate
+            delay={200}
+          />
+          <StatCard 
+            icon="skip-forward" 
+            title="Questions Skipped" 
+            value={stats.skipped}
+            color="#607D8B"
+            animate
+            delay={300}
+          />
+          <StatCard 
+            icon="trending-up" 
+            title="Questions Remaining" 
+            value={stats.totalQuestions - stats.answered}
+            color="#9C27B0" 
+            animate
+            delay={400}
+          />
+        </View>
+
+        {/* Difficulty breakdown section */}
+        <ThemedView style={styles.sectionContainer}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Performance by Difficulty
+          </ThemedText>
+          
+          {stats.difficultyBreakdown.map((item, index) => (
+            <View key={item.difficulty} style={[styles.difficultyItem, { backgroundColor }]}>
+              <View style={styles.difficultyHeader}>
+                <View style={[styles.difficultyBadge, { 
+                  backgroundColor: 
+                    item.difficulty === 'Easy' ? '#4CAF5050' :
+                    item.difficulty === 'Medium' ? '#FFC10750' :
+                    '#F4433650'
+                }]}>
+                  <ThemedText style={[styles.difficultyText, {
+                    color:
+                      item.difficulty === 'Easy' ? '#4CAF50' :
+                      item.difficulty === 'Medium' ? '#FFC107' :
+                      '#F44336'  
+                  }]}>{item.difficulty}</ThemedText>
+                </View>
+                <ThemedText style={styles.accuracyText}>
+                  {item.answered > 0 ? `${item.accuracy}% accuracy` : 'Not started'}
+                </ThemedText>
+              </View>
+              
+              <View style={styles.difficultyStats}>
+                <ThemedText style={styles.statDetail}>
+                  <ThemedText type="defaultSemiBold">Answered:</ThemedText> {item.answered}/{item.total}
+                </ThemedText>
+                <ThemedText style={styles.statDetail}>
+                  <ThemedText type="defaultSemiBold">Correct:</ThemedText> {item.correct}/{item.answered}
+                </ThemedText>
+              </View>
+            </View>
+          ))}
+        </ThemedView>
+        
+        {/* Category progress section */}
+        <ThemedView style={styles.sectionContainer}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Category Progress
+          </ThemedText>
+          
+          {stats.categories.map((category, index) => (
+            <CategoryProgressCard
+              key={category.name}
+              category={category.name}
+              answeredCount={category.answered}
+              totalCount={category.total}
+              color={categoryColors[category.name] || '#0a7ea4'}
+            />
+          ))}
+        </ThemedView>
+        
+        {/* Educational insights section */}
+        <ThemedView style={styles.sectionContainer}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Learning Insights
+          </ThemedText>
+          
+          {educationalInsights.map((insight, index) => (
+            <InsightCard 
+              key={index}
+              title={insight.title}
+              content={insight.content}
+              index={index}
+            />
+          ))}
+        </ThemedView>
+        
+        {/* Learning recommendations */}
+        <ThemedView style={styles.sectionContainer}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Personalized Recommendations
+          </ThemedText>
+          
+          {areasToFocus.length > 0 ? (
+            <View style={[styles.recommendationsContainer, { backgroundColor }]}>
+              <ThemedText style={styles.recommendationTitle}>
+                Focus areas:
+              </ThemedText>
+              {areasToFocus.map((category, index) => (
+                <View key={index} style={styles.focusArea}>
+                  <FeatherIcon name="target" size={18} color="#0a7ea4" style={styles.focusIcon} />
+                  <ThemedText style={styles.focusText}>
+                    {category.name} ({category.percentage}% complete)
+                  </ThemedText>
+                </View>
+              ))}
+              
+              {mostImprovedCategory && (
+                <View style={styles.improvedContainer}>
+                  <ThemedText style={styles.recommendationTitle}>
+                    Most progress in:
+                  </ThemedText>
+                  <View style={styles.focusArea}>
+                    <FeatherIcon name="trending-up" size={18} color="#4CAF50" style={styles.focusIcon} />
+                    <ThemedText style={styles.mostImprovedText}>
+                      {mostImprovedCategory.name} ({mostImprovedCategory.percentage}% complete)
+                    </ThemedText>
+                  </View>
+                </View>
+              )}
+              
+              <View style={[
+                styles.tipContainer, 
+                { backgroundColor: colorScheme === 'dark' ? '#1E3A4D' : '#E3F2FD' }
+              ]}>
+                <ThemedText style={styles.tipText}>
+                  <ThemedText type="defaultSemiBold">Learning tip:</ThemedText> Questions you get wrong are 
+                  actually the most valuable! Research shows reviewing your mistakes helps 
+                  build stronger neural connections.
+                </ThemedText>
+              </View>
+            </View>
+          ) : (
+            <ThemedText style={styles.emptyStateText}>
+              Start answering questions to get personalized recommendations!
+            </ThemedText>
+          )}
+        </ThemedView>
+      </ScrollView>
+    </ThemedView>
+  );
+
+  // For web, wrap in a WebContainer; for mobile, return content directly
+  if (Platform.OS === 'web') {
+    return (
+      <WebContainer maxWidth={1000}>
+        {Content}
+      </WebContainer>
+    );
+  }
+
+  return Content;
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 60,
+    paddingHorizontal: Platform.OS === 'web' ? 24 : 16,
+  },
+  title: {
+    marginBottom: 16,
+    paddingHorizontal: 8,
+    textAlign: Platform.OS === 'web' ? 'center' : 'left',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  statCard: {
+    width: Platform.OS === 'web' ? '23%' : '48%',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      },
+    }),
+  },
+  iconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  statContent: {
+    flex: 1,
+  },
+  statTitle: {
+    fontSize: 12,
+    opacity: 0.7,
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    fontFamily: Platform.select({
+      ios: 'System-Bold',
+      default: 'Inter-Bold',
+    }),
+  },
+  statSubtext: {
+    fontSize: 12,
+    opacity: 0.6,
+    marginTop: 2,
+  },
+  sectionContainer: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    marginBottom: 12,
+    paddingHorizontal: 8,
+    textAlign: Platform.OS === 'web' ? 'center' : 'left',
+  },
+  progressContainer: {
+    height: 8,
+    borderRadius: 4,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  categoryCard: {
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      },
+    }),
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  categoryTitle: {
+    fontSize: 16,
+    fontFamily: Platform.select({
+      ios: 'System-Bold',
+      default: 'Inter-Bold',
+    }),
+  },
+  categoryCount: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  insightCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  insightHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  insightTitle: {
+    fontSize: 16,
+    fontFamily: Platform.select({
+      ios: 'System-Bold',
+      default: 'Inter-Bold',
+    }),
+  },
+  insightContent: {
+    marginTop: 12,
+    overflow: 'hidden',
+  },
+  insightText: {
+    lineHeight: 22,
+  },
+  difficultyItem: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      },
+    }),
+  },
+  difficultyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  difficultyBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  difficultyText: {
+    fontFamily: Platform.select({
+      ios: 'System-Bold',
+      default: 'Inter-Bold',
+    }),
+    fontSize: 14,
+  },
+  accuracyText: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  difficultyStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statDetail: {
+    fontSize: 14,
+  },
+  recommendationsContainer: {
+    borderRadius: 12,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      },
+    }),
+  },
+  recommendationTitle: {
+    fontSize: 16,
+    fontFamily: Platform.select({
+      ios: 'System-Bold',
+      default: 'Inter-Bold',
+    }),
+    marginBottom: 8,
+  },
+  focusArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingLeft: 4,
+  },
+  focusIcon: {
+    marginRight: 8,
+  },
+  focusText: {
+    fontSize: 15,
+  },
+  improvedContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopColor: '#f0f0f0',
+    borderTopWidth: 1,
+  },
+  mostImprovedText: {
+    fontSize: 15,
+    color: '#4CAF50',
+  },
+  tipContainer: {
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 16,
+  },
+  tipText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  emptyStateText: {
+    textAlign: 'center',
+    padding: 20,
+    opacity: 0.7,
+  }
+});
+
+export default StatsScreen;
