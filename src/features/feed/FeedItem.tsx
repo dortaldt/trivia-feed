@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import {
   View,
   Text,
@@ -47,12 +47,132 @@ type FeedItemProps = {
   onNextQuestion?: () => void;
 };
 
+// Preload images by their URLs to avoid flicker
+const preloadImage = (url: string): Promise<void> => {
+  if (Platform.OS !== 'web') {
+    return Promise.resolve(); // Only relevant for web
+  }
+  
+  return new Promise((resolve, reject) => {
+    // Use the browser's Image constructor for web platform
+    // @ts-ignore - Using browser Image constructor
+    const img = new window.Image();
+    img.src = url;
+    img.onload = () => {
+      console.log(`[DEBUG] Successfully preloaded image: ${url}`);
+      resolve();
+    };
+    // @ts-ignore - Browser-specific error event handling
+    img.onerror = (error) => {
+      console.log(`[DEBUG] Failed to preload image: ${url}`, error);
+      reject(new Error(`Failed to load image: ${url}`));
+    };
+  });
+};
+
+// Create a memoized background image component with debugging
+const BackgroundImage = memo(({ imageUrl, fallbackImage, onImageError, itemId }: {
+  imageUrl: string, 
+  fallbackImage: any,
+  onImageError: (error: NativeSyntheticEvent<ImageErrorEventData>) => void,
+  itemId: string
+}) => {
+  console.log(`[DEBUG] Rendering BackgroundImage component for item ${itemId} with URL: ${imageUrl}`);
+  
+  const onLoad = useCallback(() => {
+    console.log(`[DEBUG] Background image successfully loaded for item ${itemId}: ${imageUrl}`);
+  }, [imageUrl, itemId]);
+  
+  const onError = useCallback((error: NativeSyntheticEvent<ImageErrorEventData>) => {
+    console.log(`[DEBUG] Image error occurred for item ${itemId}: ${error.nativeEvent.error}`);
+    onImageError(error);
+  }, [onImageError, itemId]);
+
+  return (
+    <Image
+      source={{ uri: imageUrl }}
+      style={{ 
+        position: 'absolute', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        bottom: 0, 
+        width: '100%', 
+        height: '100%',
+        // Add caching props
+        ...(Platform.OS === 'web' ? { 
+          // @ts-ignore - Web-specific caching property
+          imageCachePolicy: 'force-cache'
+        } : {})
+      }}
+      onError={onError}
+      onLoad={onLoad}
+      defaultSource={fallbackImage}
+      resizeMode="cover"
+    />
+  );
+}, (prevProps, nextProps) => {
+  // Add custom comparison for memo
+  const areEqual = prevProps.imageUrl === nextProps.imageUrl;
+  console.log(`[DEBUG] BackgroundImage memo comparison: ${areEqual ? 'Equal (not rerendering)' : 'Not equal (rerendering)'}`);
+  return areEqual;
+});
+
 const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, onNextQuestion }) => {
   const [liked, setLiked] = useState(false);
   const [showLearningCapsule, setShowLearningCapsule] = useState(false);
   const [hoveredAnswerIndex, setHoveredAnswerIndex] = useState<number | null>(null);
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const renderCount = useRef(0);
+  const imageUrl = useRef<string | null>(null);
+  
+  // Add debounce timer refs
+  const mouseEnterTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const mouseLeaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Create a stable image URL reference that doesn't change across renders
+  const stableImageUrl = useMemo(() => item.backgroundImage, [item.id]);
+  
+  // Pre-load the image on mount
+  useEffect(() => {
+    if (Platform.OS === 'web' && stableImageUrl) {
+      console.log(`[DEBUG] Starting image preload for: ${stableImageUrl}`);
+      // Store the current URL we're trying to load
+      imageUrl.current = stableImageUrl;
+      const currentUrl = stableImageUrl;
+      
+      // Set status to loading
+      setImageStatus('loading');
+      
+      // Preload the image
+      preloadImage(stableImageUrl)
+        .then(() => {
+          console.log(`[DEBUG] Preload successful - current URL: ${imageUrl.current}, loaded URL: ${currentUrl}`);
+          // Only update state if the URL hasn't changed
+          if (imageUrl.current === currentUrl) {
+            setImageStatus('loaded');
+            setImageLoadError(false);
+          }
+        })
+        .catch((error) => {
+          console.log(`[DEBUG] Preload failed - current URL: ${imageUrl.current}, failed URL: ${currentUrl}`, error);
+          // Only update state if the URL hasn't changed
+          if (imageUrl.current === currentUrl) {
+            setImageStatus('error');
+            setImageLoadError(true);
+          }
+        });
+    }
+  }, [stableImageUrl]);
+  
+  // Log component renders
+  useEffect(() => {
+    renderCount.current += 1;
+    console.log(`[DEBUG] FeedItem component render #${renderCount.current} for item ${item.id}`);
+    console.log(`[DEBUG] Current state - imageLoadError: ${imageLoadError}, imageStatus: ${imageStatus}, hoveredAnswerIndex: ${hoveredAnswerIndex}, hoveredAction: ${hoveredAction}`);
+  });
   
   // Use our iOS animations hook for the learning capsule
   const { 
@@ -136,34 +256,81 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
   // Use useCallback for hover handlers to stabilize function references
   const handleMouseEnter = useCallback((index: number) => {
     if (Platform.OS === 'web' && !isAnswered() && !isSkipped()) {
-      setHoveredAnswerIndex(index);
+      console.log(`[DEBUG] handleMouseEnter called for answer index ${index}`);
+      
+      // Clear any pending leave timer
+      if (mouseLeaveTimerRef.current) {
+        clearTimeout(mouseLeaveTimerRef.current);
+        mouseLeaveTimerRef.current = null;
+      }
+      
+      // Set enter timer with a small delay
+      mouseEnterTimerRef.current = setTimeout(() => {
+        console.log(`[DEBUG] Setting hoveredAnswerIndex to ${index}`);
+        setHoveredAnswerIndex(index);
+      }, 5);
     }
   }, [isAnswered, isSkipped]);
 
   const handleMouseLeave = useCallback(() => {
     if (Platform.OS === 'web') {
-      setHoveredAnswerIndex(null);
+      console.log(`[DEBUG] handleMouseLeave called`);
+      
+      // Clear any pending enter timer
+      if (mouseEnterTimerRef.current) {
+        clearTimeout(mouseEnterTimerRef.current);
+        mouseEnterTimerRef.current = null;
+      }
+      
+      // Set leave timer with a small delay
+      mouseLeaveTimerRef.current = setTimeout(() => {
+        console.log(`[DEBUG] Setting hoveredAnswerIndex to null`);
+        setHoveredAnswerIndex(null);
+      }, 5);
     }
+  }, []);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (mouseEnterTimerRef.current) {
+        clearTimeout(mouseEnterTimerRef.current);
+      }
+      if (mouseLeaveTimerRef.current) {
+        clearTimeout(mouseLeaveTimerRef.current);
+      }
+    };
   }, []);
 
   // Handle action button hover events with useCallback
   const handleActionMouseEnter = useCallback((action: string) => {
     if (Platform.OS === 'web') {
+      console.log(`[DEBUG] handleActionMouseEnter called for action: ${action}`);
       setHoveredAction(action);
     }
   }, []);
 
   const handleActionMouseLeave = useCallback(() => {
     if (Platform.OS === 'web') {
+      console.log(`[DEBUG] handleActionMouseLeave called`);
       setHoveredAction(null);
     }
   }, []);
 
-  // Handle image loading error
+  // Handle image loading error with better debugging
   const handleImageError = (error: NativeSyntheticEvent<ImageErrorEventData>) => {
+    console.log(`[DEBUG] handleImageError called for item ${item.id}, current imageStatus: ${imageStatus}`);
     console.error('Image loading error:', error.nativeEvent.error);
+    setImageStatus('error');
     setImageLoadError(true);
   };
+  
+  // New handler for successful image loading
+  const handleImageLoad = useCallback(() => {
+    console.log(`[DEBUG] handleImageLoad called for item ${item.id}, current imageStatus: ${imageStatus}`);
+    setImageStatus('loaded');
+    setImageLoadError(false);
+  }, [item.id, imageStatus]);
 
   // Correct the typo in the web result text rendering
   const getResultText = () => {
@@ -196,27 +363,46 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     }
   }, [onNextQuestion]);
 
+  // Prevent background image from reloading when hovering elements
+  const backgroundImageComponent = useMemo(() => {
+    console.log(`[DEBUG] Creating backgroundImageComponent, imageLoadError: ${imageLoadError}`);
+    if (imageLoadError) {
+      return (
+        <Image
+          source={fallbackImage}
+          style={{ 
+            position: 'absolute', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            width: '100%', 
+            height: '100%',
+            zIndex: 1, // Ensure proper layering
+          }}
+          resizeMode="cover"
+          onLoad={() => console.log(`[DEBUG] Fallback image loaded for item ${item.id}`)}
+        />
+      );
+    } else {
+      return (
+        <BackgroundImage 
+          imageUrl={stableImageUrl}
+          fallbackImage={fallbackImage}
+          onImageError={handleImageError}
+          itemId={item.id}
+        />
+      );
+    }
+  }, [imageLoadError, stableImageUrl, item.id, handleImageError]);
+
   return (
     <View style={styles.container}>
-      <Image
-        source={imageLoadError ? fallbackImage : { uri: item.backgroundImage }}
-        style={{ 
-          position: 'absolute', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0, 
-          width: '100%', 
-          height: '100%' 
-        }}
-        onError={handleImageError}
-        defaultSource={fallbackImage}
-        resizeMode="cover"
-      />
+      {backgroundImageComponent}
       
-      <View style={styles.overlay} />
+      <View style={[styles.overlay, {zIndex: 1}]} />
 
-      <View style={styles.content}>
+      <View style={[styles.content, {zIndex: 2}]}>
         <View style={styles.header}>
           <Text style={styles.category}>{item.category}</Text>
           <View style={[styles.difficulty, { 
@@ -555,7 +741,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     // @ts-ignore - Web-specific transition property
-    transition: Platform.OS === 'web' ? 'all 0.2s ease' : undefined,
+    transition: Platform.OS === 'web' ? 'background-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease' : undefined,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
