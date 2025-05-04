@@ -34,6 +34,7 @@ import {
   updateUserProfile, 
   getPersonalizedFeed 
 } from '../../lib/personalizationService';
+import { InteractionTracker } from '../../components/InteractionTracker';
 
 const { width, height } = Dimensions.get('window');
 
@@ -558,6 +559,9 @@ const FeedScreen: React.FC = () => {
         windowSize={3}
         initialNumToRender={2}
       />
+
+      {/* InteractionTracker Component */}
+      <InteractionTracker feedData={personalizedFeed.length > 0 ? personalizedFeed : feedData} />
 
       {/* Debugging Modal for Personalization Explanations (DEV only) */}
       {__DEV__ && showExplanationModal && (
