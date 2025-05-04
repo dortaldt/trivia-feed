@@ -40,6 +40,9 @@ const triviaSlice = createSlice({
       const startTime = state.interactionStartTimes[questionId] || Date.now();
       const timeSpent = Date.now() - startTime;
       
+      // Log the answered question and timing information
+      console.log(`[Redux] Answering question ${questionId}: answer=${answerIndex}, correct=${isCorrect}, time spent=${timeSpent}ms`);
+      
       // Update question state
       state.questions[questionId] = { 
         status: 'answered',
@@ -58,6 +61,9 @@ const triviaSlice = createSlice({
         const startTime = state.interactionStartTimes[questionId] || Date.now();
         const timeSpent = Date.now() - startTime;
         
+        // Log the skipped question and timing information
+        console.log(`[Redux] Skipping question ${questionId}: time spent = ${timeSpent}ms`);
+        
         state.questions[questionId] = { 
           status: 'skipped',
           timeSpent
@@ -65,12 +71,16 @@ const triviaSlice = createSlice({
         
         // Clear interaction start time
         delete state.interactionStartTimes[questionId];
+      } else {
+        console.log(`[Redux] Skip ignored for question ${questionId}: already in '${state.questions[questionId].status}' state`);
       }
     },
     startInteraction: (state, action: PayloadAction<{ questionId: string }>) => {
       const { questionId } = action.payload;
       // Record when the user started interacting with this question
-      state.interactionStartTimes[questionId] = Date.now();
+      const now = Date.now();
+      state.interactionStartTimes[questionId] = now;
+      console.log(`[Redux] Started interaction timer for question ${questionId} at ${new Date(now).toISOString()}`);
     },
     setPersonalizedFeed: (state, action: PayloadAction<{ items: FeedItem[]; explanations: { [questionId: string]: string[] } }>) => {
       const { items, explanations } = action.payload;

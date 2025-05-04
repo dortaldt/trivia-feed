@@ -35,6 +35,11 @@ interface InteractionTrackerProps {
 }
 
 export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
+  // Don't render the component in production to avoid infinite loops
+  if (!__DEV__) {
+    return null;
+  }
+
   const [visible, setVisible] = useState(false);
   const [interactions, setInteractions] = useState<InteractionLog[]>([]);
   const [profileChanges, setProfileChanges] = useState<ProfileChange[]>([]);
@@ -67,8 +72,8 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
     }));
   };
   
-  // Track feed changes when personalizedFeed updates
-  useEffect(() => {
+  // Manually process feed changes - disable automatic tracking to prevent infinite loops
+  const processFeedChanges = () => {
     if (personalizedFeed.length > 0) {
       const now = Date.now();
       const currentFeedIds = personalizedFeed.map(item => item.id);
@@ -92,7 +97,15 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
       // Update previous feed reference
       prevFeedRef.current = currentFeedIds;
     }
-  }, [personalizedFeed, feedExplanations]);
+  };
+  
+  // Initialize refs on mount only
+  useEffect(() => {
+    prevFeedRef.current = personalizedFeed.map(item => item.id);
+    // Initial process once on mount only
+    processFeedChanges();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run once
   
   // Watch for changes in the userProfile
   useEffect(() => {
@@ -146,7 +159,7 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
       });
     }
     
-    // Get questionId that caused the change by checking the newest interaction
+    // Get questionId that caused the change
     if (changes.length > 0 && interactions.length > 0) {
       const latestInteraction = interactions[interactions.length - 1];
       changes.forEach(change => {
@@ -161,7 +174,7 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
     
     // Update previous profile
     prevProfileRef.current = userProfile;
-  }, [userProfile, interactions]);
+  }, [userProfile]); // Remove interactions dependency
   
   // Watch for changes in the questions state
   useEffect(() => {
@@ -171,6 +184,7 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
     
     // Process all answered or skipped questions that we haven't logged yet
     const now = Date.now();
+    const newInteractions: InteractionLog[] = [];
     
     questionIds.forEach(id => {
       const question = questions[id];
@@ -204,19 +218,28 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
           questionText
         };
         
-        // Add to interactions and update summary
-        setInteractions(prev => [...prev, newInteraction]);
-        setSummary(prev => {
-          const newSummary = { ...prev };
-          newSummary[type]++;
-          newSummary.totalTime += timeSpent;
-          newSummary.avgTime = newSummary.totalTime / 
-            (newSummary.correct + newSummary.incorrect + newSummary.skipped || 1);
-          return newSummary;
-        });
+        // Add to new interactions array
+        newInteractions.push(newInteraction);
       }
     });
-  }, [questions, interactions]);
+    
+    // Update state once with all new interactions
+    if (newInteractions.length > 0) {
+      setInteractions(prev => [...prev, ...newInteractions]);
+      
+      // Update summary based on new interactions
+      setSummary(prev => {
+        const newSummary = { ...prev };
+        newInteractions.forEach(interaction => {
+          newSummary[interaction.type]++;
+          newSummary.totalTime += interaction.timeSpent;
+        });
+        newSummary.avgTime = newSummary.totalTime / 
+          (newSummary.correct + newSummary.incorrect + newSummary.skipped || 1);
+        return newSummary;
+      });
+    }
+  }, [questions, feedData]);
   
   // Helper to get question text
   const getQuestionText = (questionId: string): string => {
@@ -413,9 +436,18 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
         <View style={styles.feedListContainer}>
           <View style={styles.statusSection}>
             <ThemedText style={styles.statusLabel}>Current Feed:</ThemedText>
-            <ThemedText style={styles.statusValue}>
-              {personalizedFeed.length} Questions
-            </ThemedText>
+            <View style={styles.feedHeaderRow}>
+              <ThemedText style={styles.statusValue}>
+                {personalizedFeed.length} Questions
+              </ThemedText>
+              <TouchableOpacity 
+                style={styles.refreshButton}
+                onPress={() => processFeedChanges()}
+              >
+                <Feather name="refresh-cw" size={16} color="#0A7EA4" />
+                <ThemedText style={styles.refreshText}>Refresh</ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
           
           {/* Recent Feed Changes */}
@@ -424,7 +456,7 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
           <View style={styles.feedChangesContainer}>
             {feedChanges.length === 0 ? (
               <ThemedText style={styles.emptyText}>
-                No feed changes detected yet
+                No feed changes detected yet. Press refresh to check for changes.
               </ThemedText>
             ) : (
               feedChanges.slice().reverse().slice(0, 5).map((change, index) => (
@@ -881,5 +913,24 @@ const styles = StyleSheet.create({
     color: '#0A7EA4',
     fontWeight: 'bold',
     fontSize: 12,
+  },
+  feedHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(10, 126, 164, 0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  refreshText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 4,
+    color: '#0A7EA4',
   },
 }); 
