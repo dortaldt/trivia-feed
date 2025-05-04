@@ -5,15 +5,23 @@ import {
   StyleSheet,
   Dimensions,
   ViewToken,
-  Text,
   Animated,
   Easing,
   TouchableOpacity,
   Platform,
   NativeSyntheticEvent,
   NativeScrollEvent,
-  ActivityIndicator,
 } from 'react-native';
+import { 
+  Text, 
+  ActivityIndicator, 
+  IconButton,
+  Surface, 
+  Portal, 
+  Modal, 
+  Button as PaperButton 
+} from 'react-native-paper';
+import { Card } from '../../components/ui/Card';
 import FeedItem from './FeedItem';
 // Remove mock data import
 // import { mockFeedData } from '../../data/mockData';
@@ -37,6 +45,7 @@ import {
 } from '../../lib/personalizationService';
 import { InteractionTracker } from '../../components/InteractionTracker';
 import { useAuth } from '../../context/AuthContext';
+import { colors, spacing, borderRadius } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -842,33 +851,35 @@ const FeedScreen: React.FC = () => {
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#0a7ea4" />
+      <Surface style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading trivia questions...</Text>
         
         {/* Add debug button for analyzing correct answers */}
         {__DEV__ && (
-          <TouchableOpacity 
-            style={[styles.retryButton, { marginTop: 20 }]}
+          <PaperButton 
+            mode="contained"
+            style={styles.retryButton}
             onPress={() => {
               analyzeCorrectAnswers().then(() => {
                 console.log('Analysis complete. Check console logs for details.');
               });
             }}
           >
-            <Text style={styles.retryButtonText}>Analyze Correct Answers</Text>
-          </TouchableOpacity>
+            Analyze Correct Answers
+          </PaperButton>
         )}
-      </View>
+      </Surface>
     );
   }
 
   // Error state
   if (loadError) {
     return (
-      <View style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
+      <Surface style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={styles.errorText}>{loadError}</Text>
-        <TouchableOpacity 
+        <PaperButton 
+          mode="contained"
           style={styles.retryButton}
           onPress={() => {
             fetchTriviaQuestions().then((questions: FeedItemType[]) => {
@@ -880,23 +891,24 @@ const FeedScreen: React.FC = () => {
             });
           }}
         >
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
+          Retry
+        </PaperButton>
         
         {/* Add debug button for analyzing correct answers */}
         {__DEV__ && (
-          <TouchableOpacity 
-            style={[styles.retryButton, { marginTop: 10, backgroundColor: '#2c3e50' }]}
+          <PaperButton 
+            mode="contained"
+            style={[styles.retryButton, { backgroundColor: colors.secondary }]}
             onPress={() => {
               analyzeCorrectAnswers().then(() => {
                 console.log('Analysis complete. Check console logs for details.');
               });
             }}
           >
-            <Text style={styles.retryButtonText}>Analyze Correct Answers</Text>
-          </TouchableOpacity>
+            Analyze Correct Answers
+          </PaperButton>
         )}
-      </View>
+      </Surface>
     );
   }
 
@@ -949,18 +961,30 @@ const FeedScreen: React.FC = () => {
 
       {/* Debugging Modal for Personalization Explanations (DEV only) */}
       {__DEV__ && showExplanationModal && (
-        <View style={styles.explanationModal}>
-          <Text style={styles.explanationHeader}>Question Selection Logic</Text>
-          {currentExplanation.map((explanation, i) => (
-            <Text key={i} style={styles.explanationText}>{explanation}</Text>
-          ))}
-          <TouchableOpacity
-            style={styles.explanationCloseButton}
-            onPress={() => setShowExplanationModal(false)}
+        <Portal>
+          <Modal 
+            visible={showExplanationModal} 
+            onDismiss={() => setShowExplanationModal(false)}
+            contentContainerStyle={styles.explanationModal}
           >
-            <Text style={styles.explanationCloseButtonText}>Close</Text>
-          </TouchableOpacity>
-        </View>
+            <Card>
+              <Card.Header title="Question Selection Logic" />
+              <Card.Content>
+                {currentExplanation.map((explanation, i) => (
+                  <Text key={i} style={styles.explanationText}>{explanation}</Text>
+                ))}
+              </Card.Content>
+              <Card.Footer>
+                <PaperButton 
+                  mode="contained"
+                  onPress={() => setShowExplanationModal(false)}
+                >
+                  Close
+                </PaperButton>
+              </Card.Footer>
+            </Card>
+          </Modal>
+        </Portal>
       )}
 
       {showTooltip && (
@@ -1018,24 +1042,24 @@ const FeedScreen: React.FC = () => {
             </View>
           </View>
 
-          <TouchableOpacity 
-            style={styles.tooltipButton} 
+          <PaperButton
+            mode="contained"
             onPress={hideTooltip}
           >
-            <Text style={styles.tooltipButtonText}>Got it</Text>
-          </TouchableOpacity>
+            Got it
+          </PaperButton>
         </Animated.View>
       )}
 
       {__DEV__ && getColdStartPhaseInfo().inColdStart && (
-        <View style={styles.coldStartBanner}>
+        <Surface style={styles.coldStartBanner}>
           <Text style={styles.coldStartBannerText}>
             Cold Start Phase {getColdStartPhaseInfo().phase}: {getColdStartPhaseInfo().phaseDescription}
           </Text>
           <Text style={styles.coldStartBannerSubText}>
             Question {getColdStartPhaseInfo().questionsInPhase} of 20
           </Text>
-        </View>
+        </Surface>
       )}
     </View>
   );
@@ -1044,7 +1068,7 @@ const FeedScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'black',
+    backgroundColor: colors.background,
     position: 'relative',
     overflow: 'hidden',
     width: '100%', // Ensure full width
@@ -1058,9 +1082,9 @@ const styles = StyleSheet.create({
     bottom: 80,
     right: Platform.OS === 'web' ? '50%' : 20,
     transform: Platform.OS === 'web' ? [{ translateX: 110 }] : [],
-    backgroundColor: 'rgba(32, 32, 32, 0.85)',
-    borderRadius: 16,
-    padding: 12,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.xl,
+    padding: spacing[4],
     width: Platform.OS === 'web' ? 220 : 155,
     alignItems: 'center',
     zIndex: 100,
@@ -1074,7 +1098,7 @@ const styles = StyleSheet.create({
       elevation: 6,
     }),
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border,
   },
   tooltipArrow: {
     position: 'absolute',
@@ -1088,31 +1112,27 @@ const styles = StyleSheet.create({
     borderTopWidth: 8,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: 'rgba(32, 32, 32, 0.85)',
+    borderTopColor: colors.card,
   },
   tooltipText: {
-    fontFamily: Platform.select({
-      ios: 'System-Bold',
-      default: 'Inter-Bold',
-    }),
-    color: 'white',
+    color: colors.foreground,
     fontSize: 14,
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: spacing[2],
   },
   tiktokAnimationContainer: {
     height: 85,
     width: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: spacing[2],
   },
   phoneFrame: {
     width: 45,
     height: 80,
-    borderRadius: 8,
+    borderRadius: borderRadius.md,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
+    borderColor: colors.border,
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
@@ -1127,7 +1147,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
-    borderRadius: 5,
+    borderRadius: borderRadius.sm,
   },
   mockScreen1: {
     backgroundColor: 'rgba(255, 100, 100, 0.6)',
@@ -1168,131 +1188,48 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
     zIndex: -1,
   },
-  tooltipButton: {
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginTop: 2,
-    ...(Platform.OS === 'web' ? {
-      cursor: 'pointer',
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
-      transition: 'all 0.2s ease',
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.2,
-      shadowRadius: 2,
-      elevation: 3,
-    }),
-  },
-  tooltipButtonText: {
-    fontFamily: Platform.select({
-      ios: 'System-Bold',
-      default: 'Inter-Bold',
-    }),
-    color: 'white',
-    fontSize: 12,
-  },
   loadingText: {
-    marginTop: 16,
+    marginTop: spacing[4],
     fontSize: 16,
-    color: '#555',
-    fontFamily: Platform.select({
-      ios: 'System',
-      default: 'Inter',
-    }),
+    color: colors.mutedForeground,
   },
   errorText: {
     fontSize: 16,
-    color: '#e74c3c',
+    color: colors.destructive,
     textAlign: 'center',
-    marginHorizontal: 32,
-    marginBottom: 16,
-    fontFamily: Platform.select({
-      ios: 'System',
-      default: 'Inter',
-    }),
+    marginHorizontal: spacing[8],
+    marginBottom: spacing[4],
   },
   retryButton: {
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-    ...(Platform.OS === 'web' ? {
-      cursor: 'pointer',
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 3,
-      elevation: 4,
-    }),
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontFamily: Platform.select({
-      ios: 'System-Bold',
-      default: 'Inter-Bold',
-    }),
+    marginTop: spacing[4],
   },
   explanationModal: {
-    position: 'absolute',
-    top: '10%',
-    left: '10%',
-    right: '10%',
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    borderRadius: 16,
-    padding: 16,
-    zIndex: 1000,
-    maxHeight: '80%',
-  },
-  explanationHeader: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 10,
-    textAlign: 'center',
+    margin: spacing[5],
   },
   explanationText: {
-    color: 'white',
-    marginBottom: 8,
+    color: colors.foreground,
+    marginBottom: spacing[2],
     fontSize: 14,
-  },
-  explanationCloseButton: {
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-    marginTop: 16,
-    alignSelf: 'center',
-  },
-  explanationCloseButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
   },
   coldStartBanner: {
     position: 'absolute',
-    top: 20,
-    left: 20,
-    right: 20,
+    top: spacing[5],
+    left: spacing[5],
+    right: spacing[5],
     backgroundColor: 'rgba(10, 126, 164, 0.8)',
-    padding: 10,
-    borderRadius: 8,
+    padding: spacing[2],
+    borderRadius: borderRadius.md,
     zIndex: 100,
   },
   coldStartBannerText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: colors.foreground,
     textAlign: 'center',
   },
   coldStartBannerSubText: {
-    color: 'white',
+    color: colors.foreground,
     fontSize: 12,
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: spacing[1],
   },
   debugContainer: {
     position: 'absolute',
