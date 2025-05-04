@@ -18,11 +18,22 @@ import FeedItem from './FeedItem';
 // Remove mock data import
 // import { mockFeedData } from '../../data/mockData';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { markTooltipAsViewed, skipQuestion } from '../../store/triviaSlice';
+import { 
+  markTooltipAsViewed, 
+  skipQuestion, 
+  startInteraction,
+  setPersonalizedFeed,
+  updateUserProfile as updateUserProfileAction,
+  answerQuestion 
+} from '../../store/triviaSlice';
 import { useIOSAnimations } from '@/hooks/useIOSAnimations';
 // Fix the import path
 import { fetchTriviaQuestions, FeedItem as FeedItemType, analyzeCorrectAnswers } from '../../lib/triviaService';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { 
+  updateUserProfile, 
+  getPersonalizedFeed 
+} from '../../lib/personalizationService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,6 +45,9 @@ const FeedScreen: React.FC = () => {
   const [feedData, setFeedData] = useState<FeedItemType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Add state for selection explanations 
+  const [showExplanationModal, setShowExplanationModal] = useState(false);
+  const [currentExplanation, setCurrentExplanation] = useState<string[]>([]);
   
   const flatListRef = useRef<FlatList>(null);
   const lastInteractionTime = useRef(Date.now());
@@ -54,15 +68,24 @@ const FeedScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const hasViewedTooltip = useAppSelector(state => state.trivia.hasViewedTooltip);
   const questions = useAppSelector(state => state.trivia.questions);
+  const userProfile = useAppSelector(state => state.trivia.userProfile);
+  const personalizedFeed = useAppSelector(state => state.trivia.personalizedFeed);
+  const feedExplanations = useAppSelector(state => state.trivia.feedExplanations);
 
-  // Fetch trivia questions from Supabase when the component mounts
+  // Fetch trivia questions from Supabase and apply personalization
   useEffect(() => {
     const loadTriviaQuestions = async () => {
       setIsLoading(true);
       setLoadError(null);
       try {
-        const questions = await fetchTriviaQuestions(); // Remove limit parameter to get all questions
-        setFeedData(questions);
+        const allQuestions = await fetchTriviaQuestions(); // Get all available questions
+        setFeedData(allQuestions); // Store all questions
+        
+        // Apply personalization if we have questions
+        if (allQuestions.length > 0) {
+          const { items, explanations } = getPersonalizedFeed(allQuestions, userProfile);
+          dispatch(setPersonalizedFeed({ items, explanations }));
+        }
       } catch (error) {
         console.error('Failed to load trivia questions:', error);
         setLoadError('Failed to load questions. Please try again later.');
@@ -72,7 +95,7 @@ const FeedScreen: React.FC = () => {
     };
 
     loadTriviaQuestions();
-  }, []);
+  }, []); // Only run on mount
 
   const fingerPosition = useRef(new Animated.Value(0)).current;
   const phoneFrame = useRef(new Animated.Value(0)).current;
@@ -213,25 +236,44 @@ const FeedScreen: React.FC = () => {
     }
   };
 
-  // When scrolling past a question, mark it as skipped if it wasn't answered
+  // When scrolling past a question, mark it as skipped if it wasn't answered and update profile
   const markPreviousAsSkipped = useCallback((prevIndex: number, newIndex: number) => {
     // Only mark as skipped when scrolling down and if we have feed data
-    if (newIndex > prevIndex && feedData.length > 0) {
-      const previousQuestionId = feedData[prevIndex].id;
+    if (newIndex > prevIndex && personalizedFeed.length > 0) {
+      const previousQuestion = personalizedFeed[prevIndex];
+      const previousQuestionId = previousQuestion.id;
       const questionState = questions[previousQuestionId];
       
       // Only mark as skipped if the question wasn't answered
       if (!questionState || questionState.status === 'unanswered') {
+        // Dispatch skip action to mark question as skipped
         dispatch(skipQuestion({ questionId: previousQuestionId }));
+        
+        // Update user profile for personalization
+        const updatedProfile = updateUserProfile(
+          userProfile,
+          previousQuestionId,
+          { 
+            wasSkipped: true,
+            timeSpent: questionState?.timeSpent || 0
+          },
+          previousQuestion
+        );
+        
+        // Save updated profile to Redux
+        dispatch(updateUserProfileAction(updatedProfile));
+        
+        console.log('Skipped question:', previousQuestionId, 'Tags:', previousQuestion.tags || 'None');
       }
     }
-  }, [dispatch, questions, feedData]);
+  }, [dispatch, questions, personalizedFeed, userProfile]);
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0 && viewableItems[0].index !== null && feedData.length > 0) {
+      if (viewableItems.length > 0 && viewableItems[0].index !== null && personalizedFeed.length > 0) {
         const newIndex = viewableItems[0].index;
-        const currentItemId = feedData[newIndex].id;
+        const currentItem = personalizedFeed[newIndex];
+        const currentItemId = currentItem.id;
 
         // Mark previous question as skipped when scrolling to a new question
         if (previousIndex.current !== newIndex) {
@@ -241,16 +283,26 @@ const FeedScreen: React.FC = () => {
         previousIndex.current = newIndex;
         lastVisibleItemId.current = currentItemId;
         setCurrentIndex(newIndex);
+        
+        // Start tracking interaction time with this question
+        dispatch(startInteraction({ questionId: currentItemId }));
+        
+        // Set current explanation for debugging
+        if (__DEV__ && feedExplanations[currentItemId]) {
+          setCurrentExplanation(feedExplanations[currentItemId]);
+        }
       }
     },
-    [markPreviousAsSkipped, feedData]
+    [markPreviousAsSkipped, personalizedFeed, feedExplanations]
   );
 
   useEffect(() => {
-    if (feedData.length > 0) {
-      lastVisibleItemId.current = feedData[0].id;
+    if (personalizedFeed.length > 0) {
+      lastVisibleItemId.current = personalizedFeed[0].id;
+      // Start tracking interaction with first question
+      dispatch(startInteraction({ questionId: personalizedFeed[0].id }));
     }
-  }, [feedData]);
+  }, [personalizedFeed, dispatch]);
 
   const viewabilityConfig = {
     itemVisiblePercentThreshold: 50,
@@ -272,8 +324,83 @@ const FeedScreen: React.FC = () => {
     console.log(`Scroll transition time: ${scrollTime}ms`);
   }, []);
 
+  // Add a function to refresh the personalized feed
+  const refreshPersonalizedFeed = useCallback(() => {
+    if (feedData.length > 0) {
+      // Get personalized feed based on updated profile
+      const { items, explanations } = getPersonalizedFeed(feedData, userProfile);
+      dispatch(setPersonalizedFeed({ items, explanations }));
+      console.log('Refreshed personalized feed with', items.length, 'items');
+    }
+  }, [feedData, userProfile, dispatch]);
+
+  // Update effect to watch for profile changes and refresh feed
+  useEffect(() => {
+    refreshPersonalizedFeed();
+  }, [userProfile, refreshPersonalizedFeed]);
+
+  // Add function to handle answering questions
+  const handleAnswerQuestion = useCallback((questionId: string, answerIndex: number, isCorrect: boolean) => {
+    // First find the question in our feed
+    const questionItem = personalizedFeed.find(item => item.id === questionId);
+    if (!questionItem) return;
+    
+    // Dispatch answer action to mark question as answered
+    dispatch(answerQuestion({ questionId, answerIndex, isCorrect }));
+    
+    // Update user profile for personalization
+    const questionState = questions[questionId];
+    const updatedProfile = updateUserProfile(
+      userProfile,
+      questionId,
+      {
+        wasCorrect: isCorrect,
+        wasSkipped: false,
+        timeSpent: questionState?.timeSpent || 0
+      },
+      questionItem
+    );
+    
+    // Save updated profile to Redux
+    dispatch(updateUserProfileAction(updatedProfile));
+    
+    // Scroll to next question after answering
+    setTimeout(() => {
+      if (flatListRef.current && currentIndex < personalizedFeed.length - 1) {
+        flatListRef.current.scrollToIndex({
+          index: currentIndex + 1,
+          animated: true
+        });
+      }
+    }, 1000);
+    
+    console.log(
+      'Answered question:', 
+      questionId, 
+      'Correct:', 
+      isCorrect, 
+      'Time:', 
+      questionState?.timeSpent,
+      'Tags:',
+      questionItem.tags || 'None'
+    );
+  }, [dispatch, personalizedFeed, questions, userProfile, currentIndex]);
+
   const renderItem = ({ item }: { item: FeedItemType }) => {
-    return <FeedItem item={item} />;
+    return (
+      <FeedItem 
+        item={item} 
+        onAnswer={(answerIndex, isCorrect) => 
+          handleAnswerQuestion(item.id, answerIndex, isCorrect)
+        }
+        showExplanation={() => {
+          if (__DEV__ && feedExplanations[item.id]) {
+            setCurrentExplanation(feedExplanations[item.id]);
+            setShowExplanationModal(true);
+          }
+        }} 
+      />
+    );
   };
 
   const keyExtractor = (item: FeedItemType) => item.id;
@@ -352,7 +479,7 @@ const FeedScreen: React.FC = () => {
     <View style={styles.container}>
       <FlatList
         ref={flatListRef}
-        data={feedData}
+        data={personalizedFeed.length > 0 ? personalizedFeed : feedData}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
@@ -369,6 +496,22 @@ const FeedScreen: React.FC = () => {
         style={styles.flatList}
         contentContainerStyle={Platform.OS === 'web' ? { minHeight: '100%' } : undefined}
       />
+
+      {/* Debugging Modal for Personalization Explanations (DEV only) */}
+      {__DEV__ && showExplanationModal && (
+        <View style={styles.explanationModal}>
+          <Text style={styles.explanationHeader}>Question Selection Logic</Text>
+          {currentExplanation.map((explanation, i) => (
+            <Text key={i} style={styles.explanationText}>{explanation}</Text>
+          ))}
+          <TouchableOpacity
+            style={styles.explanationCloseButton}
+            onPress={() => setShowExplanationModal(false)}
+          >
+            <Text style={styles.explanationCloseButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {showTooltip && (
         <Animated.View
@@ -632,6 +775,42 @@ const styles = StyleSheet.create({
       ios: 'System-Bold',
       default: 'Inter-Bold',
     }),
+  },
+  explanationModal: {
+    position: 'absolute',
+    top: '10%',
+    left: '10%',
+    right: '10%',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    borderRadius: 16,
+    padding: 16,
+    zIndex: 1000,
+    maxHeight: '80%',
+  },
+  explanationHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  explanationText: {
+    color: 'white',
+    marginBottom: 8,
+    fontSize: 14,
+  },
+  explanationCloseButton: {
+    backgroundColor: '#0a7ea4',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    marginTop: 16,
+    alignSelf: 'center',
+  },
+  explanationCloseButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
 

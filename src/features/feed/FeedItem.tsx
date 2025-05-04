@@ -25,7 +25,7 @@ const fallbackImage = require('@/assets/images/icon.png');
 
 const { width, height } = Dimensions.get('window');
 
-// Updated type to support multiple answers
+// Updated type to support multiple answers and add new props
 type FeedItemProps = {
   item: {
     id: string;
@@ -40,10 +40,13 @@ type FeedItemProps = {
     views: number;
     backgroundImage: string;
     learningCapsule: string;
+    tags?: string[];
   };
+  onAnswer?: (answerIndex: number, isCorrect: boolean) => void;
+  showExplanation?: () => void;
 };
 
-const FeedItem: React.FC<FeedItemProps> = ({ item }) => {
+const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation }) => {
   const [liked, setLiked] = useState(false);
   const [showLearningCapsule, setShowLearningCapsule] = useState(false);
   const [hoveredAnswerIndex, setHoveredAnswerIndex] = useState<number | null>(null);
@@ -67,7 +70,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item }) => {
 
   // Get the question state from Redux store
   const questionState = useAppSelector(
-    state => state.trivia.questions[item.id]
+    state => state.trivia.questions[item.id] as QuestionState | undefined
   );
   const dispatch = useAppDispatch();
 
@@ -77,7 +80,17 @@ const FeedItem: React.FC<FeedItemProps> = ({ item }) => {
       springAnimation();
     }
     
-    dispatch(answerQuestion({ questionId: item.id, answerIndex: index }));
+    // Call the onAnswer prop if provided
+    if (onAnswer && !isAnswered()) {
+      onAnswer(index, item.answers[index].isCorrect);
+    }
+    
+    // Just pass answerIndex to the reducer, which doesn't use isCorrect
+    dispatch(answerQuestion({ 
+      questionId: item.id, 
+      answerIndex: index,
+      isCorrect: item.answers[index].isCorrect
+    }));
   };
 
   const toggleLike = () => {
@@ -161,11 +174,30 @@ const FeedItem: React.FC<FeedItemProps> = ({ item }) => {
     }
   };
 
+  // Fix TypeScript error in styles by defining the specific ImageStyle
+  const imageStyles = StyleSheet.create({
+    backgroundImage: {
+      ...StyleSheet.absoluteFillObject,
+      width: Platform.OS === 'web' ? '100vw' : '100%',
+      height: '100%',
+      left: Platform.OS === 'web' ? '50%' : 0,
+      transform: Platform.OS === 'web' ? [{ translateX: '-50%' }] : []
+    }
+  });
+
   return (
     <View style={styles.container}>
       <Image
         source={imageLoadError ? fallbackImage : { uri: item.backgroundImage }}
-        style={styles.backgroundImage}
+        style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          width: '100%', 
+          height: '100%' 
+        }}
         onError={handleImageError}
         resizeMode="cover"
       />
@@ -306,6 +338,24 @@ const FeedItem: React.FC<FeedItemProps> = ({ item }) => {
             <FeatherIcon name="info" size={20} color="white" style={styles.icon} />
             <ThemedText style={styles.actionText}>Learn More</ThemedText>
           </TouchableOpacity>
+          
+          {/* Add explain button for debug */}
+          {__DEV__ && showExplanation && (
+            <TouchableOpacity 
+              onPress={showExplanation}
+              style={[
+                styles.actionButton,
+                Platform.OS === 'web' && hoveredAction === 'explain' && styles.hoveredActionButton
+              ]}
+              {...(Platform.OS === 'web' ? {
+                onMouseEnter: () => handleActionMouseEnter('explain'),
+                onMouseLeave: handleActionMouseLeave
+              } : {})}
+            >
+              <FeatherIcon name="bar-chart-2" size={20} color="white" style={styles.icon} />
+              <ThemedText style={styles.actionText}>Why this?</ThemedText>
+            </TouchableOpacity>
+          )}
           
           <View style={styles.viewsContainer}>
             <FeatherIcon name="eye" size={20} color="white" style={styles.icon} />
