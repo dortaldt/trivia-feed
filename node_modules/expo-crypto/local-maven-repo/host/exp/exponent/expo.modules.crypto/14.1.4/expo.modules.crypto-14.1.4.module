@@ -1,0 +1,87 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "host.exp.exponent",
+    "module": "expo.modules.crypto",
+    "version": "14.1.4",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.13"
+    }
+  },
+  "variants": [
+    {
+      "name": "releaseVariantReleaseApiPublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "expo.modules.crypto-14.1.4.aar",
+          "url": "expo.modules.crypto-14.1.4.aar",
+          "size": 32073,
+          "sha512": "84d36cd264342f1681aa7e7237b2514944a2e4fb0ed3e31456c0c5e0e32510ecac892191b678f262a87d24d28b5a37efa77caa3f3f373673e4de60ccec6b3a63",
+          "sha256": "5129efec3020ce9d66224f9cc3225109fb8d67c20244b68ee8cc62fc9393fb49",
+          "sha1": "5118a7c44aeb0eee36936b8d664e4b7d35c531d9",
+          "md5": "ab8e0f3967c63b89306ada1206d63a5f"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseRuntimePublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib-jdk7",
+          "version": {
+            "requires": "2.0.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "expo.modules.crypto-14.1.4.aar",
+          "url": "expo.modules.crypto-14.1.4.aar",
+          "size": 32073,
+          "sha512": "84d36cd264342f1681aa7e7237b2514944a2e4fb0ed3e31456c0c5e0e32510ecac892191b678f262a87d24d28b5a37efa77caa3f3f373673e4de60ccec6b3a63",
+          "sha256": "5129efec3020ce9d66224f9cc3225109fb8d67c20244b68ee8cc62fc9393fb49",
+          "sha1": "5118a7c44aeb0eee36936b8d664e4b7d35c531d9",
+          "md5": "ab8e0f3967c63b89306ada1206d63a5f"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseSourcePublication",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "expo.modules.crypto-14.1.4-sources.jar",
+          "url": "expo.modules.crypto-14.1.4-sources.jar",
+          "size": 2443,
+          "sha512": "9ee66fd92f77abd9cfefad61c67aba460278f8294792432e98d13500e525acc0622ac8c7ac3d107a0c6e3a9f9c206b4b805fdd739ebdaad0af5507af7374f337",
+          "sha256": "fbb9dee297c3061dc4d03768b2c257d77e8a8b125bc53523c3b9d63496404bd8",
+          "sha1": "f7fc7f161cfe92554e5bd6cac8e609b3f5919d6c",
+          "md5": "d828acd0ab9b2a1ce162926327c4f825"
+        }
+      ]
+    }
+  ]
+}
