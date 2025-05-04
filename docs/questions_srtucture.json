@@ -1,0 +1,19 @@
+{
+    "id": "q0011",
+    "question_text": "Which exoplanet's atmosphere was found to contain compounds associated with life in 2025?",
+    "answer_choices": ["Kepler-452b", "K2-18b", "Proxima Centauri b", "TRAPPIST-1e"],
+    "correct_answer": "K2-18b",
+    "difficulty": "hard",
+    "language": "en",
+    "topic": "Science",
+    "subtopic": "Astronomy",
+    "branch": "Exoplanets",
+    "tags": ["K2-18b", "exoplanet", "astrobiology"],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1580428180128-4e4c5b3a2f9e",
+    "learning_capsule": "In 2025, scientists detected dimethyl sulfide in K2-18b's atmosphere, a compound associated with life on Earth.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:00:00Z",
+    "updated_at": "2025-05-04T10:00:00Z"
+  }
