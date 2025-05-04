@@ -10,7 +10,7 @@ import {
   TextStyle,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { answerQuestion, QuestionState } from '../../store/triviaSlice';
+import { QuestionState } from '../../store/triviaSlice';
 import { FeatherIcon } from '@/components/FeatherIcon';
 import { ThemedText } from '@/components/ThemedText';
 import { useIOSAnimations } from '@/hooks/useIOSAnimations';
@@ -89,13 +89,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     if (onAnswer && !isAnswered()) {
       onAnswer(index, item.answers[index].isCorrect);
     }
-    
-    // Just pass answerIndex to the reducer, which doesn't use isCorrect
-    dispatch(answerQuestion({ 
-      questionId: item.id, 
-      answerIndex: index,
-      isCorrect: item.answers[index].isCorrect
-    }));
   };
 
   const toggleLike = () => {

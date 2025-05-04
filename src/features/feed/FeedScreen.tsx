@@ -36,6 +36,7 @@ import {
   getPersonalizedFeed 
 } from '../../lib/personalizationService';
 import { InteractionTracker } from '../../components/InteractionTracker';
+import { useAuth } from '../../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -50,6 +51,9 @@ const FeedScreen: React.FC = () => {
   // Add state for selection explanations 
   const [showExplanationModal, setShowExplanationModal] = useState(false);
   const [currentExplanation, setCurrentExplanation] = useState<string[]>([]);
+  
+  // Get user from auth context
+  const { user } = useAuth();
   
   const flatListRef = useRef<FlatList>(null);
   const lastInteractionTime = useRef(Date.now());
@@ -441,6 +445,7 @@ const FeedScreen: React.FC = () => {
     const questionItem = personalizedFeed.find(item => item.id === questionId);
     if (!questionItem) return;
     
+<<<<<<< Updated upstream
     // Calculate time spent
     const startTime = interactionStartTimes[questionId];
     let timeSpent = 0;
@@ -451,9 +456,13 @@ const FeedScreen: React.FC = () => {
     } else {
       console.log(`Warning: No start time recorded for answered question ${questionId}`);
     }
+=======
+    // Get the user ID from auth context
+    const userId = user?.id;
+>>>>>>> Stashed changes
     
     // Dispatch answer action to mark question as answered
-    dispatch(answerQuestion({ questionId, answerIndex, isCorrect }));
+    dispatch(answerQuestion({ questionId, answerIndex, isCorrect, userId }));
     
     // Update user profile for personalization
     const updatedProfile = updateUserProfile(
