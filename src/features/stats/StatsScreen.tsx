@@ -247,7 +247,7 @@ const StatsScreen: React.FC = () => {
       setIsLoading(true);
       setLoadError(null);
       try {
-        const questions = await fetchTriviaQuestions(50);
+        const questions = await fetchTriviaQuestions();
         setFeedData(questions);
       } catch (error) {
         console.error('Failed to load trivia questions for stats:', error);

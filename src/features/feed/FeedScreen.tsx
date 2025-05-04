@@ -61,7 +61,7 @@ const FeedScreen: React.FC = () => {
       setIsLoading(true);
       setLoadError(null);
       try {
-        const questions = await fetchTriviaQuestions(25); // Fetch 25 questions
+        const questions = await fetchTriviaQuestions(); // Remove limit parameter to get all questions
         setFeedData(questions);
       } catch (error) {
         console.error('Failed to load trivia questions:', error);
@@ -319,7 +319,7 @@ const FeedScreen: React.FC = () => {
         <TouchableOpacity 
           style={styles.retryButton}
           onPress={() => {
-            fetchTriviaQuestions(25).then((questions: FeedItemType[]) => {
+            fetchTriviaQuestions().then((questions: FeedItemType[]) => {
               setFeedData(questions);
               setLoadError(null);
             }).catch((err: Error) => {
