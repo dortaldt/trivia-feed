@@ -22,6 +22,14 @@ interface ProfileChange {
   questionId: string;
 }
 
+interface FeedChange {
+  timestamp: number;
+  type: 'added' | 'removed';
+  itemId: string;
+  questionText: string;
+  explanations: string[];
+}
+
 interface InteractionTrackerProps {
   feedData?: FeedItem[];
 }
@@ -30,7 +38,9 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
   const [visible, setVisible] = useState(false);
   const [interactions, setInteractions] = useState<InteractionLog[]>([]);
   const [profileChanges, setProfileChanges] = useState<ProfileChange[]>([]);
-  const [activeTab, setActiveTab] = useState<'interactions' | 'feed'>('interactions');
+  const [feedChanges, setFeedChanges] = useState<FeedChange[]>([]);
+  const [activeTab, setActiveTab] = useState<'interactions' | 'feed' | 'feedList'>('interactions');
+  const [expandedExplanations, setExpandedExplanations] = useState<{[id: string]: boolean}>({});
   const [summary, setSummary] = useState({
     correct: 0,
     incorrect: 0,
@@ -43,9 +53,46 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
   const questions = useAppSelector(state => state.trivia.questions);
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   const personalizedFeed = useAppSelector(state => state.trivia.personalizedFeed);
+  const feedExplanations = useAppSelector(state => state.trivia.feedExplanations);
   
-  // Store previous profile to track changes
+  // Store previous profile and feed to track changes
   const prevProfileRef = useRef(userProfile);
+  const prevFeedRef = useRef<string[]>([]);
+  
+  // Toggle explanation visibility
+  const toggleExplanation = (itemId: string) => {
+    setExpandedExplanations(prev => ({
+      ...prev,
+      [itemId]: !prev[itemId]
+    }));
+  };
+  
+  // Track feed changes when personalizedFeed updates
+  useEffect(() => {
+    if (personalizedFeed.length > 0) {
+      const now = Date.now();
+      const currentFeedIds = personalizedFeed.map(item => item.id);
+      
+      // Find added items
+      const addedItems = personalizedFeed.filter(item => !prevFeedRef.current.includes(item.id));
+      
+      // Process new items
+      if (addedItems.length > 0) {
+        const newChanges: FeedChange[] = addedItems.map(item => ({
+          timestamp: now,
+          type: 'added',
+          itemId: item.id,
+          questionText: item.question || `Question ${item.id.substring(0, 5)}...`,
+          explanations: feedExplanations[item.id] || []
+        }));
+        
+        setFeedChanges(prev => [...prev, ...newChanges]);
+      }
+      
+      // Update previous feed reference
+      prevFeedRef.current = currentFeedIds;
+    }
+  }, [personalizedFeed, feedExplanations]);
   
   // Watch for changes in the userProfile
   useEffect(() => {
@@ -360,6 +407,105 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
     );
   };
   
+  const renderFeedListTab = () => {
+    return (
+      <ScrollView style={styles.tabScrollView}>
+        <View style={styles.feedListContainer}>
+          <View style={styles.statusSection}>
+            <ThemedText style={styles.statusLabel}>Current Feed:</ThemedText>
+            <ThemedText style={styles.statusValue}>
+              {personalizedFeed.length} Questions
+            </ThemedText>
+          </View>
+          
+          {/* Recent Feed Changes */}
+          <ThemedText type="subtitle">Recent Feed Changes</ThemedText>
+          
+          <View style={styles.feedChangesContainer}>
+            {feedChanges.length === 0 ? (
+              <ThemedText style={styles.emptyText}>
+                No feed changes detected yet
+              </ThemedText>
+            ) : (
+              feedChanges.slice().reverse().slice(0, 5).map((change, index) => (
+                <View key={index} style={styles.feedChangeItem}>
+                  <View style={styles.logHeader}>
+                    <ThemedText style={styles.logType}>
+                      {change.type === 'added' ? 'ADDED TO FEED' : 'REMOVED FROM FEED'}
+                    </ThemedText>
+                    <ThemedText style={styles.logTime}>
+                      {new Date(change.timestamp).toLocaleTimeString()}
+                    </ThemedText>
+                  </View>
+                  <ThemedText style={styles.logQuestion}>{change.questionText}</ThemedText>
+                  
+                  {change.explanations.length > 0 && (
+                    <View style={styles.explanationContainer}>
+                      <ThemedText style={styles.explanationHeader}>Why:</ThemedText>
+                      {change.explanations.map((explanation, i) => (
+                        <ThemedText key={i} style={styles.explanationText}>• {explanation}</ThemedText>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))
+            )}
+          </View>
+          
+          {/* All Feed Items */}
+          <ThemedText type="subtitle" style={styles.sectionHeader}>All Feed Items</ThemedText>
+          
+          <View style={styles.allFeedItemsContainer}>
+            {personalizedFeed.length === 0 ? (
+              <ThemedText style={styles.emptyText}>No feed items available</ThemedText>
+            ) : (
+              personalizedFeed.map((item, index) => (
+                <View key={index} style={styles.feedItem}>
+                  <View style={styles.feedItemHeader}>
+                    <ThemedText style={styles.feedItemNumber}>#{index + 1}</ThemedText>
+                    <ThemedText style={styles.feedItemCategory}>{item.category || 'Unknown'}</ThemedText>
+                  </View>
+                  <ThemedText style={styles.feedItemText}>{item.question || `Question ${item.id.substring(0, 5)}...`}</ThemedText>
+                  {item.tags && item.tags.length > 0 && (
+                    <View style={styles.tagsContainer}>
+                      {item.tags.map((tag, i) => (
+                        <View key={i} style={styles.tag}>
+                          <ThemedText style={styles.tagText}>{tag}</ThemedText>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  
+                  {feedExplanations[item.id] && (
+                    <>
+                      <TouchableOpacity 
+                        style={styles.explanationButton}
+                        onPress={() => toggleExplanation(item.id)}
+                      >
+                        <ThemedText style={styles.explanationButtonText}>
+                          {expandedExplanations[item.id] ? 'Hide Explanation' : 'Show Explanation +'}
+                        </ThemedText>
+                      </TouchableOpacity>
+                      
+                      {expandedExplanations[item.id] && (
+                        <View style={styles.explanationContainer}>
+                          <ThemedText style={styles.explanationHeader}>Why this question:</ThemedText>
+                          {feedExplanations[item.id].map((explanation, i) => (
+                            <ThemedText key={i} style={styles.explanationText}>• {explanation}</ThemedText>
+                          ))}
+                        </View>
+                      )}
+                    </>
+                  )}
+                </View>
+              ))
+            )}
+          </View>
+        </View>
+      </ScrollView>
+    );
+  };
+  
   if (!visible) {
     return (
       <TouchableOpacity 
@@ -398,9 +544,19 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
             Feed Status
           </ThemedText>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'feedList' && styles.activeTab]} 
+          onPress={() => setActiveTab('feedList')}
+        >
+          <ThemedText style={[styles.tabText, activeTab === 'feedList' && styles.activeTabText]}>
+            Feed List
+          </ThemedText>
+        </TouchableOpacity>
       </View>
       
-      {activeTab === 'interactions' ? renderInteractionsTab() : renderFeedStatusTab()}
+      {activeTab === 'interactions' ? renderInteractionsTab() : 
+       activeTab === 'feed' ? renderFeedStatusTab() : 
+       renderFeedListTab()}
     </ThemedView>
   );
 }
@@ -635,5 +791,95 @@ const styles = StyleSheet.create({
   changeText: {
     fontSize: 14,
     marginBottom: 4,
+  },
+  feedListContainer: {
+    marginBottom: 20,
+  },
+  feedChangesContainer: {
+    marginBottom: 20,
+  },
+  feedChangeItem: {
+    marginBottom: 8,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: 'rgba(10, 126, 164, 0.1)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#0A7EA4',
+  },
+  explanationContainer: {
+    marginTop: 8,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(10, 126, 164, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(10, 126, 164, 0.2)',
+  },
+  explanationHeader: {
+    fontWeight: 'bold',
+    marginBottom: 6,
+    fontSize: 12,
+    color: '#0A7EA4',
+  },
+  explanationText: {
+    marginBottom: 4,
+    fontSize: 12,
+    paddingLeft: 4,
+  },
+  sectionHeader: {
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  allFeedItemsContainer: {
+    marginBottom: 20,
+  },
+  feedItem: {
+    marginBottom: 8,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: 'rgba(10, 126, 164, 0.1)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#0A7EA4',
+  },
+  feedItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  feedItemNumber: {
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  feedItemCategory: {
+    fontSize: 12,
+  },
+  feedItemText: {
+    fontSize: 14,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
+  tag: {
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(10, 126, 164, 0.1)',
+    marginRight: 4,
+  },
+  tagText: {
+    fontSize: 12,
+  },
+  explanationButton: {
+    marginTop: 8,
+    padding: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(10, 126, 164, 0.15)',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(10, 126, 164, 0.3)',
+  },
+  explanationButtonText: {
+    color: '#0A7EA4',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
 }); 

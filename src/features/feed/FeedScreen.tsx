@@ -116,6 +116,27 @@ const FeedScreen: React.FC = () => {
     }
   }, [userProfile, feedData, personalizedFeed.length, dispatch]);
 
+  // Add effect to refresh feed during cold start phase when userProfile changes
+  useEffect(() => {
+    // Only refresh during cold start and after we have initial feed data
+    const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
+    const inColdStart = !userProfile.coldStartComplete && totalQuestionsAnswered < 20;
+    
+    if (inColdStart && feedData.length > 0 && personalizedFeed.length > 0 && totalQuestionsAnswered > 0) {
+      console.log('Refreshing feed during cold start phase, questions answered:', totalQuestionsAnswered);
+      const { items, explanations } = getPersonalizedFeed(feedData, userProfile);
+      
+      // Only update if the new feed is different
+      const currentIds = personalizedFeed.map(item => item.id).join(',');
+      const newIds = items.map(item => item.id).join(',');
+      
+      if (currentIds !== newIds) {
+        console.log('Updating feed with new personalized items');
+        dispatch(setPersonalizedFeed({ items, explanations }));
+      }
+    }
+  }, [userProfile, feedData, personalizedFeed, dispatch]);
+
   const fingerPosition = useRef(new Animated.Value(0)).current;
   const phoneFrame = useRef(new Animated.Value(0)).current;
   const mockContent1 = useRef(new Animated.Value(0)).current;

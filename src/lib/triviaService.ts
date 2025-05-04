@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { getCategoryColor } from './colors';
 
 // Define the type of trivia question from Supabase
 export interface TriviaQuestion {
@@ -31,7 +32,7 @@ export interface FeedItem {
   difficulty: string;
   likes: number;
   views: number;
-  backgroundImage: string;
+  backgroundColor: string;
   learningCapsule: string;
   tags?: string[];
 }
@@ -51,7 +52,7 @@ const mockFeedData: FeedItem[] = [
     difficulty: 'Easy',
     likes: 1245,
     views: 5800,
-    backgroundImage: 'https://images.unsplash.com/photo-1532693322450-2cb5c511067d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80',
+    backgroundColor: getCategoryColor('Science'),
     learningCapsule: 'The Sun is about 93 million miles (150 million km) from Earth and is a G-type main-sequence star.'
   },
   {
@@ -67,7 +68,7 @@ const mockFeedData: FeedItem[] = [
     difficulty: 'Easy',
     likes: 842,
     views: 3200,
-    backgroundImage: 'https://images.unsplash.com/photo-1569429593410-b498b3fb3387?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80',
+    backgroundColor: getCategoryColor('History'),
     learningCapsule: 'George Washington served as the first President from 1789 to 1797 and is often called the "Father of His Country".'
   },
   {
@@ -83,7 +84,7 @@ const mockFeedData: FeedItem[] = [
     difficulty: 'Medium',
     likes: 756,
     views: 2900,
-    backgroundImage: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80',
+    backgroundColor: getCategoryColor('Geography'),
     learningCapsule: 'The Pacific Ocean covers more than 30% of Earth\'s surface and contains more than half of the free water on Earth.'
   }
 ];
@@ -368,9 +369,8 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
       // Get learning capsule/explanation
       const learningCapsule = question.learning_capsule || question.explanation || 'No additional information available for this question.';
       
-      // Get image URL
-      const backgroundImage = question.image_url || 
-        'https://images.unsplash.com/photo-1532693322450-2cb5c511067d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80';
+      // Get background color based on category
+      const backgroundColor = getCategoryColor(category);
 
       return {
         id: question.id || String(Math.random()),
@@ -380,7 +380,7 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
         difficulty,
         likes: Math.floor(Math.random() * 2000),  // Placeholder values
         views: Math.floor(Math.random() * 10000), // Placeholder values
-        backgroundImage,
+        backgroundColor,
         learningCapsule
       };
     });

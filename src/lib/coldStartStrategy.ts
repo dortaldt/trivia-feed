@@ -10,13 +10,14 @@ type Branch = string;
 interface ColdStartState {
   phase: 1 | 2 | 3 | 4;
   questionsShown: number;
-  topicsShown: Set<Category>;
+  topicsShown: Set<string>; // Category names
+  shownQuestionIds: Set<string>; // Question IDs that have been shown already
   subtopicsShown: Map<Category, Set<Subtopic>>;
   correctlyAnsweredTopics: Map<Category, number>;
   correctlyAnsweredSubtopics: Map<string, number>; // format: "category/subtopic"
-  answeredQuickly: Map<string, boolean>; // format: "category/subtopic"
+  answeredQuickly: Map<string, number>; // format: "category/subtopic"
   preferredTopics: string[];
-  skippedTopics: Set<Category>;
+  skippedTopics: Map<Category, number>;
 }
 
 // Initialize cold start state
@@ -25,12 +26,13 @@ function initColdStartState(): ColdStartState {
     phase: 1,
     questionsShown: 0,
     topicsShown: new Set(),
+    shownQuestionIds: new Set(),
     subtopicsShown: new Map(),
     correctlyAnsweredTopics: new Map(),
     correctlyAnsweredSubtopics: new Map(),
     answeredQuickly: new Map(),
     preferredTopics: [],
-    skippedTopics: new Set()
+    skippedTopics: new Map()
   };
 }
 
@@ -64,45 +66,63 @@ function getHighInterestTopics(): string[] {
 }
 
 // Select questions for Phase 1: Seeding (Questions 1-3)
-function getPhase1Questions(allQuestions: FeedItem[], groupedQuestions: Map<Category, Map<Subtopic, FeedItem[]>>): FeedItem[] {
-  const selectedQuestions: FeedItem[] = [];
-  const highInterestTopics = getHighInterestTopics();
+function getPhase1Questions(
+  allQuestions: FeedItem[],
+  groupedQuestions: Map<Category, Map<Subtopic, FeedItem[]>>,
+  state: ColdStartState,
+  userProfile: UserProfile
+): FeedItem[] {
+  console.log("Getting Phase 1 questions");
   
-  // Try to get one medium difficulty question from each high-interest topic
-  for (const topic of highInterestTopics) {
-    if (groupedQuestions.has(topic)) {
-      const topicQuestions = Array.from(groupedQuestions.get(topic)!.values()).flat();
+  // We want to cover different core topics across categories
+  const questionsToUse = allQuestions.filter(q => !state.shownQuestionIds.has(q.id));
+  
+  // Minimum one question from each category for diversity
+  // Check if groupedQuestions is actually a Map object
+  let categories: string[];
+  if (groupedQuestions instanceof Map) {
+    categories = Array.from(groupedQuestions.keys());
+  } else {
+    // Handle the case where groupedQuestions might be a plain object
+    console.error("groupedQuestions is not a Map instance", groupedQuestions);
+    categories = Object.keys(groupedQuestions as any);
+  }
+  const selectedQuestions: FeedItem[] = [];
+  
+  // Try to get one question from each major category first
+  for (const category of categories) {
+    if (selectedQuestions.length >= 5) break;
+    
+    // Also check before using Map methods on groupedQuestions
+    const topicMap = groupedQuestions instanceof Map 
+      ? groupedQuestions.get(category)
+      : (groupedQuestions as any)[category];
       
-      // Find medium difficulty questions first
-      const mediumQuestions = topicQuestions.filter(q => 
-        q.difficulty === 'Medium' || q.difficulty === 'medium'
-      );
+    if (!topicMap) continue;
+    
+    const allSubtopicQuestions = topicMap instanceof Map
+      ? Array.from(topicMap.values()).flat()
+      : Object.values(topicMap).flat();
       
-      if (mediumQuestions.length > 0) {
-        // Select random medium question from this topic
-        const selectedQuestion = mediumQuestions[Math.floor(Math.random() * mediumQuestions.length)];
-        selectedQuestions.push(selectedQuestion);
-      } else if (topicQuestions.length > 0) {
-        // If no medium questions, just take any question from this topic
-        const selectedQuestion = topicQuestions[Math.floor(Math.random() * topicQuestions.length)];
-        selectedQuestions.push(selectedQuestion);
-      }
+    const filteredQuestions = allSubtopicQuestions
+      .filter(q => !state.shownQuestionIds.has(q.id))
+      .filter(q => !selectedQuestions.some(sq => sq.id === q.id));
+    
+    if (filteredQuestions.length > 0) {
+      const question = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
+      selectedQuestions.push(question);
+      state.shownQuestionIds.add(question.id);
     }
   }
   
-  // If we couldn't find enough questions from high-interest topics, add more from general pool
-  if (selectedQuestions.length < 3) {
-    // Get random questions from topics not already selected, avoiding niche topics
-    const usedTopics = new Set(selectedQuestions.map(q => q.category));
-    const remainingQuestions = allQuestions.filter(q => !usedTopics.has(q.category));
+  // Fill remaining slots with random questions
+  while (selectedQuestions.length < 5 && questionsToUse.length > selectedQuestions.length) {
+    const remainingQuestions = questionsToUse.filter(q => !selectedQuestions.some(sq => sq.id === q.id));
+    if (remainingQuestions.length === 0) break;
     
-    while (selectedQuestions.length < 3 && remainingQuestions.length > 0) {
-      const randomIndex = Math.floor(Math.random() * remainingQuestions.length);
-      const question = remainingQuestions[randomIndex];
-      selectedQuestions.push(question);
-      remainingQuestions.splice(randomIndex, 1); // Remove the selected question
-      usedTopics.add(question.category); // Avoid duplicate topics
-    }
+    const randomQuestion = remainingQuestions[Math.floor(Math.random() * remainingQuestions.length)];
+    selectedQuestions.push(randomQuestion);
+    state.shownQuestionIds.add(randomQuestion.id);
   }
   
   return selectedQuestions;
@@ -115,38 +135,35 @@ function getPhase2Questions(
   state: ColdStartState,
   userProfile: UserProfile
 ): FeedItem[] {
-  const selectedQuestions: FeedItem[] = [];
+  console.log("Getting Phase 2 questions");
   
-  // Calculate how many 4-question segments we need (2-3 segments)
-  const segmentsNeeded = Math.ceil((12 - 3) / 4); // Questions 4-12 = 9 questions
+  const questionsToUse = allQuestions.filter(q => !state.shownQuestionIds.has(q.id));
   
-  for (let segment = 0; segment < segmentsNeeded; segment++) {
-    // For each segment, get:
-    // - 2 questions from preferred subtopics
-    // - 2 questions from unexplored topics
-    
-    // 1. Get questions from preferred subtopics
+  // Get 2 questions from preferred topics based on Phase 1 answers
     const preferredQuestions = getPreferredTopicQuestions(
-      allQuestions,
+    questionsToUse, 
       groupedQuestions, 
       state,
       userProfile,
-      2 // We want 2 questions from preferred topics
-    );
-    selectedQuestions.push(...preferredQuestions);
-    
-    // 2. Get questions from unexplored topics
-    const unexploredQuestions = getUnexploredTopicQuestions(
-      allQuestions,
-      groupedQuestions,
-      state,
-      2 // We want 2 questions from unexplored topics
-    );
-    selectedQuestions.push(...unexploredQuestions);
+    2
+  );
+  
+  // Get 3 questions from a mix of other topics
+  const remainingQuestions = questionsToUse
+    .filter(q => !preferredQuestions.some(pq => pq.id === q.id));
+  
+  const randomQuestions: FeedItem[] = [];
+  while (randomQuestions.length < 3 && remainingQuestions.length > 0) {
+    const randomIndex = Math.floor(Math.random() * remainingQuestions.length);
+    randomQuestions.push(remainingQuestions[randomIndex]);
+    state.shownQuestionIds.add(remainingQuestions[randomIndex].id);
+    remainingQuestions.splice(randomIndex, 1);
   }
   
-  // Limit to exactly the number we need
-  return selectedQuestions.slice(0, 9); // 9 questions for phase 2
+  // Mark selected questions as shown
+  preferredQuestions.forEach(q => state.shownQuestionIds.add(q.id));
+  
+  return [...preferredQuestions, ...randomQuestions];
 }
 
 // Select questions for Phase 3: Adaptive Personalization (Questions 13-20)
@@ -156,61 +173,80 @@ function getPhase3Questions(
   state: ColdStartState,
   userProfile: UserProfile
 ): FeedItem[] {
-  const selectedQuestions: FeedItem[] = [];
-  const questionsNeeded = 8; // Questions 13-20 = 8 questions
+  console.log("Getting Phase 3 questions");
   
-  // Get the top preferred topics based on user performance
-  const preferredTopics = getPreferredTopics(state, userProfile);
+  const questionsToUse = allQuestions.filter(q => !state.shownQuestionIds.has(q.id));
   
-  // For each 4-question segment:
-  // - 2 questions from preferred topics
-  // - 1 question from familiar but lower-ranked topic
-  // - 1 question from new or less-sampled topic
-  
-  const segmentsNeeded = Math.ceil(questionsNeeded / 4);
-  
-  for (let segment = 0; segment < segmentsNeeded; segment++) {
-    // 1. Get 2 questions from preferred topics
+  // Get 3 questions from preferred topics
     const preferredQuestions = getPreferredTopicQuestions(
-      allQuestions,
+    questionsToUse,
       groupedQuestions,
       state,
       userProfile,
-      2
-    );
-    selectedQuestions.push(...preferredQuestions);
-    
-    // 2. Get 1 question from familiar but lower-ranked topic
-    const lowerRankedQuestions = getLowerRankedTopicQuestions(
-      allQuestions,
-      groupedQuestions,
-      state,
-      userProfile,
-      1
-    );
-    selectedQuestions.push(...lowerRankedQuestions);
-    
-    // 3. Get 1 question from new or less-sampled topic
-    const newTopicQuestions = getNewOrLessSampledTopicQuestions(
-      allQuestions,
-      groupedQuestions,
-      state,
-      1
-    );
-    selectedQuestions.push(...newTopicQuestions);
-  }
-  
-  // Ensure we include adjacent branch exploration
-  tryAddAdjacentBranchQuestion(
-    selectedQuestions,
-    allQuestions,
-    groupedQuestions,
-    state,
-    userProfile
+    3
   );
   
-  // Limit to exactly the number we need
-  return selectedQuestions.slice(0, questionsNeeded);
+  // Get 2 questions from topics that haven't been shown yet
+  // Check if groupedQuestions is actually a Map object
+  let availableCategories: string[];
+  if (groupedQuestions instanceof Map) {
+    availableCategories = Array.from(groupedQuestions.keys());
+  } else {
+    console.error("groupedQuestions is not a Map instance in getPhase3Questions", groupedQuestions);
+    availableCategories = Object.keys(groupedQuestions as any);
+  }
+  
+  const unusedCategories = availableCategories.filter(
+    category => !Array.from(state.shownQuestionIds).some(id => {
+      const question = allQuestions.find(q => q.id === id);
+      return question && question.category === category;
+    })
+  );
+  
+  const diversityQuestions: FeedItem[] = [];
+  if (unusedCategories.length > 0) {
+    for (const category of unusedCategories) {
+      if (diversityQuestions.length >= 2) break;
+      
+      // Also check before using Map methods on groupedQuestions
+      const topicMap = groupedQuestions instanceof Map 
+        ? groupedQuestions.get(category)
+        : (groupedQuestions as any)[category];
+        
+      if (!topicMap) continue;
+      
+      const allSubtopicQuestions = topicMap instanceof Map
+        ? Array.from(topicMap.values()).flat()
+        : Object.values(topicMap).flat();
+        
+      const filteredQuestions = allSubtopicQuestions
+        .filter(q => !state.shownQuestionIds.has(q.id))
+        .filter(q => !preferredQuestions.some(pq => pq.id === q.id));
+      
+      if (filteredQuestions.length > 0) {
+        const question = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
+        diversityQuestions.push(question);
+        state.shownQuestionIds.add(question.id);
+      }
+    }
+  }
+  
+  // If we still need more questions, get random ones
+  const remainingQuestions = questionsToUse
+    .filter(q => !preferredQuestions.some(pq => pq.id === q.id))
+    .filter(q => !diversityQuestions.some(dq => dq.id === q.id));
+  
+  while (diversityQuestions.length < 2 && remainingQuestions.length > 0) {
+    const randomIndex = Math.floor(Math.random() * remainingQuestions.length);
+    diversityQuestions.push(remainingQuestions[randomIndex]);
+    state.shownQuestionIds.add(remainingQuestions[randomIndex].id);
+    remainingQuestions.splice(randomIndex, 1);
+  }
+  
+  // Mark selected questions as shown
+  preferredQuestions.forEach(q => state.shownQuestionIds.add(q.id));
+  
+  return [...preferredQuestions, ...diversityQuestions];
 }
 
 // Select questions for Phase 4: Steady State (Questions 21+)
@@ -218,56 +254,125 @@ function getPhase4Questions(
   allQuestions: FeedItem[],
   groupedQuestions: Map<Category, Map<Subtopic, FeedItem[]>>,
   state: ColdStartState,
-  userProfile: UserProfile,
-  count: number
+  userProfile: UserProfile
 ): FeedItem[] {
-  const selectedQuestions: FeedItem[] = [];
+  console.log("Getting Phase 4 questions");
   
-  // For Steady State, we want:
-  // - 60% from preferred topics
-  // - 20% from similar branches
-  // - 20% from wildcard/unknown topics
+  const questionsToUse = allQuestions.filter((q: FeedItem) => !state.shownQuestionIds.has(q.id));
   
-  const preferredCount = Math.round(count * 0.6);
-  const similarCount = Math.round(count * 0.2);
-  const wildcardCount = count - preferredCount - similarCount;
-  
-  // 1. Get questions from preferred topics (60%)
+  // Get 4 questions from preferred topics
   const preferredQuestions = getPreferredTopicQuestions(
-    allQuestions,
+    questionsToUse,
     groupedQuestions,
     state,
     userProfile,
-    preferredCount
+    4
   );
-  selectedQuestions.push(...preferredQuestions);
   
-  // 2. Get questions from similar branches (20%)
-  const similarBranchQuestions = getSimilarBranchQuestions(
-    allQuestions,
-    groupedQuestions,
-    state,
-    userProfile,
-    similarCount
-  );
-  selectedQuestions.push(...similarBranchQuestions);
+  // Get 1 exploration question (from a topic not yet shown or from a random topic)
+  const remainingQuestions = questionsToUse
+    .filter((q: FeedItem) => !preferredQuestions.some(pq => pq.id === q.id));
   
-  // 3. Get wildcard questions (20%)
-  const wildcardQuestions = getWildcardQuestions(
-    allQuestions,
-    groupedQuestions,
-    state,
-    wildcardCount
-  );
-  selectedQuestions.push(...wildcardQuestions);
+  let explorationQuestion: FeedItem | null = null;
   
-  return selectedQuestions;
+  // Try to find a question from an unused subtopic in a preferred category
+  const preferredTopics = getPreferredTopics(state, userProfile);
+  for (const topic of preferredTopics) {
+    if (explorationQuestion) break;
+    
+    // Check if groupedQuestions is a Map
+    if (groupedQuestions instanceof Map && groupedQuestions.has(topic)) {
+      const topicMap = groupedQuestions.get(topic)!;
+      
+      // Find subtopics that haven't been shown yet - handle both Map and Object
+      if (topicMap instanceof Map) {
+        for (const [subtopic, questions] of topicMap.entries()) {
+          const subtopicShown = Array.from(state.shownQuestionIds).some(id => {
+            const question = allQuestions.find(q => q.id === id);
+            return question && question.category === topic && question.tags?.[0] === subtopic;
+          });
+          
+          if (!subtopicShown) {
+            const filteredQuestions = questions
+              .filter((q: FeedItem) => !state.shownQuestionIds.has(q.id))
+              .filter((q: FeedItem) => !preferredQuestions.some(pq => pq.id === q.id));
+            
+            if (filteredQuestions.length > 0) {
+              explorationQuestion = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
+              break;
+            }
+          }
+        }
+      } else if (typeof topicMap === 'object' && topicMap !== null) {
+        // Handle the case where topicMap is an object
+        for (const subtopic of Object.keys(topicMap)) {
+          const questions = topicMap[subtopic];
+          
+          const subtopicShown = Array.from(state.shownQuestionIds).some(id => {
+            const question = allQuestions.find(q => q.id === id);
+            return question && question.category === topic && question.tags?.[0] === subtopic;
+          });
+          
+          if (!subtopicShown && Array.isArray(questions)) {
+            const filteredQuestions = questions
+              .filter((q: FeedItem) => !state.shownQuestionIds.has(q.id))
+              .filter((q: FeedItem) => !preferredQuestions.some(pq => pq.id === q.id));
+            
+            if (filteredQuestions.length > 0) {
+              explorationQuestion = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
+              break;
+            }
+          }
+        }
+      }
+    } else if (typeof groupedQuestions === 'object' && groupedQuestions !== null && topic in groupedQuestions) {
+      // Handle the case where groupedQuestions is an object
+      const topicMap = (groupedQuestions as any)[topic];
+      
+      if (typeof topicMap === 'object' && topicMap !== null) {
+        for (const subtopic of Object.keys(topicMap)) {
+          const questions = topicMap[subtopic];
+          
+          const subtopicShown = Array.from(state.shownQuestionIds).some(id => {
+            const question = allQuestions.find(q => q.id === id);
+            return question && question.category === topic && question.tags?.[0] === subtopic;
+          });
+          
+          if (!subtopicShown && Array.isArray(questions)) {
+            const filteredQuestions = questions
+              .filter((q: FeedItem) => !state.shownQuestionIds.has(q.id))
+              .filter((q: FeedItem) => !preferredQuestions.some(pq => pq.id === q.id));
+            
+            if (filteredQuestions.length > 0) {
+              explorationQuestion = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // If we couldn't find an exploration question from preferred categories,
+  // just pick a random question
+  if (!explorationQuestion && remainingQuestions.length > 0) {
+    const randomIndex = Math.floor(Math.random() * remainingQuestions.length);
+    explorationQuestion = remainingQuestions[randomIndex];
+  }
+  
+  // Mark selected questions as shown
+  preferredQuestions.forEach((q: FeedItem) => state.shownQuestionIds.add(q.id));
+  if (explorationQuestion) {
+    state.shownQuestionIds.add(explorationQuestion.id);
+  }
+  
+  return [...preferredQuestions, ...(explorationQuestion ? [explorationQuestion] : [])];
 }
 
 // Helper function to get questions from preferred topics
 function getPreferredTopicQuestions(
   allQuestions: FeedItem[],
-  groupedQuestions: Map<Category, Map<Subtopic, FeedItem[]>>,
+  groupedQuestions: Map<Category, Map<Subtopic, FeedItem[]>> | Record<string, any>,
   state: ColdStartState,
   userProfile: UserProfile,
   count: number
@@ -280,13 +385,35 @@ function getPreferredTopicQuestions(
     if (selectedQuestions.length >= count) break;
     
     const [category, subtopic] = topicKey.split('/');
-    if (groupedQuestions.has(category) && groupedQuestions.get(category)!.has(subtopic)) {
-      const questions = groupedQuestions.get(category)!.get(subtopic)!
-        .filter(q => !state.topicsShown.has(q.id)); // Avoid showing the same question twice
-      
-      if (questions.length > 0) {
-        const question = questions[Math.floor(Math.random() * questions.length)];
-        selectedQuestions.push(question);
+    
+    // Check if we're dealing with a Map or an object
+    if (groupedQuestions instanceof Map) {
+      if (groupedQuestions.has(category)) {
+        const topicMap = groupedQuestions.get(category)!;
+        if (topicMap instanceof Map && topicMap.has(subtopic)) {
+          const questions = topicMap.get(subtopic)!
+            .filter((q: FeedItem) => !state.shownQuestionIds.has(q.id)); // Avoid showing the same question twice
+          
+          if (questions.length > 0) {
+            const question = questions[Math.floor(Math.random() * questions.length)];
+            selectedQuestions.push(question);
+          }
+        }
+      }
+    } else if (typeof groupedQuestions === 'object' && groupedQuestions !== null) {
+      // Handle object format
+      if (category in groupedQuestions) {
+        const topicMap = (groupedQuestions as any)[category];
+        if (typeof topicMap === 'object' && topicMap !== null && subtopic in topicMap) {
+          const questions = topicMap[subtopic];
+          if (Array.isArray(questions)) {
+            const filteredQuestions = questions.filter((q: FeedItem) => !state.shownQuestionIds.has(q.id));
+            if (filteredQuestions.length > 0) {
+              const question = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
+              selectedQuestions.push(question);
+            }
+          }
+        }
       }
     }
   }
@@ -295,14 +422,43 @@ function getPreferredTopicQuestions(
   for (const topic of preferredTopics) {
     if (selectedQuestions.length >= count) break;
     
-    if (groupedQuestions.has(topic)) {
+    if (groupedQuestions instanceof Map && groupedQuestions.has(topic)) {
       const topicMap = groupedQuestions.get(topic)!;
-      const allSubtopicQuestions = Array.from(topicMap.values()).flat()
-        .filter(q => !state.topicsShown.has(q.id)); // Avoid showing the same question twice
       
-      if (allSubtopicQuestions.length > 0) {
-        const question = allSubtopicQuestions[Math.floor(Math.random() * allSubtopicQuestions.length)];
-        selectedQuestions.push(question);
+      if (topicMap instanceof Map) {
+        const allSubtopicQuestions = Array.from(topicMap.values()).flat()
+          .filter((q: FeedItem) => !state.shownQuestionIds.has(q.id)) // Avoid showing the same question twice
+          .filter((q: FeedItem) => !selectedQuestions.some(sq => sq.id === q.id)); // Avoid duplicates
+        
+        if (allSubtopicQuestions.length > 0) {
+          const question = allSubtopicQuestions[Math.floor(Math.random() * allSubtopicQuestions.length)];
+          selectedQuestions.push(question);
+        }
+      }
+    } else if (typeof groupedQuestions === 'object' && groupedQuestions !== null && topic in groupedQuestions) {
+      // Handle object format
+      const topicMap = (groupedQuestions as any)[topic];
+      
+      if (typeof topicMap === 'object' && topicMap !== null) {
+        const allSubtopicQuestions: FeedItem[] = [];
+        
+        // Collect all questions from all subtopics
+        for (const subtopic in topicMap) {
+          const questions = topicMap[subtopic];
+          if (Array.isArray(questions)) {
+            allSubtopicQuestions.push(...questions);
+          }
+        }
+        
+        // Filter out questions that have already been shown or selected
+        const filteredQuestions = allSubtopicQuestions
+          .filter((q: FeedItem) => !state.shownQuestionIds.has(q.id))
+          .filter((q: FeedItem) => !selectedQuestions.some(sq => sq.id === q.id));
+        
+        if (filteredQuestions.length > 0) {
+          const question = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
+          selectedQuestions.push(question);
+        }
       }
     }
   }
@@ -310,8 +466,8 @@ function getPreferredTopicQuestions(
   // If we still need more, get random questions from any topic
   if (selectedQuestions.length < count) {
     const remainingQuestions = allQuestions
-      .filter(q => !state.topicsShown.has(q.id)) // Avoid showing the same question twice
-      .filter(q => !selectedQuestions.some(sq => sq.id === q.id)); // Avoid duplicates
+      .filter((q: FeedItem) => !state.shownQuestionIds.has(q.id)) // Avoid showing the same question twice
+      .filter((q: FeedItem) => !selectedQuestions.some(sq => sq.id === q.id)); // Avoid duplicates
     
     while (selectedQuestions.length < count && remainingQuestions.length > 0) {
       const randomIndex = Math.floor(Math.random() * remainingQuestions.length);
@@ -337,7 +493,7 @@ function getUnexploredTopicQuestions(
     .filter(topic => !state.topicsShown.has(topic));
   
   // Also consider topics shown but skipped or answered incorrectly
-  const unsuccessfulTopics = Array.from(state.skippedTopics);
+  const unsuccessfulTopics = Array.from(state.skippedTopics.keys());
   
   // Prioritize completely unseen topics
   const candidateTopics = [...unseenTopics, ...unsuccessfulTopics];
@@ -348,7 +504,7 @@ function getUnexploredTopicQuestions(
     if (groupedQuestions.has(topic)) {
       const topicMap = groupedQuestions.get(topic)!;
       const allSubtopicQuestions = Array.from(topicMap.values()).flat()
-        .filter(q => !state.topicsShown.has(q.id)); // Avoid showing the same question twice
+        .filter(q => !state.shownQuestionIds.has(q.id)); // Use shownQuestionIds for filtering
       
       if (allSubtopicQuestions.length > 0) {
         const question = allSubtopicQuestions[Math.floor(Math.random() * allSubtopicQuestions.length)];
@@ -360,7 +516,7 @@ function getUnexploredTopicQuestions(
   // If we still need more, get random questions from any topic
   if (selectedQuestions.length < count) {
     const remainingQuestions = allQuestions
-      .filter(q => !state.topicsShown.has(q.id)) // Avoid showing the same question twice
+      .filter(q => !state.shownQuestionIds.has(q.id)) // Use shownQuestionIds for filtering
       .filter(q => !selectedQuestions.some(sq => sq.id === q.id)); // Avoid duplicates
     
     while (selectedQuestions.length < count && remainingQuestions.length > 0) {
@@ -394,7 +550,7 @@ function getLowerRankedTopicQuestions(
     if (groupedQuestions.has(topic)) {
       const topicMap = groupedQuestions.get(topic)!;
       const allSubtopicQuestions = Array.from(topicMap.values()).flat()
-        .filter(q => !state.topicsShown.has(q.id)); // Avoid showing the same question twice
+        .filter(q => !state.shownQuestionIds.has(q.id)); // Use shownQuestionIds for filtering
       
       if (allSubtopicQuestions.length > 0) {
         const question = allSubtopicQuestions[Math.floor(Math.random() * allSubtopicQuestions.length)];
@@ -407,7 +563,7 @@ function getLowerRankedTopicQuestions(
   if (selectedQuestions.length < count) {
     const nonPreferredQuestions = allQuestions
       .filter(q => !preferredTopics.includes(q.category))
-      .filter(q => !state.topicsShown.has(q.id)) // Avoid showing the same question twice
+      .filter(q => !state.shownQuestionIds.has(q.id)) // Use shownQuestionIds for filtering
       .filter(q => !selectedQuestions.some(sq => sq.id === q.id)); // Avoid duplicates
     
     while (selectedQuestions.length < count && nonPreferredQuestions.length > 0) {
@@ -470,7 +626,7 @@ function getNewOrLessSampledTopicQuestions(
       if (groupedQuestions.has(topic)) {
         const topicMap = groupedQuestions.get(topic)!;
         const allSubtopicQuestions = Array.from(topicMap.values()).flat()
-          .filter(q => !state.topicsShown.has(q.id)) // Avoid showing the same question twice
+          .filter(q => !state.shownQuestionIds.has(q.id)) // Use shownQuestionIds for filtering
           .filter(q => !selectedQuestions.some(sq => sq.id === q.id)); // Avoid duplicates
         
         if (allSubtopicQuestions.length > 0) {
@@ -524,7 +680,7 @@ function getSimilarBranchQuestions(
       // Look for questions in this similar branch
       const questions = allQuestions
         .filter(q => q.category === similarBranch || q.tags?.includes(similarBranch))
-        .filter(q => !state.topicsShown.has(q.id)) // Avoid showing the same question twice
+        .filter(q => !state.shownQuestionIds.has(q.id)) // Use shownQuestionIds for filtering
         .filter(q => !selectedQuestions.some(sq => sq.id === q.id)); // Avoid duplicates
       
       if (questions.length > 0) {
@@ -537,7 +693,7 @@ function getSimilarBranchQuestions(
   // If we couldn't find enough similar branch questions, fill with random questions
   if (selectedQuestions.length < count) {
     const remainingQuestions = allQuestions
-      .filter(q => !state.topicsShown.has(q.id)) // Avoid showing the same question twice
+      .filter(q => !state.shownQuestionIds.has(q.id)) // Use shownQuestionIds for filtering
       .filter(q => !selectedQuestions.some(sq => sq.id === q.id)); // Avoid duplicates
     
     while (selectedQuestions.length < count && remainingQuestions.length > 0) {
@@ -550,25 +706,22 @@ function getSimilarBranchQuestions(
   return selectedQuestions;
 }
 
-// Helper function to get wildcard/random questions
+// Helper function to get wildcard questions (completely random)
 function getWildcardQuestions(
   allQuestions: FeedItem[],
   groupedQuestions: Map<Category, Map<Subtopic, FeedItem[]>>,
   state: ColdStartState,
   count: number
 ): FeedItem[] {
-  const selectedQuestions: FeedItem[] = [];
-  
   // Get completely random questions from the pool
   const candidates = allQuestions
-    .filter(q => !state.topicsShown.has(q.id)) // Avoid showing the same question twice
+    .filter(q => !state.shownQuestionIds.has(q.id)) // Use shownQuestionIds for filtering
     .sort(() => Math.random() - 0.5); // Shuffle
   
-  // Take the first 'count' questions
   return candidates.slice(0, count);
 }
 
-// Helper function to try adding a question from an adjacent branch
+// Add a question from an adjacent branch if possible
 function tryAddAdjacentBranchQuestion(
   selectedQuestions: FeedItem[],
   allQuestions: FeedItem[],
@@ -576,44 +729,43 @@ function tryAddAdjacentBranchQuestion(
   state: ColdStartState,
   userProfile: UserProfile
 ): void {
-  // Find the user's most preferred topic
-  const preferredTopics = getPreferredTopics(state, userProfile);
-  if (preferredTopics.length === 0) return;
+  if (selectedQuestions.length === 0) return;
   
-  const topPreferredTopic = preferredTopics[0];
+  // Get a random question from the selected set
+  const randomQuestion = selectedQuestions[Math.floor(Math.random() * selectedQuestions.length)];
+  const branch = randomQuestion.tags?.[1] || randomQuestion.tags?.[0] || randomQuestion.category;
   
-  // Branch adjacency map (similar to getSimilarBranchQuestions)
-  const adjacencyMap: Record<string, string[]> = {
-    'Modern Cinema': ['Television Shows', 'Musicals', 'Animation'],
-    'Science': ['Technology', 'Nature', 'Medicine'],
-    'History': ['Politics', 'Geography', 'Military History'],
-    'Pop Culture': ['Media', 'Celebrities', 'Fashion'],
-    // Add more mappings as needed
-  };
-  
-  const adjacentBranches = adjacencyMap[topPreferredTopic] || [];
-  if (adjacentBranches.length === 0) return;
+  // Define adjacent branches (could be customized based on a knowledge graph)
+  const adjacentBranches = [
+    // If branch is a subject, try related subjects
+    ...(branch === 'History' ? ['Politics', 'Geography', 'Anthropology'] : []),
+    ...(branch === 'Science' ? ['Technology', 'Medicine', 'Astronomy'] : []),
+    ...(branch === 'Arts' ? ['Literature', 'Music', 'Philosophy'] : []),
+    
+    // If branch is a time period, try adjacent time periods
+    ...(branch === 'Modern Era' ? ['Middle Ages', 'Renaissance'] : []),
+    ...(branch === 'Ancient History' ? ['Classical Antiquity', 'Middle Ages'] : []),
+    
+    // If branch is a region, try nearby regions
+    ...(branch === 'North America' ? ['South America', 'Europe'] : []),
+    ...(branch === 'Asia' ? ['Middle East', 'Oceania'] : []),
+    
+    // Default adjacent branches
+    'General Knowledge',
+    'Popular Culture',
+  ];
   
   // Try to find a question from an adjacent branch
-  for (const branch of adjacentBranches) {
+  for (const adjacentBranch of adjacentBranches) {
     const questions = allQuestions
-      .filter(q => q.category === branch || q.tags?.includes(branch))
-      .filter(q => !state.topicsShown.has(q.id)) // Avoid showing the same question twice
+      .filter(q => q.category === adjacentBranch || q.tags?.includes(adjacentBranch))
+      .filter(q => !state.shownQuestionIds.has(q.id)) // Use shownQuestionIds for filtering
       .filter(q => !selectedQuestions.some(sq => sq.id === q.id)); // Avoid duplicates
     
     if (questions.length > 0) {
       const question = questions[Math.floor(Math.random() * questions.length)];
-      
-      // Replace a random question in the second half of the selection
-      if (selectedQuestions.length >= 4) {
-        const replaceIndex = Math.floor(selectedQuestions.length / 2) + 
-                            Math.floor(Math.random() * (selectedQuestions.length / 2));
-        selectedQuestions[replaceIndex] = question;
-      } else {
         selectedQuestions.push(question);
-      }
-      
-      return; // Successfully added an adjacent branch question
+      return;
     }
   }
 }
@@ -634,7 +786,7 @@ function getPreferredTopics(state: ColdStartState, userProfile: UserProfile): st
     
     // Check if any subtopics of this topic were answered quickly
     for (const topicKey of state.answeredQuickly.keys()) {
-      if (topicKey.startsWith(topic + '/') && state.answeredQuickly.get(topicKey)) {
+      if (topicKey.startsWith(topic + '/') && state.answeredQuickly.get(topicKey)! > 0) {
         score += 0.5; // Bonus for quick answers
       }
     }
@@ -646,171 +798,160 @@ function getPreferredTopics(state: ColdStartState, userProfile: UserProfile): st
   topicScores.sort((a, b) => b[1] - a[1]);
   
   // Return just the topic names
-  return topicScores.map(([topic]) => topic);
-}
-
-// Function to update the cold start state based on user interaction
-function updateColdStartState(
-  state: ColdStartState,
-  userProfile: UserProfile,
-  question: FeedItem,
-  interaction: { wasCorrect?: boolean; wasSkipped: boolean; timeSpent: number }
-): ColdStartState {
-  // Clone the state to avoid modifying the original
-  const newState: ColdStartState = {
-    ...state,
-    questionsShown: state.questionsShown + 1,
-    topicsShown: new Set(state.topicsShown),
-    subtopicsShown: new Map(state.subtopicsShown),
-    correctlyAnsweredTopics: new Map(state.correctlyAnsweredTopics),
-    correctlyAnsweredSubtopics: new Map(state.correctlyAnsweredSubtopics),
-    answeredQuickly: new Map(state.answeredQuickly),
-    preferredTopics: [...state.preferredTopics],
-    skippedTopics: new Set(state.skippedTopics)
-  };
-  
-  const category = question.category;
-  const subtopic = question.tags?.[0] || 'General';
-  const subtopicKey = `${category}/${subtopic}`;
-  
-  // Track that this topic and subtopic have been shown
-  newState.topicsShown.add(category);
-  
-  if (!newState.subtopicsShown.has(category)) {
-    newState.subtopicsShown.set(category, new Set());
-  }
-  newState.subtopicsShown.get(category)!.add(subtopic);
-  
-  // Update based on interaction
-  if (interaction.wasCorrect) {
-    // Track correct answers by topic and subtopic
-    newState.correctlyAnsweredTopics.set(
-      category, 
-      (newState.correctlyAnsweredTopics.get(category) || 0) + 1
-    );
-    
-    newState.correctlyAnsweredSubtopics.set(
-      subtopicKey,
-      (newState.correctlyAnsweredSubtopics.get(subtopicKey) || 0) + 1
-    );
-    
-    // Track if answered quickly (< 5 seconds)
-    if (interaction.timeSpent < 5000) {
-      newState.answeredQuickly.set(subtopicKey, true);
-    }
-  } else if (interaction.wasSkipped) {
-    // Track skipped topics
-    newState.skippedTopics.add(category);
-  }
-  
-  // Update the phase based on questions shown
-  if (newState.questionsShown >= 20) {
-    newState.phase = 4; // Steady State
-  } else if (newState.questionsShown >= 12) {
-    newState.phase = 3; // Adaptive Personalization
-  } else if (newState.questionsShown >= 3) {
-    newState.phase = 2; // Initial Branching
-  }
-  
-  // Recalculate preferred topics if we've shown enough questions
-  if (newState.questionsShown >= 6) {
-    newState.preferredTopics = getPreferredTopics(newState, userProfile);
-  }
-  
-  return newState;
+  return topicScores.map(entry => entry[0]);
 }
 
 // Main function to get the cold start feed
 export function getColdStartFeed(
   allQuestions: FeedItem[],
   userProfile: UserProfile,
-  count: number = 20
-): { items: FeedItem[], explanations: { [questionId: string]: string[] }, state: ColdStartState } {
-  // Initialize or retrieve cold start state from user profile
-  const state: ColdStartState = initColdStartState();
+  groupedQuestions: Map<Category, Map<Subtopic, FeedItem[]>> | Record<string, any> = new Map()
+): { items: FeedItem[], state: ColdStartState, explanations: { [questionId: string]: string[] } } {
+  // Initialize or update the cold start state based on the user profile
+  const state = initColdStartState();
   
-  // Group questions by topic and subtopic for easier selection
-  const groupedQuestions = groupQuestionsByTopic(allQuestions);
+  // Calculate actual state from the user profile
+  const totalQuestionsAnswered = Object.keys(userProfile.interactions).length;
+  console.log(`Total questions answered: ${totalQuestionsAnswered}`);
   
-  // Select questions based on current phase
-  let selectedQuestions: FeedItem[] = [];
+  // Update the phase based on the number of questions answered
+  if (totalQuestionsAnswered >= 15) {
+    state.phase = 4;
+  } else if (totalQuestionsAnswered >= 10) {
+    state.phase = 3;
+  } else if (totalQuestionsAnswered >= 5) {
+    state.phase = 2;
+  } else {
+    state.phase = 1;
+  }
+  
+  // Process past interactions to build the cold start state
+  Object.entries(userProfile.interactions).forEach(([questionId, interaction]) => {
+    // Find the question related to this interaction
+    const question = allQuestions.find(q => q.id === questionId);
+    if (question) {
+      // Mark this question as shown
+      state.shownQuestionIds.add(question.id);
+      
+      // Track the category/topic as shown
+      state.topicsShown.add(question.category);
+      
+      // Process based on interaction type
+      if (interaction.wasCorrect) {
+        // Add to answered correctly
+        if (!state.correctlyAnsweredTopics.has(question.category)) {
+          state.correctlyAnsweredTopics.set(question.category, 0);
+        }
+        state.correctlyAnsweredTopics.set(
+          question.category,
+          state.correctlyAnsweredTopics.get(question.category)! + 1
+        );
+        
+        // If answered quickly, track it
+        if (interaction.timeSpent && interaction.timeSpent < 10000) {
+          const topicKey = `${question.category}/${question.tags?.[0] || 'General'}`;
+          if (!state.answeredQuickly.has(topicKey)) {
+            state.answeredQuickly.set(topicKey, 0);
+          }
+          state.answeredQuickly.set(
+            topicKey,
+            state.answeredQuickly.get(topicKey)! + 1
+          );
+        }
+      } else if (interaction.wasSkipped) {
+        // Add to skipped topics
+        if (!state.skippedTopics.has(question.category)) {
+          state.skippedTopics.set(question.category, 0);
+        }
+        state.skippedTopics.set(
+          question.category,
+          state.skippedTopics.get(question.category)! + 1
+        );
+      }
+    }
+  });
+  
+  console.log(`Cold start phase: ${state.phase}, Questions shown: ${state.shownQuestionIds.size}`);
+  
+  // Convert groupedQuestions to a Map if it's not already a Map instance
+  let groupedQuestionsMap: Map<Category, Map<Subtopic, FeedItem[]>>;
+  if (!(groupedQuestions instanceof Map)) {
+    console.warn("groupedQuestions is not a Map instance, converting to Map");
+    groupedQuestionsMap = new Map();
+    
+    // If it's an object with properties, try to convert them
+    if (typeof groupedQuestions === 'object' && groupedQuestions !== null) {
+      Object.entries(groupedQuestions).forEach(([category, subtopicsMap]) => {
+        const newSubtopicsMap = new Map();
+        
+        if (typeof subtopicsMap === 'object' && subtopicsMap !== null) {
+          Object.entries(subtopicsMap).forEach(([subtopic, questions]) => {
+            newSubtopicsMap.set(subtopic, Array.isArray(questions) ? questions : []);
+          });
+        }
+        
+        groupedQuestionsMap.set(category, newSubtopicsMap);
+      });
+    }
+  } else {
+    groupedQuestionsMap = groupedQuestions;
+  }
+  
+  // If we don't have grouped questions, create them
+  if (groupedQuestionsMap.size === 0) {
+    for (const question of allQuestions) {
+      if (!groupedQuestionsMap.has(question.category)) {
+        groupedQuestionsMap.set(question.category, new Map());
+      }
+      
+      const categoryMap = groupedQuestionsMap.get(question.category)!;
+      const subtopic = question.tags?.[0] || 'General';
+      
+      if (!categoryMap.has(subtopic)) {
+        categoryMap.set(subtopic, []);
+      }
+      
+      categoryMap.get(subtopic)!.push(question);
+    }
+  }
+  
+  // Get questions based on the current phase
+  let phaseQuestions: FeedItem[];
+  switch (state.phase) {
+    case 1:
+      phaseQuestions = getPhase1Questions(allQuestions, groupedQuestionsMap, state, userProfile);
+      break;
+    case 2:
+      phaseQuestions = getPhase2Questions(allQuestions, groupedQuestionsMap, state, userProfile);
+      break;
+    case 3:
+      phaseQuestions = getPhase3Questions(allQuestions, groupedQuestionsMap, state, userProfile);
+      break;
+    case 4:
+      phaseQuestions = getPhase4Questions(allQuestions, groupedQuestionsMap, state, userProfile);
+      break;
+    default:
+      phaseQuestions = getPhase1Questions(allQuestions, groupedQuestionsMap, state, userProfile);
+  }
+  
+  console.log(`Returning ${phaseQuestions.length} questions for phase ${state.phase}`);
+  console.log(`Total unique questions shown: ${state.shownQuestionIds.size}`);
+  
+  // Create explanations for each question
   const explanations: { [questionId: string]: string[] } = {};
-  
-  // Phase 1: Seeding (Questions 1-3)
-  const phase1Questions = getPhase1Questions(allQuestions, groupedQuestions);
-  phase1Questions.forEach(q => {
-    explanations[q.id] = [
-      `PHASE 1: SEEDING - Showing high-interest topic "${q.category}" to detect preferences.`,
-      `Difficulty: ${q.difficulty}, Topic: ${q.category}, Subtopic: ${q.tags?.[0] || 'General'}`
+  phaseQuestions.forEach(question => {
+    const phase = state.phase;
+    explanations[question.id] = [
+      `Cold Start - Phase ${phase}`,
+      `Based on ${state.shownQuestionIds.size} previously shown questions`,
+      `Category: ${question.category}`
     ];
   });
   
-  // Phase 2: Initial Branching (Questions 4-12)
-  const phase2Questions = getPhase2Questions(allQuestions, groupedQuestions, state, userProfile);
-  phase2Questions.forEach(q => {
-    const isPreferred = state.correctlyAnsweredTopics.has(q.category);
-    explanations[q.id] = [
-      `PHASE 2: INITIAL BRANCHING - ${isPreferred ? 'Preferred topic based on performance' : 'Exploration of new/unexplored topic'}`,
-      `Topic: ${q.category}, Subtopic: ${q.tags?.[0] || 'General'}`,
-      isPreferred ? 'Selected because you showed interest in this topic' : 'Selected to discover new interests'
-    ];
-  });
-  
-  // Phase 3: Adaptive Personalization (Questions 13-20)
-  const phase3Questions = getPhase3Questions(allQuestions, groupedQuestions, state, userProfile);
-  phase3Questions.forEach(q => {
-    const isPreferred = state.preferredTopics.includes(q.category);
-    const isLowerRanked = state.topicsShown.has(q.category) && !state.preferredTopics.includes(q.category);
-    const isNew = !state.topicsShown.has(q.category);
-    
-    let phaseDescription = 'Unknown selection reason';
-    if (isPreferred) {
-      phaseDescription = 'Preferred topic based on your previous engagement';
-    } else if (isLowerRanked) {
-      phaseDescription = 'Familiar but lower-ranked topic for exploration';
-    } else if (isNew) {
-      phaseDescription = 'New or less-sampled topic for discovery';
-    }
-    
-    explanations[q.id] = [
-      `PHASE 3: ADAPTIVE PERSONALIZATION - ${phaseDescription}`,
-      `Topic: ${q.category}, Subtopic: ${q.tags?.[0] || 'General'}`
-    ];
-  });
-  
-  // Phase 4: Steady State (Questions 21+)
-  const phase4Questions = getPhase4Questions(allQuestions, groupedQuestions, state, userProfile, count - (phase1Questions.length + phase2Questions.length + phase3Questions.length));
-  phase4Questions.forEach(q => {
-    const isPreferred = state.preferredTopics.includes(q.category);
-    const isSimilar = getSimilarBranchQuestions([q], groupedQuestions, state, userProfile, 1).length > 0;
-    const isWildcard = !isPreferred && !isSimilar;
-    
-    let categoryDescription = 'Unknown category';
-    if (isPreferred) {
-      categoryDescription = 'Weighted preferred topic (60%)';
-    } else if (isSimilar) {
-      categoryDescription = 'Similar branch exploration (20%)';
-    } else if (isWildcard) {
-      categoryDescription = 'Wild card/unknown topic (20%)';
-    }
-    
-    explanations[q.id] = [
-      `PHASE 4: STEADY STATE - ${categoryDescription}`,
-      `Topic: ${q.category}, Subtopic: ${q.tags?.[0] || 'General'}`
-    ];
-  });
-  
-  // Combine questions from all phases
-  selectedQuestions = [
-    ...phase1Questions,
-    ...phase2Questions,
-    ...phase3Questions,
-    ...phase4Questions
-  ].slice(0, count);
-  
+  // Return the questions, state, and explanations
   return {
-    items: selectedQuestions,
-    explanations,
-    state
+    items: phaseQuestions,
+    state,
+    explanations
   };
 } 
