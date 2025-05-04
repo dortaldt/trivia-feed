@@ -1,12 +1,14 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { UserProfile, createInitialUserProfile } from '../lib/personalizationService';
 import { FeedItem } from '../lib/triviaService';
+import { recordUserAnswer } from '../lib/leaderboardService';
 
 // Define a type for possible question states
 export type QuestionState = {
   status: 'unanswered' | 'skipped' | 'answered';
   answerIndex?: number;
   timeSpent?: number; // Track time spent on the question
+  isCorrect?: boolean; // Track if the answer was correct
 };
 
 interface TriviaState {
@@ -33,8 +35,8 @@ const triviaSlice = createSlice({
   name: 'trivia',
   initialState,
   reducers: {
-    answerQuestion: (state, action: PayloadAction<{ questionId: string; answerIndex: number; isCorrect: boolean }>) => {
-      const { questionId, answerIndex, isCorrect } = action.payload;
+    answerQuestion: (state, action: PayloadAction<{ questionId: string; answerIndex: number; isCorrect: boolean; userId?: string }>) => {
+      const { questionId, answerIndex, isCorrect, userId } = action.payload;
       
       // Calculate time spent
       const startTime = state.interactionStartTimes[questionId] || Date.now();
@@ -47,11 +49,18 @@ const triviaSlice = createSlice({
       state.questions[questionId] = { 
         status: 'answered',
         answerIndex,
-        timeSpent
+        timeSpent,
+        isCorrect
       };
       
       // Clear interaction start time
       delete state.interactionStartTimes[questionId];
+      
+      // Record answer to database if user is logged in
+      if (userId) {
+        // We use void to avoid awaiting the promise
+        void recordUserAnswer(userId, questionId, isCorrect, answerIndex);
+      }
     },
     skipQuestion: (state, action: PayloadAction<{ questionId: string }>) => {
       const { questionId } = action.payload;
