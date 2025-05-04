@@ -299,9 +299,32 @@ export function getPersonalizedFeed(
       userProfile.coldStartComplete = true;
     }
     
+    // Ensure no duplicate items by ID
+    const seen = new Set<string>();
+    const uniqueItems: FeedItem[] = [];
+    
+    // Build a unique items array
+    for (const item of coldStartResult.items) {
+      if (!seen.has(item.id)) {
+        seen.add(item.id);
+        uniqueItems.push(item);
+      }
+    }
+    
+    // Rebuild explanations object for unique items only
+    const uniqueExplanations: { [questionId: string]: string[] } = {};
+    uniqueItems.forEach(item => {
+      if (coldStartResult.explanations[item.id]) {
+        uniqueExplanations[item.id] = coldStartResult.explanations[item.id];
+      }
+    });
+    
+    // Use string concatenation for logging
+    console.log("Cold start feed: " + coldStartResult.items.length + " items, " + uniqueItems.length + " after removing duplicates");
+    
     return {
-      items: coldStartResult.items,
-      explanations: coldStartResult.explanations
+      items: uniqueItems,
+      explanations: uniqueExplanations
     };
   }
   
@@ -377,35 +400,110 @@ export function getPersonalizedFeed(
   const selectedItems: FeedItem[] = [];
   const explanations: { [questionId: string]: string[] } = {};
   
+  // Use a Set to track IDs we've already added to prevent duplicates
+  const addedItemIds = new Set<string>();
+  
+  // Helper function to add item only if not already added
+  const addItemIfUnique = (item: FeedItem, itemExplanations: string[]) => {
+    if (!addedItemIds.has(item.id)) {
+      selectedItems.push(item);
+      explanations[item.id] = itemExplanations;
+      addedItemIds.add(item.id);
+      return true;
+    }
+    return false;
+  };
+  
   // Add known items (highest priority)
-  knownItems.slice(0, knownItemCount).forEach(({ item, explanations: itemExplanations }) => {
-    selectedItems.push(item);
-    explanations[item.id] = itemExplanations;
-  });
+  let i = 0;
+  let added = 0;
+  while (added < knownItemCount && i < knownItems.length) {
+    const { item, explanations: itemExplanations } = knownItems[i];
+    if (addItemIfUnique(item, itemExplanations)) {
+      added++;
+    }
+    i++;
+  }
   
   // Add exploration items
-  newBranchItems.slice(0, newBranchCount).forEach(({ item, explanations: itemExplanations }) => {
-    selectedItems.push(item);
-    explanations[item.id] = [...itemExplanations, 'Exploration: New branch within known subtopic'];
-  });
+  // New branches
+  i = 0;
+  added = 0;
+  while (added < newBranchCount && i < newBranchItems.length) {
+    const { item, explanations: itemExplanations } = newBranchItems[i];
+    if (addItemIfUnique(item, [...itemExplanations, 'Exploration: New branch within known subtopic'])) {
+      added++;
+    }
+    i++;
+  }
   
-  newSubtopicItems.slice(0, newSubtopicCount).forEach(({ item, explanations: itemExplanations }) => {
-    selectedItems.push(item);
-    explanations[item.id] = [...itemExplanations, 'Exploration: New subtopic within known topic'];
-  });
+  // New subtopics
+  i = 0;
+  added = 0;
+  while (added < newSubtopicCount && i < newSubtopicItems.length) {
+    const { item, explanations: itemExplanations } = newSubtopicItems[i];
+    if (addItemIfUnique(item, [...itemExplanations, 'Exploration: New subtopic within known topic'])) {
+      added++;
+    }
+    i++;
+  }
   
-  newTopicItems.slice(0, newTopicCount).forEach(({ item, explanations: itemExplanations }) => {
-    selectedItems.push(item);
-    explanations[item.id] = [...itemExplanations, 'Exploration: Entirely new topic'];
-  });
+  // New topics
+  i = 0;
+  added = 0;
+  while (added < newTopicCount && i < newTopicItems.length) {
+    const { item, explanations: itemExplanations } = newTopicItems[i];
+    if (addItemIfUnique(item, [...itemExplanations, 'Exploration: Entirely new topic'])) {
+      added++;
+    }
+    i++;
+  }
   
   // Fill remaining slots from known items if needed
   if (selectedItems.length < count) {
-    const remainingCount = count - selectedItems.length;
-    knownItems.slice(knownItemCount, knownItemCount + remainingCount).forEach(({ item, explanations: itemExplanations }) => {
-      selectedItems.push(item);
-      explanations[item.id] = itemExplanations;
-    });
+    const remainingNeeded = count - selectedItems.length;
+    i = knownItemCount; // Start from where we left off
+    added = 0;
+    
+    while (added < remainingNeeded && i < knownItems.length) {
+      const { item, explanations: itemExplanations } = knownItems[i];
+      if (addItemIfUnique(item, itemExplanations)) {
+        added++;
+      }
+      i++;
+    }
+  }
+  
+  // Double-check for duplicates as a final safety measure
+  const seen = new Set<string>();
+  const uniqueItems: FeedItem[] = [];
+  
+  // Build a unique items array
+  for (const item of selectedItems) {
+    if (!seen.has(item.id)) {
+      seen.add(item.id);
+      uniqueItems.push(item);
+    }
+  }
+  
+  // If we removed any duplicates, rebuild the explanations object
+  if (uniqueItems.length !== selectedItems.length) {
+    // Create a simple logging message with string concatenation
+    console.log("Removed " + (selectedItems.length - uniqueItems.length) + " duplicate items in final check");
+    
+    // Create a new explanations object with only the unique items
+    const finalExplanations: { [questionId: string]: string[] } = {};
+    
+    for (const item of uniqueItems) {
+      if (explanations[item.id]) {
+        finalExplanations[item.id] = explanations[item.id];
+      }
+    }
+    
+    return { 
+      items: uniqueItems, 
+      explanations: finalExplanations 
+    };
   }
   
   return { 

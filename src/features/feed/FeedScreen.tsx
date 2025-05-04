@@ -41,7 +41,7 @@ import { fetchTriviaQuestions, FeedItem as FeedItemType, analyzeCorrectAnswers }
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { 
   updateUserProfile, 
-  getPersonalizedFeed 
+  getPersonalizedFeed
 } from '../../lib/personalizationService';
 import { InteractionTracker } from '../../components/InteractionTracker';
 import { useAuth } from '../../context/AuthContext';
@@ -103,14 +103,31 @@ const FeedScreen: React.FC = () => {
           index === self.findIndex(t => t.id === item.id)
         );
         
+        console.log(`Loaded ${allQuestions.length} questions, ${uniqueQuestions.length} unique questions after filtering duplicates`);
         setFeedData(uniqueQuestions); // Store unique questions
         
         // Apply personalization if we have questions
         if (uniqueQuestions.length > 0) {
           const { items, explanations } = getPersonalizedFeed(uniqueQuestions, userProfile);
           
+          // Ensure items are unique again (personalization might introduce duplicates)
+          const uniqueItems = items.filter((item, index, self) => 
+            index === self.findIndex(t => t.id === item.id)
+          );
+          
+          // Create explanations object with only unique items
+          const uniqueExplanations: Record<string, string[]> = {};
+          uniqueItems.forEach(item => {
+            if (explanations[item.id]) {
+              uniqueExplanations[item.id] = explanations[item.id];
+            }
+          });
+          
           // Store the feed items in a stable order
-          dispatch(setPersonalizedFeed({ items, explanations }));
+          dispatch(setPersonalizedFeed({ 
+            items: uniqueItems, 
+            explanations: uniqueExplanations 
+          }));
         }
       } catch (error) {
         console.error('Failed to load trivia questions:', error);
@@ -128,8 +145,25 @@ const FeedScreen: React.FC = () => {
     // Only refresh personalized feed when userProfile changes and we don't have a feed yet
     if (feedData.length > 0 && personalizedFeed.length === 0) {
       const { items, explanations } = getPersonalizedFeed(feedData, userProfile);
-      dispatch(setPersonalizedFeed({ items, explanations }));
-      console.log('Initial personalized feed with', items.length, 'items');
+      
+      // Filter out any duplicate questions by ID
+      const uniqueItems = items.filter((item, index, self) => 
+        index === self.findIndex(t => t.id === item.id)
+      );
+      
+      // Generate new explanations object with only unique items
+      const uniqueExplanations: Record<string, string[]> = {};
+      uniqueItems.forEach(item => {
+        if (explanations[item.id]) {
+          uniqueExplanations[item.id] = explanations[item.id];
+        }
+      });
+      
+      dispatch(setPersonalizedFeed({ 
+        items: uniqueItems, 
+        explanations: uniqueExplanations 
+      }));
+      console.log('Initial personalized feed with', uniqueItems.length, 'unique items');
     }
   }, [userProfile, feedData, personalizedFeed.length, dispatch]);
 
@@ -143,27 +177,39 @@ const FeedScreen: React.FC = () => {
       return; // Profile hasn't changed in a way that affects feed ordering
     }
     
-    // Only refresh during cold start and after we have initial feed data
+    // Only apply this logic during initial loading, not after answering questions
     const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
     const inColdStart = !userProfile.coldStartComplete && totalQuestionsAnswered < 20;
     
-    if (inColdStart && feedData.length > 0 && personalizedFeed.length > 0 && totalQuestionsAnswered > 0) {
-      console.log('Refreshing feed during cold start phase, questions answered:', totalQuestionsAnswered);
+    // Only use this effect for initial feed generation
+    // Skip if we already have a feed and have answered questions
+    if (inColdStart && feedData.length > 0 && personalizedFeed.length === 0) {
+      console.log('Initial feed creation during cold start phase');
       const { items, explanations } = getPersonalizedFeed(feedData, userProfile);
       
-      // Only update if the new feed is different
-      const currentIds = personalizedFeed.map(item => item.id).join(',');
-      const newIds = items.map(item => item.id).join(',');
+      // Filter out any duplicate questions by ID
+      const uniqueItems = items.filter((item, index, self) => 
+        index === self.findIndex(t => t.id === item.id)
+      );
       
-      if (currentIds !== newIds) {
-        console.log('Updating feed with new personalized items');
-        dispatch(setPersonalizedFeed({ items, explanations }));
-      }
+      // Generate new explanations object with only unique items
+      const uniqueExplanations: Record<string, string[]> = {};
+      uniqueItems.forEach(item => {
+        if (explanations[item.id]) {
+          uniqueExplanations[item.id] = explanations[item.id];
+        }
+      });
+      
+      dispatch(setPersonalizedFeed({ 
+        items: uniqueItems, 
+        explanations: uniqueExplanations 
+      }));
+      console.log('Initial personalized feed with', uniqueItems.length, 'unique items');
     }
     
     // Update ref with current userProfile
     previousUserProfileRef.current = userProfile;
-  }, [userProfile, feedData, dispatch]); // Remove personalizedFeed from dependencies
+  }, [userProfile, feedData, dispatch, personalizedFeed.length]); // Added personalizedFeed.length to dependencies
 
   const fingerPosition = useRef(new Animated.Value(0)).current;
   const phoneFrame = useRef(new Animated.Value(0)).current;
@@ -449,7 +495,7 @@ const FeedScreen: React.FC = () => {
   }, []);
 
   // Add function to handle answering questions
-  const handleAnswerQuestion = (questionId: string, answerIndex: number, isCorrect: boolean) => {
+  const handleAnswerQuestion = useCallback((questionId: string, answerIndex: number, isCorrect: boolean) => {
     const questionItem = personalizedFeed.find(item => item.id === questionId);
     if (!questionItem) return;
     
@@ -482,8 +528,53 @@ const FeedScreen: React.FC = () => {
       questionItem
     );
     
+    // IMPORTANT: Save a copy of the current feed before updating the profile
+    // This prevents the feed from being regenerated by other useEffects
+    const currentFeed = [...personalizedFeed];
+    
     // Save updated profile to Redux
     dispatch(updateUserProfileAction(updatedProfile));
+    
+    // Determine if we should append new questions to maintain feed continuity
+    const inColdStart = !updatedProfile.coldStartComplete && 
+                       (updatedProfile.totalQuestionsAnswered || 0) < 20;
+    
+    if (inColdStart && feedData.length > currentFeed.length) {
+      console.log('Cold start active - maintaining feed continuity');
+      
+      // Find questions we don't already have in our feed
+      const existingIds = new Set(currentFeed.map(item => item.id));
+      const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
+      
+      // Take up to 3 new questions
+      const newQuestions = availableQuestions.slice(0, 3);
+      
+      if (newQuestions.length > 0) {
+        console.log(`Appending ${newQuestions.length} new questions to feed`);
+        
+        // Create a new feed with existing + new questions
+        const updatedFeed = [...currentFeed, ...newQuestions];
+        
+        // Create empty explanations for new questions
+        const newExplanations: Record<string, string[]> = {};
+        newQuestions.forEach((item: FeedItemType) => {
+          newExplanations[item.id] = [`Added to maintain feed continuity`];
+        });
+        
+        // Combine explanations
+        const combinedExplanations = {
+          ...feedExplanations,
+          ...newExplanations
+        };
+        
+        // Update the feed in Redux with the combined feed (old + new questions)
+        // This ensures the current question and its state remain in place
+        dispatch(setPersonalizedFeed({
+          items: updatedFeed,
+          explanations: combinedExplanations
+        }));
+      }
+    }
     
     // Remove auto-scrolling behavior - let users control when to move to next question
     // The user can swipe up manually when ready to see the next question
@@ -498,7 +589,7 @@ const FeedScreen: React.FC = () => {
       'Tags:',
       questionItem.tags || 'None'
     );
-  };
+  }, [dispatch, personalizedFeed, userProfile, interactionStartTimes, feedData, feedExplanations]);
 
   // Modify handleNextQuestion to be more controlled and prevent unexpected scrolling
   const handleNextQuestion = useCallback(() => {
@@ -513,10 +604,62 @@ const FeedScreen: React.FC = () => {
         offset,
         animated: true
       });
+    } else if (currentIndex >= personalizedFeed.length - 2) {
+      // We're near the end of the feed, let's add more questions if available
+      console.log('Near end of feed, checking if we can append more questions');
+      
+      // Find questions we don't already have in our feed
+      const existingIds = new Set(personalizedFeed.map(item => item.id));
+      const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
+      
+      // Take up to 5 new questions to append
+      const newQuestions = availableQuestions.slice(0, 5);
+      
+      if (newQuestions.length > 0) {
+        console.log(`Appending ${newQuestions.length} more questions to feed`);
+        
+        // Create a new feed with existing + new questions
+        const updatedFeed = [...personalizedFeed, ...newQuestions];
+        
+        // Create empty explanations for new questions
+        const newExplanations: Record<string, string[]> = {};
+        newQuestions.forEach((item: FeedItemType) => {
+          newExplanations[item.id] = [`Added to extend feed`];
+        });
+        
+        // Combine explanations
+        const combinedExplanations = {
+          ...feedExplanations,
+          ...newExplanations
+        };
+        
+        // Update the feed in Redux
+        dispatch(setPersonalizedFeed({
+          items: updatedFeed,
+          explanations: combinedExplanations
+        }));
+        
+        // After updating feed, scroll to the next question
+        setTimeout(() => {
+          if (flatListRef.current) {
+            const targetIndex = currentIndex + 1;
+            const offset = viewportHeight * targetIndex;
+            
+            flatListRef.current.scrollToOffset({
+              offset,
+              animated: true
+            });
+          }
+        }, 100);
+      }
     }
-  }, [currentIndex, personalizedFeed.length, viewportHeight]);
+  }, [currentIndex, personalizedFeed, viewportHeight, feedData, feedExplanations, dispatch]);
 
-  const renderItem = ({ item }: { item: FeedItemType }) => {
+  const renderItem = ({ item, index }: { item: FeedItemType; index: number }) => {
+    // Add debug logging for duplicate detection and feed stability
+    console.log(`Rendering item ${index}: ${item.id} - "${item.question.substring(0, 30)}..."`, 
+      questions[item.id] ? `(Question status: ${questions[item.id].status})` : '(No status yet)');
+    
     return (
       <FeedItem 
         item={item} 
@@ -656,6 +799,16 @@ const FeedScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {__DEV__ && (
+        <View style={styles.debugContainer}>
+          {personalizedFeed.length > 0 ? (
+            <Text style={styles.debugText}>
+              {`Rendering feed with ${personalizedFeed.length} items. `}
+              {`Unique IDs: ${new Set(personalizedFeed.map(item => item.id)).size} / ${personalizedFeed.length}`}
+            </Text>
+          ) : null}
+        </View>
+      )}
       <FlatList
         ref={flatListRef}
         data={personalizedFeed.length > 0 ? personalizedFeed : feedData}
@@ -954,6 +1107,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: spacing[1],
+  },
+  debugContainer: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 10,
+    borderRadius: 8,
+    zIndex: 100,
+  },
+  debugText: {
+    color: 'white',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
 
