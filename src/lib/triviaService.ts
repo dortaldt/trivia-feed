@@ -206,6 +206,28 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
   try {
     console.log('DEBUG: Starting to fetch data from Supabase - requesting ALL questions');
     
+    // Log basic info without accessing protected properties
+    // @ts-ignore - We need to access this for debugging
+    console.log(`DEBUG: Supabase URL being used: ${supabase?.url || supabase?.supabaseUrl || 'Unknown'}`);
+    console.log(`DEBUG: Attempting to connect to Supabase database`);
+    
+    try {
+      // Test the connection with a simple query
+      const { count, error: pingError } = await supabase
+        .from('trivia_questions')
+        .select('*', { count: 'exact', head: true });
+        
+      if (pingError) {
+        console.error('DEBUG: Connection test failed:', pingError);
+        throw new Error(`Connection test failed: ${pingError.message}`);
+      }
+      
+      console.log(`DEBUG: Connection test successful! Database has ${count} records in trivia_questions table.`);
+    } catch (pingError) {
+      console.error('DEBUG: Connection test error:', pingError);
+      return mockFeedData;
+    }
+    
     // First inspect the table structure
     await inspectTableStructure();
     
@@ -230,6 +252,7 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
     
     if (error) {
       console.error('Error fetching trivia questions:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       return mockFeedData;
     }
 

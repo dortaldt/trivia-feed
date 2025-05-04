@@ -1,4 +1,5 @@
 import { FeedItem } from './triviaService';
+import { getColdStartFeed } from './coldStartStrategy';
 
 // Types for user interaction metrics
 export type QuestionInteraction = {
@@ -31,6 +32,8 @@ export type UserProfile = {
   topics: { [topicName: string]: RootTopic };
   interactions: { [questionId: string]: QuestionInteraction };
   lastRefreshed: number;
+  coldStartComplete?: boolean; // Flag to indicate if cold start is complete
+  totalQuestionsAnswered?: number; // Track total questions answered
 };
 
 const DEFAULT_TOPIC_WEIGHT = 0.5;
@@ -152,6 +155,11 @@ export function updateUserProfile(
     ...interaction,
     viewedAt: currentTime
   };
+  
+  // Track total questions answered
+  if (interaction.wasCorrect !== undefined) {
+    updatedProfile.totalQuestionsAnswered = (updatedProfile.totalQuestionsAnswered || 0) + 1;
+  }
   
   // 2. Update topic weights based on interaction
   const topic = question.category;
@@ -275,6 +283,31 @@ export function getPersonalizedFeed(
   userProfile: UserProfile,
   count: number = 20
 ): { items: FeedItem[], explanations: { [questionId: string]: string[] } } {
+  // Check if we should use cold start strategy
+  const totalInteractions = Object.keys(userProfile.interactions).length;
+  const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
+  
+  // Use cold start strategy if user has interacted with fewer than 20 questions
+  // or if coldStartComplete flag is not set to true
+  if (totalInteractions < 20 || totalQuestionsAnswered < 20 || !userProfile.coldStartComplete) {
+    console.log('Using Cold Start Strategy for feed personalization');
+    const coldStartResult = getColdStartFeed(allItems, userProfile, count);
+    
+    // If we're in the final phase, mark cold start as complete
+    if (coldStartResult.state.phase === 4 && coldStartResult.state.questionsShown >= 20) {
+      // This will be saved to userProfile when updateUserProfile is called
+      userProfile.coldStartComplete = true;
+    }
+    
+    return {
+      items: coldStartResult.items,
+      explanations: coldStartResult.explanations
+    };
+  }
+  
+  // Otherwise, continue with standard personalization logic
+  console.log('Using Standard Personalization Strategy for feed');
+  
   // Apply weight decay to inactive topics/subtopics/branches
   const updatedProfile = applyWeightDecay(userProfile);
   
@@ -388,6 +421,8 @@ export function createInitialUserProfile(): UserProfile {
   return {
     topics: {},
     interactions: {},
-    lastRefreshed: Date.now()
+    lastRefreshed: Date.now(),
+    coldStartComplete: false,
+    totalQuestionsAnswered: 0
   };
 } 
