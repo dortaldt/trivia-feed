@@ -393,10 +393,10 @@ function getPreferredTopicQuestions(
         if (topicMap instanceof Map && topicMap.has(subtopic)) {
           const questions = topicMap.get(subtopic)!
             .filter((q: FeedItem) => !state.shownQuestionIds.has(q.id)); // Avoid showing the same question twice
-          
-          if (questions.length > 0) {
-            const question = questions[Math.floor(Math.random() * questions.length)];
-            selectedQuestions.push(question);
+      
+      if (questions.length > 0) {
+        const question = questions[Math.floor(Math.random() * questions.length)];
+        selectedQuestions.push(question);
           }
         }
       }
@@ -426,13 +426,13 @@ function getPreferredTopicQuestions(
       const topicMap = groupedQuestions.get(topic)!;
       
       if (topicMap instanceof Map) {
-        const allSubtopicQuestions = Array.from(topicMap.values()).flat()
+      const allSubtopicQuestions = Array.from(topicMap.values()).flat()
           .filter((q: FeedItem) => !state.shownQuestionIds.has(q.id)) // Avoid showing the same question twice
           .filter((q: FeedItem) => !selectedQuestions.some(sq => sq.id === q.id)); // Avoid duplicates
-        
-        if (allSubtopicQuestions.length > 0) {
-          const question = allSubtopicQuestions[Math.floor(Math.random() * allSubtopicQuestions.length)];
-          selectedQuestions.push(question);
+      
+      if (allSubtopicQuestions.length > 0) {
+        const question = allSubtopicQuestions[Math.floor(Math.random() * allSubtopicQuestions.length)];
+        selectedQuestions.push(question);
         }
       }
     } else if (typeof groupedQuestions === 'object' && groupedQuestions !== null && topic in groupedQuestions) {
@@ -837,7 +837,7 @@ export function getColdStartFeed(
       state.topicsShown.add(question.category);
       
       // Process based on interaction type
-      if (interaction.wasCorrect) {
+  if (interaction.wasCorrect) {
         // Add to answered correctly
         if (!state.correctlyAnsweredTopics.has(question.category)) {
           state.correctlyAnsweredTopics.set(question.category, 0);
@@ -857,8 +857,8 @@ export function getColdStartFeed(
             topicKey,
             state.answeredQuickly.get(topicKey)! + 1
           );
-        }
-      } else if (interaction.wasSkipped) {
+    }
+  } else if (interaction.wasSkipped) {
         // Add to skipped topics
         if (!state.skippedTopics.has(question.category)) {
           state.skippedTopics.set(question.category, 0);

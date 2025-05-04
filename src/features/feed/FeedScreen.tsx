@@ -24,7 +24,8 @@ import {
   startInteraction,
   setPersonalizedFeed,
   updateUserProfile as updateUserProfileAction,
-  answerQuestion 
+  answerQuestion,
+  QuestionState
 } from '../../store/triviaSlice';
 import { useIOSAnimations } from '@/hooks/useIOSAnimations';
 // Fix the import path
@@ -54,6 +55,8 @@ const FeedScreen: React.FC = () => {
   const lastInteractionTime = useRef(Date.now());
   const lastVisibleItemId = useRef<string | null>(null);
   const previousIndex = useRef<number>(0);
+  // Add ref to track previous userProfile for cold start updates
+  const previousUserProfileRef = useRef<typeof userProfile | null>(null);
 
   // Get a background color for the loading state
   const backgroundColor = useThemeColor({}, 'background');
@@ -72,6 +75,7 @@ const FeedScreen: React.FC = () => {
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   const personalizedFeed = useAppSelector(state => state.trivia.personalizedFeed);
   const feedExplanations = useAppSelector(state => state.trivia.feedExplanations);
+  const interactionStartTimes = useAppSelector(state => state.trivia.interactionStartTimes);
 
   // Fetch trivia questions from Supabase and apply personalization
   useEffect(() => {
@@ -118,6 +122,14 @@ const FeedScreen: React.FC = () => {
 
   // Add effect to refresh feed during cold start phase when userProfile changes
   useEffect(() => {
+    // Skip if userProfile hasn't changed since last check
+    const prevProfile = previousUserProfileRef.current;
+    if (prevProfile && 
+        prevProfile.totalQuestionsAnswered === userProfile.totalQuestionsAnswered && 
+        prevProfile.coldStartComplete === userProfile.coldStartComplete) {
+      return; // Profile hasn't changed in a way that affects feed ordering
+    }
+    
     // Only refresh during cold start and after we have initial feed data
     const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
     const inColdStart = !userProfile.coldStartComplete && totalQuestionsAnswered < 20;
@@ -135,7 +147,10 @@ const FeedScreen: React.FC = () => {
         dispatch(setPersonalizedFeed({ items, explanations }));
       }
     }
-  }, [userProfile, feedData, personalizedFeed, dispatch]);
+    
+    // Update ref with current userProfile
+    previousUserProfileRef.current = userProfile;
+  }, [userProfile, feedData, dispatch]); // Remove personalizedFeed from dependencies
 
   const fingerPosition = useRef(new Animated.Value(0)).current;
   const phoneFrame = useRef(new Animated.Value(0)).current;
@@ -284,8 +299,22 @@ const FeedScreen: React.FC = () => {
       const previousQuestionId = previousQuestion.id;
       const questionState = questions[previousQuestionId];
       
+      console.log('Checking if question should be skipped:', previousQuestionId);
+      console.log('Current question state:', questionState);
+      
       // Only mark as skipped if the question wasn't answered
       if (!questionState || questionState.status === 'unanswered') {
+        // Calculate time spent if startTime exists but timeSpent hasn't been set yet
+        const startTime = interactionStartTimes[previousQuestionId];
+        let timeSpent = 0;
+        
+        if (startTime) {
+          timeSpent = Date.now() - startTime;
+          console.log(`Time spent on question ${previousQuestionId}: ${timeSpent}ms`);
+        } else {
+          console.log(`Warning: No start time recorded for question ${previousQuestionId}`);
+        }
+        
         // Dispatch skip action to mark question as skipped
         dispatch(skipQuestion({ questionId: previousQuestionId }));
         
@@ -295,7 +324,7 @@ const FeedScreen: React.FC = () => {
           previousQuestionId,
           { 
             wasSkipped: true,
-            timeSpent: questionState?.timeSpent || 0
+            timeSpent: timeSpent
           },
           previousQuestion
         );
@@ -303,10 +332,15 @@ const FeedScreen: React.FC = () => {
         // Save updated profile to Redux
         dispatch(updateUserProfileAction(updatedProfile));
         
-        console.log('Skipped question:', previousQuestionId, 'Tags:', previousQuestion.tags || 'None');
+        console.log('Skipped question:', previousQuestionId, 
+          'Time spent:', timeSpent,
+          'Tags:', previousQuestion.tags || 'None');
+      } else {
+        console.log('Skipping already answered/skipped question:', previousQuestionId, 
+          'Status:', questionState.status);
       }
     }
-  }, [dispatch, questions, personalizedFeed, userProfile]);
+  }, [dispatch, questions, personalizedFeed, userProfile, interactionStartTimes]);
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -325,7 +359,19 @@ const FeedScreen: React.FC = () => {
         setCurrentIndex(newIndex);
         
         // Start tracking interaction time with this question
+        const currentTime = Date.now();
+        console.log(`Starting interaction tracking for question ${currentItemId} at ${new Date(currentTime).toISOString()}`);
         dispatch(startInteraction({ questionId: currentItemId }));
+        
+        // Immediately check if we already have an existing interaction time
+        setTimeout(() => {
+          const startTime = interactionStartTimes[currentItemId];
+          if (startTime) {
+            console.log(`Confirmed interaction tracking for ${currentItemId}, start time: ${new Date(startTime).toISOString()}`);
+          } else {
+            console.warn(`Failed to start interaction tracking for ${currentItemId}`);
+          }
+        }, 50);
         
         // Set current explanation for debugging
         if (__DEV__ && feedExplanations[currentItemId]) {
@@ -333,16 +379,41 @@ const FeedScreen: React.FC = () => {
         }
       }
     },
-    [markPreviousAsSkipped, personalizedFeed, feedExplanations]
+    [markPreviousAsSkipped, personalizedFeed, feedExplanations, dispatch, interactionStartTimes]
   );
 
   useEffect(() => {
     if (personalizedFeed.length > 0) {
-      lastVisibleItemId.current = personalizedFeed[0].id;
+      const firstQuestionId = personalizedFeed[0].id;
+      lastVisibleItemId.current = firstQuestionId;
+      
       // Start tracking interaction with first question
-      dispatch(startInteraction({ questionId: personalizedFeed[0].id }));
+      console.log(`Starting initial interaction tracking for question ${firstQuestionId}`);
+      
+      // Dispatch action to start tracking this question's interaction time
+      dispatch(startInteraction({ questionId: firstQuestionId }));
     }
+  // Remove interactionStartTimes from dependencies to prevent infinite loop
   }, [personalizedFeed, dispatch]);
+  
+  // Separate useEffect for verification to prevent infinite loops
+  useEffect(() => {
+    // Only run once after component mounts to verify first question tracking
+    if (personalizedFeed.length > 0) {
+      const firstQuestionId = personalizedFeed[0].id;
+      
+      // Verify after a short delay
+      const timer = setTimeout(() => {
+        if (interactionStartTimes[firstQuestionId]) {
+          console.log(`Confirmed initial interaction tracking for ${firstQuestionId}, start time: ${new Date(interactionStartTimes[firstQuestionId]).toISOString()}`);
+        } else {
+          console.warn(`Failed to start initial interaction tracking for ${firstQuestionId}`);
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [personalizedFeed.length]); // Only run when feed length changes
 
   const viewabilityConfig = {
     itemVisiblePercentThreshold: 50,
@@ -370,18 +441,28 @@ const FeedScreen: React.FC = () => {
     const questionItem = personalizedFeed.find(item => item.id === questionId);
     if (!questionItem) return;
     
+    // Calculate time spent
+    const startTime = interactionStartTimes[questionId];
+    let timeSpent = 0;
+    
+    if (startTime) {
+      timeSpent = Date.now() - startTime;
+      console.log(`Time spent answering question ${questionId}: ${timeSpent}ms`);
+    } else {
+      console.log(`Warning: No start time recorded for answered question ${questionId}`);
+    }
+    
     // Dispatch answer action to mark question as answered
     dispatch(answerQuestion({ questionId, answerIndex, isCorrect }));
     
     // Update user profile for personalization
-    const questionState = questions[questionId];
     const updatedProfile = updateUserProfile(
       userProfile,
       questionId,
       {
         wasCorrect: isCorrect,
         wasSkipped: false,
-        timeSpent: questionState?.timeSpent || 0
+        timeSpent: timeSpent
       },
       questionItem
     );
@@ -398,11 +479,11 @@ const FeedScreen: React.FC = () => {
       'Correct:', 
       isCorrect, 
       'Time:', 
-      questionState?.timeSpent,
+      timeSpent,
       'Tags:',
       questionItem.tags || 'None'
     );
-  }, [dispatch, personalizedFeed, questions, userProfile, currentIndex]);
+  }, [dispatch, personalizedFeed, userProfile, interactionStartTimes]);
 
   // Modify handleNextQuestion to be more controlled and prevent unexpected scrolling
   const handleNextQuestion = useCallback(() => {
