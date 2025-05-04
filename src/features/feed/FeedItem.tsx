@@ -164,32 +164,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     setHoveredAction(null);
   };
 
-  const getResultText = () => {
-    if (!isAnswered()) {
-      return '';
-    }
-    
-    if (isSelectedAnswerCorrect()) {
-      const phrases = [
-        "That's correct!",
-        "Great job!",
-        "You got it!",
-        "Excellent!",
-        "Well done!",
-      ];
-      return phrases[Math.floor(Math.random() * phrases.length)];
-    } else {
-      const phrases = [
-        "Not quite!",
-        "Good try, but not correct.",
-        "That's not right.",
-        "Sorry, that's incorrect.",
-        "Not the right answer.",
-      ];
-      return phrases[Math.floor(Math.random() * phrases.length)];
-    }
-  };
-
   // Custom styles for background color
   const dynamicStyles = StyleSheet.create({
     backgroundColor: {
@@ -204,16 +178,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
       backgroundColor: item.backgroundColor
     }
   });
-
-  // Ensure the Next Question button doesn't trigger scrolling within the component
-  const handleNextQuestion = useCallback(() => {
-    if (onNextQuestion) {
-      // Prevent default behavior
-      setTimeout(() => {
-        onNextQuestion();
-      }, 50);
-    }
-  }, [onNextQuestion]);
 
   return (
     <View style={styles.container}>
@@ -309,27 +273,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
               
               {isAnswered() && (
                 <>
-                  <ThemedText style={[
-                    styles.resultText, 
-                    isSelectedAnswerCorrect() ? styles.correctResultText : styles.incorrectResultText
-                  ]}>
-                    {getResultText()}
-                  </ThemedText>
-                  
-                  {/* Add Next Question button */}
-                  {onNextQuestion && (
-                    <TouchableOpacity
-                      style={styles.nextQuestionButton}
-                      onPress={handleNextQuestion}
-                      {...(Platform.OS === 'web' ? {
-                        onMouseEnter: () => handleActionMouseEnter('next'),
-                        onMouseLeave: handleActionMouseLeave
-                      } : {})}
-                    >
-                      <ThemedText style={styles.nextQuestionButtonText}>Next Question</ThemedText>
-                      <FeatherIcon name="chevron-down" size={20} color="white" />
-                    </TouchableOpacity>
-                  )}
                 </>
               )}
             </>
@@ -428,11 +371,14 @@ export default FeedItem;
 const styles = StyleSheet.create({
   container: {
     width: width,
-    height: Platform.OS === 'web' ? '100vh' : height,
+    height: Platform.OS === 'web' ? '100vh' as any : height,
+    minHeight: Platform.OS === 'web' ? '100vh' as any : height - 49, // Adjust for bottom tab bar
     position: 'relative',
     overflow: 'hidden',
     flexDirection: 'column',
     justifyContent: 'flex-end',
+    // Ensure the container takes the full viewport
+    flex: 1,
   },
   overlay: {
     position: 'absolute',
@@ -478,7 +424,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-    textShadow: Platform.OS === 'web' ? '0px 2px 4px rgba(0, 0, 0, 0.5)' : undefined,
+    ...(Platform.OS === 'web' ? { textShadow: '0px 2px 4px rgba(0, 0, 0, 0.5)' } as any : {}),
   },
   answersContainer: {
     marginTop: 10,
@@ -549,43 +495,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
-  },
-  resultText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginVertical: 10,
-    paddingVertical: 5,
-    color: 'white',
-    textShadow: Platform.OS === 'web' ? '0px 1px 2px rgba(0, 0, 0, 0.3)' : undefined,
-  },
-  correctResultText: {
-    color: '#4CAF50',
-  },
-  incorrectResultText: {
-    color: '#F44336',
-  },
-  nextQuestionButton: {
-    backgroundColor: '#1976D2',
-    borderRadius: 24,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginTop: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  nextQuestionButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginRight: 8,
   },
   footer: {
     flexDirection: 'row',

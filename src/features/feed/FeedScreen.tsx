@@ -81,6 +81,11 @@ const FeedScreen: React.FC = () => {
   const feedExplanations = useAppSelector(state => state.trivia.feedExplanations);
   const interactionStartTimes = useAppSelector(state => state.trivia.interactionStartTimes);
 
+  // Add state to track scroll activity
+  const [isActivelyScrolling, setIsActivelyScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScrollPosition = useRef<number>(0);
+
   // Fetch trivia questions from Supabase and apply personalization
   useEffect(() => {
     const loadTriviaQuestions = async () => {
@@ -222,6 +227,15 @@ const FeedScreen: React.FC = () => {
       return () => {
         window.removeEventListener('resize', handleResize);
       };
+    } else {
+      // For mobile, update viewport height using Dimensions API
+      const dimensionsSubscription = Dimensions.addEventListener('change', ({ window }) => {
+        setViewportHeight(window.height - 49);
+      });
+      
+      return () => {
+        dimensionsSubscription.remove();
+      };
     }
   }, []);
 
@@ -335,12 +349,6 @@ const FeedScreen: React.FC = () => {
     }
   };
 
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (event.nativeEvent.contentOffset.y !== 0 && showTooltip) {
-      hideTooltip();
-    }
-  };
-
   // When scrolling past a question, mark it as skipped if it wasn't answered and update profile
   const markPreviousAsSkipped = useCallback((prevIndex: number, newIndex: number) => {
     // Only mark as skipped when scrolling down and if we have feed data
@@ -392,6 +400,48 @@ const FeedScreen: React.FC = () => {
     }
   }, [dispatch, questions, personalizedFeed, userProfile, interactionStartTimes]);
 
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (event.nativeEvent.contentOffset.y !== 0 && showTooltip) {
+      hideTooltip();
+    }
+    
+    // Mark as actively scrolling
+    setIsActivelyScrolling(true);
+    
+    // Clear any existing timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    
+    // Set a timeout to mark as no longer scrolling after a brief period
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsActivelyScrolling(false);
+    }, 500);
+    
+    // Check for skipped questions during scroll
+    const currentScrollPos = event.nativeEvent.contentOffset.y;
+    const scrollDirection = currentScrollPos > lastScrollPosition.current ? 'down' : 'up';
+    lastScrollPosition.current = currentScrollPos;
+    
+    // If scrolling down quickly, check for questions to mark as skipped
+    if (scrollDirection === 'down') {
+      // Calculate the approximate index based on scroll position
+      const estimatedIndex = Math.round(currentScrollPos / viewportHeight);
+      
+      // If we've moved more than one question, we may have skipped some
+      if (estimatedIndex > currentIndex + 1) {
+        console.log(`Fast scroll detected: ${currentIndex} → ~${estimatedIndex}`);
+        
+        // Mark intermediate questions as skipped
+        for (let i = currentIndex; i < estimatedIndex; i++) {
+          if (i >= 0 && i < personalizedFeed.length) {
+            markPreviousAsSkipped(i, estimatedIndex);
+          }
+        }
+      }
+    }
+  };
+
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0 && viewableItems[0].index !== null && personalizedFeed.length > 0) {
@@ -432,6 +482,45 @@ const FeedScreen: React.FC = () => {
     [markPreviousAsSkipped, personalizedFeed, feedExplanations, dispatch, interactionStartTimes]
   );
 
+  // Add useEffect for checking idle/inactive questions
+  useEffect(() => {
+    // Set up timer to periodically check if questions should be marked as skipped
+    // This handles cases where scroll events might not trigger properly
+    const checkInterval = setInterval(() => {
+      // Only check if we're not actively scrolling (to avoid conflicts)
+      if (!isActivelyScrolling && personalizedFeed.length > 0) {
+        const currentTime = Date.now();
+        
+        // Check if a significant time has passed since the last interaction with current question
+        const currentQuestionId = personalizedFeed[currentIndex]?.id;
+        if (currentQuestionId) {
+          const startTime = interactionStartTimes[currentQuestionId];
+          
+          // If we've been on this question for more than 30 seconds without interaction
+          // and user is scrolling to the next one, consider marking it as skipped
+          if (startTime && (currentTime - startTime > 30000)) {
+            console.log(`Long idle time detected on question ${currentQuestionId} (${Math.round((currentTime - startTime)/1000)}s)`);
+            
+            // If this isn't the last question, check if we should auto-advance
+            if (currentIndex < personalizedFeed.length - 1) {
+              const questionState = questions[currentQuestionId];
+              
+              // Only advance if question hasn't been answered or skipped yet
+              if (!questionState || questionState.status === 'unanswered') {
+                console.log('Auto-marking long idle question as skipped');
+                markPreviousAsSkipped(currentIndex, currentIndex + 1);
+              }
+            }
+          }
+        }
+      }
+    }, 5000); // Check every 5 seconds
+    
+    return () => {
+      clearInterval(checkInterval);
+    };
+  }, [currentIndex, isActivelyScrolling, personalizedFeed, interactionStartTimes, questions, markPreviousAsSkipped]);
+
   useEffect(() => {
     if (personalizedFeed.length > 0) {
       const firstQuestionId = personalizedFeed[0].id;
@@ -467,6 +556,7 @@ const FeedScreen: React.FC = () => {
 
   const viewabilityConfig = {
     itemVisiblePercentThreshold: 50,
+    minimumViewTime: 300, // Question must be visible for at least 300ms to be considered viewed
   };
 
   const viewabilityConfigCallbackPairs = useRef([
@@ -478,12 +568,37 @@ const FeedScreen: React.FC = () => {
     if (showTooltip) {
       hideTooltip();
     }
-  }, [showTooltip]);
+    
+    // Log scroll movement for debugging
+    console.log(`Scroll movement started from question ${currentIndex}`);
+  }, [showTooltip, currentIndex]);
 
   const onMomentumScrollEnd = useCallback(() => {
     const scrollTime = Date.now() - lastInteractionTime.current;
-    console.log(`Scroll transition time: ${scrollTime}ms`);
-  }, []);
+    console.log(`Scroll transition time: ${scrollTime}ms to question ${currentIndex}`);
+    
+    // Double-check if we need to mark questions as skipped
+    if (previousIndex.current !== currentIndex && previousIndex.current < currentIndex) {
+      console.log(`Manually checking if questions were skipped during scroll from ${previousIndex.current} to ${currentIndex}`);
+      
+      // Check all questions that were passed
+      for (let i = previousIndex.current; i < currentIndex; i++) {
+        const skippedQuestion = personalizedFeed[i];
+        if (skippedQuestion) {
+          markPreviousAsSkipped(i, currentIndex);
+        }
+      }
+    }
+    
+    // If we've scrolled more than one question at once, ensure all were marked
+    const difference = Math.abs(previousIndex.current - currentIndex);
+    if (difference > 1) {
+      console.log(`Multiple questions scrolled (${difference}), ensuring all are marked correctly`);
+    }
+    
+    // Update previous index after ensuring skipped questions are marked
+    previousIndex.current = currentIndex;
+  }, [currentIndex, personalizedFeed, markPreviousAsSkipped]);
 
   // Add function to handle answering questions
   const handleAnswerQuestion = useCallback((questionId: string, answerIndex: number, isCorrect: boolean) => {
@@ -811,14 +926,22 @@ const FeedScreen: React.FC = () => {
         onScroll={handleScroll}
         scrollEventThrottle={16}
         snapToAlignment="start"
-        decelerationRate="fast"
+        decelerationRate={Platform.OS === 'ios' ? 'fast' : 'normal'}
         snapToInterval={viewportHeight}
         style={styles.flatList}
-        contentContainerStyle={Platform.OS === 'web' ? { minHeight: '100%' } : undefined}
-        removeClippedSubviews={false}
+        contentContainerStyle={[
+          Platform.OS === 'web' ? { minHeight: '100%' } : undefined,
+          { paddingBottom: Platform.OS === 'ios' ? 40 : 20 } // Add padding to bottom for better scroll experience
+        ]}
+        removeClippedSubviews={Platform.OS !== 'web'} // Improve performance on mobile but can cause issues on web
         maxToRenderPerBatch={3}
-        windowSize={3}
+        windowSize={5} // Increase window size for better visibility detection
         initialNumToRender={2}
+        updateCellsBatchingPeriod={50} // Optimize batch updates
+        maintainVisibleContentPosition={{ // Help maintain position during dynamic content changes
+          minIndexForVisible: 0,
+          autoscrollToTopThreshold: 10
+        }}
       />
 
       {/* InteractionTracker Component */}
