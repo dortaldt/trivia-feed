@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,28 +6,48 @@ import {
   Dimensions,
   Platform,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useAppSelector } from '@/src/store/hooks';
 import { FeatherIcon } from '@/components/FeatherIcon';
-import { mockFeedData } from '@/src/data/mockData';
 import * as Haptics from 'expo-haptics';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
   withTiming,
   withSpring,
-  Easing 
+  Easing,
+  type WithTimingConfig,
+  type WithSpringConfig,
 } from 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { WebContainer } from '@/components/WebContainer';
+import { fetchTriviaQuestions, FeedItem } from '../../lib/triviaService';
 
 const { width, height } = Dimensions.get('window');
 
+type FeatherIconName = 
+  | 'check-circle' | 'award' | 'skip-forward' | 'trending-up' 
+  | 'target' | 'alert-triangle' | 'chevron-up' | 'chevron-down';
+
+// Add types for the props
+interface StatCardProps {
+  icon: FeatherIconName;
+  title: string;
+  value: number;
+  subtext?: string;
+  color?: string;
+  animate?: boolean;
+  delay?: number;
+  valuePrefix?: string;
+  valueSuffix?: string;
+}
+
 // Helper component for stat cards
-const StatCard = ({ 
+const StatCard: React.FC<StatCardProps> = ({ 
   icon, 
   title, 
   value, 
@@ -50,11 +70,13 @@ const StatCard = ({
     opacity.value = withTiming(1, { 
       duration: 600,
       easing: Easing.out(Easing.quad),
+      // @ts-ignore delay is not in the type but works in the API
       delay
     });
     scale.value = withSpring(1, { 
       damping: 12, 
       stiffness: 90,
+      // @ts-ignore delay is not in the type but works in the API
       delay
     });
   }, []);
@@ -86,8 +108,21 @@ const StatCard = ({
   );
 };
 
+// Define the prop types for CategoryProgressCard
+interface CategoryProgressCardProps {
+  category: string;
+  answeredCount: number;
+  totalCount: number;
+  color: string;
+}
+
 // Category progress card
-const CategoryProgressCard = ({ category, answeredCount, totalCount, color }) => {
+const CategoryProgressCard: React.FC<CategoryProgressCardProps> = ({ 
+  category, 
+  answeredCount, 
+  totalCount, 
+  color 
+}) => {
   const colorScheme = useColorScheme() ?? 'light';
   const backgroundColor = useThemeColor({}, 'background');
   
@@ -133,8 +168,19 @@ const CategoryProgressCard = ({ category, answeredCount, totalCount, color }) =>
   );
 };
 
+// Define the prop types for InsightCard
+interface InsightCardProps {
+  title: string;
+  content: string;
+  index: number;
+}
+
 // Educational insight card
-const InsightCard = ({ title, content, index }) => {
+const InsightCard: React.FC<InsightCardProps> = ({ 
+  title, 
+  content, 
+  index 
+}) => {
   const [expanded, setExpanded] = React.useState(false);
   const contentHeight = useSharedValue(0);
   const colorScheme = useColorScheme() ?? 'light';
@@ -192,65 +238,83 @@ const StatsScreen: React.FC = () => {
   const backgroundColor = useThemeColor({}, 'background');
   
   const questions = useAppSelector(state => state.trivia.questions);
+  const [feedData, setFeedData] = useState<FeedItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadTriviaQuestions = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const questions = await fetchTriviaQuestions(50);
+        setFeedData(questions);
+      } catch (error) {
+        console.error('Failed to load trivia questions for stats:', error);
+        setLoadError('Failed to load questions. Stats may be incomplete.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTriviaQuestions();
+  }, []);
   
-  // Calculate stats from redux store
   const stats = useMemo(() => {
-    const totalQuestions = mockFeedData.length;
+    const totalQuestions = feedData.length;
     let answered = 0;
     let correct = 0;
     let skipped = 0;
-    let categoryStats = {};
-    let difficultyStats = {
+    let categoryStats: Record<string, { total: number; correct: number; answered: number }> = {};
+    let difficultyStats: Record<string, { total: number; correct: number; answered: number }> = {
       'Easy': { total: 0, correct: 0, answered: 0 },
       'Medium': { total: 0, correct: 0, answered: 0 },
       'Hard': { total: 0, correct: 0, answered: 0 },
     };
 
-    // Count questions by category
-    mockFeedData.forEach(item => {
+    feedData.forEach(item => {
       if (!categoryStats[item.category]) {
         categoryStats[item.category] = { total: 0, correct: 0, answered: 0 };
       }
       categoryStats[item.category].total++;
-      difficultyStats[item.difficulty].total++;
+      if (difficultyStats[item.difficulty]) {
+        difficultyStats[item.difficulty].total++;
+      }
     });
 
-    // Process answered/skipped questions
     Object.entries(questions).forEach(([questionId, questionState]) => {
-      const question = mockFeedData.find(q => q.id === questionId);
+      const question = feedData.find(q => q.id === questionId);
       
       if (!question) return;
       
       if (questionState.status === 'answered') {
         answered++;
         categoryStats[question.category].answered++;
-        difficultyStats[question.difficulty].answered++;
+        if (difficultyStats[question.difficulty]) {
+          difficultyStats[question.difficulty].answered++;
         
-        if (questionState.answerIndex !== undefined && 
-            question.answers[questionState.answerIndex].isCorrect) {
-          correct++;
-          categoryStats[question.category].correct++;
-          difficultyStats[question.difficulty].correct++;
+          if (questionState.answerIndex !== undefined && 
+              question.answers[questionState.answerIndex].isCorrect) {
+            correct++;
+            categoryStats[question.category].correct++;
+            difficultyStats[question.difficulty].correct++;
+          }
         }
       } else if (questionState.status === 'skipped') {
         skipped++;
       }
     });
 
-    // Calculate accuracy
     const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0;
     
-    // Calculate completion percentage
-    const completion = Math.round((answered / totalQuestions) * 100);
+    const completion = totalQuestions > 0 ? Math.round((answered / totalQuestions) * 100) : 0;
     
-    // Format categories for display
     const categories = Object.entries(categoryStats).map(([name, stats]) => ({
       name,
       ...stats,
       percentage: stats.total > 0 ? Math.round((stats.answered / stats.total) * 100) : 0,
     })).sort((a, b) => b.percentage - a.percentage);
 
-    // Calculate difficulty breakdown 
     const difficultyBreakdown = Object.entries(difficultyStats).map(([difficulty, stats]) => ({
       difficulty,
       ...stats,
@@ -267,9 +331,8 @@ const StatsScreen: React.FC = () => {
       categories,
       difficultyBreakdown
     };
-  }, [questions]);
+  }, [questions, feedData]);
 
-  // Educational insights based on current stats
   const educationalInsights = [
     {
       title: 'Spaced Repetition Matters',
@@ -289,22 +352,19 @@ const StatsScreen: React.FC = () => {
     }
   ];
 
-  // Get most improved category
   const mostImprovedCategory = useMemo(() => {
     if (stats.categories.length === 0) return null;
     return stats.categories[0];
   }, [stats.categories]);
 
-  // Calculate areas to focus on (categories with lowest completion)
   const areasToFocus = useMemo(() => {
     return stats.categories
-      .filter(cat => cat.answered > 0) // Only consider categories the user has started
-      .sort((a, b) => a.percentage - b.percentage) // Sort by completion percentage
-      .slice(0, 2); // Take the lowest 2
+      .filter(cat => cat.answered > 0)
+      .sort((a, b) => a.percentage - b.percentage)
+      .slice(0, 2);
   }, [stats.categories]);
   
-  // Category colors
-  const categoryColors = {
+  const categoryColors: Record<string, string> = {
     'Science': '#4285F4',
     'History': '#DB4437',
     'Geography': '#0F9D58',
@@ -318,9 +378,24 @@ const StatsScreen: React.FC = () => {
     'Movies': '#FFC107'
   };
 
-  // We'll wrap our content in WebContainer for web users
+  if (isLoading) {
+    return (
+      <ThemedView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#0a7ea4" />
+        <ThemedText style={styles.loadingText}>Loading stats...</ThemedText>
+      </ThemedView>
+    );
+  }
+
   const Content = (
     <ThemedView style={styles.container}>
+      {loadError && (
+        <View style={styles.errorBanner}>
+          <FeatherIcon name="alert-triangle" size={16} color="#e74c3c" />
+          <ThemedText style={styles.errorText}>{loadError}</ThemedText>
+        </View>
+      )}
+      
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -328,7 +403,6 @@ const StatsScreen: React.FC = () => {
       >
         <ThemedText type="title" style={styles.title}>Your Stats</ThemedText>
         
-        {/* Main stats cards */}
         <View style={styles.statsGrid}>
           <StatCard 
             icon="check-circle" 
@@ -353,6 +427,7 @@ const StatsScreen: React.FC = () => {
             icon="skip-forward" 
             title="Questions Skipped" 
             value={stats.skipped}
+            subtext=""
             color="#607D8B"
             animate
             delay={300}
@@ -361,13 +436,13 @@ const StatsScreen: React.FC = () => {
             icon="trending-up" 
             title="Questions Remaining" 
             value={stats.totalQuestions - stats.answered}
+            subtext=""
             color="#9C27B0" 
             animate
             delay={400}
           />
         </View>
 
-        {/* Difficulty breakdown section */}
         <ThemedView style={styles.sectionContainer}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Performance by Difficulty
@@ -406,7 +481,6 @@ const StatsScreen: React.FC = () => {
           ))}
         </ThemedView>
         
-        {/* Category progress section */}
         <ThemedView style={styles.sectionContainer}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Category Progress
@@ -423,7 +497,6 @@ const StatsScreen: React.FC = () => {
           ))}
         </ThemedView>
         
-        {/* Educational insights section */}
         <ThemedView style={styles.sectionContainer}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Learning Insights
@@ -439,7 +512,6 @@ const StatsScreen: React.FC = () => {
           ))}
         </ThemedView>
         
-        {/* Learning recommendations */}
         <ThemedView style={styles.sectionContainer}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Personalized Recommendations
@@ -494,16 +566,7 @@ const StatsScreen: React.FC = () => {
     </ThemedView>
   );
 
-  // For web, wrap in a WebContainer; for mobile, return content directly
-  if (Platform.OS === 'web') {
-    return (
-      <WebContainer maxWidth={1000}>
-        {Content}
-      </WebContainer>
-    );
-  }
-
-  return Content;
+  return Platform.OS === 'web' ? <WebContainer>{Content}</WebContainer> : Content;
 };
 
 const styles = StyleSheet.create({
@@ -766,7 +829,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     padding: 20,
     opacity: 0.7,
-  }
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#555',
+    fontFamily: Platform.select({
+      ios: 'System',
+      default: 'Inter',
+    }),
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+    padding: 8,
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#e74c3c',
+    marginLeft: 8,
+    flex: 1,
+    fontFamily: Platform.select({
+      ios: 'System',
+      default: 'Inter',
+    }),
+  },
 });
 
 export default StatsScreen;

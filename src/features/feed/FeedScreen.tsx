@@ -12,12 +12,17 @@ import {
   Platform,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  ActivityIndicator,
 } from 'react-native';
 import FeedItem from './FeedItem';
-import { mockFeedData } from '../../data/mockData';
+// Remove mock data import
+// import { mockFeedData } from '../../data/mockData';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { markTooltipAsViewed, skipQuestion } from '../../store/triviaSlice';
 import { useIOSAnimations } from '@/hooks/useIOSAnimations';
+// Fix the import path
+import { fetchTriviaQuestions, FeedItem as FeedItemType, analyzeCorrectAnswers } from '../../lib/triviaService';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 const { width, height } = Dimensions.get('window');
 
@@ -25,10 +30,18 @@ const FeedScreen: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showTooltip, setShowTooltip] = useState(false);
   const [isAnimationError, setIsAnimationError] = useState(false);
+  // Add state for feed data
+  const [feedData, setFeedData] = useState<FeedItemType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  
   const flatListRef = useRef<FlatList>(null);
   const lastInteractionTime = useRef(Date.now());
   const lastVisibleItemId = useRef<string | null>(null);
   const previousIndex = useRef<number>(0);
+
+  // Get a background color for the loading state
+  const backgroundColor = useThemeColor({}, 'background');
 
   // State to track viewport height on web for proper sizing
   const [viewportHeight, setViewportHeight] = useState(
@@ -41,6 +54,25 @@ const FeedScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const hasViewedTooltip = useAppSelector(state => state.trivia.hasViewedTooltip);
   const questions = useAppSelector(state => state.trivia.questions);
+
+  // Fetch trivia questions from Supabase when the component mounts
+  useEffect(() => {
+    const loadTriviaQuestions = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const questions = await fetchTriviaQuestions(25); // Fetch 25 questions
+        setFeedData(questions);
+      } catch (error) {
+        console.error('Failed to load trivia questions:', error);
+        setLoadError('Failed to load questions. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTriviaQuestions();
+  }, []);
 
   const fingerPosition = useRef(new Animated.Value(0)).current;
   const phoneFrame = useRef(new Animated.Value(0)).current;
@@ -183,9 +215,9 @@ const FeedScreen: React.FC = () => {
 
   // When scrolling past a question, mark it as skipped if it wasn't answered
   const markPreviousAsSkipped = useCallback((prevIndex: number, newIndex: number) => {
-    // Only mark as skipped when scrolling down
-    if (newIndex > prevIndex) {
-      const previousQuestionId = mockFeedData[prevIndex].id;
+    // Only mark as skipped when scrolling down and if we have feed data
+    if (newIndex > prevIndex && feedData.length > 0) {
+      const previousQuestionId = feedData[prevIndex].id;
       const questionState = questions[previousQuestionId];
       
       // Only mark as skipped if the question wasn't answered
@@ -193,13 +225,13 @@ const FeedScreen: React.FC = () => {
         dispatch(skipQuestion({ questionId: previousQuestionId }));
       }
     }
-  }, [dispatch, questions]);
+  }, [dispatch, questions, feedData]);
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0 && viewableItems[0].index !== null) {
+      if (viewableItems.length > 0 && viewableItems[0].index !== null && feedData.length > 0) {
         const newIndex = viewableItems[0].index;
-        const currentItemId = mockFeedData[newIndex].id;
+        const currentItemId = feedData[newIndex].id;
 
         // Mark previous question as skipped when scrolling to a new question
         if (previousIndex.current !== newIndex) {
@@ -211,14 +243,14 @@ const FeedScreen: React.FC = () => {
         setCurrentIndex(newIndex);
       }
     },
-    [markPreviousAsSkipped]
+    [markPreviousAsSkipped, feedData]
   );
 
   useEffect(() => {
-    if (mockFeedData.length > 0) {
-      lastVisibleItemId.current = mockFeedData[0].id;
+    if (feedData.length > 0) {
+      lastVisibleItemId.current = feedData[0].id;
     }
-  }, []);
+  }, [feedData]);
 
   const viewabilityConfig = {
     itemVisiblePercentThreshold: 50,
@@ -240,11 +272,11 @@ const FeedScreen: React.FC = () => {
     console.log(`Scroll transition time: ${scrollTime}ms`);
   }, []);
 
-  const renderItem = ({ item }: { item: any }) => {
+  const renderItem = ({ item }: { item: FeedItemType }) => {
     return <FeedItem item={item} />;
   };
 
-  const keyExtractor = (item: any) => item.id;
+  const keyExtractor = (item: FeedItemType) => item.id;
 
   // Get item layout with responsive height
   const getItemLayout = (_: any, index: number) => {
@@ -255,53 +287,77 @@ const FeedScreen: React.FC = () => {
     };
   };
 
-  // Handle keyboard-based navigation for web
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (!flatListRef.current) return;
+  // Loading state
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#0a7ea4" />
+        <Text style={styles.loadingText}>Loading trivia questions...</Text>
+        
+        {/* Add debug button for analyzing correct answers */}
+        {__DEV__ && (
+          <TouchableOpacity 
+            style={[styles.retryButton, { marginTop: 20 }]}
+            onPress={() => {
+              analyzeCorrectAnswers().then(() => {
+                console.log('Analysis complete. Check console logs for details.');
+              });
+            }}
+          >
+            <Text style={styles.retryButtonText}>Analyze Correct Answers</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }
 
-    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-      // Navigate to next question
-      if (currentIndex < mockFeedData.length - 1) {
-        flatListRef.current.scrollToIndex({
-          index: currentIndex + 1,
-          animated: true
-        });
-      }
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-      // Navigate to previous question
-      if (currentIndex > 0) {
-        flatListRef.current.scrollToIndex({
-          index: currentIndex - 1,
-          animated: true
-        });
-      }
-    }
-  }, [currentIndex]);
-
-  // Add keyboard event listeners for web
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      window.addEventListener('keydown', handleKeyDown);
-      return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-      };
-    }
-  }, [handleKeyDown]);
+  // Error state
+  if (loadError) {
+    return (
+      <View style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={styles.errorText}>{loadError}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={() => {
+            fetchTriviaQuestions(25).then((questions: FeedItemType[]) => {
+              setFeedData(questions);
+              setLoadError(null);
+            }).catch((err: Error) => {
+              console.error('Retry failed:', err);
+              setLoadError('Failed to load questions. Please try again later.');
+            });
+          }}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+        
+        {/* Add debug button for analyzing correct answers */}
+        {__DEV__ && (
+          <TouchableOpacity 
+            style={[styles.retryButton, { marginTop: 10, backgroundColor: '#2c3e50' }]}
+            onPress={() => {
+              analyzeCorrectAnswers().then(() => {
+                console.log('Analysis complete. Check console logs for details.');
+              });
+            }}
+          >
+            <Text style={styles.retryButtonText}>Analyze Correct Answers</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.container, { height: Platform.OS === 'web' ? '100%' : undefined }]}>
+    <View style={styles.container}>
       <FlatList
         ref={flatListRef}
-        data={mockFeedData}
+        data={feedData}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        pagingEnabled
         showsVerticalScrollIndicator={false}
+        pagingEnabled
         getItemLayout={getItemLayout}
-        initialNumToRender={2}
-        maxToRenderPerBatch={3}
-        windowSize={5}
-        removeClippedSubviews={Platform.OS !== 'web'}
         viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
         onMomentumScrollBegin={onMomentumScrollBegin}
         onMomentumScrollEnd={onMomentumScrollEnd}
@@ -533,6 +589,49 @@ const styles = StyleSheet.create({
     }),
     color: 'white',
     fontSize: 12,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#555',
+    fontFamily: Platform.select({
+      ios: 'System',
+      default: 'Inter',
+    }),
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#e74c3c',
+    textAlign: 'center',
+    marginHorizontal: 32,
+    marginBottom: 16,
+    fontFamily: Platform.select({
+      ios: 'System',
+      default: 'Inter',
+    }),
+  },
+  retryButton: {
+    backgroundColor: '#0a7ea4',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 3,
+      elevation: 4,
+    }),
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontFamily: Platform.select({
+      ios: 'System-Bold',
+      default: 'Inter-Bold',
+    }),
   },
 });
 
