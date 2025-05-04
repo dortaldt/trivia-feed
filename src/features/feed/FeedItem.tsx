@@ -10,6 +10,7 @@ import {
   Platform,
   ImageErrorEventData,
   NativeSyntheticEvent,
+  TextStyle,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { answerQuestion, QuestionState } from '../../store/triviaSlice';
@@ -217,6 +218,12 @@ const FeedItem: React.FC<FeedItemProps> = ({ item }) => {
                     questionState?.answerIndex === index && 
                     !answer.isCorrect && 
                     styles.incorrectAnswerOption,
+                    // Highlight the correct answer when any wrong answer is selected
+                    isAnswered() && 
+                    questionState?.answerIndex !== index && 
+                    answer.isCorrect && 
+                    !isSelectedAnswerCorrect() && 
+                    styles.correctAnswerOption,
                     // Add hover state for web
                     Platform.OS === 'web' && hoveredAnswerIndex === index && styles.hoveredAnswerOption,
                     // Add skipped state styling
@@ -240,11 +247,13 @@ const FeedItem: React.FC<FeedItemProps> = ({ item }) => {
                     {answer.text}
                   </ThemedText>
                   
-                  {isAnswered() && questionState?.answerIndex === index && (
+                  {(isAnswered() && questionState?.answerIndex === index && (
                     answer.isCorrect ? 
-                    <FeatherIcon name="check-circle" size={24} color="#4CAF50" style={styles.resultIcon} /> : 
-                    <FeatherIcon name="x-circle" size={24} color="#F44336" style={styles.resultIcon} />
-                  )}
+                    <FeatherIcon name="check-circle" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} /> : 
+                    <FeatherIcon name="x-circle" size={24} color="#F44336" style={{marginLeft: 8} as TextStyle} />
+                  )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
+                    <FeatherIcon name="check-circle" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} />
+                  ))}
                 </TouchableOpacity>
               ))}
               
@@ -530,7 +539,7 @@ const styles = StyleSheet.create({
   },
   resultIcon: {
     marginLeft: 8,
-  },
+  } as TextStyle,
   resultText: {
     marginTop: 12,
     fontSize: 24,
