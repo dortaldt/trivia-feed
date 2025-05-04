@@ -203,16 +203,27 @@ export async function analyzeCorrectAnswers() {
 // Function to fetch trivia questions from Supabase
 export async function fetchTriviaQuestions(limit: number = 20, language: string = 'English'): Promise<FeedItem[]> {
   try {
-    console.log('DEBUG: Starting to fetch data from Supabase');
+    console.log('DEBUG: Starting to fetch data from Supabase - requesting ALL questions');
     
     // First inspect the table structure
     await inspectTableStructure();
     
-    // Fetch the actual data
+    // Get total count of records in the database
+    const { count: totalCount, error: countError } = await supabase
+      .from('trivia_questions')
+      .select('*', { count: 'exact', head: true });
+      
+    if (countError) {
+      console.error('Error getting total count:', countError);
+    } else {
+      console.log(`DEBUG: Total questions in database: ${totalCount}`);
+    }
+    
+    // Fetch the actual data - remove the limit to get all questions
+    console.log('DEBUG: Fetching all questions from database...');
     const { data, error } = await supabase
       .from('trivia_questions')
-      .select('*')
-      .limit(limit);
+      .select('*');
 
     console.log('DEBUG: Supabase response:', data ? `Got ${data.length} records` : 'No data', error ? `Error: ${error.message}` : 'No error');
     
