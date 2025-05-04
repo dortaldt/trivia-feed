@@ -1,0 +1,2702 @@
+[
+  {
+    "id": "qcf01",
+    "question_text": "Which film features the quote, 'Here's looking at you, kid'?",
+    "answer_choices": [
+      "Casablanca",
+      "Gone with the Wind",
+      "Citizen Kane",
+      "The Godfather"
+    ],
+    "correct_answer": "Casablanca",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Classic Films",
+    "branch": "Film History",
+    "tags": [
+      "classic films",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Humphrey Bogart delivered this iconic line in Casablanca.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qcf02",
+    "question_text": "In what year was 'Gone with the Wind' released?",
+    "answer_choices": [
+      "1939",
+      "1945",
+      "1929",
+      "1950"
+    ],
+    "correct_answer": "1939",
+    "difficulty": "hard",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Classic Films",
+    "branch": "Film History",
+    "tags": [
+      "classic films",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It\u2019s one of the earliest blockbuster films.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qcf03",
+    "question_text": "Who directed 'Psycho'?",
+    "answer_choices": [
+      "Stanley Kubrick",
+      "Alfred Hitchcock",
+      "Billy Wilder",
+      "Orson Welles"
+    ],
+    "correct_answer": "Alfred Hitchcock",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Classic Films",
+    "branch": "Film History",
+    "tags": [
+      "classic films",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Hitchcock was known as the master of suspense.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qcf04",
+    "question_text": "Which silent film star was known as 'The Tramp'?",
+    "answer_choices": [
+      "Charlie Chaplin",
+      "Buster Keaton",
+      "Harold Lloyd",
+      "Fatty Arbuckle"
+    ],
+    "correct_answer": "Charlie Chaplin",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Classic Films",
+    "branch": "Film History",
+    "tags": [
+      "classic films",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Chaplin\u2019s character is iconic.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qcf05",
+    "question_text": "What 1941 film is often cited as the greatest of all time?",
+    "answer_choices": [
+      "Citizen Kane",
+      "The Maltese Falcon",
+      "Rebecca",
+      "Double Indemnity"
+    ],
+    "correct_answer": "Citizen Kane",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Classic Films",
+    "branch": "Film History",
+    "tags": [
+      "classic films",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Orson Welles wrote, directed, and starred.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qcf06",
+    "question_text": "Which musical won Best Picture in 1961?",
+    "answer_choices": [
+      "West Side Story",
+      "The Sound of Music",
+      "My Fair Lady",
+      "Singin\u2019 in the Rain"
+    ],
+    "correct_answer": "West Side Story",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Classic Films",
+    "branch": "Film History",
+    "tags": [
+      "classic films",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A modern Romeo & Juliet adaptation.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qcf07",
+    "question_text": "Who played Scarlett O\u2019Hara in 'Gone with the Wind'?",
+    "answer_choices": [
+      "Vivien Leigh",
+      "Bette Davis",
+      "Katharine Hepburn",
+      "Greta Garbo"
+    ],
+    "correct_answer": "Vivien Leigh",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Classic Films",
+    "branch": "Film History",
+    "tags": [
+      "classic films",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "She won an Oscar for her performance.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qcf08",
+    "question_text": "Which actor said 'You can't handle the truth!'?",
+    "answer_choices": [
+      "Jack Nicholson",
+      "Al Pacino",
+      "Tom Hanks",
+      "Gene Hackman"
+    ],
+    "correct_answer": "Jack Nicholson",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Classic Films",
+    "branch": "Film History",
+    "tags": [
+      "classic films",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The quote is from 'A Few Good Men'.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qcf09",
+    "question_text": "What was the first color feature film?",
+    "answer_choices": [
+      "The Wizard of Oz",
+      "Becky Sharp",
+      "Gone with the Wind",
+      "Fantasia"
+    ],
+    "correct_answer": "Becky Sharp",
+    "difficulty": "hard",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Classic Films",
+    "branch": "Film History",
+    "tags": [
+      "classic films",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "'Becky Sharp' (1935) was first in full color.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qcf10",
+    "question_text": "Which 1952 musical includes 'Singin\u2019 in the Rain'?",
+    "answer_choices": [
+      "Singin\u2019 in the Rain",
+      "An American in Paris",
+      "Gigi",
+      "High Society"
+    ],
+    "correct_answer": "Singin\u2019 in the Rain",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Classic Films",
+    "branch": "Film History",
+    "tags": [
+      "classic films",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Gene Kelly danced in the rain.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmc01",
+    "question_text": "Who directed the 2023 film 'Oppenheimer'?",
+    "answer_choices": [
+      "Christopher Nolan",
+      "James Cameron",
+      "Steven Spielberg",
+      "Greta Gerwig"
+    ],
+    "correct_answer": "Christopher Nolan",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Modern Cinema",
+    "branch": "Contemporary Film",
+    "tags": [
+      "modern cinema",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Nolan\u2019s epic focused on the father of the atomic bomb.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmc02",
+    "question_text": "Which film won Best Picture at the 2023 Oscars?",
+    "answer_choices": [
+      "Everything Everywhere All At Once",
+      "The Fabelmans",
+      "Top Gun: Maverick",
+      "Tar"
+    ],
+    "correct_answer": "Everything Everywhere All At Once",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Modern Cinema",
+    "branch": "Contemporary Film",
+    "tags": [
+      "modern cinema",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A multiverse film dominated awards.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmc03",
+    "question_text": "Who starred as Barbie in the 2023 movie?",
+    "answer_choices": [
+      "Margot Robbie",
+      "Emma Stone",
+      "Florence Pugh",
+      "Zendaya"
+    ],
+    "correct_answer": "Margot Robbie",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Modern Cinema",
+    "branch": "Contemporary Film",
+    "tags": [
+      "modern cinema",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Robbie portrayed the iconic doll.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmc04",
+    "question_text": "Which 2022 film is a sequel to 'Avatar'?",
+    "answer_choices": [
+      "Avatar: The Way of Water",
+      "Avatar: Earthrise",
+      "Pandora Returns",
+      "Avatar: Legacy"
+    ],
+    "correct_answer": "Avatar: The Way of Water",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Modern Cinema",
+    "branch": "Contemporary Film",
+    "tags": [
+      "modern cinema",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "James Cameron returned for the sequel.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmc05",
+    "question_text": "Which actor plays Batman in 'The Batman' (2022)?",
+    "answer_choices": [
+      "Robert Pattinson",
+      "Ben Affleck",
+      "Christian Bale",
+      "Henry Cavill"
+    ],
+    "correct_answer": "Robert Pattinson",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Modern Cinema",
+    "branch": "Contemporary Film",
+    "tags": [
+      "modern cinema",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Pattinson gave a darker tone to the role.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmc06",
+    "question_text": "Which 2022 film features Brendan Fraser's award-winning performance?",
+    "answer_choices": [
+      "The Whale",
+      "The Mummy Returns",
+      "Room",
+      "Black Swan"
+    ],
+    "correct_answer": "The Whale",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Modern Cinema",
+    "branch": "Contemporary Film",
+    "tags": [
+      "modern cinema",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "He played a reclusive English teacher.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmc07",
+    "question_text": "Who directed the 2023 film 'Killers of the Flower Moon'?",
+    "answer_choices": [
+      "Martin Scorsese",
+      "David Fincher",
+      "Quentin Tarantino",
+      "Paul Thomas Anderson"
+    ],
+    "correct_answer": "Martin Scorsese",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Modern Cinema",
+    "branch": "Contemporary Film",
+    "tags": [
+      "modern cinema",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Scorsese adapts a true crime story.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmc08",
+    "question_text": "Which animated film won Best Animated Feature at the 2023 Oscars?",
+    "answer_choices": [
+      "Guillermo del Toro\u2019s Pinocchio",
+      "Turning Red",
+      "Puss in Boots: The Last Wish",
+      "Marcel the Shell"
+    ],
+    "correct_answer": "Guillermo del Toro\u2019s Pinocchio",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Modern Cinema",
+    "branch": "Contemporary Film",
+    "tags": [
+      "modern cinema",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A darker retelling of the classic tale.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmc09",
+    "question_text": "Who starred in and directed 'A Star is Born' (2018)?",
+    "answer_choices": [
+      "Bradley Cooper",
+      "Ben Affleck",
+      "George Clooney",
+      "Ryan Gosling"
+    ],
+    "correct_answer": "Bradley Cooper",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Modern Cinema",
+    "branch": "Contemporary Film",
+    "tags": [
+      "modern cinema",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "He acted alongside Lady Gaga.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmc10",
+    "question_text": "Which movie popularized the phrase 'I\u2019m Just Ken' in 2023?",
+    "answer_choices": [
+      "Barbie",
+      "Ken\u2019s Day Out",
+      "Mattel the Movie",
+      "Fashion World"
+    ],
+    "correct_answer": "Barbie",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Modern Cinema",
+    "branch": "Contemporary Film",
+    "tags": [
+      "modern cinema",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Ryan Gosling's song became a meme.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtv01",
+    "question_text": "Which fantasy series is set in Westeros?",
+    "answer_choices": [
+      "Game of Thrones",
+      "The Witcher",
+      "Shadow and Bone",
+      "The Rings of Power"
+    ],
+    "correct_answer": "Game of Thrones",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Television Shows",
+    "branch": "TV & Streaming",
+    "tags": [
+      "television shows",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Based on George R.R. Martin\u2019s novels.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtv02",
+    "question_text": "Which comedy follows the Bluth family?",
+    "answer_choices": [
+      "Arrested Development",
+      "The Office",
+      "Parks and Rec",
+      "Modern Family"
+    ],
+    "correct_answer": "Arrested Development",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Television Shows",
+    "branch": "TV & Streaming",
+    "tags": [
+      "television shows",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A cult hit known for callbacks.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtv03",
+    "question_text": "What show features Eleven and the Upside Down?",
+    "answer_choices": [
+      "Stranger Things",
+      "The OA",
+      "Locke & Key",
+      "Dark"
+    ],
+    "correct_answer": "Stranger Things",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Television Shows",
+    "branch": "TV & Streaming",
+    "tags": [
+      "television shows",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Netflix\u2019s supernatural hit.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtv04",
+    "question_text": "Who played Walter White in 'Breaking Bad'?",
+    "answer_choices": [
+      "Bryan Cranston",
+      "Aaron Paul",
+      "Bob Odenkirk",
+      "Giancarlo Esposito"
+    ],
+    "correct_answer": "Bryan Cranston",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Television Shows",
+    "branch": "TV & Streaming",
+    "tags": [
+      "television shows",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "He transformed from teacher to drug lord.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtv05",
+    "question_text": "Which show is set in the fictional town of Pawnee?",
+    "answer_choices": [
+      "Parks and Recreation",
+      "The Good Place",
+      "Community",
+      "Schitt's Creek"
+    ],
+    "correct_answer": "Parks and Recreation",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Television Shows",
+    "branch": "TV & Streaming",
+    "tags": [
+      "television shows",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Leslie Knope works for local government.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtv06",
+    "question_text": "Which show became the most streamed in 2021?",
+    "answer_choices": [
+      "Squid Game",
+      "Bridgerton",
+      "Stranger Things",
+      "The Mandalorian"
+    ],
+    "correct_answer": "Squid Game",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Television Shows",
+    "branch": "TV & Streaming",
+    "tags": [
+      "television shows",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A Korean thriller about deadly games.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtv07",
+    "question_text": "What show stars Zendaya as Rue?",
+    "answer_choices": [
+      "Euphoria",
+      "Riverdale",
+      "13 Reasons Why",
+      "Sex Education"
+    ],
+    "correct_answer": "Euphoria",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Television Shows",
+    "branch": "TV & Streaming",
+    "tags": [
+      "television shows",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A raw drama about addiction.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtv08",
+    "question_text": "Which show is a prequel to Breaking Bad?",
+    "answer_choices": [
+      "Better Call Saul",
+      "El Camino",
+      "The Cleaner",
+      "Meth Lab Diaries"
+    ],
+    "correct_answer": "Better Call Saul",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Television Shows",
+    "branch": "TV & Streaming",
+    "tags": [
+      "television shows",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It follows Saul Goodman\u2019s early years.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtv09",
+    "question_text": "Who played the Doctor in 'Doctor Who' from 2018-2022?",
+    "answer_choices": [
+      "Jodie Whittaker",
+      "Peter Capaldi",
+      "David Tennant",
+      "Matt Smith"
+    ],
+    "correct_answer": "Jodie Whittaker",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Television Shows",
+    "branch": "TV & Streaming",
+    "tags": [
+      "television shows",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The first woman to play the Doctor.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtv10",
+    "question_text": "Which comedy features Ted Lasso coaching soccer?",
+    "answer_choices": [
+      "Ted Lasso",
+      "The League",
+      "The English Game",
+      "Premier Dreams"
+    ],
+    "correct_answer": "Ted Lasso",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Television Shows",
+    "branch": "TV & Streaming",
+    "tags": [
+      "television shows",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "An American football coach takes on the Premier League.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmus01",
+    "question_text": "Which musical features the song 'Defying Gravity'?",
+    "answer_choices": [
+      "Wicked",
+      "Frozen",
+      "Les Mis\u00e9rables",
+      "Chicago"
+    ],
+    "correct_answer": "Wicked",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Theater & Musicals",
+    "branch": "Broadway & Stage",
+    "tags": [
+      "theater & musicals",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Elphaba and Glinda sing this powerful duet.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmus02",
+    "question_text": "Who wrote the musical 'Hamilton'?",
+    "answer_choices": [
+      "Lin-Manuel Miranda",
+      "Andrew Lloyd Webber",
+      "Stephen Sondheim",
+      "Jonathan Larson"
+    ],
+    "correct_answer": "Lin-Manuel Miranda",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Theater & Musicals",
+    "branch": "Broadway & Stage",
+    "tags": [
+      "theater & musicals",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Miranda also played the title role.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmus03",
+    "question_text": "Which musical takes place during the French Revolution?",
+    "answer_choices": [
+      "Les Mis\u00e9rables",
+      "Cabaret",
+      "Phantom of the Opera",
+      "Evita"
+    ],
+    "correct_answer": "Les Mis\u00e9rables",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Theater & Musicals",
+    "branch": "Broadway & Stage",
+    "tags": [
+      "theater & musicals",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Jean Valjean is its central character.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmus04",
+    "question_text": "Which musical is set in New York's East Village and follows struggling artists?",
+    "answer_choices": [
+      "Rent",
+      "Hair",
+      "Tick, Tick... Boom!",
+      "West Side Story"
+    ],
+    "correct_answer": "Rent",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Theater & Musicals",
+    "branch": "Broadway & Stage",
+    "tags": [
+      "theater & musicals",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It\u2019s based on the opera La Boh\u00e8me.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmus05",
+    "question_text": "What musical features Jellicle cats?",
+    "answer_choices": [
+      "Cats",
+      "Lion King",
+      "Pippin",
+      "Into the Woods"
+    ],
+    "correct_answer": "Cats",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Theater & Musicals",
+    "branch": "Broadway & Stage",
+    "tags": [
+      "theater & musicals",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It\u2019s based on T.S. Eliot\u2019s poems.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmus06",
+    "question_text": "Which musical is based on the life of Eva Per\u00f3n?",
+    "answer_choices": [
+      "Evita",
+      "Dreamgirls",
+      "Sunset Boulevard",
+      "My Fair Lady"
+    ],
+    "correct_answer": "Evita",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Theater & Musicals",
+    "branch": "Broadway & Stage",
+    "tags": [
+      "theater & musicals",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It includes 'Don\u2019t Cry for Me Argentina'.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmus07",
+    "question_text": "Which musical includes the song 'Seasons of Love'?",
+    "answer_choices": [
+      "Rent",
+      "Spring Awakening",
+      "Waitress",
+      "Chicago"
+    ],
+    "correct_answer": "Rent",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Theater & Musicals",
+    "branch": "Broadway & Stage",
+    "tags": [
+      "theater & musicals",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It opens the second act.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmus08",
+    "question_text": "Who composed 'The Phantom of the Opera'?",
+    "answer_choices": [
+      "Andrew Lloyd Webber",
+      "Stephen Schwartz",
+      "Stephen Sondheim",
+      "Alan Menken"
+    ],
+    "correct_answer": "Andrew Lloyd Webber",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Theater & Musicals",
+    "branch": "Broadway & Stage",
+    "tags": [
+      "theater & musicals",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It\u2019s one of Broadway\u2019s longest-running shows.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmus09",
+    "question_text": "Which musical features a singing plant named Audrey II?",
+    "answer_choices": [
+      "Little Shop of Horrors",
+      "Hairspray",
+      "Matilda",
+      "Beetlejuice"
+    ],
+    "correct_answer": "Little Shop of Horrors",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Theater & Musicals",
+    "branch": "Broadway & Stage",
+    "tags": [
+      "theater & musicals",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It\u2019s a dark comedy cult classic.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmus10",
+    "question_text": "Which 2022 musical film starred Rachel Zegler as Maria?",
+    "answer_choices": [
+      "West Side Story",
+      "In the Heights",
+      "Dear Evan Hansen",
+      "The Prom"
+    ],
+    "correct_answer": "West Side Story",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Theater & Musicals",
+    "branch": "Broadway & Stage",
+    "tags": [
+      "theater & musicals",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Directed by Steven Spielberg.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qani01",
+    "question_text": "Which studio created 'Toy Story'?",
+    "answer_choices": [
+      "Pixar",
+      "DreamWorks",
+      "Blue Sky",
+      "Illumination"
+    ],
+    "correct_answer": "Pixar",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Animation & Cartoons",
+    "branch": "Animated Films & Series",
+    "tags": [
+      "animation & cartoons",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It was the first fully 3D-animated film.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qani02",
+    "question_text": "What is the name of the princess in Disney\u2019s 'The Little Mermaid'?",
+    "answer_choices": [
+      "Ariel",
+      "Belle",
+      "Jasmine",
+      "Aurora"
+    ],
+    "correct_answer": "Ariel",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Animation & Cartoons",
+    "branch": "Animated Films & Series",
+    "tags": [
+      "animation & cartoons",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "She wants to be 'part of your world'.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qani03",
+    "question_text": "Which animated film features a house lifted by balloons?",
+    "answer_choices": [
+      "Up",
+      "Bolt",
+      "Ratatouille",
+      "Onward"
+    ],
+    "correct_answer": "Up",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Animation & Cartoons",
+    "branch": "Animated Films & Series",
+    "tags": [
+      "animation & cartoons",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Carl Fredricksen flies to South America.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qani04",
+    "question_text": "Which series includes characters like Finn and Jake?",
+    "answer_choices": [
+      "Adventure Time",
+      "Steven Universe",
+      "Gravity Falls",
+      "Rick and Morty"
+    ],
+    "correct_answer": "Adventure Time",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Animation & Cartoons",
+    "branch": "Animated Films & Series",
+    "tags": [
+      "animation & cartoons",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A surreal Cartoon Network hit.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qani05",
+    "question_text": "Which character lives in a pineapple under the sea?",
+    "answer_choices": [
+      "SpongeBob SquarePants",
+      "Patrick",
+      "Squidward",
+      "Plankton"
+    ],
+    "correct_answer": "SpongeBob SquarePants",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Animation & Cartoons",
+    "branch": "Animated Films & Series",
+    "tags": [
+      "animation & cartoons",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A meme-worthy Nickelodeon icon.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qani06",
+    "question_text": "Which animated film won Best Picture at the 2002 Oscars?",
+    "answer_choices": [
+      "Shrek",
+      "Spirited Away",
+      "Ice Age",
+      "Finding Nemo"
+    ],
+    "correct_answer": "Shrek",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Animation & Cartoons",
+    "branch": "Animated Films & Series",
+    "tags": [
+      "animation & cartoons",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It was the first ever Best Animated Feature winner.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qani07",
+    "question_text": "Who is the villain in 'The Lion King'?",
+    "answer_choices": [
+      "Scar",
+      "Jafar",
+      "Hades",
+      "Shere Khan"
+    ],
+    "correct_answer": "Scar",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Animation & Cartoons",
+    "branch": "Animated Films & Series",
+    "tags": [
+      "animation & cartoons",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "He famously says 'Long live the king'.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qani08",
+    "question_text": "Which anime series features a ninja named Naruto?",
+    "answer_choices": [
+      "Naruto",
+      "Bleach",
+      "Attack on Titan",
+      "Dragon Ball"
+    ],
+    "correct_answer": "Naruto",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Animation & Cartoons",
+    "branch": "Animated Films & Series",
+    "tags": [
+      "animation & cartoons",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "He dreams of becoming Hokage.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qani09",
+    "question_text": "Which studio produced 'How to Train Your Dragon'?",
+    "answer_choices": [
+      "DreamWorks",
+      "Pixar",
+      "Sony Animation",
+      "Ghibli"
+    ],
+    "correct_answer": "DreamWorks",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Animation & Cartoons",
+    "branch": "Animated Films & Series",
+    "tags": [
+      "animation & cartoons",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It\u2019s about friendship between a boy and a dragon.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qani10",
+    "question_text": "Which 2023 animated film featured Miles Morales?",
+    "answer_choices": [
+      "Spider-Man: Across the Spider-Verse",
+      "The Mitchells vs. the Machines",
+      "Turning Red",
+      "Elemental"
+    ],
+    "correct_answer": "Spider-Man: Across the Spider-Verse",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Entertainment",
+    "subtopic": "Animation & Cartoons",
+    "branch": "Animated Films & Series",
+    "tags": [
+      "animation & cartoons",
+      "entertainment"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A visually stunning multiverse sequel.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmuscl01",
+    "question_text": "Who composed the 'Fifth Symphony'?",
+    "answer_choices": [
+      "Beethoven",
+      "Mozart",
+      "Bach",
+      "Tchaikovsky"
+    ],
+    "correct_answer": "Beethoven",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Classical Composers",
+    "branch": "Orchestral Music",
+    "tags": [
+      "classical composers",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Beethoven\u2019s 'da-da-da-DUM' motif is iconic.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmuscl02",
+    "question_text": "Who wrote 'The Magic Flute'?",
+    "answer_choices": [
+      "Mozart",
+      "Beethoven",
+      "Handel",
+      "Haydn"
+    ],
+    "correct_answer": "Mozart",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Classical Composers",
+    "branch": "Orchestral Music",
+    "tags": [
+      "classical composers",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "One of Mozart\u2019s most famous operas.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmuscl03",
+    "question_text": "Which composer became deaf later in life?",
+    "answer_choices": [
+      "Beethoven",
+      "Schubert",
+      "Chopin",
+      "Liszt"
+    ],
+    "correct_answer": "Beethoven",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Classical Composers",
+    "branch": "Orchestral Music",
+    "tags": [
+      "classical composers",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "He continued to compose despite hearing loss.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmuscl04",
+    "question_text": "Which Baroque composer wrote the 'Brandenburg Concertos'?",
+    "answer_choices": [
+      "Bach",
+      "Vivaldi",
+      "Handel",
+      "Pachelbel"
+    ],
+    "correct_answer": "Bach",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Classical Composers",
+    "branch": "Orchestral Music",
+    "tags": [
+      "classical composers",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Bach\u2019s work influenced generations.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmuscl05",
+    "question_text": "Who composed 'The Four Seasons'?",
+    "answer_choices": [
+      "Vivaldi",
+      "Bach",
+      "Mozart",
+      "Debussy"
+    ],
+    "correct_answer": "Vivaldi",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Classical Composers",
+    "branch": "Orchestral Music",
+    "tags": [
+      "classical composers",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Each concerto represents a season.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmuscl06",
+    "question_text": "Which composer wrote 'Clair de Lune'?",
+    "answer_choices": [
+      "Debussy",
+      "Ravel",
+      "Chopin",
+      "Liszt"
+    ],
+    "correct_answer": "Debussy",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Classical Composers",
+    "branch": "Orchestral Music",
+    "tags": [
+      "classical composers",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A soft and atmospheric piano piece.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmuscl07",
+    "question_text": "Who composed the '1812 Overture'?",
+    "answer_choices": [
+      "Tchaikovsky",
+      "Beethoven",
+      "Mendelssohn",
+      "Sibelius"
+    ],
+    "correct_answer": "Tchaikovsky",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Classical Composers",
+    "branch": "Orchestral Music",
+    "tags": [
+      "classical composers",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Famous for its use of cannons.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmuscl08",
+    "question_text": "Which composer was a child prodigy and toured Europe at age 6?",
+    "answer_choices": [
+      "Mozart",
+      "Beethoven",
+      "Schubert",
+      "Brahms"
+    ],
+    "correct_answer": "Mozart",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Classical Composers",
+    "branch": "Orchestral Music",
+    "tags": [
+      "classical composers",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "He composed from early childhood.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmuscl09",
+    "question_text": "Which composer is known for the 'Ride of the Valkyries'?",
+    "answer_choices": [
+      "Wagner",
+      "Strauss",
+      "Mahler",
+      "Liszt"
+    ],
+    "correct_answer": "Wagner",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Classical Composers",
+    "branch": "Orchestral Music",
+    "tags": [
+      "classical composers",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It\u2019s part of his 'Ring Cycle'.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qmuscl10",
+    "question_text": "Who composed 'Bol\u00e9ro'?",
+    "answer_choices": [
+      "Ravel",
+      "Bizet",
+      "Saint-Sa\u00ebns",
+      "Offenbach"
+    ],
+    "correct_answer": "Ravel",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Classical Composers",
+    "branch": "Orchestral Music",
+    "tags": [
+      "classical composers",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A single long crescendo piece.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrock01",
+    "question_text": "Which band was known as the 'Fab Four'?",
+    "answer_choices": [
+      "The Beatles",
+      "The Rolling Stones",
+      "The Who",
+      "Queen"
+    ],
+    "correct_answer": "The Beatles",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Rock & Roll History",
+    "branch": "Rock Music",
+    "tags": [
+      "rock & roll history",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The Beatles revolutionized music in the '60s.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrock02",
+    "question_text": "Who is the 'King of Rock and Roll'?",
+    "answer_choices": [
+      "Elvis Presley",
+      "Chuck Berry",
+      "Little Richard",
+      "Buddy Holly"
+    ],
+    "correct_answer": "Elvis Presley",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Rock & Roll History",
+    "branch": "Rock Music",
+    "tags": [
+      "rock & roll history",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "His hip moves and voice made history.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrock03",
+    "question_text": "Which guitarist played 'Purple Haze'?",
+    "answer_choices": [
+      "Jimi Hendrix",
+      "Eric Clapton",
+      "Jimmy Page",
+      "Keith Richards"
+    ],
+    "correct_answer": "Jimi Hendrix",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Rock & Roll History",
+    "branch": "Rock Music",
+    "tags": [
+      "rock & roll history",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A psychedelic rock legend.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrock04",
+    "question_text": "What rock opera did The Who release in 1969?",
+    "answer_choices": [
+      "Tommy",
+      "Quadrophenia",
+      "Pinball Wizard",
+      "Baba O'Riley"
+    ],
+    "correct_answer": "Tommy",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Rock & Roll History",
+    "branch": "Rock Music",
+    "tags": [
+      "rock & roll history",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A deaf, dumb, and blind pinball wizard.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrock05",
+    "question_text": "Which band\u2019s logo features a tongue and lips?",
+    "answer_choices": [
+      "The Rolling Stones",
+      "The Doors",
+      "AC/DC",
+      "Led Zeppelin"
+    ],
+    "correct_answer": "The Rolling Stones",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Rock & Roll History",
+    "branch": "Rock Music",
+    "tags": [
+      "rock & roll history",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The most recognizable logo in rock.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrock06",
+    "question_text": "What year did Woodstock take place?",
+    "answer_choices": [
+      "1969",
+      "1972",
+      "1965",
+      "1970"
+    ],
+    "correct_answer": "1969",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Rock & Roll History",
+    "branch": "Rock Music",
+    "tags": [
+      "rock & roll history",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A symbol of counterculture.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrock07",
+    "question_text": "Which band released 'Bohemian Rhapsody'?",
+    "answer_choices": [
+      "Queen",
+      "Pink Floyd",
+      "The Beatles",
+      "U2"
+    ],
+    "correct_answer": "Queen",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Rock & Roll History",
+    "branch": "Rock Music",
+    "tags": [
+      "rock & roll history",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Freddie Mercury\u2019s masterpiece.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrock08",
+    "question_text": "Who was Nirvana\u2019s frontman?",
+    "answer_choices": [
+      "Kurt Cobain",
+      "Dave Grohl",
+      "Eddie Vedder",
+      "Chris Cornell"
+    ],
+    "correct_answer": "Kurt Cobain",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Rock & Roll History",
+    "branch": "Rock Music",
+    "tags": [
+      "rock & roll history",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A grunge icon.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrock09",
+    "question_text": "Which artist is known for smashing guitars on stage?",
+    "answer_choices": [
+      "Pete Townshend",
+      "Slash",
+      "Joe Perry",
+      "Angus Young"
+    ],
+    "correct_answer": "Pete Townshend",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Rock & Roll History",
+    "branch": "Rock Music",
+    "tags": [
+      "rock & roll history",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The Who\u2019s guitarist was destructive.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qrock10",
+    "question_text": "Which rock band is from Ireland?",
+    "answer_choices": [
+      "U2",
+      "The Strokes",
+      "Foo Fighters",
+      "Muse"
+    ],
+    "correct_answer": "U2",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Rock & Roll History",
+    "branch": "Rock Music",
+    "tags": [
+      "rock & roll history",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Led by Bono, U2 formed in Dublin.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpopm01",
+    "question_text": "Who released the hit single 'Anti-Hero' in 2022?",
+    "answer_choices": [
+      "Taylor Swift",
+      "Olivia Rodrigo",
+      "Billie Eilish",
+      "Adele"
+    ],
+    "correct_answer": "Taylor Swift",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Pop Music Trends",
+    "branch": "Modern Pop",
+    "tags": [
+      "pop music trends",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A lead single from the album 'Midnights'.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpopm02",
+    "question_text": "What boy band launched the careers of Harry Styles and Zayn Malik?",
+    "answer_choices": [
+      "One Direction",
+      "BTS",
+      "NSYNC",
+      "Backstreet Boys"
+    ],
+    "correct_answer": "One Direction",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Pop Music Trends",
+    "branch": "Modern Pop",
+    "tags": [
+      "pop music trends",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "They rose to fame via The X Factor.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpopm03",
+    "question_text": "Which 2023 song went viral with the lyric 'I'm Just Ken'?",
+    "answer_choices": [
+      "I'm Just Ken",
+      "Ken's Theme",
+      "Barbie World",
+      "Power Ballad"
+    ],
+    "correct_answer": "I'm Just Ken",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Pop Music Trends",
+    "branch": "Modern Pop",
+    "tags": [
+      "pop music trends",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Ryan Gosling performed it in 'Barbie'.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpopm04",
+    "question_text": "Who was the youngest artist to win Album of the Year at the Grammys?",
+    "answer_choices": [
+      "Billie Eilish",
+      "Lorde",
+      "Olivia Rodrigo",
+      "Taylor Swift"
+    ],
+    "correct_answer": "Billie Eilish",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Pop Music Trends",
+    "branch": "Modern Pop",
+    "tags": [
+      "pop music trends",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "She won it at age 18.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpopm05",
+    "question_text": "Which Latin song became a global hit in 2017?",
+    "answer_choices": [
+      "Despacito",
+      "Mi Gente",
+      "Havana",
+      "Bailando"
+    ],
+    "correct_answer": "Despacito",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Pop Music Trends",
+    "branch": "Modern Pop",
+    "tags": [
+      "pop music trends",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It was remixed with Justin Bieber.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpopm06",
+    "question_text": "Which artist is known for the 'Chromatica' album?",
+    "answer_choices": [
+      "Lady Gaga",
+      "Katy Perry",
+      "Dua Lipa",
+      "Halsey"
+    ],
+    "correct_answer": "Lady Gaga",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Pop Music Trends",
+    "branch": "Modern Pop",
+    "tags": [
+      "pop music trends",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It marked a return to her dance-pop roots.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpopm07",
+    "question_text": "Which K-pop group released 'Dynamite' in 2020?",
+    "answer_choices": [
+      "BTS",
+      "BLACKPINK",
+      "EXO",
+      "TXT"
+    ],
+    "correct_answer": "BTS",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Pop Music Trends",
+    "branch": "Modern Pop",
+    "tags": [
+      "pop music trends",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It topped the Billboard Hot 100.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpopm08",
+    "question_text": "Which singer is known as 'The Weeknd'?",
+    "answer_choices": [
+      "Abel Tesfaye",
+      "Bruno Mars",
+      "Post Malone",
+      "Drake"
+    ],
+    "correct_answer": "Abel Tesfaye",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Pop Music Trends",
+    "branch": "Modern Pop",
+    "tags": [
+      "pop music trends",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "His stage name drops the third 'e'.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpopm09",
+    "question_text": "Which artist broke records with the 'Eras Tour'?",
+    "answer_choices": [
+      "Taylor Swift",
+      "Beyonc\u00e9",
+      "Ed Sheeran",
+      "Ariana Grande"
+    ],
+    "correct_answer": "Taylor Swift",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Pop Music Trends",
+    "branch": "Modern Pop",
+    "tags": [
+      "pop music trends",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The Eras Tour became a global event.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qpopm10",
+    "question_text": "Which artist released 'As It Was' in 2022?",
+    "answer_choices": [
+      "Harry Styles",
+      "Shawn Mendes",
+      "Justin Bieber",
+      "Lizzo"
+    ],
+    "correct_answer": "Harry Styles",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Pop Music Trends",
+    "branch": "Modern Pop",
+    "tags": [
+      "pop music trends",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A synth-pop hit from his album 'Harry's House'.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qjazz01",
+    "question_text": "Who is known as the 'First Lady of Song'?",
+    "answer_choices": [
+      "Ella Fitzgerald",
+      "Aretha Franklin",
+      "Billie Holiday",
+      "Nina Simone"
+    ],
+    "correct_answer": "Ella Fitzgerald",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Jazz & Blues",
+    "branch": "Jazz History",
+    "tags": [
+      "jazz & blues",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Known for her vocal range and scat singing.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qjazz02",
+    "question_text": "Which trumpeter is famous for 'What a Wonderful World'?",
+    "answer_choices": [
+      "Louis Armstrong",
+      "Miles Davis",
+      "Dizzy Gillespie",
+      "Chet Baker"
+    ],
+    "correct_answer": "Louis Armstrong",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Jazz & Blues",
+    "branch": "Jazz History",
+    "tags": [
+      "jazz & blues",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "His gravelly voice is iconic.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qjazz03",
+    "question_text": "Which genre combines jazz and rock?",
+    "answer_choices": [
+      "Fusion",
+      "Swing",
+      "Bebop",
+      "Soul"
+    ],
+    "correct_answer": "Fusion",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Jazz & Blues",
+    "branch": "Jazz History",
+    "tags": [
+      "jazz & blues",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Jazz fusion emerged in the late 1960s.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qjazz04",
+    "question_text": "Which jazz musician released 'Kind of Blue'?",
+    "answer_choices": [
+      "Miles Davis",
+      "John Coltrane",
+      "Herbie Hancock",
+      "Duke Ellington"
+    ],
+    "correct_answer": "Miles Davis",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Jazz & Blues",
+    "branch": "Jazz History",
+    "tags": [
+      "jazz & blues",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "One of the most influential jazz albums.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qjazz05",
+    "question_text": "Who is known for 'Georgia on My Mind'?",
+    "answer_choices": [
+      "Ray Charles",
+      "Nat King Cole",
+      "James Brown",
+      "Sam Cooke"
+    ],
+    "correct_answer": "Ray Charles",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Jazz & Blues",
+    "branch": "Jazz History",
+    "tags": [
+      "jazz & blues",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Blended blues, gospel, and R&B.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qjazz06",
+    "question_text": "What instrument did John Coltrane primarily play?",
+    "answer_choices": [
+      "Saxophone",
+      "Trumpet",
+      "Piano",
+      "Guitar"
+    ],
+    "correct_answer": "Saxophone",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Jazz & Blues",
+    "branch": "Jazz History",
+    "tags": [
+      "jazz & blues",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "He transformed modern jazz.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qjazz07",
+    "question_text": "Which style of jazz emphasizes fast tempos and improvisation?",
+    "answer_choices": [
+      "Bebop",
+      "Swing",
+      "Fusion",
+      "Cool Jazz"
+    ],
+    "correct_answer": "Bebop",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Jazz & Blues",
+    "branch": "Jazz History",
+    "tags": [
+      "jazz & blues",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Developed in the 1940s.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qjazz08",
+    "question_text": "Which blues musician was nicknamed 'King of the Blues'?",
+    "answer_choices": [
+      "B.B. King",
+      "Muddy Waters",
+      "Howlin' Wolf",
+      "Robert Johnson"
+    ],
+    "correct_answer": "B.B. King",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Jazz & Blues",
+    "branch": "Jazz History",
+    "tags": [
+      "jazz & blues",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Played a guitar named Lucille.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qjazz09",
+    "question_text": "Which female singer is known for 'Strange Fruit'?",
+    "answer_choices": [
+      "Billie Holiday",
+      "Nina Simone",
+      "Etta James",
+      "Dinah Washington"
+    ],
+    "correct_answer": "Billie Holiday",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Jazz & Blues",
+    "branch": "Jazz History",
+    "tags": [
+      "jazz & blues",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A protest song against racism.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qjazz10",
+    "question_text": "Which pianist composed 'Take Five'?",
+    "answer_choices": [
+      "Dave Brubeck",
+      "Thelonious Monk",
+      "Oscar Peterson",
+      "Art Tatum"
+    ],
+    "correct_answer": "Dave Brubeck",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Jazz & Blues",
+    "branch": "Jazz History",
+    "tags": [
+      "jazz & blues",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Known for its unusual 5/4 time signature.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtheo01",
+    "question_text": "How many notes are in a standard musical octave?",
+    "answer_choices": [
+      "8",
+      "12",
+      "7",
+      "10"
+    ],
+    "correct_answer": "12",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Music Theory",
+    "branch": "Notation & Structure",
+    "tags": [
+      "music theory",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "12 semitones make up a chromatic scale.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtheo02",
+    "question_text": "Which clef is used for higher-pitched instruments?",
+    "answer_choices": [
+      "Treble",
+      "Bass",
+      "Alto",
+      "Tenor"
+    ],
+    "correct_answer": "Treble",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Music Theory",
+    "branch": "Notation & Structure",
+    "tags": [
+      "music theory",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Also called the G clef.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtheo03",
+    "question_text": "Which term means 'slow tempo'?",
+    "answer_choices": [
+      "Adagio",
+      "Allegro",
+      "Presto",
+      "Vivace"
+    ],
+    "correct_answer": "Adagio",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Music Theory",
+    "branch": "Notation & Structure",
+    "tags": [
+      "music theory",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "A slow and graceful speed.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtheo04",
+    "question_text": "Which key has no sharps or flats?",
+    "answer_choices": [
+      "C Major",
+      "G Major",
+      "F Major",
+      "A Major"
+    ],
+    "correct_answer": "C Major",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Music Theory",
+    "branch": "Notation & Structure",
+    "tags": [
+      "music theory",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "C major is the simplest key.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtheo05",
+    "question_text": "Which symbol raises a note by a half step?",
+    "answer_choices": [
+      "Sharp",
+      "Flat",
+      "Natural",
+      "Rest"
+    ],
+    "correct_answer": "Sharp",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Music Theory",
+    "branch": "Notation & Structure",
+    "tags": [
+      "music theory",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The '#' sign indicates a sharp.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtheo06",
+    "question_text": "How many beats does a whole note get in 4/4 time?",
+    "answer_choices": [
+      "4",
+      "2",
+      "1",
+      "8"
+    ],
+    "correct_answer": "4",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Music Theory",
+    "branch": "Notation & Structure",
+    "tags": [
+      "music theory",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "It takes a full measure.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtheo07",
+    "question_text": "Which dynamic marking means 'very loud'?",
+    "answer_choices": [
+      "ff",
+      "pp",
+      "mf",
+      "mp"
+    ],
+    "correct_answer": "ff",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Music Theory",
+    "branch": "Notation & Structure",
+    "tags": [
+      "music theory",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Fortissimo is double loud.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtheo08",
+    "question_text": "Which scale includes all 12 notes?",
+    "answer_choices": [
+      "Chromatic",
+      "Major",
+      "Minor",
+      "Pentatonic"
+    ],
+    "correct_answer": "Chromatic",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Music Theory",
+    "branch": "Notation & Structure",
+    "tags": [
+      "music theory",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The chromatic scale has no key center.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtheo09",
+    "question_text": "What is a group of 3 notes played in the time of 2 called?",
+    "answer_choices": [
+      "Triplet",
+      "Duplet",
+      "Tuplet",
+      "Syncopation"
+    ],
+    "correct_answer": "Triplet",
+    "difficulty": "medium",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Music Theory",
+    "branch": "Notation & Structure",
+    "tags": [
+      "music theory",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "Triplets divide a beat into three.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  },
+  {
+    "id": "qtheo10",
+    "question_text": "Which time signature is known as 'common time'?",
+    "answer_choices": [
+      "4/4",
+      "3/4",
+      "2/4",
+      "6/8"
+    ],
+    "correct_answer": "4/4",
+    "difficulty": "easy",
+    "language": "en",
+    "topic": "Music",
+    "subtopic": "Music Theory",
+    "branch": "Notation & Structure",
+    "tags": [
+      "music theory",
+      "music"
+    ],
+    "tone": "neutral",
+    "format": "text",
+    "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d",
+    "learning_capsule": "The most standard time signature.",
+    "source": "Curated",
+    "created_at": "2025-05-04T10:12:33Z",
+    "updated_at": "2025-05-04T10:12:33Z"
+  }
+]
