@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "trivia-universe-feed",
-    "slug": "trivia-universe-feed",
+    "name": "trivia-feed",
+    "slug": "trivia-feed",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "trivia-universe-feed",
+    "scheme": "trivia-feed",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -17,14 +17,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.triviauniversefeed"
+      "bundleIdentifier": "com.triviafeed"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.triviauniversefeed"
+      "package": "com.triviafeed"
     },
     "web": {
       "bundler": "metro",
@@ -36,6 +36,20 @@
     "experiments": {
       "typedRoutes": true
     },
-    "sdkVersion": "53.0.0"
+    "sdkVersion": "53.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/e0a61e01-78f0-4cb9-ada3-4867936fb44f",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD"
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "owner": "robodorx-2",
+    "extra": {
+      "eas": {
+        "projectId": "e0a61e01-78f0-4cb9-ada3-4867936fb44f"
+      }
+    }
   }
 }
