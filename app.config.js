@@ -51,6 +51,10 @@ module.exports = {
     supabaseAnonKey: process.env.SUPABASE_KEY ||
                     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
                     WORKING_SUPABASE_KEY,
+    
+    eas: {
+      projectId: "e0a61e01-78f0-4cb9-ada3-4867936fb44f"
+    }
   },
   updates: {
     fallbackToCacheTimeout: 0
@@ -64,7 +68,8 @@ module.exports = {
     "**/*"
   ],
   ios: {
-    supportsTablet: true
+    supportsTablet: true,
+    bundleIdentifier: "com.triviauniversefeed"
   },
   android: {
     adaptiveIcon: {
