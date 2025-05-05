@@ -241,13 +241,26 @@ const InsightCard: React.FC<InsightCardProps> = ({
 };
 
 const StatsScreen: React.FC = () => {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
+  const isDark = colorScheme === 'dark';
   const backgroundColor = useThemeColor({}, 'background');
   
   const questions = useAppSelector(state => state.trivia.questions);
   const [feedData, setFeedData] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Force dark theme on web if not explicitly set
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      // Add a class to the document body to ensure dark theme styles are applied
+      document.body.classList.add('dark-theme');
+      // Clean up when component unmounts
+      return () => {
+        document.body.classList.remove('dark-theme');
+      };
+    }
+  }, []);
 
   useEffect(() => {
     const loadTriviaQuestions = async () => {

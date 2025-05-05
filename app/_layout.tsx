@@ -110,7 +110,7 @@ export default function RootLayout() {
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
         
         :root {
-          --trivia-app-background-color: #f5f5f5;
+          --trivia-app-background-color: #151718;
           --trivia-app-serif-font: 'Playfair Display', Georgia, serif;
           --trivia-app-sans-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
@@ -122,6 +122,7 @@ export default function RootLayout() {
           width: 100%;
           overflow-x: hidden;
           font-family: var(--trivia-app-sans-font);
+          color: #ECEDEE;
         }
         #root {
           display: flex;
@@ -138,6 +139,15 @@ export default function RootLayout() {
         }
       `;
       document.head.appendChild(style);
+
+      // Import our custom dark theme CSS
+      const linkElem = document.createElement('link');
+      linkElem.rel = 'stylesheet';
+      linkElem.href = '/assets/web/styles.css';
+      document.head.appendChild(linkElem);
+
+      // Apply dark theme to body
+      document.body.classList.add('dark-theme');
     }
   }, []);
 

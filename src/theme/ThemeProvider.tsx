@@ -24,7 +24,7 @@ type ThemeProviderProps = {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
-  initialTheme = 'system',
+  initialTheme = 'dark',
 }) => {
   const deviceTheme = useColorScheme();
   const [theme, setTheme] = useState<'dark' | 'light'>(
