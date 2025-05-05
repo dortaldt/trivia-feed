@@ -401,6 +401,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
     paddingTop: 20,
+    ...(Platform.OS === 'web' ? {
+      maxWidth: 600,
+      alignSelf: 'center',
+      width: '100%',
+    } : {})
   },
   header: {
     flexDirection: 'row',
@@ -529,9 +534,17 @@ const styles = StyleSheet.create({
   },
   learningCapsule: {
     position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
+    top: 'auto',
+    bottom: 100, // Position it higher up from the bottom to avoid nav bar on iOS
+    ...(Platform.OS === 'web' ? {
+      left: '50%',
+      right: 'auto',
+      maxWidth: 560, // Slightly less than content to account for padding
+      transform: [{translateX: -280}], // Half of maxWidth to center
+    } : {
+      left: 20,
+      right: 20,
+    }),
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
     borderRadius: 16,
     padding: 20,
@@ -543,6 +556,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     maxHeight: '50%',
+    zIndex: 1000,
   },
   learningCapsuleHeader: {
     flexDirection: 'row',
