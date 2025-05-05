@@ -19,7 +19,7 @@ export default function TabLayout() {
   const ProfileTab = ({ color }: { color: string }) => (
     <Link href="/profile" asChild>
       <TouchableOpacity>
-        <Ionicons name="person-circle-outline" size={28} color={color} />
+        <Ionicons name="person-outline" size={28} color={color} />
       </TouchableOpacity>
     </Link>
   );
@@ -62,7 +62,7 @@ export default function TabLayout() {
             title: 'Stats',
             tabBarIcon: ({ color }) => (
               Platform.OS === 'ios' ? 
-                <IconSymbol size={28} name="chart.bar.fill" color={color} /> :
+                <IconSymbol size={28} name="chart.bar" color={color} weight="light" /> :
                 <FeatherIcon name="bar-chart-2" size={24} color={color} />
             ),
           }}
@@ -71,14 +71,14 @@ export default function TabLayout() {
           name="feed"
           options={{
             title: 'My Feed',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="lightbulb.fill" color={color} />,
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="lightbulb" color={color} weight="light" />,
           }}
         />
         <Tabs.Screen
           name="profile"
           options={{
             title: 'Profile',
-            tabBarIcon: ({ color }) => <Ionicons name="person-circle-outline" size={28} color={color} />,
+            tabBarIcon: ({ color }) => <Ionicons name="person-outline" size={28} color={color} />,
           }}
         />
       </Tabs>
