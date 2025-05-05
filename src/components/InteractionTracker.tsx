@@ -28,6 +28,13 @@ interface FeedChange {
   itemId: string;
   questionText: string;
   explanations: string[];
+  weightFactors?: {
+    category: string;
+    topicWeight?: number;
+    subtopicWeight?: number;
+    preferenceReason?: string;
+    selectionMethod?: string;
+  };
 }
 
 interface InteractionTrackerProps {
@@ -83,13 +90,60 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
       
       // Process new items
       if (addedItems.length > 0) {
-        const newChanges: FeedChange[] = addedItems.map(item => ({
-          timestamp: now,
-          type: 'added',
-          itemId: item.id,
-          questionText: item.question || `Question ${item.id.substring(0, 5)}...`,
-          explanations: feedExplanations[item.id] || []
-        }));
+        const newChanges: FeedChange[] = addedItems.map(item => {
+          // Get explanations for this item
+          const itemExplanations = feedExplanations[item.id] || [];
+          
+          // Extract weight-based selection info
+          const weightFactors: FeedChange['weightFactors'] = {
+            category: item.category,
+          };
+          
+          // Check if there's a topic weight in user profile for this category
+          if (userProfile.topics && userProfile.topics[item.category]) {
+            weightFactors.topicWeight = userProfile.topics[item.category].weight;
+            
+            // Check if there's a subtopic weight
+            const subtopic = item.tags?.[0] || 'General';
+            if (userProfile.topics[item.category].subtopics?.[subtopic]) {
+              weightFactors.subtopicWeight = userProfile.topics[item.category].subtopics[subtopic].weight;
+            }
+          }
+          
+          // Determine selection method based on explanations
+          if (itemExplanations.some(exp => exp.includes("Cold Start"))) {
+            weightFactors.selectionMethod = "Cold Start Algorithm";
+            
+            // Further analyze the cold start phase
+            const phaseMatch = itemExplanations.find(exp => exp.includes("Phase"))?.match(/Phase (\d+)/);
+            if (phaseMatch) {
+              const phase = parseInt(phaseMatch[1]);
+              weightFactors.preferenceReason = phase === 1 ? "Initial exploration phase" :
+                phase === 2 ? "Building on initial preferences" :
+                phase === 3 ? "Refining based on correct answers" :
+                "Transitioning to personalized feed";
+            }
+          } else if (itemExplanations.some(exp => exp.includes("Exploration"))) {
+            weightFactors.selectionMethod = "Exploration Selection";
+            weightFactors.preferenceReason = itemExplanations.find(exp => 
+              exp.includes("Exploration"))?.replace("Exploration: ", "");
+          } else if (itemExplanations.some(exp => exp.includes("maintain feed continuity"))) {
+            weightFactors.selectionMethod = "Feed Continuity";
+            weightFactors.preferenceReason = "Added after answering to maintain feed";
+          } else if (itemExplanations.some(exp => exp.includes("extend feed"))) {
+            weightFactors.selectionMethod = "Feed Extension";
+            weightFactors.preferenceReason = "Added proactively while approaching feed end";
+          }
+          
+          return {
+            timestamp: now,
+            type: 'added',
+            itemId: item.id,
+            questionText: item.question || `Question ${item.id.substring(0, 5)}...`,
+            explanations: itemExplanations,
+            weightFactors
+          };
+        });
         
         setFeedChanges(prev => [...prev, ...newChanges]);
       }
@@ -479,6 +533,48 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
                       ))}
                     </View>
                   )}
+                  
+                  {/* Add weight-based selection explanation */}
+                  {change.weightFactors && (
+                    <View style={styles.weightFactorsContainer}>
+                      <ThemedText style={styles.explanationHeader}>Selection Factors:</ThemedText>
+                      <ThemedText style={styles.weightFactorText}>
+                        • Category: <ThemedText style={styles.weightValue}>{change.weightFactors.category}</ThemedText>
+                      </ThemedText>
+                      
+                      {change.weightFactors.topicWeight !== undefined && (
+                        <ThemedText style={styles.weightFactorText}>
+                          • Topic Weight: <ThemedText style={styles.weightValue}>
+                            {change.weightFactors.topicWeight.toFixed(2)}
+                          </ThemedText>
+                        </ThemedText>
+                      )}
+                      
+                      {change.weightFactors.subtopicWeight !== undefined && (
+                        <ThemedText style={styles.weightFactorText}>
+                          • Subtopic Weight: <ThemedText style={styles.weightValue}>
+                            {change.weightFactors.subtopicWeight.toFixed(2)}
+                          </ThemedText>
+                        </ThemedText>
+                      )}
+                      
+                      {change.weightFactors.selectionMethod && (
+                        <ThemedText style={styles.weightFactorText}>
+                          • Method: <ThemedText style={styles.weightValue}>
+                            {change.weightFactors.selectionMethod}
+                          </ThemedText>
+                        </ThemedText>
+                      )}
+                      
+                      {change.weightFactors.preferenceReason && (
+                        <ThemedText style={styles.weightFactorText}>
+                          • Reason: <ThemedText style={styles.weightValue}>
+                            {change.weightFactors.preferenceReason}
+                          </ThemedText>
+                        </ThemedText>
+                      )}
+                    </View>
+                  )}
                 </View>
               ))
             )}
@@ -525,6 +621,28 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
                           {feedExplanations[item.id].map((explanation, i) => (
                             <ThemedText key={i} style={styles.explanationText}>• {explanation}</ThemedText>
                           ))}
+                          
+                          {/* Add weight-based info for each feed item */}
+                          {userProfile.topics && userProfile.topics[item.category] && (
+                            <>
+                              <ThemedText style={[styles.explanationHeader, {marginTop: 8}]}>
+                                Weight Factors:
+                              </ThemedText>
+                              <ThemedText style={styles.explanationText}>
+                                • Topic weight: {userProfile.topics[item.category].weight.toFixed(2)}
+                              </ThemedText>
+                              
+                              {item.tags && item.tags[0] && 
+                               userProfile.topics[item.category].subtopics && 
+                               userProfile.topics[item.category].subtopics[item.tags[0]] && (
+                                <ThemedText style={styles.explanationText}>
+                                  • Subtopic weight: {
+                                    userProfile.topics[item.category].subtopics[item.tags[0]].weight.toFixed(2)
+                                  }
+                                </ThemedText>
+                              )}
+                            </>
+                          )}
                         </View>
                       )}
                     </>
@@ -931,6 +1049,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     marginLeft: 4,
+    color: '#0A7EA4',
+  },
+  weightFactorsContainer: {
+    backgroundColor: 'rgba(10, 126, 164, 0.1)',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  weightFactorText: {
+    fontSize: 12,
+    marginBottom: 4,
+    color: '#444',
+  },
+  weightValue: {
+    fontWeight: 'bold',
     color: '#0A7EA4',
   },
 }); 
