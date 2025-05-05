@@ -61,6 +61,8 @@ const StatCard: React.FC<StatCardProps> = ({
   // Get theme colors
   const colorScheme = useColorScheme() ?? 'light';
   const backgroundColor = useThemeColor({}, 'background');
+  const { width } = Dimensions.get('window');
+  const isTablet = width > 768;
   
   // Animation for card appearance
   const opacity = useSharedValue(0);
@@ -91,7 +93,12 @@ const StatCard: React.FC<StatCardProps> = ({
   return (
     <Animated.View style={[
       styles.statCard, 
-      { backgroundColor },
+      { 
+        backgroundColor,
+        width: Platform.OS === 'web' 
+          ? isTablet ? '23%' : '48%' 
+          : '48%'
+      },
       animatedStyle
     ]}>
       <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
@@ -566,7 +573,15 @@ const StatsScreen: React.FC = () => {
     </ThemedView>
   );
 
-  return Platform.OS === 'web' ? <WebContainer>{Content}</WebContainer> : Content;
+  if (Platform.OS === 'web') {
+    return (
+      <WebContainer>
+        {Content}
+      </WebContainer>
+    );
+  }
+
+  return Content;
 };
 
 const styles = StyleSheet.create({
@@ -580,6 +595,9 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 60,
     paddingHorizontal: Platform.OS === 'web' ? 24 : 16,
+    maxWidth: Platform.OS === 'web' ? 1200 : undefined,
+    alignSelf: Platform.OS === 'web' ? 'center' : undefined,
+    width: Platform.OS === 'web' ? '100%' : undefined,
   },
   title: {
     marginBottom: 16,
@@ -593,12 +611,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   statCard: {
-    width: Platform.OS === 'web' ? '23%' : '48%',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(150, 150, 150, 0.2)',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -633,10 +652,6 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    fontFamily: Platform.select({
-      ios: 'System-Bold',
-      default: 'Inter-Bold',
-    }),
   },
   statSubtext: {
     fontSize: 12,
@@ -645,6 +660,10 @@ const styles = StyleSheet.create({
   },
   sectionContainer: {
     marginBottom: 24,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(150, 150, 150, 0.2)',
   },
   sectionTitle: {
     marginBottom: 12,
@@ -662,82 +681,32 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   categoryCard: {
-    marginBottom: 12,
     borderRadius: 12,
-    padding: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      },
-    }),
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(150, 150, 150, 0.2)',
   },
   categoryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 8,
   },
   categoryTitle: {
     fontSize: 16,
-    fontFamily: Platform.select({
-      ios: 'System-Bold',
-      default: 'Inter-Bold',
-    }),
+    fontWeight: 'bold',
   },
   categoryCount: {
     fontSize: 14,
     opacity: 0.7,
   },
-  insightCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  insightHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  insightTitle: {
-    fontSize: 16,
-    fontFamily: Platform.select({
-      ios: 'System-Bold',
-      default: 'Inter-Bold',
-    }),
-  },
-  insightContent: {
-    marginTop: 12,
-    overflow: 'hidden',
-  },
-  insightText: {
-    lineHeight: 22,
-  },
   difficultyItem: {
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      },
-    }),
+    borderWidth: 1,
+    borderColor: 'rgba(150, 150, 150, 0.2)',
   },
   difficultyHeader: {
     flexDirection: 'row',
@@ -746,20 +715,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   difficultyBadge: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   difficultyText: {
-    fontFamily: Platform.select({
-      ios: 'System-Bold',
-      default: 'Inter-Bold',
-    }),
     fontSize: 14,
+    fontWeight: 'bold',
   },
   accuracyText: {
     fontSize: 14,
-    opacity: 0.7,
   },
   difficultyStats: {
     flexDirection: 'row',
@@ -771,27 +736,11 @@ const styles = StyleSheet.create({
   recommendationsContainer: {
     borderRadius: 12,
     padding: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      },
-    }),
+    borderWidth: 1,
+    borderColor: 'rgba(150, 150, 150, 0.2)',
   },
   recommendationTitle: {
     fontSize: 16,
-    fontFamily: Platform.select({
-      ios: 'System-Bold',
-      default: 'Inter-Bold',
-    }),
     marginBottom: 8,
   },
   focusArea: {
@@ -809,8 +758,8 @@ const styles = StyleSheet.create({
   improvedContainer: {
     marginTop: 12,
     paddingTop: 12,
-    borderTopColor: '#f0f0f0',
     borderTopWidth: 1,
+    borderTopColor: 'rgba(150, 150, 150, 0.2)',
   },
   mostImprovedText: {
     fontSize: 15,
@@ -820,6 +769,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginTop: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(150, 150, 150, 0.2)',
   },
   tipText: {
     fontSize: 14,
@@ -833,11 +784,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#555',
-    fontFamily: Platform.select({
-      ios: 'System',
-      default: 'Inter',
-    }),
+    opacity: 0.7,
   },
   errorBanner: {
     flexDirection: 'row',
@@ -853,10 +800,29 @@ const styles = StyleSheet.create({
     color: '#e74c3c',
     marginLeft: 8,
     flex: 1,
-    fontFamily: Platform.select({
-      ios: 'System',
-      default: 'Inter',
-    }),
+  },
+  insightCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(150, 150, 150, 0.2)',
+  },
+  insightHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  insightTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  insightContent: {
+    marginTop: 12,
+    overflow: 'hidden',
+  },
+  insightText: {
+    lineHeight: 22,
   },
 });
 

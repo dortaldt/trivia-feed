@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -8,6 +8,11 @@ import { supabase } from '../../src/lib/supabaseClient';
 import { Picker } from '@react-native-picker/picker';
 import { countries } from '../../src/data/countries';
 import Leaderboard from '../../src/components/Leaderboard';
+import { ThemedText } from '../../components/ThemedText';
+import { ThemedView } from '../../components/ThemedView';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { Colors } from '@/constants/Colors';
+import { FeatherIcon } from '@/components/FeatherIcon';
 
 export default function ProfileScreen() {
   const { user, signOut, updateProfile, isLoading } = useAuth();
@@ -21,6 +26,10 @@ export default function ProfileScreen() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [activeSection, setActiveSection] = useState<'profile' | 'leaderboard'>('profile');
+  const colorScheme = useColorScheme() ?? 'dark';
+  const isDark = colorScheme === 'dark';
+  const { width } = useWindowDimensions();
+  const isTablet = width > 768;
 
   useEffect(() => {
     fetchUserProfile();
@@ -97,9 +106,9 @@ export default function ProfileScreen() {
 
   if (isLoading || loadingProfile) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3498db" />
-      </View>
+      <ThemedView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors[colorScheme].tint} />
+      </ThemedView>
     );
   }
 
@@ -118,131 +127,133 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.outerContainer}>
-      <StatusBar style="dark" />
+    <ThemedView style={styles.outerContainer}>
+      <StatusBar style={isDark ? "light" : "dark"} />
       <View style={styles.tabsContainer}>
         <TouchableOpacity 
           style={[styles.tabButton, activeSection === 'profile' && styles.activeTabButton]} 
           onPress={() => setActiveSection('profile')}
         >
-          <Ionicons 
-            name="person" 
+          <FeatherIcon 
+            name="user" 
             size={20} 
-            color={activeSection === 'profile' ? '#3498db' : '#777'} 
+            color={activeSection === 'profile' ? Colors[colorScheme].tint : Colors[colorScheme].tabIconDefault} 
           />
-          <Text style={[styles.tabText, activeSection === 'profile' && styles.activeTabText]}>
+          <ThemedText style={[styles.tabText, activeSection === 'profile' && styles.activeTabText]}>
             Profile
-          </Text>
+          </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.tabButton, activeSection === 'leaderboard' && styles.activeTabButton]} 
           onPress={() => setActiveSection('leaderboard')}
         >
-          <Ionicons 
-            name="trophy" 
+          <FeatherIcon 
+            name="award" 
             size={20} 
-            color={activeSection === 'leaderboard' ? '#3498db' : '#777'} 
+            color={activeSection === 'leaderboard' ? Colors[colorScheme].tint : Colors[colorScheme].tabIconDefault} 
           />
-          <Text style={[styles.tabText, activeSection === 'leaderboard' && styles.activeTabText]}>
+          <ThemedText style={[styles.tabText, activeSection === 'leaderboard' && styles.activeTabText]}>
             Leaderboard
-          </Text>
+          </ThemedText>
         </TouchableOpacity>
       </View>
 
       {activeSection === 'profile' ? (
         <ScrollView contentContainerStyle={styles.contentContainer}>
-          <View style={styles.innerContainer}>
+          <View style={[styles.innerContainer, isTablet && styles.tabletContainer]}>
             <View style={styles.header}>
-              <Text style={styles.headerTitle}>Profile</Text>
+              <ThemedText type="subtitle" style={styles.headerTitle}>Profile</ThemedText>
               <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
-                <Ionicons name="log-out-outline" size={24} color="#333" />
+                <FeatherIcon name="log-out" size={24} color={Colors[colorScheme].text} />
               </TouchableOpacity>
             </View>
             
-            <View style={styles.profileContainer}>
+            <ThemedView style={styles.profileContainer}>
               <View style={styles.avatarContainer}>
                 {avatarUrl ? (
                   <Image source={{ uri: avatarUrl }} style={styles.avatar} />
                 ) : (
                   <View style={styles.avatarPlaceholder}>
-                    <Text style={styles.avatarText}>{getInitials()}</Text>
+                    <ThemedText style={styles.avatarText}>{getInitials()}</ThemedText>
                   </View>
                 )}
                 
                 {isEditing && (
                   <TouchableOpacity style={styles.editAvatarButton}>
-                    <Ionicons name="camera-outline" size={20} color="#fff" />
+                    <FeatherIcon name="camera" size={18} color="#fff" />
                   </TouchableOpacity>
                 )}
               </View>
               
-              <Text style={styles.emailText}>{user?.email}</Text>
+              <ThemedText style={styles.emailText}>{user?.email}</ThemedText>
               
               {!isEditing ? (
                 <View style={styles.profileInfoContainer}>
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Username</Text>
-                    <Text style={styles.infoValue}>{username || 'Not set'}</Text>
+                    <ThemedText style={styles.infoLabel}>Username</ThemedText>
+                    <ThemedText type="defaultSemiBold" style={styles.infoValue}>{username || 'Not set'}</ThemedText>
                   </View>
                   
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Full Name</Text>
-                    <Text style={styles.infoValue}>{fullName || 'Not set'}</Text>
+                    <ThemedText style={styles.infoLabel}>Full Name</ThemedText>
+                    <ThemedText type="defaultSemiBold" style={styles.infoValue}>{fullName || 'Not set'}</ThemedText>
                   </View>
                   
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Country</Text>
-                    <Text style={styles.infoValue}>{getCountryName(country)}</Text>
+                    <ThemedText style={styles.infoLabel}>Country</ThemedText>
+                    <ThemedText type="defaultSemiBold" style={styles.infoValue}>{getCountryName(country)}</ThemedText>
                   </View>
                   
                   <TouchableOpacity 
                     style={styles.editButton}
                     onPress={() => setIsEditing(true)}
                   >
-                    <Text style={styles.editButtonText}>Edit Profile</Text>
+                    <ThemedText style={styles.editButtonText}>Edit Profile</ThemedText>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.editFormContainer}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Username</Text>
+                    <ThemedText style={styles.inputLabel}>Username</ThemedText>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, {color: Colors[colorScheme].text, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}]}
                       value={username}
                       onChangeText={setUsername}
                       placeholder="Enter username"
+                      placeholderTextColor={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'}
                     />
                   </View>
                   
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Full Name</Text>
+                    <ThemedText style={styles.inputLabel}>Full Name</ThemedText>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, {color: Colors[colorScheme].text, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}]}
                       value={fullName}
                       onChangeText={setFullName}
                       placeholder="Enter full name"
+                      placeholderTextColor={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'}
                     />
                   </View>
                   
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Country</Text>
+                    <ThemedText style={styles.inputLabel}>Country</ThemedText>
                     {Platform.OS === 'ios' ? (
                       <TouchableOpacity
-                        style={styles.countryPickerButton}
+                        style={[styles.countryPickerButton, {backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}]}
                         onPress={() => setShowCountryPicker(true)}
                       >
-                        <Text style={styles.countryPickerButtonText}>
+                        <ThemedText style={styles.countryPickerButtonText}>
                           {country ? getCountryName(country) : 'Select a country'}
-                        </Text>
-                        <Ionicons name="chevron-down" size={20} color="#777" />
+                        </ThemedText>
+                        <FeatherIcon name="chevron-down" size={20} color={Colors[colorScheme].tabIconDefault} />
                       </TouchableOpacity>
                     ) : (
-                      <View style={styles.pickerContainer}>
+                      <View style={[styles.pickerContainer, {backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}]}>
                         <Picker
                           selectedValue={country}
                           onValueChange={(itemValue) => setCountry(itemValue)}
-                          style={styles.picker}
-                          dropdownIconColor="#777"
+                          style={[styles.picker, {color: Colors[colorScheme].text}]}
+                          dropdownIconColor={Colors[colorScheme].tabIconDefault}
                         >
                           <Picker.Item label="Select a country" value="" />
                           {countries.map((countryItem) => (
@@ -250,6 +261,7 @@ export default function ProfileScreen() {
                               key={countryItem.code}
                               label={countryItem.name}
                               value={countryItem.code}
+                              color={isDark ? '#fff' : '#000'}
                             />
                           ))}
                         </Picker>
@@ -258,18 +270,19 @@ export default function ProfileScreen() {
                   </View>
                   
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Avatar URL</Text>
+                    <ThemedText style={styles.inputLabel}>Avatar URL</ThemedText>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, {color: Colors[colorScheme].text, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}]}
                       value={avatarUrl}
                       onChangeText={setAvatarUrl}
                       placeholder="Enter avatar URL"
+                      placeholderTextColor={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'}
                     />
                   </View>
                   
                   <View style={styles.buttonRow}>
                     <TouchableOpacity 
-                      style={[styles.actionButton, styles.cancelButton]}
+                      style={[styles.actionButton, styles.cancelButton, {backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)'}]}
                       onPress={() => {
                         setIsEditing(false);
                         // Reset to original values
@@ -281,7 +294,7 @@ export default function ProfileScreen() {
                         }
                       }}
                     >
-                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                      <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
                     </TouchableOpacity>
                     
                     <TouchableOpacity 
@@ -292,35 +305,35 @@ export default function ProfileScreen() {
                       {isUpdating ? (
                         <ActivityIndicator size="small" color="#fff" />
                       ) : (
-                        <Text style={styles.saveButtonText}>Save Changes</Text>
+                        <ThemedText style={styles.saveButtonText}>Save Changes</ThemedText>
                       )}
                     </TouchableOpacity>
                   </View>
                 </View>
               )}
-            </View>
+            </ThemedView>
             
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Account</Text>
+            <ThemedView style={styles.sectionContainer}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>Account</ThemedText>
               
               <TouchableOpacity style={styles.menuItem}>
-                <Ionicons name="shield-checkmark-outline" size={24} color="#333" style={styles.menuIcon} />
-                <Text style={styles.menuText}>Privacy & Security</Text>
-                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                <FeatherIcon name="shield" size={24} color={Colors[colorScheme].text} style={styles.menuIcon} />
+                <ThemedText style={styles.menuText}>Privacy & Security</ThemedText>
+                <FeatherIcon name="chevron-right" size={20} color={Colors[colorScheme].tabIconDefault} />
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.menuItem}>
-                <Ionicons name="notifications-outline" size={24} color="#333" style={styles.menuIcon} />
-                <Text style={styles.menuText}>Notification Settings</Text>
-                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                <FeatherIcon name="bell" size={24} color={Colors[colorScheme].text} style={styles.menuIcon} />
+                <ThemedText style={styles.menuText}>Notification Settings</ThemedText>
+                <FeatherIcon name="chevron-right" size={20} color={Colors[colorScheme].tabIconDefault} />
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.menuItem}>
-                <Ionicons name="key-outline" size={24} color="#333" style={styles.menuIcon} />
-                <Text style={styles.menuText}>Change Password</Text>
-                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                <FeatherIcon name="key" size={24} color={Colors[colorScheme].text} style={styles.menuIcon} />
+                <ThemedText style={styles.menuText}>Change Password</ThemedText>
+                <FeatherIcon name="chevron-right" size={20} color={Colors[colorScheme].tabIconDefault} />
               </TouchableOpacity>
-            </View>
+            </ThemedView>
           </View>
         </ScrollView>
       ) : (
@@ -330,47 +343,46 @@ export default function ProfileScreen() {
       {/* Country Picker Modal for iOS */}
       {Platform.OS === 'ios' && showCountryPicker && (
         <View style={styles.modalContainer}>
-          <View style={styles.pickerModalContent}>
+          <View style={[styles.pickerModalContent, {backgroundColor: isDark ? Colors.dark.background : Colors.light.background}]}>
             <View style={styles.pickerHeader}>
               <TouchableOpacity onPress={() => setShowCountryPicker(false)}>
-                <Text style={styles.pickerCancel}>Cancel</Text>
+                <ThemedText style={styles.pickerCancel}>Cancel</ThemedText>
               </TouchableOpacity>
-              <Text style={styles.pickerTitle}>Select Country</Text>
+              <ThemedText style={styles.pickerTitle}>Select Country</ThemedText>
               <TouchableOpacity onPress={() => setShowCountryPicker(false)}>
-                <Text style={styles.pickerDone}>Done</Text>
+                <ThemedText style={styles.pickerDone}>Done</ThemedText>
               </TouchableOpacity>
             </View>
             <Picker
               selectedValue={country}
               onValueChange={(itemValue) => setCountry(itemValue)}
-              style={styles.pickerIOS}
+              style={[styles.pickerIOS, {color: Colors[colorScheme].text}]}
             >
-              <Picker.Item label="Select a country" value="" />
+              <Picker.Item label="Select a country" value="" color={isDark ? '#fff' : '#000'} />
               {countries.map((countryItem) => (
                 <Picker.Item
                   key={countryItem.code}
                   label={countryItem.name}
                   value={countryItem.code}
+                  color={isDark ? '#fff' : '#000'}
                 />
               ))}
             </Picker>
           </View>
         </View>
       )}
-    </View>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
     paddingTop: 60, // Account for safe area
   },
   tabButton: {
@@ -382,15 +394,14 @@ const styles = StyleSheet.create({
   },
   activeTabButton: {
     borderBottomWidth: 2,
-    borderBottomColor: '#3498db',
+    borderBottomColor: '#0a7ea4',
   },
   tabText: {
     fontSize: 16,
-    color: '#777',
     marginLeft: 6,
   },
   activeTabText: {
-    color: '#3498db',
+    color: '#0a7ea4',
     fontWeight: '600',
   },
   contentContainer: {
@@ -402,11 +413,14 @@ const styles = StyleSheet.create({
     maxWidth: 600,
     alignSelf: 'center',
   },
+  tabletContainer: {
+    maxWidth: 800,
+    padding: 20,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f8f8',
   },
   header: {
     flexDirection: 'row',
@@ -414,23 +428,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: '#fff',
     width: '100%',
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
   },
   signOutButton: {
     padding: 8,
   },
   profileContainer: {
-    backgroundColor: '#fff',
     padding: 20,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
     width: '100%',
   },
   avatarContainer: {
@@ -446,7 +456,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#3498db',
+    backgroundColor: '#0a7ea4',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -459,7 +469,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     bottom: 0,
-    backgroundColor: '#3498db',
+    backgroundColor: '#0a7ea4',
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -470,8 +480,8 @@ const styles = StyleSheet.create({
   },
   emailText: {
     fontSize: 16,
-    color: '#777',
     marginBottom: 20,
+    opacity: 0.7,
   },
   profileInfoContainer: {
     width: '100%',
@@ -482,20 +492,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
   },
   infoLabel: {
     fontSize: 16,
-    color: '#777',
+    opacity: 0.7,
   },
   infoValue: {
     fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
   },
   editButton: {
     marginTop: 20,
-    backgroundColor: '#3498db',
+    backgroundColor: '#0a7ea4',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -515,23 +523,21 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 14,
-    color: '#777',
     marginBottom: 6,
+    opacity: 0.7,
   },
   input: {
-    backgroundColor: '#f5f5f5',
     paddingVertical: 12,
     paddingHorizontal: 15,
     borderRadius: 8,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: 'rgba(150, 150, 150, 0.2)',
   },
   pickerContainer: {
-    backgroundColor: '#f5f5f5',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: 'rgba(150, 150, 150, 0.2)',
     overflow: 'hidden',
   },
   picker: {
@@ -539,19 +545,17 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   countryPickerButton: {
-    backgroundColor: '#f5f5f5',
     paddingVertical: 12,
     paddingHorizontal: 15,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: 'rgba(150, 150, 150, 0.2)',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   countryPickerButtonText: {
     fontSize: 16,
-    color: '#333',
   },
   modalContainer: {
     position: 'absolute',
@@ -563,7 +567,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   pickerModalContent: {
-    backgroundColor: '#fff',
     borderTopLeftRadius: 15,
     borderTopRightRadius: 15,
   },
@@ -573,18 +576,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
   },
   pickerTitle: {
     fontSize: 18,
     fontWeight: '500',
   },
   pickerCancel: {
-    color: '#777',
+    opacity: 0.7,
     fontSize: 16,
   },
   pickerDone: {
-    color: '#3498db',
+    color: '#0a7ea4',
     fontSize: 16,
     fontWeight: '500',
   },
@@ -604,15 +607,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelButton: {
-    backgroundColor: '#f1f1f1',
     marginRight: 10,
   },
   cancelButtonText: {
-    color: '#333',
     fontWeight: '500',
   },
   saveButton: {
-    backgroundColor: '#3498db',
+    backgroundColor: '#0a7ea4',
     marginLeft: 10,
   },
   saveButtonText: {
@@ -620,18 +621,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   sectionContainer: {
-    backgroundColor: '#fff',
     marginTop: 20,
     padding: 20,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#eee',
+    borderColor: 'rgba(150, 150, 150, 0.2)',
     width: '100%',
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
     marginBottom: 15,
   },
   menuItem: {
@@ -639,7 +636,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
   },
   menuIcon: {
     marginRight: 15,
@@ -647,6 +644,5 @@ const styles = StyleSheet.create({
   menuText: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
   },
 }); 
