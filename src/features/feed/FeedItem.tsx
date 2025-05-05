@@ -49,6 +49,34 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
   const renderCount = useRef(0);
   
+  // Calculate responsive font size based on question length
+  const calculateFontSize = useMemo(() => {
+    const textLength = item.question.length;
+    const lineBreaks = (item.question.match(/\n/g) || []).length;
+    
+    // Base calculation on text length and number of line breaks
+    // Start with maximum font size and reduce based on length
+    let fontSize = 42;
+    
+    if (textLength > 60 || lineBreaks > 0) {
+      fontSize = 36;
+    }
+    
+    if (textLength > 100 || lineBreaks > 1) {
+      fontSize = 32;
+    }
+    
+    if (textLength > 140 || lineBreaks > 2) {
+      fontSize = 28;
+    }
+    
+    if (textLength > 180 || lineBreaks > 3) {
+      fontSize = 24;
+    }
+    
+    return fontSize;
+  }, [item.question]);
+  
   // Add debounce timer refs
   const mouseEnterTimerRef = useRef<NodeJS.Timeout | null>(null);
   const mouseLeaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -193,17 +221,22 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
             <Text style={styles.category}>{item.category}</Text>
             <View style={[styles.difficulty, { 
               backgroundColor: 
-                item.difficulty === 'Easy' ? '#4CAF50' :
-                item.difficulty === 'Medium' ? '#FFC107' :
-                '#F44336'
+                item.difficulty?.toLowerCase() === 'easy' ? '#8BC34A' :  // Light green for easy
+                item.difficulty?.toLowerCase() === 'medium' ? '#FFEB3B' : // Yellow for medium
+                '#9C27B0'  // Purple for hard
             }]}>
-              <Text style={styles.difficultyText}>{item.difficulty}</Text>
+              <Text style={[styles.difficultyText, { 
+                color: 
+                  item.difficulty?.toLowerCase() === 'easy' ? '#507523' :  // Darker green for text
+                  item.difficulty?.toLowerCase() === 'medium' ? '#806F00' : // Darker yellow for text
+                  '#4A1158'  // Darker purple for text
+              }]}>{item.difficulty}</Text>
             </View>
           </View>
 
           <View style={styles.questionContainer}>
-            {/* Using ThemedText with question type for DM Serif */}
-            <ThemedText type="question" style={styles.questionText}>
+            {/* Using ThemedText with question type for DM Serif and dynamic font size */}
+            <ThemedText type="question" style={[styles.questionText, { fontSize: calculateFontSize }]}>
               {item.question}
             </ThemedText>
 
@@ -308,12 +341,14 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
             </TouchableOpacity>
             
             <TouchableOpacity 
-              onPress={toggleLearningCapsule} 
+              onPress={isAnswered() ? toggleLearningCapsule : undefined} 
               style={[
                 styles.actionButton,
-                Platform.OS === 'web' && hoveredAction === 'learn' && styles.hoveredActionButton
+                !isAnswered() && styles.disabledActionButton,
+                Platform.OS === 'web' && isAnswered() && hoveredAction === 'learn' && styles.hoveredActionButton
               ]}
-              {...(Platform.OS === 'web' ? {
+              disabled={!isAnswered()}
+              {...(Platform.OS === 'web' && isAnswered() ? {
                 onMouseEnter: () => handleActionMouseEnter('learn'),
                 onMouseLeave: handleActionMouseLeave
               } : {})}
@@ -322,9 +357,9 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                 name={showLearningCapsule ? "book" : "book-open"} 
                 size={20} 
                 color="white" 
-                style={styles.icon} 
+                style={[styles.icon, !isAnswered() && styles.disabledIcon]} 
               />
-              <ThemedText style={styles.actionText}>Learn</ThemedText>
+              <ThemedText style={[styles.actionText, !isAnswered() && styles.disabledText]}>Learn</ThemedText>
             </TouchableOpacity>
             
             {/* Only show explanation button in dev mode */}
@@ -435,10 +470,10 @@ const styles = StyleSheet.create({
   },
   questionText: {
     color: 'white',
-    fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
     ...(Platform.OS === 'web' ? { textShadow: '0px 2px 4px rgba(0, 0, 0, 0.5)' } as any : {}),
+    // fontSize is now applied dynamically
   },
   answersContainer: {
     marginTop: 10,
@@ -576,5 +611,14 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     lineHeight: 24,
+  },
+  disabledActionButton: {
+    opacity: 0.5,
+  },
+  disabledIcon: {
+    opacity: 0.5,
+  },
+  disabledText: {
+    opacity: 0.5,
   },
 });
