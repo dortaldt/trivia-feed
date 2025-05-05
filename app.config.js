@@ -42,7 +42,7 @@ if (INVALID_URLS.includes(finalUrl)) {
 console.log("Building app with Supabase URL:", finalUrl);
 
 module.exports = {
-  name: "Trivia Feed",
+  name: "Zest",
   slug: "trivia-feed",
   scheme: "trivia-feed",
   version: "1.0.0",
