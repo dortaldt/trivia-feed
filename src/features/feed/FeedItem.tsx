@@ -255,20 +255,23 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                     } : {})}
                   >
                     {/* Use ThemedText for answers to ensure Inter font */}
-                    <ThemedText style={[
-                      styles.answerText, 
-                      isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerText,
-                      isSkipped() && styles.skippedAnswerText
-                    ]}>
+                    <ThemedText 
+                      type="default"
+                      style={[
+                        styles.answerText, 
+                        isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerText,
+                        isSkipped() && styles.skippedAnswerText
+                      ]}
+                    >
                       {answer.text}
                     </ThemedText>
                     
                     {(isAnswered() && questionState?.answerIndex === index && (
                       answer.isCorrect ? 
-                      <FeatherIcon name="check-circle" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} /> : 
+                      <FeatherIcon name="check-square" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} /> : 
                       <FeatherIcon name="x-circle" size={24} color="#F44336" style={{marginLeft: 8} as TextStyle} />
                     )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
-                      <FeatherIcon name="check-circle" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} />
+                      <FeatherIcon name="square" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} />
                     ))}
                   </TouchableOpacity>
                 ))}
@@ -294,10 +297,10 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
               } : {})}
             >
               <FeatherIcon 
-                name="heart" 
+                name={liked ? "heart" : "heart"} 
                 size={20} 
                 color={liked ? '#F44336' : 'white'} 
-                style={styles.icon} 
+                style={[styles.icon, liked ? {} : {opacity: 0.8}]} 
               />
               <ThemedText style={styles.actionText}>
                 {liked ? item.likes + 1 : item.likes}
@@ -316,7 +319,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
               } : {})}
             >
               <FeatherIcon 
-                name="book-open" 
+                name={showLearningCapsule ? "book" : "book-open"} 
                 size={20} 
                 color="white" 
                 style={styles.icon} 
@@ -338,7 +341,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                 } : {})}
               >
                 <FeatherIcon 
-                  name="help-circle" 
+                  name="info" 
                   size={20} 
                   color="white" 
                   style={styles.icon} 
