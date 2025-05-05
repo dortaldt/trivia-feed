@@ -232,17 +232,18 @@ const FeedScreen: React.FC = () => {
   useEffect(() => {
     const calculateViewportHeight = () => {
       if (Platform.OS === 'web') {
-        // For web, account for any header/navigation bar (approximately 49px)
+        // For web, account for the tab bar navigation height (49px)
         setViewportHeight(window.innerHeight - 49);
       } else {
         // For mobile, get the screen dimensions accounting for safe areas
         const windowHeight = Dimensions.get('window').height;
         // Account for status bar and navigation bar on mobile
-        const statusBarHeight = Platform.OS === 'ios' ? 44 : 24; // Approximate for different devices
-        const bottomNavHeight = Platform.OS === 'ios' ? 34 : 48; // Approximate for different devices
+        // Adjust these values based on the actual navbar height in your app
+        const statusBarHeight = Platform.OS === 'ios' ? 44 : 24; 
+        const bottomNavHeight = Platform.OS === 'ios' ? 49 : 49; // Using 49px for both to match web
         
         // Calculate available height minus navigation areas
-        const calculatedHeight = windowHeight - (statusBarHeight + bottomNavHeight);
+        const calculatedHeight = windowHeight - bottomNavHeight;
         console.log(`Calculated viewport height: ${calculatedHeight}px (window: ${windowHeight}px)`);
         setViewportHeight(calculatedHeight);
       }
@@ -895,7 +896,7 @@ const FeedScreen: React.FC = () => {
       questions[item.id] ? `(Question status: ${questions[item.id].status})` : '(No status yet)');
     
     return (
-      <View style={[styles.feedItemContainer, { height: viewportHeight, flex: 1 }]}>
+      <View style={[styles.feedItemContainer, { height: viewportHeight }]}>
         <FeedItem 
           item={item} 
           onAnswer={(answerIndex, isCorrect) => 
@@ -1061,7 +1062,7 @@ const FeedScreen: React.FC = () => {
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
-        pagingEnabled
+        pagingEnabled={true}
         getItemLayout={getItemLayout}
         viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
         onMomentumScrollBegin={onMomentumScrollBegin}
@@ -1069,7 +1070,7 @@ const FeedScreen: React.FC = () => {
         onScroll={handleScroll}
         scrollEventThrottle={16}
         snapToAlignment="start"
-        decelerationRate={Platform.OS === 'ios' ? 'fast' : 'normal'}
+        decelerationRate="fast" // Use fast deceleration for better snapping
         snapToInterval={viewportHeight}
         style={styles.flatList}
         contentContainerStyle={styles.flatListContent}
@@ -1208,13 +1209,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   flatListContent: {
-    // This ensures proper sizing on both web and mobile
-    minHeight: '100%',
+    // No additional padding or spacing that would cause items to overflow
     flexGrow: 1,
   },
   feedItemContainer: {
     width: '100%',
-    flex: 1,
     // Height is dynamically set in renderItem using viewportHeight
     // This ensures each item takes exactly one screen
   },
