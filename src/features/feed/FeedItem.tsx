@@ -8,6 +8,7 @@ import {
   Animated,
   Platform,
   TextStyle,
+  SafeAreaView,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { QuestionState } from '../../store/triviaSlice';
@@ -180,188 +181,190 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
   });
 
   return (
-    <View style={styles.container}>
-      {/* Solid color background instead of image */}
-      <View style={dynamicStyles.backgroundColor} />
-      
-      <View style={[styles.overlay, {zIndex: 1}]} />
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Solid color background instead of image */}
+        <View style={dynamicStyles.backgroundColor} />
+        
+        <View style={[styles.overlay, {zIndex: 1}]} />
 
-      <View style={[styles.content, {zIndex: 2}]}>
-        <View style={styles.header}>
-          <Text style={styles.category}>{item.category}</Text>
-          <View style={[styles.difficulty, { 
-            backgroundColor: 
-              item.difficulty === 'Easy' ? '#4CAF50' :
-              item.difficulty === 'Medium' ? '#FFC107' :
-              '#F44336'
-          }]}>
-            <Text style={styles.difficultyText}>{item.difficulty}</Text>
-          </View>
-        </View>
-
-        <View style={styles.questionContainer}>
-          {/* Using ThemedText with question type for DM Serif */}
-          <ThemedText type="question" style={styles.questionText}>
-            {item.question}
-          </ThemedText>
-
-          {/* Show "Skipped" banner if question was skipped */}
-          {isSkipped() && (
-            <View style={styles.skippedContainer}>
-              <FeatherIcon name="skip-forward" size={24} color="#FFC107" style={styles.skippedIcon} />
-              <ThemedText style={styles.skippedText}>
-                You skipped this question
-              </ThemedText>
+        <View style={[styles.content, {zIndex: 2}]}>
+          <View style={styles.header}>
+            <Text style={styles.category}>{item.category}</Text>
+            <View style={[styles.difficulty, { 
+              backgroundColor: 
+                item.difficulty === 'Easy' ? '#4CAF50' :
+                item.difficulty === 'Medium' ? '#FFC107' :
+                '#F44336'
+            }]}>
+              <Text style={styles.difficultyText}>{item.difficulty}</Text>
             </View>
-          )}
-          
-          <View style={styles.answersContainer}>
-            <>
-              {item.answers.map((answer, index) => (
-                <TouchableOpacity
-                  key={`${item.id}-answer-${index}`}
-                  style={[
-                    styles.answerOption,
-                    { backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.2)' },
-                    isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerOption,
-                    isAnswered() && 
-                    questionState?.answerIndex === index && 
-                    answer.isCorrect && 
-                    styles.correctAnswerOption,
-                    isAnswered() && 
-                    questionState?.answerIndex === index && 
-                    !answer.isCorrect && 
-                    styles.incorrectAnswerOption,
-                    // Highlight the correct answer when any wrong answer is selected
-                    isAnswered() && 
-                    questionState?.answerIndex !== index && 
-                    answer.isCorrect && 
-                    !isSelectedAnswerCorrect() && 
-                    styles.correctAnswerOption,
-                    // Add hover state for web
-                    Platform.OS === 'web' && hoveredAnswerIndex === index && styles.hoveredAnswerOption,
-                    // Add skipped state styling
-                    isSkipped() && styles.skippedAnswerOption,
-                  ]}
-                  onPress={() => selectAnswer(index)}
-                  // Don't disable if skipped so user can still answer
-                  disabled={isAnswered()}
-                  // Add onMouseEnter and onMouseLeave conditionally for web
-                  {...(Platform.OS === 'web' ? {
-                    onMouseEnter: () => handleMouseEnter(index),
-                    onMouseLeave: handleMouseLeave
-                  } : {})}
-                >
-                  {/* Use ThemedText for answers to ensure Inter font */}
-                  <ThemedText style={[
-                    styles.answerText, 
-                    isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerText,
-                    isSkipped() && styles.skippedAnswerText
-                  ]}>
-                    {answer.text}
-                  </ThemedText>
-                  
-                  {(isAnswered() && questionState?.answerIndex === index && (
-                    answer.isCorrect ? 
-                    <FeatherIcon name="check-circle" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} /> : 
-                    <FeatherIcon name="x-circle" size={24} color="#F44336" style={{marginLeft: 8} as TextStyle} />
-                  )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
-                    <FeatherIcon name="check-circle" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} />
-                  ))}
-                </TouchableOpacity>
-              ))}
-              
-              {isAnswered() && (
-                <>
-                </>
-              )}
-            </>
           </View>
-        </View>
 
-        <View style={styles.footer}>
-          <TouchableOpacity 
-            onPress={toggleLike} 
-            style={[
-              styles.actionButton,
-              Platform.OS === 'web' && hoveredAction === 'like' && styles.hoveredActionButton
-            ]}
-            {...(Platform.OS === 'web' ? {
-              onMouseEnter: () => handleActionMouseEnter('like'),
-              onMouseLeave: handleActionMouseLeave
-            } : {})}
-          >
-            <FeatherIcon 
-              name="heart" 
-              size={20} 
-              color={liked ? '#F44336' : 'white'} 
-              style={styles.icon} 
-            />
-            <ThemedText style={styles.actionText}>
-              {liked ? item.likes + 1 : item.likes}
+          <View style={styles.questionContainer}>
+            {/* Using ThemedText with question type for DM Serif */}
+            <ThemedText type="question" style={styles.questionText}>
+              {item.question}
             </ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            onPress={toggleLearningCapsule} 
-            style={[
-              styles.actionButton,
-              Platform.OS === 'web' && hoveredAction === 'learn' && styles.hoveredActionButton
-            ]}
-            {...(Platform.OS === 'web' ? {
-              onMouseEnter: () => handleActionMouseEnter('learn'),
-              onMouseLeave: handleActionMouseLeave
-            } : {})}
-          >
-            <FeatherIcon 
-              name="book-open" 
-              size={20} 
-              color="white" 
-              style={styles.icon} 
-            />
-            <ThemedText style={styles.actionText}>Learn</ThemedText>
-          </TouchableOpacity>
-          
-          {/* Only show explanation button in dev mode */}
-          {__DEV__ && showExplanation && (
-            <TouchableOpacity
-              onPress={showExplanation}
+
+            {/* Show "Skipped" banner if question was skipped */}
+            {isSkipped() && (
+              <View style={styles.skippedContainer}>
+                <FeatherIcon name="skip-forward" size={24} color="#FFC107" style={styles.skippedIcon} />
+                <ThemedText style={styles.skippedText}>
+                  You skipped this question
+                </ThemedText>
+              </View>
+            )}
+            
+            <View style={styles.answersContainer}>
+              <>
+                {item.answers.map((answer, index) => (
+                  <TouchableOpacity
+                    key={`${item.id}-answer-${index}`}
+                    style={[
+                      styles.answerOption,
+                      { backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.2)' },
+                      isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerOption,
+                      isAnswered() && 
+                      questionState?.answerIndex === index && 
+                      answer.isCorrect && 
+                      styles.correctAnswerOption,
+                      isAnswered() && 
+                      questionState?.answerIndex === index && 
+                      !answer.isCorrect && 
+                      styles.incorrectAnswerOption,
+                      // Highlight the correct answer when any wrong answer is selected
+                      isAnswered() && 
+                      questionState?.answerIndex !== index && 
+                      answer.isCorrect && 
+                      !isSelectedAnswerCorrect() && 
+                      styles.correctAnswerOption,
+                      // Add hover state for web
+                      Platform.OS === 'web' && hoveredAnswerIndex === index && styles.hoveredAnswerOption,
+                      // Add skipped state styling
+                      isSkipped() && styles.skippedAnswerOption,
+                    ]}
+                    onPress={() => selectAnswer(index)}
+                    // Don't disable if skipped so user can still answer
+                    disabled={isAnswered()}
+                    // Add onMouseEnter and onMouseLeave conditionally for web
+                    {...(Platform.OS === 'web' ? {
+                      onMouseEnter: () => handleMouseEnter(index),
+                      onMouseLeave: handleMouseLeave
+                    } : {})}
+                  >
+                    {/* Use ThemedText for answers to ensure Inter font */}
+                    <ThemedText style={[
+                      styles.answerText, 
+                      isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerText,
+                      isSkipped() && styles.skippedAnswerText
+                    ]}>
+                      {answer.text}
+                    </ThemedText>
+                    
+                    {(isAnswered() && questionState?.answerIndex === index && (
+                      answer.isCorrect ? 
+                      <FeatherIcon name="check-circle" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} /> : 
+                      <FeatherIcon name="x-circle" size={24} color="#F44336" style={{marginLeft: 8} as TextStyle} />
+                    )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
+                      <FeatherIcon name="check-circle" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} />
+                    ))}
+                  </TouchableOpacity>
+                ))}
+                
+                {isAnswered() && (
+                  <>
+                  </>
+                )}
+              </>
+            </View>
+          </View>
+
+          <View style={styles.footer}>
+            <TouchableOpacity 
+              onPress={toggleLike} 
               style={[
                 styles.actionButton,
-                Platform.OS === 'web' && hoveredAction === 'explain' && styles.hoveredActionButton
+                Platform.OS === 'web' && hoveredAction === 'like' && styles.hoveredActionButton
               ]}
               {...(Platform.OS === 'web' ? {
-                onMouseEnter: () => handleActionMouseEnter('explain'),
+                onMouseEnter: () => handleActionMouseEnter('like'),
                 onMouseLeave: handleActionMouseLeave
               } : {})}
             >
               <FeatherIcon 
-                name="help-circle" 
+                name="heart" 
+                size={20} 
+                color={liked ? '#F44336' : 'white'} 
+                style={styles.icon} 
+              />
+              <ThemedText style={styles.actionText}>
+                {liked ? item.likes + 1 : item.likes}
+              </ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={toggleLearningCapsule} 
+              style={[
+                styles.actionButton,
+                Platform.OS === 'web' && hoveredAction === 'learn' && styles.hoveredActionButton
+              ]}
+              {...(Platform.OS === 'web' ? {
+                onMouseEnter: () => handleActionMouseEnter('learn'),
+                onMouseLeave: handleActionMouseLeave
+              } : {})}
+            >
+              <FeatherIcon 
+                name="book-open" 
                 size={20} 
                 color="white" 
                 style={styles.icon} 
               />
-              <ThemedText style={styles.actionText}>Explanations</ThemedText>
+              <ThemedText style={styles.actionText}>Learn</ThemedText>
             </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* Learning Capsule Popup */}
-      {showLearningCapsule && (
-        <Animated.View style={[styles.learningCapsule, getPopupAnimatedStyle()]}>
-          <View style={styles.learningCapsuleHeader}>
-            <ThemedText style={styles.learningCapsuleTitle}>Learn More</ThemedText>
-            <TouchableOpacity onPress={toggleLearningCapsule} style={styles.closeButton}>
-              <FeatherIcon name="x" size={24} color="white" />
-            </TouchableOpacity>
+            
+            {/* Only show explanation button in dev mode */}
+            {__DEV__ && showExplanation && (
+              <TouchableOpacity
+                onPress={showExplanation}
+                style={[
+                  styles.actionButton,
+                  Platform.OS === 'web' && hoveredAction === 'explain' && styles.hoveredActionButton
+                ]}
+                {...(Platform.OS === 'web' ? {
+                  onMouseEnter: () => handleActionMouseEnter('explain'),
+                  onMouseLeave: handleActionMouseLeave
+                } : {})}
+              >
+                <FeatherIcon 
+                  name="help-circle" 
+                  size={20} 
+                  color="white" 
+                  style={styles.icon} 
+                />
+                <ThemedText style={styles.actionText}>Explanations</ThemedText>
+              </TouchableOpacity>
+            )}
           </View>
-          <ThemedText style={styles.learningCapsuleText}>
-            {item.learningCapsule}
-          </ThemedText>
-        </Animated.View>
-      )}
-    </View>
+        </View>
+
+        {/* Learning Capsule Popup */}
+        {showLearningCapsule && (
+          <Animated.View style={[styles.learningCapsule, getPopupAnimatedStyle()]}>
+            <View style={styles.learningCapsuleHeader}>
+              <ThemedText style={styles.learningCapsuleTitle}>Learn More</ThemedText>
+              <TouchableOpacity onPress={toggleLearningCapsule} style={styles.closeButton}>
+                <FeatherIcon name="x" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+            <ThemedText style={styles.learningCapsuleText}>
+              {item.learningCapsule}
+            </ThemedText>
+          </Animated.View>
+        )}
+      </View>
+    </SafeAreaView>
   );
 };
 
@@ -369,16 +372,19 @@ export default FeedItem;
 
 // Keep all existing styles
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   container: {
-    width: width,
-    height: Platform.OS === 'web' ? '100vh' as any : height,
-    minHeight: Platform.OS === 'web' ? '100vh' as any : height - 49, // Adjust for bottom tab bar
+    width: '100%',
+    height: '100%',
+    flex: 1,
     position: 'relative',
     overflow: 'hidden',
     flexDirection: 'column',
     justifyContent: 'flex-end',
-    // Ensure the container takes the full viewport
-    flex: 1,
   },
   overlay: {
     position: 'absolute',
