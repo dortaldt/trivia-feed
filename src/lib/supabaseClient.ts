@@ -74,6 +74,11 @@ try {
   console.log('DEBUG: Creating Supabase client...');
   console.log(`DEBUG: Using URL: ${supabaseUrl}`);
   
+  // Check for network connectivity before creating client
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing Supabase credentials');
+  }
+  
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       storage: AsyncStorage,
@@ -87,14 +92,42 @@ try {
 } catch (error: any) {
   console.error('DEBUG: Failed to create Supabase client:', error);
   
-  // Create a dummy client that logs errors for any method call
+  // Create a dummy client that logs errors but falls back gracefully
   supabase = new Proxy({}, {
     get: function(obj, prop) {
       if (typeof prop === 'string') {
-        // Return a function that logs the error
+        // For from() method, return a special handler that can be chained
+        if (prop === 'from') {
+          return (tableName: string) => {
+            console.warn(`DEBUG: Attempting to access table '${tableName}' with non-functional Supabase client. Will return mock data if available.`);
+            
+            // Return an object that mimics Supabase query builder
+            return {
+              select: () => {
+                console.warn('DEBUG: select() called on non-functional client');
+                return Promise.resolve({ data: null, error: { message: 'Supabase client not initialized or network unavailable' } });
+              },
+              insert: () => {
+                console.warn('DEBUG: insert() called on non-functional client');
+                return Promise.resolve({ data: null, error: { message: 'Supabase client not initialized or network unavailable' } });
+              },
+              update: () => {
+                console.warn('DEBUG: update() called on non-functional client');
+                return Promise.resolve({ data: null, error: { message: 'Supabase client not initialized or network unavailable' } });
+              },
+              delete: () => {
+                console.warn('DEBUG: delete() called on non-functional client');
+                return Promise.resolve({ data: null, error: { message: 'Supabase client not initialized or network unavailable' } });
+              },
+              // Add other Supabase query methods as needed
+            };
+          };
+        }
+        
+        // Return a function that logs the error for other methods
         return () => {
-          console.error(`Supabase client not initialized. Cannot call '${prop}'.`);
-          return { data: null, error: { message: 'Supabase client not initialized' } };
+          console.warn(`DEBUG: Supabase client not initialized. Cannot call '${prop}'. Will use mock data if available.`);
+          return { data: null, error: { message: 'Supabase client not initialized or network unavailable' } };
         };
       }
       return undefined;

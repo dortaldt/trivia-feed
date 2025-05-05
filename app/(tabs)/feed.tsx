@@ -20,7 +20,7 @@ export default function Feed() {
 const styles = StyleSheet.create({
   webWrapper: {
     flex: 1,
-    height: 'calc(100vh - 49px)', // Full viewport height minus tab bar
+    height: Platform.OS === 'web' ? 'calc(100vh - 49px)' as any : '100%',
     display: 'flex',
     overflow: 'hidden',
     width: '100%',

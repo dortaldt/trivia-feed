@@ -57,6 +57,7 @@ const FeedScreen: React.FC = () => {
   const [feedData, setFeedData] = useState<FeedItemType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [usingMockData, setUsingMockData] = useState(false);
   // Add state for selection explanations 
   const [showExplanationModal, setShowExplanationModal] = useState(false);
   const [currentExplanation, setCurrentExplanation] = useState<string[]>([]);
@@ -76,7 +77,7 @@ const FeedScreen: React.FC = () => {
 
   // State to track viewport height on web for proper sizing
   const [viewportHeight, setViewportHeight] = useState(
-    Platform.OS === 'web' ? window.innerHeight - 49 : height - 49
+    Platform.OS === 'web' ? window.innerHeight - 49 : height
   );
 
   // Use our custom iOS animations hook
@@ -102,6 +103,12 @@ const FeedScreen: React.FC = () => {
       setLoadError(null);
       try {
         const allQuestions = await fetchTriviaQuestions(); // Get all available questions
+        
+        // Check if we got mock data due to a connection error
+        if (allQuestions.length === 3 && allQuestions[0].id === '1' && allQuestions[0].question.includes('closest star to Earth')) {
+          console.log('Using mock data due to connection error');
+          setUsingMockData(true);
+        }
         
         // Filter out duplicates by ID
         const uniqueQuestions = allQuestions.filter((item, index, self) => 
@@ -223,23 +230,37 @@ const FeedScreen: React.FC = () => {
 
   // For web, listen to window resize events to update the viewport height
   useEffect(() => {
-    if (Platform.OS === 'web') {
-      const handleResize = () => {
+    const calculateViewportHeight = () => {
+      if (Platform.OS === 'web') {
+        // For web, account for any header/navigation bar (approximately 49px)
         setViewportHeight(window.innerHeight - 49);
-      };
-
-      window.addEventListener('resize', handleResize);
-
-      // Initial size check
-      handleResize();
-
+      } else {
+        // For mobile, get the screen dimensions accounting for safe areas
+        const windowHeight = Dimensions.get('window').height;
+        // Account for status bar and navigation bar on mobile
+        const statusBarHeight = Platform.OS === 'ios' ? 44 : 24; // Approximate for different devices
+        const bottomNavHeight = Platform.OS === 'ios' ? 34 : 48; // Approximate for different devices
+        
+        // Calculate available height minus navigation areas
+        const calculatedHeight = windowHeight - (statusBarHeight + bottomNavHeight);
+        console.log(`Calculated viewport height: ${calculatedHeight}px (window: ${windowHeight}px)`);
+        setViewportHeight(calculatedHeight);
+      }
+    };
+    
+    // Initial calculation
+    calculateViewportHeight();
+    
+    if (Platform.OS === 'web') {
+      // Listen for resize on web
+      window.addEventListener('resize', calculateViewportHeight);
       return () => {
-        window.removeEventListener('resize', handleResize);
+        window.removeEventListener('resize', calculateViewportHeight);
       };
     } else {
-      // For mobile, update viewport height using Dimensions API
-      const dimensionsSubscription = Dimensions.addEventListener('change', ({ window }) => {
-        setViewportHeight(window.height - 49);
+      // For mobile, update on dimension changes
+      const dimensionsSubscription = Dimensions.addEventListener('change', () => {
+        calculateViewportHeight();
       });
       
       return () => {
@@ -859,19 +880,21 @@ const FeedScreen: React.FC = () => {
       questions[item.id] ? `(Question status: ${questions[item.id].status})` : '(No status yet)');
     
     return (
-      <FeedItem 
-        item={item} 
-        onAnswer={(answerIndex, isCorrect) => 
-          handleAnswerQuestion(item.id, answerIndex, isCorrect)
-        }
-        showExplanation={() => {
-          if (__DEV__ && feedExplanations[item.id]) {
-            setCurrentExplanation(feedExplanations[item.id]);
-            setShowExplanationModal(true);
+      <View style={[styles.feedItemContainer, { height: viewportHeight, flex: 1 }]}>
+        <FeedItem 
+          item={item} 
+          onAnswer={(answerIndex, isCorrect) => 
+            handleAnswerQuestion(item.id, answerIndex, isCorrect)
           }
-        }}
-        onNextQuestion={handleNextQuestion} 
-      />
+          showExplanation={() => {
+            if (__DEV__ && feedExplanations[item.id]) {
+              setCurrentExplanation(feedExplanations[item.id]);
+              setShowExplanationModal(true);
+            }
+          }}
+          onNextQuestion={handleNextQuestion} 
+        />
+      </View>
     );
   };
 
@@ -1007,6 +1030,16 @@ const FeedScreen: React.FC = () => {
           ) : null}
         </View>
       )}
+      
+      {/* Connection error banner */}
+      {usingMockData && (
+        <Surface style={styles.mockDataBanner}>
+          <Text style={styles.mockDataText}>
+            Using sample questions due to network connectivity issues. Please check your connection.
+          </Text>
+        </Surface>
+      )}
+      
       <FlatList
         ref={flatListRef}
         data={personalizedFeed.length > 0 ? personalizedFeed : feedData}
@@ -1024,10 +1057,7 @@ const FeedScreen: React.FC = () => {
         decelerationRate={Platform.OS === 'ios' ? 'fast' : 'normal'}
         snapToInterval={viewportHeight}
         style={styles.flatList}
-        contentContainerStyle={[
-          Platform.OS === 'web' ? { minHeight: '100%' } : undefined,
-          { paddingBottom: Platform.OS === 'ios' ? 40 : 20 } // Add padding to bottom for better scroll experience
-        ]}
+        contentContainerStyle={styles.flatListContent}
         removeClippedSubviews={Platform.OS !== 'web'} // Improve performance on mobile but can cause issues on web
         maxToRenderPerBatch={3}
         windowSize={5} // Increase window size for better visibility detection
@@ -1155,10 +1185,23 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     width: '100%', // Ensure full width
+    height: '100%', // Ensure full height
   },
   flatList: {
     width: '100%', // Full width for web and mobile
-    height: '100%',
+    height: '100%', // Full height
+    flex: 1,
+  },
+  flatListContent: {
+    // This ensures proper sizing on both web and mobile
+    minHeight: '100%',
+    flexGrow: 1,
+  },
+  feedItemContainer: {
+    width: '100%',
+    flex: 1,
+    // Height is dynamically set in renderItem using viewportHeight
+    // This ensures each item takes exactly one screen
   },
   tooltip: {
     position: 'absolute',
@@ -1328,6 +1371,26 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     textAlign: 'center',
+  },
+  mockDataBanner: {
+    position: 'absolute',
+    top: spacing[5],
+    left: spacing[5],
+    right: spacing[5],
+    backgroundColor: 'rgba(244, 67, 54, 0.9)',
+    padding: spacing[3],
+    borderRadius: borderRadius.md,
+    zIndex: 100,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  mockDataText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
 });
 

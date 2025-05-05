@@ -226,164 +226,172 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
       console.log(`DEBUG: Connection test successful! Database has ${count} records in trivia_questions table.`);
     } catch (pingError) {
       console.error('DEBUG: Connection test error:', pingError);
+      console.log('DEBUG: Falling back to mock data due to connection error');
       return mockFeedData;
     }
     
-    // First inspect the table structure
-    await inspectTableStructure();
-    
-    // Get total count of records in the database
-    const { count: totalCount, error: countError } = await supabase
-      .from('trivia_questions')
-      .select('*', { count: 'exact', head: true });
+    // If we made it here, the connection test was successful, try to get actual data
+    try {
+      // First inspect the table structure
+      await inspectTableStructure();
       
-    if (countError) {
-      console.error('Error getting total count:', countError);
-    } else {
-      console.log(`DEBUG: Total questions in database: ${totalCount}`);
-    }
-    
-    // Fetch the actual data - remove the limit to get all questions
-    console.log('DEBUG: Fetching all questions from database...');
-    const { data, error } = await supabase
-      .from('trivia_questions')
-      .select('*');
-
-    console.log('DEBUG: Supabase response:', data ? `Got ${data.length} records` : 'No data', error ? `Error: ${error.message}` : 'No error');
-    
-    if (error) {
-      console.error('Error fetching trivia questions:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
-      return mockFeedData;
-    }
-
-    if (!data || data.length === 0) {
-      console.warn('No trivia questions found, using mock data instead');
-      return mockFeedData;
-    }
-
-    console.log('DEBUG: Successfully retrieved data from Supabase');
-    
-    // Transform the Supabase data to match our app's format
-    return data.map((question: TriviaQuestion) => {
-      // Determine the question text
-      const questionText = question.question_text || question.question || 'Unknown question';
-      
-      // Handle answers - this is the critical part that needs adjustment based on inspection
-      let answers: { text: string, isCorrect: boolean }[] = [];
-      
-      // Case 1: Pre-formatted answers array with isCorrect flags
-      if (question.answers && Array.isArray(question.answers)) {
-        answers = question.answers;
+      // Get total count of records in the database
+      const { count: totalCount, error: countError } = await supabase
+        .from('trivia_questions')
+        .select('*', { count: 'exact', head: true });
+        
+      if (countError) {
+        console.error('Error getting total count:', countError);
+        return mockFeedData;
+      } else {
+        console.log(`DEBUG: Total questions in database: ${totalCount}`);
       }
-      // Case 2: answer_choices array + separate correct_answer
-      else if (question.answer_choices && Array.isArray(question.answer_choices)) {
-        if (question.correct_answer) {
-          const correctAnswerStr = String(question.correct_answer).trim();
-          
-          // Create a normalized version for comparison (lowercase, no punctuation)
-          const normalizeString = (str: string): string => {
-            return str.toLowerCase()
-              .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
-              .replace(/\s+/g, " ")
-              .trim();
-          };
-          
-          const normalizedCorrectAnswer = normalizeString(correctAnswerStr);
-          
-          // Try three matching approaches:
-          // 1. Exact string match
-          // 2. Normalized string match (case insensitive, punctuation removed)
-          // 3. Substring match (is correct answer contained in the choice or vice versa)
-          answers = question.answer_choices.map((choice: any) => {
-            const choiceStr = String(choice).trim();
-            const normalizedChoice = normalizeString(choiceStr);
+      
+      // Fetch the actual data - remove the limit to get all questions
+      console.log('DEBUG: Fetching all questions from database...');
+      const { data, error } = await supabase
+        .from('trivia_questions')
+        .select('*');
+
+      console.log('DEBUG: Supabase response:', data ? `Got ${data.length} records` : 'No data', error ? `Error: ${error.message}` : 'No error');
+      
+      if (error) {
+        console.error('Error fetching trivia questions:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        return mockFeedData;
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('No trivia questions found, using mock data instead');
+        return mockFeedData;
+      }
+
+      console.log('DEBUG: Successfully retrieved data from Supabase');
+      
+      // Transform the Supabase data to match our app's format
+      return data.map((question: TriviaQuestion) => {
+        // Determine the question text
+        const questionText = question.question_text || question.question || 'Unknown question';
+        
+        // Handle answers - this is the critical part that needs adjustment based on inspection
+        let answers: { text: string, isCorrect: boolean }[] = [];
+        
+        // Case 1: Pre-formatted answers array with isCorrect flags
+        if (question.answers && Array.isArray(question.answers)) {
+          answers = question.answers;
+        }
+        // Case 2: answer_choices array + separate correct_answer
+        else if (question.answer_choices && Array.isArray(question.answer_choices)) {
+          if (question.correct_answer) {
+            const correctAnswerStr = String(question.correct_answer).trim();
             
-            // Try different matching strategies in order of strictness
-            const exactMatch = choiceStr === correctAnswerStr;
-            const normalizedMatch = normalizedChoice === normalizedCorrectAnswer;
-            const substringMatch = normalizedChoice.includes(normalizedCorrectAnswer) || 
-                                 normalizedCorrectAnswer.includes(normalizedChoice);
-            
-            return {
-              text: choiceStr,
-              isCorrect: exactMatch || normalizedMatch || substringMatch
+            // Create a normalized version for comparison (lowercase, no punctuation)
+            const normalizeString = (str: string): string => {
+              return str.toLowerCase()
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+                .replace(/\s+/g, " ")
+                .trim();
             };
-          });
-          
-          // Log for debugging
-          console.log(`Question "${questionText}" - correct answer from DB: "${question.correct_answer}"`);
-          
-          // Check if we successfully marked any answer as correct
-          const hasCorrectAnswer = answers.some(a => a.isCorrect);
-          if (!hasCorrectAnswer) {
-            console.warn(`Failed to identify correct answer for question "${questionText}". The correct_answer value "${question.correct_answer}" doesn't match any of the answer_choices.`);
-            // Still need a correct answer, so mark the first one
-            if (answers.length > 0) {
-              answers[0].isCorrect = true;
-            }
-          } else if (answers.filter(a => a.isCorrect).length > 1) {
-            // If we marked multiple answers as correct due to fuzzy matching, keep only the best match
-            console.warn(`Multiple correct answers identified for question "${questionText}". Will select the best match.`);
             
-            // Find the best match (prioritize exact match, then normalized, then substring)
-            const exactMatches = answers.filter(a => String(a.text).trim() === correctAnswerStr);
-            if (exactMatches.length === 1) {
-              // Reset all to false, then set only the exact match
-              answers.forEach(a => a.isCorrect = false);
-              exactMatches[0].isCorrect = true;
-              console.log(`Selected exact match: "${exactMatches[0].text}"`);
-            } else {
-              // Just keep the first correct answer we found
-              const firstCorrectIndex = answers.findIndex(a => a.isCorrect);
-              answers.forEach((a, i) => a.isCorrect = i === firstCorrectIndex);
-              console.log(`Selected first matching answer: "${answers[firstCorrectIndex].text}"`);
+            const normalizedCorrectAnswer = normalizeString(correctAnswerStr);
+            
+            // Try three matching approaches:
+            // 1. Exact string match
+            // 2. Normalized string match (case insensitive, punctuation removed)
+            // 3. Substring match (is correct answer contained in the choice or vice versa)
+            answers = question.answer_choices.map((choice: any) => {
+              const choiceStr = String(choice).trim();
+              const normalizedChoice = normalizeString(choiceStr);
+              
+              // Try different matching strategies in order of strictness
+              const exactMatch = choiceStr === correctAnswerStr;
+              const normalizedMatch = normalizedChoice === normalizedCorrectAnswer;
+              const substringMatch = normalizedChoice.includes(normalizedCorrectAnswer) || 
+                                   normalizedCorrectAnswer.includes(normalizedChoice);
+              
+              return {
+                text: choiceStr,
+                isCorrect: exactMatch || normalizedMatch || substringMatch
+              };
+            });
+            
+            // Log for debugging
+            console.log(`Question "${questionText}" - correct answer from DB: "${question.correct_answer}"`);
+            
+            // Check if we successfully marked any answer as correct
+            const hasCorrectAnswer = answers.some(a => a.isCorrect);
+            if (!hasCorrectAnswer) {
+              console.warn(`Failed to identify correct answer for question "${questionText}". The correct_answer value "${question.correct_answer}" doesn't match any of the answer_choices.`);
+              // Still need a correct answer, so mark the first one
+              if (answers.length > 0) {
+                answers[0].isCorrect = true;
+              }
+            } else if (answers.filter(a => a.isCorrect).length > 1) {
+              // If we marked multiple answers as correct due to fuzzy matching, keep only the best match
+              console.warn(`Multiple correct answers identified for question "${questionText}". Will select the best match.`);
+              
+              // Find the best match (prioritize exact match, then normalized, then substring)
+              const exactMatches = answers.filter(a => String(a.text).trim() === correctAnswerStr);
+              if (exactMatches.length === 1) {
+                // Reset all to false, then set only the exact match
+                answers.forEach(a => a.isCorrect = false);
+                exactMatches[0].isCorrect = true;
+                console.log(`Selected exact match: "${exactMatches[0].text}"`);
+              } else {
+                // Just keep the first correct answer we found
+                const firstCorrectIndex = answers.findIndex(a => a.isCorrect);
+                answers.forEach((a, i) => a.isCorrect = i === firstCorrectIndex);
+                console.log(`Selected first matching answer: "${answers[firstCorrectIndex].text}"`);
+              }
             }
           }
+          // If no correct_answer field, fall back to assuming the first answer is correct
+          else {
+            answers = question.answer_choices.map((choice: any, index: number) => ({
+              text: String(choice),
+              isCorrect: index === 0 // Assume first answer is correct if no correct_answer specified
+            }));
+            console.log(`Question "${questionText}" - assuming first answer is correct (no correct_answer field)`);
+          }
         }
-        // If no correct_answer field, fall back to assuming the first answer is correct
+        // Case 3: Fallback to dummy answers
         else {
-          answers = question.answer_choices.map((choice: any, index: number) => ({
-            text: String(choice),
-            isCorrect: index === 0 // Assume first answer is correct if no correct_answer specified
-          }));
-          console.log(`Question "${questionText}" - assuming first answer is correct (no correct_answer field)`);
+          answers = [
+            { text: "Yes", isCorrect: true },
+            { text: "No", isCorrect: false },
+            { text: "Maybe", isCorrect: false },
+          ];
+          console.warn(`No valid answers found for question "${questionText}". Using dummy answers.`);
         }
-      }
-      // Case 3: Fallback to dummy answers
-      else {
-        answers = [
-          { text: "Yes", isCorrect: true },
-          { text: "No", isCorrect: false },
-          { text: "Maybe", isCorrect: false },
-        ];
-        console.warn(`No valid answers found for question "${questionText}". Using dummy answers.`);
-      }
 
-      // Get category/topic
-      const category = question.topic || question.category || 'General';
-      
-      // Get difficulty
-      const difficulty = question.difficulty || 'Medium';
-      
-      // Get learning capsule/explanation
-      const learningCapsule = question.learning_capsule || question.explanation || 'No additional information available for this question.';
-      
-      // Get background color based on category
-      const backgroundColor = getCategoryColor(category);
+        // Get category/topic
+        const category = question.topic || question.category || 'General';
+        
+        // Get difficulty
+        const difficulty = question.difficulty || 'Medium';
+        
+        // Get learning capsule/explanation
+        const learningCapsule = question.learning_capsule || question.explanation || 'No additional information available for this question.';
+        
+        // Get background color based on category
+        const backgroundColor = getCategoryColor(category);
 
-      return {
-        id: question.id || String(Math.random()),
-        category,
-        question: questionText,
-        answers,
-        difficulty,
-        likes: Math.floor(Math.random() * 2000),  // Placeholder values
-        views: Math.floor(Math.random() * 10000), // Placeholder values
-        backgroundColor,
-        learningCapsule
-      };
-    });
+        return {
+          id: question.id || String(Math.random()),
+          category,
+          question: questionText,
+          answers,
+          difficulty,
+          likes: Math.floor(Math.random() * 2000),  // Placeholder values
+          views: Math.floor(Math.random() * 10000), // Placeholder values
+          backgroundColor,
+          learningCapsule
+        };
+      });
+    } catch (error) {
+      console.error('Error during data retrieval:', error);
+      return mockFeedData;
+    }
   } catch (error) {
     console.error('Unexpected error while fetching trivia questions:', error);
     return mockFeedData;
