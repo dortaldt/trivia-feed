@@ -432,30 +432,36 @@ const FeedScreen: React.FC = () => {
         if (feedData.length > currentFeed.length) {
           console.log('Skipped question - maintaining feed continuity');
           
-          // Find questions we don't already have in our feed
+          // Create a set of IDs that are already in our feed
           const existingIds = new Set(currentFeed.map(item => item.id));
+          
+          // Use the personalization system to get additional questions
+          // Get questions that aren't already in our feed
           const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
           
-          // Take up to 3 new questions
-          const newQuestions = availableQuestions.slice(0, 3);
+          // Use personalization logic to select new questions instead of sequential selection
+          const { items: personalizedItems, explanations: personalizedExplanations } = 
+            getPersonalizedFeed(availableQuestions, updatedProfile, 5);
+            
+          // Take only questions we don't already have
+          const newQuestions = personalizedItems.filter(item => !existingIds.has(item.id)).slice(0, 3);
           
           if (newQuestions.length > 0) {
-            console.log(`Appending ${newQuestions.length} new questions to feed after skip`);
+            console.log(`Appending ${newQuestions.length} personalized questions to feed after skip`);
             
             // Create a new feed with existing + new questions
             const updatedFeed = [...currentFeed, ...newQuestions];
             
-            // Create explanations for new questions
-            const newExplanations: Record<string, string[]> = {};
-            newQuestions.forEach((item: FeedItemType) => {
-              newExplanations[item.id] = [`Added after skipping a question`];
-            });
+            // Add additional explanation about why we added them
+            const combinedExplanations: Record<string, string[]> = { ...feedExplanations };
             
-            // Combine explanations
-            const combinedExplanations = {
-              ...feedExplanations,
-              ...newExplanations
-            };
+            // Add the explanations from the personalization system plus our continuity message
+            newQuestions.forEach((item: FeedItemType) => {
+              combinedExplanations[item.id] = [
+                ...(personalizedExplanations[item.id] || []),
+                `Added after skipping a question to maintain feed continuity`
+              ];
+            });
             
             // Update the feed in Redux
             dispatch(setPersonalizedFeed({
@@ -562,26 +568,29 @@ const FeedScreen: React.FC = () => {
           const existingIds = new Set(currentFeed.map(item => item.id));
           const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
           
-          // Take up to 5 new questions to ensure we always have a buffer
-          const newQuestions = availableQuestions.slice(0, 5);
+          // Use personalization logic to select new questions instead of sequential selection
+          const { items: personalizedItems, explanations: personalizedExplanations } = 
+            getPersonalizedFeed(availableQuestions, userProfile, 8);
+            
+          // Take up to 5 new personalized questions
+          const newQuestions = personalizedItems.filter(item => !existingIds.has(item.id)).slice(0, 5);
           
           if (newQuestions.length > 0) {
-            console.log(`Proactively appending ${newQuestions.length} questions to feed`);
+            console.log(`Proactively appending ${newQuestions.length} personalized questions to feed`);
             
             // Create a new feed with existing + new questions
             const updatedFeed = [...currentFeed, ...newQuestions];
             
-            // Create explanations for new questions
-            const newExplanations: Record<string, string[]> = {};
-            newQuestions.forEach((item: FeedItemType) => {
-              newExplanations[item.id] = [`Added to extend feed`];
-            });
+            // Add additional explanation about why we added them
+            const combinedExplanations: Record<string, string[]> = { ...feedExplanations };
             
-            // Combine explanations
-            const combinedExplanations = {
-              ...feedExplanations,
-              ...newExplanations
-            };
+            // Add the explanations from the personalization system plus our message
+            newQuestions.forEach((item: FeedItemType) => {
+              combinedExplanations[item.id] = [
+                ...(personalizedExplanations[item.id] || []),
+                `Added to extend feed`
+              ];
+            });
             
             // Update the feed in Redux
             dispatch(setPersonalizedFeed({
@@ -592,7 +601,7 @@ const FeedScreen: React.FC = () => {
         }
       }
     },
-    [markPreviousAsSkipped, personalizedFeed, feedExplanations, dispatch, interactionStartTimes, feedData]
+    [markPreviousAsSkipped, personalizedFeed, feedExplanations, dispatch, interactionStartTimes, feedData, userProfile]
   );
 
   // Add useEffect for checking idle/inactive questions
@@ -758,33 +767,39 @@ const FeedScreen: React.FC = () => {
     const inColdStart = !updatedProfile.coldStartComplete && 
                        (updatedProfile.totalQuestionsAnswered || 0) < 20;
     
-    if (inColdStart && feedData.length > currentFeed.length) {
+    if (feedData.length > currentFeed.length) {
       console.log('Cold start active - maintaining feed continuity');
       
-      // Find questions we don't already have in our feed
+      // Create a set of IDs that are already in our feed
       const existingIds = new Set(currentFeed.map(item => item.id));
+      
+      // Use the personalization system to get additional questions
+      // Get questions that aren't already in our feed
       const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
       
-      // Take up to 3 new questions
-      const newQuestions = availableQuestions.slice(0, 3);
+      // Use personalization logic to select new questions instead of sequential selection
+      const { items: personalizedItems, explanations: personalizedExplanations } = 
+        getPersonalizedFeed(availableQuestions, updatedProfile, 5);
+        
+      // Take only questions we don't already have
+      const newQuestions = personalizedItems.filter(item => !existingIds.has(item.id)).slice(0, 3);
       
       if (newQuestions.length > 0) {
-        console.log(`Appending ${newQuestions.length} new questions to feed`);
+        console.log(`Appending ${newQuestions.length} personalized questions to feed`);
         
         // Create a new feed with existing + new questions
         const updatedFeed = [...currentFeed, ...newQuestions];
         
-        // Create empty explanations for new questions
-        const newExplanations: Record<string, string[]> = {};
-        newQuestions.forEach((item: FeedItemType) => {
-          newExplanations[item.id] = [`Added to maintain feed continuity`];
-        });
+        // Add additional explanation about why we added them
+        const combinedExplanations: Record<string, string[]> = { ...feedExplanations };
         
-        // Combine explanations
-        const combinedExplanations = {
-          ...feedExplanations,
-          ...newExplanations
-        };
+        // Add the explanations from the personalization system plus our continuity message
+        newQuestions.forEach((item: FeedItemType) => {
+          combinedExplanations[item.id] = [
+            ...(personalizedExplanations[item.id] || []),
+            `Added to maintain feed continuity`
+          ];
+        });
         
         // Update the feed in Redux with the combined feed (old + new questions)
         // This ensures the current question and its state remain in place
