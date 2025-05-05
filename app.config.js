@@ -55,16 +55,34 @@ module.exports = {
   updates: {
     fallbackToCacheTimeout: 0
   },
+  splash: {
+    image: "./assets/images/splash-icon.png",
+    resizeMode: "contain",
+    backgroundColor: "#151718"
+  },
   assetBundlePatterns: [
     "**/*"
   ],
   ios: {
     supportsTablet: true
   },
+  android: {
+    adaptiveIcon: {
+      foregroundImage: "./assets/images/adaptive-icon.png",
+      backgroundColor: "#151718"
+    }
+  },
   web: {
     favicon: "./assets/images/favicon.png"
   },
   plugins: [
-    "expo-router"
+    "expo-router",
+    [
+      "expo-splash-screen",
+      {
+        imageResizeMode: "contain",
+        backgroundColor: "#151718"
+      }
+    ]
   ]
 }; 

@@ -3,17 +3,18 @@ import { useFonts } from 'expo-font';
 import { Stack, useSegments, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import { Provider } from 'react-redux';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Image } from 'react-native';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { store } from '@/src/store';
 import { AuthProvider, useAuth } from '@/src/context/AuthContext';
 import { ThemeProvider } from '@/src/theme/ThemeProvider';
+import { Colors } from '@/constants/Colors';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
+// Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 // Auth protection component to redirect users based on auth state
@@ -78,6 +79,7 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const [appIsReady, setAppIsReady] = useState(false);
   
   console.log('Attempting to load fonts...');
   
@@ -89,17 +91,38 @@ export default function RootLayout() {
     'PlayfairDisplay-Regular': require('../assets/fonts/trivia-universe-feed/assets/fonts/playfair/PlayfairDisplay-Regular.ttf'),
   });
 
+  // Combined initialization function - handles both font loading and other preparations
   useEffect(() => {
-    if (loaded) {
-      console.log('Fonts loaded successfully');
-      SplashScreen.hideAsync().catch(err => console.error('Error hiding splash screen:', err));
+    async function prepareApp() {
+      try {
+        // Wait for font loading or error
+        if (loaded || error) {
+          console.log(loaded ? 'Fonts loaded successfully' : 'Error loading fonts, proceeding with system fonts');
+          
+          // Simulate additional initialization if needed
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // App is ready - can hide splash screen
+          setAppIsReady(true);
+        }
+      } catch (e) {
+        console.warn('Error preparing app:', e);
+        setAppIsReady(true); // Still mark as ready even on error
+      }
     }
-    if (error) {
-      console.error('Error loading fonts:', error);
-      // Still hide the splash screen even if fonts fail to load
-      SplashScreen.hideAsync().catch(err => console.error('Error hiding splash screen:', err));
-    }
+
+    prepareApp();
   }, [loaded, error]);
+
+  // Handle splash screen hiding based on app readiness
+  useEffect(() => {
+    if (appIsReady) {
+      // Hide splash screen when everything is ready
+      SplashScreen.hideAsync().catch(err => 
+        console.warn('Error hiding splash screen:', err)
+      );
+    }
+  }, [appIsReady]);
 
   // Add web-specific styles to document if on web platform
   useEffect(() => {
@@ -151,14 +174,9 @@ export default function RootLayout() {
     }
   }, []);
 
-  // Always proceed with system fonts if custom fonts fail to load
-  if (!loaded && !error) {
-    console.log('Still loading fonts...');
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Loading app resources...</Text>
-      </View>
-    );
+  // Show loading indicator if app isn't ready yet
+  if (!appIsReady) {
+    return null; // Return null while splash screen is still showing
   }
 
   // Proceed with the app whether fonts loaded or not
@@ -176,7 +194,7 @@ export default function RootLayout() {
                   <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
                   <Stack.Screen name="+not-found" />
                 </Stack>
-                <StatusBar style="auto" />
+                <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
               </View>
             </AuthWrapper>
           </NavigationThemeProvider>
@@ -189,6 +207,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.light.background,
     // Apply web-specific styles only for web platform
     ...(Platform.OS === 'web' 
       ? {

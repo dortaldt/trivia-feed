@@ -24,3 +24,9 @@ export const Colors = {
     tabIconSelected: tintColorDark,
   },
 };
+
+// Add a splash screen color that matches the theme
+export const SplashColors = {
+  background: '#151718', // Dark background matching the dark theme
+  text: '#ECEDEE',      // Light text for the splash screen
+};
