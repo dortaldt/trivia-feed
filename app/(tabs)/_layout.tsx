@@ -51,24 +51,11 @@ export default function TabLayout() {
           tabBarItemStyle: Platform.OS === 'web' ? {
             // Adjust tab item style to fit within content container
             flex: 1,
-            maxWidth: 960 / 5, // 5 tabs within 960px max-width (added profile)
+            maxWidth: 960 / 3, // 3 tabs within 960px max-width
           } : undefined,
         }}
+        initialRouteName="feed"
       >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Home',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="feed"
-          options={{
-            title: 'Feed',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="lightbulb.fill" color={color} />,
-          }}
-        />
         <Tabs.Screen
           name="stats"
           options={{
@@ -81,10 +68,10 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="explore"
+          name="feed"
           options={{
-            title: 'Explore',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+            title: 'My Feed',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="lightbulb.fill" color={color} />,
           }}
         />
         <Tabs.Screen
