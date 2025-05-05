@@ -1,0 +1,55 @@
+/* Global dark theme styles */
+body.dark-theme {
+  background-color: #151718;
+  color: #ECEDEE;
+}
+
+/* Ensure dark scrollbars in dark mode */
+body.dark-theme ::-webkit-scrollbar {
+  width: 12px;
+}
+
+body.dark-theme ::-webkit-scrollbar-track {
+  background: #1c1c1c;
+}
+
+body.dark-theme ::-webkit-scrollbar-thumb {
+  background-color: #3f3f46;
+  border-radius: 6px;
+  border: 3px solid #1c1c1c;
+}
+
+/* Fix for default browser elements that might not get themed */
+body.dark-theme input,
+body.dark-theme select,
+body.dark-theme button {
+  background-color: #1c1c1c;
+  color: #ECEDEE;
+  border-color: #3f3f46;
+}
+
+/* Fix for some native elements that might need dark styling */
+body.dark-theme .react-native-picker select {
+  color: #ECEDEE;
+  background-color: #1c1c1c;
+}
+
+/* Center the main content area to match navigation */
+main {
+  max-width: 960px !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+}
+
+/* Center tab navigation */
+nav.rn-tab-bar {
+  max-width: 960px !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+}
+
+/* Style tab bar in dark theme */
+body.dark-theme nav.rn-tab-bar {
+  background-color: #151718 !important;
+  border-top: 1px solid rgba(150, 150, 150, 0.2) !important;
+} 

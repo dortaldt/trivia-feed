@@ -1,5 +1,5 @@
 import { Tabs, Link } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Platform, View, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
@@ -14,6 +14,31 @@ import { Ionicons } from '@expo/vector-icons';
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { user } = useAuth();
+
+  // For web: add CSS to center the tab bar
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const style = document.createElement('style');
+      style.textContent = `
+        /* Center the tab bar navigation */
+        nav.rn-tab-bar {
+          max-width: 960px !important;
+          margin: 0 auto !important;
+          width: 100% !important;
+        }
+        /* Style the tab bar background for dark theme */
+        .dark-theme nav.rn-tab-bar {
+          background-color: #151718 !important;
+          border-top: 1px solid rgba(150, 150, 150, 0.2) !important;
+        }
+      `;
+      document.head.appendChild(style);
+      
+      return () => {
+        document.head.removeChild(style);
+      };
+    }
+  }, []);
 
   // Custom tab bar with profile button
   const ProfileTab = ({ color }: { color: string }) => (
@@ -34,24 +59,13 @@ export default function TabLayout() {
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
           // Fix tab bar position and styling for web
-          tabBarStyle: {
-            ...Platform.select({
-              ios: {
-                position: 'absolute',
-              },
-              web: {
-                borderTop: '1px solid rgba(0,0,0,0.1)',
-                height: 49,
-                backgroundColor: colorScheme === 'dark' ? '#000' : '#fff',
-                width: '100%'
-              },
-              default: {},
-            }),
-          },
+          tabBarStyle: Platform.OS === 'ios' ? { position: 'absolute' } : undefined,
           tabBarItemStyle: Platform.OS === 'web' ? {
-            // Adjust tab item style to fit within content container
+            // Adjust tab item style for web
             flex: 1,
-            maxWidth: 960 / 3, // 3 tabs within 960px max-width
+          } : undefined,
+          tabBarLabelStyle: Platform.OS === 'web' ? {
+            fontSize: 14,
           } : undefined,
         }}
         initialRouteName="feed"
@@ -92,10 +106,5 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     position: 'relative',
-  },
-  tabBarWrapper: {
-    maxWidth: 960,
-    width: '100%',
-    marginHorizontal: 'auto',
   }
 });

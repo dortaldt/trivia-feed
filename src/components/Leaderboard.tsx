@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, useWindowDimensions, Platform } from 'react-native';
 import { fetchLeaderboard, LeaderboardUser, LeaderboardPeriod, fetchUserRank } from '../lib/leaderboardService';
 import { useAuth } from '../context/AuthContext';
 import { countries } from '../data/countries';
 import { ThemedView } from '../../components/ThemedView';
 import { ThemedText } from '../../components/ThemedText';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { Colors } from '@/constants/Colors';
+import { FeatherIcon } from '@/components/FeatherIcon';
+import { WebContainer } from '@/components/WebContainer';
 
 const LeaderboardTabs = {
   Daily: 'day',
@@ -26,6 +29,10 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
   const { user } = useAuth();
+  const colorScheme = useColorScheme() ?? 'dark';
+  const isDark = colorScheme === 'dark';
+  const { width } = useWindowDimensions();
+  const isTablet = width > 768;
 
   useEffect(() => {
     loadLeaderboardData();
@@ -90,41 +97,51 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
     const isCurrentUser = user && user.id === item.id;
 
     return (
-      <View style={[styles.itemContainer, isCurrentUser && styles.currentUserItem]}>
-        <Text style={styles.rank}>{index + 1}</Text>
+      <ThemedView style={[
+        styles.itemContainer, 
+        isCurrentUser && styles.currentUserItem,
+        { borderWidth: 1, borderColor: 'rgba(150, 150, 150, 0.2)' }
+      ]}
+      {...(Platform.OS === 'web' ? {
+        className: `leaderboard-item ${isCurrentUser ? 'current-user' : ''}`
+      } : {})}>
+        <ThemedText style={styles.rank}>{index + 1}</ThemedText>
         
         <View style={styles.avatarContainer}>
           {item.avatar_url ? (
             <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>{getInitials(item.full_name, item.username)}</Text>
+              <ThemedText style={styles.avatarText}>{getInitials(item.full_name, item.username)}</ThemedText>
             </View>
           )}
         </View>
         
         <View style={styles.userInfo}>
-          <Text style={styles.username}>
+          <ThemedText type="defaultSemiBold" style={styles.username}>
             {item.full_name || item.username || 'Anonymous'} 
-            {isCurrentUser && <Text style={styles.youLabel}> (You)</Text>}
-          </Text>
+            {isCurrentUser && <ThemedText style={styles.youLabel}> (You)</ThemedText>}
+          </ThemedText>
           {item.country && (
-            <Text style={styles.country}>{getCountryName(item.country)}</Text>
+            <ThemedText style={styles.country}>{getCountryName(item.country)}</ThemedText>
           )}
         </View>
         
         <View style={styles.scoreContainer}>
-          <Text style={styles.scoreValue}>{scoreToShow}</Text>
-          <Text style={styles.scoreLabel}>correct</Text>
+          <ThemedText style={[styles.scoreValue, { color: '#0a7ea4' }]}>{scoreToShow}</ThemedText>
+          <ThemedText style={styles.scoreLabel}>correct</ThemedText>
         </View>
-      </View>
+      </ThemedView>
     );
   };
 
-  return (
-    <ThemedView style={styles.container}>
+  const content = (
+    <ThemedView 
+      style={styles.container}
+      {...(Platform.OS === 'web' ? { className: 'leaderboard-container' } : {})}
+    >
       <View style={styles.header}>
-        <ThemedText style={styles.headerTitle}>Leaderboard</ThemedText>
+        <ThemedText type="subtitle" style={styles.headerTitle}>Leaderboard</ThemedText>
       </View>
       
       <View style={styles.tabContainer}>
@@ -142,54 +159,98 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
       </View>
       
       {user && userRank !== null && (
-        <View style={styles.yourRankContainer}>
+        <ThemedView style={styles.yourRankContainer}>
           <ThemedText style={styles.yourRankText}>
-            Your Rank: <Text style={styles.rankNumber}>#{userRank}</Text>
+            Your Rank: <ThemedText type="defaultSemiBold" style={styles.rankNumber}>#{userRank}</ThemedText>
           </ThemedText>
-        </View>
+        </ThemedView>
       )}
       
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3498db" />
+          <ActivityIndicator size="large" color={Colors[colorScheme].tint} />
         </View>
       ) : leaderboardData.length > 0 ? (
         <FlatList
           data={leaderboardData}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent, 
+            isTablet && { maxWidth: 800, alignSelf: 'center', width: '100%' }
+          ]}
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Ionicons name="trophy-outline" size={64} color="#ccc" />
+          <FeatherIcon 
+            name="award" 
+            size={64} 
+            color={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.2)'} 
+          />
           <ThemedText style={styles.emptyText}>No data available for this period</ThemedText>
         </View>
       )}
     </ThemedView>
   );
+
+  // Use WebContainer on web for better responsive design
+  if (Platform.OS === 'web') {
+    // Ensure dark theme styling for any web-specific elements
+    useEffect(() => {
+      if (isDark) {
+        document.body.classList.add('dark-theme');
+        
+        // Add inline styles for specific leaderboard elements
+        const style = document.createElement('style');
+        style.textContent = `
+          .leaderboard-container {
+            background-color: #151718;
+            color: #ECEDEE;
+          }
+          .leaderboard-item {
+            background-color: #1c1c1c;
+            border: 1px solid rgba(150, 150, 150, 0.2);
+          }
+          .leaderboard-item.current-user {
+            background-color: rgba(10, 126, 164, 0.08);
+            border-color: #0a7ea4;
+          }
+        `;
+        document.head.appendChild(style);
+        
+        return () => {
+          document.body.classList.remove('dark-theme');
+          document.head.removeChild(style);
+        };
+      }
+      return () => {
+        document.body.classList.remove('dark-theme');
+      };
+    }, [isDark]);
+    
+    return <WebContainer>{content}</WebContainer>;
+  }
+
+  return content;
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
   },
   header: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#fff',
+    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
+    paddingTop: Platform.OS === 'ios' ? 60 : 16,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 24,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
   },
   tab: {
     flex: 1,
@@ -198,29 +259,28 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: '#3498db',
+    borderBottomColor: '#0a7ea4',
   },
   tabText: {
     fontSize: 14,
-    color: '#777',
+    opacity: 0.7,
   },
   activeTabText: {
-    color: '#3498db',
+    color: '#0a7ea4',
     fontWeight: '600',
+    opacity: 1,
   },
   yourRankContainer: {
     padding: 12,
-    backgroundColor: '#f0f8ff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
   },
   yourRankText: {
     fontSize: 14,
     textAlign: 'center',
   },
   rankNumber: {
-    fontWeight: 'bold',
-    color: '#3498db',
+    color: '#0a7ea4',
   },
   listContent: {
     padding: 12,
@@ -228,20 +288,14 @@ const styles = StyleSheet.create({
   itemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   currentUserItem: {
-    backgroundColor: '#f0f8ff',
+    borderColor: '#0a7ea4',
     borderWidth: 1,
-    borderColor: '#3498db',
+    backgroundColor: 'rgba(10, 126, 164, 0.08)',
   },
   rank: {
     width: 30,
@@ -261,7 +315,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#3498db',
+    backgroundColor: '#0a7ea4',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -275,15 +329,14 @@ const styles = StyleSheet.create({
   },
   username: {
     fontSize: 16,
-    fontWeight: '500',
   },
   youLabel: {
     fontStyle: 'italic',
-    color: '#3498db',
+    color: '#0a7ea4',
   },
   country: {
     fontSize: 14,
-    color: '#777',
+    opacity: 0.7,
   },
   scoreContainer: {
     alignItems: 'center',
@@ -292,11 +345,10 @@ const styles = StyleSheet.create({
   scoreValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#3498db',
   },
   scoreLabel: {
     fontSize: 12,
-    color: '#777',
+    opacity: 0.7,
   },
   loadingContainer: {
     flex: 1,
@@ -313,7 +365,7 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#777',
+    opacity: 0.7,
     textAlign: 'center',
   },
 }); 
