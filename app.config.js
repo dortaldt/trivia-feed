@@ -43,6 +43,8 @@ console.log("Building app with Supabase URL:", finalUrl);
 
 module.exports = {
   name: "Trivia Feed",
+  slug: "trivia-feed",
+  scheme: "trivia-feed",
   version: "1.0.0",
   extra: {
     // Use the validated URL
@@ -57,7 +59,12 @@ module.exports = {
     }
   },
   updates: {
-    fallbackToCacheTimeout: 0
+    url: "https://u.expo.dev/e0a61e01-78f0-4cb9-ada3-4867936fb44f",
+    enabled: true,
+    checkAutomatically: "ON_LOAD"
+  },
+  runtimeVersion: {
+    policy: "sdkVersion"
   },
   splash: {
     image: "./assets/images/splash-icon.png",
@@ -69,13 +76,14 @@ module.exports = {
   ],
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.triviauniversefeed"
+    bundleIdentifier: "com.triviafeed"
   },
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
       backgroundColor: "#151718"
-    }
+    },
+    package: "com.triviafeed"
   },
   web: {
     favicon: "./assets/images/favicon.png"
