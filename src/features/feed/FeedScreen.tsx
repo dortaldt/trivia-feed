@@ -46,7 +46,6 @@ import {
 import { InteractionTracker } from '../../components/InteractionTracker';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, borderRadius } from '../../theme';
-import { useIsFocused } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -72,12 +71,6 @@ const FeedScreen: React.FC = () => {
   const previousIndex = useRef<number>(0);
   // Add ref to track previous userProfile for cold start updates
   const previousUserProfileRef = useRef<typeof userProfile | null>(null);
-  
-  // Track if user has previously interacted with the feed to avoid auto-scrolling on first open
-  const hasInteractedWithFeed = useRef(false);
-  
-  // Use React Navigation's useIsFocused hook to detect when screen gets focus
-  const isFocused = useIsFocused();
 
   // Get a background color for the loading state
   const backgroundColor = useThemeColor({}, 'background');
@@ -387,20 +380,11 @@ const FeedScreen: React.FC = () => {
     }
   };
 
-  // Add function to mark questions as skipped when scrolling past them
-  const markPreviousAsSkipped = useCallback((previousIndex: number, newIndex: number) => {
-    // Mark that user has interacted with the feed
-    hasInteractedWithFeed.current = true;
-    
-    // Only mark as skipped when moving forward
-    if (newIndex <= previousIndex || newIndex < 0 || previousIndex < 0) return;
-    
-    // Skip if we don't have feed data yet
-    if (personalizedFeed.length === 0) return;
-    
+  // When scrolling past a question, mark it as skipped if it wasn't answered and update profile
+  const markPreviousAsSkipped = useCallback((prevIndex: number, newIndex: number) => {
     // Only mark as skipped when scrolling down and if we have feed data
-    if (newIndex > previousIndex && personalizedFeed.length > 0) {
-      const previousQuestion = personalizedFeed[previousIndex];
+    if (newIndex > prevIndex && personalizedFeed.length > 0) {
+      const previousQuestion = personalizedFeed[prevIndex];
       const previousQuestionId = previousQuestion.id;
       const questionState = questions[previousQuestionId];
       
@@ -547,9 +531,6 @@ const FeedScreen: React.FC = () => {
         const currentItem = personalizedFeed[newIndex];
         const currentItemId = currentItem.id;
 
-        // Mark that user has interacted with the feed
-        hasInteractedWithFeed.current = true;
-        
         // Mark previous question as skipped when scrolling to a new question
         if (previousIndex.current !== newIndex) {
           markPreviousAsSkipped(previousIndex.current, newIndex);
@@ -742,67 +723,8 @@ const FeedScreen: React.FC = () => {
     previousIndex.current = currentIndex;
   }, [currentIndex, personalizedFeed, markPreviousAsSkipped]);
 
-  // Function to find the last answered or skipped question index
-  const findLastInteractedQuestionIndex = useCallback(() => {
-    if (!personalizedFeed || personalizedFeed.length === 0) return 0;
-    
-    // Find the last question that has been answered or skipped
-    let lastIndex = 0;
-    
-    for (let i = personalizedFeed.length - 1; i >= 0; i--) {
-      const questionId = personalizedFeed[i].id;
-      const questionState = questions[questionId];
-      
-      if (questionState && (questionState.status === 'answered' || questionState.status === 'skipped')) {
-        // Found the last question the user interacted with
-        // Return the next question index so they can continue from where they left off
-        lastIndex = Math.min(i + 1, personalizedFeed.length - 1);
-        break;
-      }
-    }
-    
-    console.log(`Last interacted question index: ${lastIndex}`);
-    return lastIndex;
-  }, [personalizedFeed, questions]);
-
-  // Add effect to scroll to the last answered/skipped question when the feed tab is focused
-  useEffect(() => {
-    // Only run if:
-    // 1. The feed is focused
-    // 2. We have feed data
-    // 3. User has previously interacted with the feed (to avoid initial scroll on first open)
-    if (isFocused && personalizedFeed.length > 0 && hasInteractedWithFeed.current) {
-      // Find the last question the user interacted with
-      const targetIndex = findLastInteractedQuestionIndex();
-      
-      // Only scroll if we're not already at that position
-      if (targetIndex !== currentIndex) {
-        console.log(`Scrolling to last interacted question (index ${targetIndex})`);
-        
-        // Calculate offset and scroll to position
-        const offset = viewportHeight * targetIndex;
-        
-        // Add small delay to ensure the component is fully rendered
-        setTimeout(() => {
-          if (flatListRef.current) {
-            flatListRef.current.scrollToOffset({
-              offset,
-              animated: true
-            });
-            
-            // Update current index
-            setCurrentIndex(targetIndex);
-          }
-        }, 300);
-      }
-    }
-  }, [isFocused, personalizedFeed, findLastInteractedQuestionIndex, currentIndex, viewportHeight]);
-
   // Add function to handle answering questions
   const handleAnswerQuestion = useCallback((questionId: string, answerIndex: number, isCorrect: boolean) => {
-    // Mark that user has interacted with the feed
-    hasInteractedWithFeed.current = true;
-    
     const questionItem = personalizedFeed.find(item => item.id === questionId);
     if (!questionItem) return;
     
