@@ -8,9 +8,9 @@
     "scheme": "trivia-universe-feed",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#151718"
     },
     "assetBundlePatterns": [
       "**/*"
