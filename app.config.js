@@ -55,11 +55,11 @@ module.exports = {
                     WORKING_SUPABASE_KEY,
     
     eas: {
-      projectId: "e0a61e01-78f0-4cb9-ada3-4867936fb44f"
+      projectId: "dab32358-550f-4ac2-861e-ccda6a8cef14"
     }
   },
   updates: {
-    url: "https://u.expo.dev/e0a61e01-78f0-4cb9-ada3-4867936fb44f",
+    url: "https://u.expo.dev/dab32358-550f-4ac2-861e-ccda6a8cef14",
     enabled: true,
     checkAutomatically: "ON_LOAD"
   },
