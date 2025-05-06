@@ -3,7 +3,6 @@
     "version": ">= 16.4.0",
     "appVersionSource": "remote"
   },
-  "projectId": "dab32358-550f-4ac2-861e-ccda6a8cef14",
   "build": {
     "development": {
       "developmentClient": true,
