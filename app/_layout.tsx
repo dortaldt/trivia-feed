@@ -184,7 +184,7 @@ export default function RootLayout() {
     <Provider store={store}>
       <AuthProvider>
         <ThemeProvider initialTheme="dark">
-          <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <NavigationThemeProvider value={DarkTheme}>
             <AuthWrapper>
               <View style={styles.container}>
                 <Stack>
@@ -194,7 +194,7 @@ export default function RootLayout() {
                   <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
                   <Stack.Screen name="+not-found" />
                 </Stack>
-                <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+                <StatusBar style="light" />
               </View>
             </AuthWrapper>
           </NavigationThemeProvider>
@@ -207,7 +207,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.dark.background,
     // Apply web-specific styles only for web platform
     ...(Platform.OS === 'web' 
       ? {
@@ -223,11 +223,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: Colors.dark.background,
   },
   loadingText: {
     fontSize: 18,
-    color: '#333',
+    color: Colors.dark.text,
     marginTop: 10,
   },
 });
