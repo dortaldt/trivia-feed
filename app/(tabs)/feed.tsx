@@ -20,7 +20,7 @@ export default function Feed() {
 const styles = StyleSheet.create({
   webWrapper: {
     flex: 1,
-    height: Platform.OS === 'web' ? 'calc(100vh - 49px)' as any : '100%',
+    height: Platform.OS === 'web' ? 'calc(100svh - 70px)' as any : '100%',
     display: 'flex',
     overflow: 'hidden',
     width: '100%',

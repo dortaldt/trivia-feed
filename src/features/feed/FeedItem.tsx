@@ -54,28 +54,47 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     const textLength = item.question.length;
     const lineBreaks = (item.question.match(/\n/g) || []).length;
     
-    // Base calculation on text length and number of line breaks
-    // Start with maximum font size and reduce based on length
-    let fontSize = 42;
+    // Default max font size - different for mobile web vs other platforms
+    const isMobileWeb = Platform.OS === 'web' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    let fontSize = isMobileWeb ? 24 : 42;
     
     if (textLength > 60 || lineBreaks > 0) {
-      fontSize = 36;
+      fontSize = isMobileWeb ? 22 : 36;
     }
     
     if (textLength > 100 || lineBreaks > 1) {
-      fontSize = 32;
+      fontSize = isMobileWeb ? 20 : 32;
     }
     
     if (textLength > 140 || lineBreaks > 2) {
-      fontSize = 28;
+      fontSize = isMobileWeb ? 18 : 28;
     }
     
     if (textLength > 180 || lineBreaks > 3) {
-      fontSize = 24;
+      fontSize = isMobileWeb ? 16 : 24;
+    }
+    
+    // Added more conditions for very long content
+    if (textLength > 220 || lineBreaks > 4) {
+      fontSize = isMobileWeb ? 14 : 20;
+    }
+    
+    if (textLength > 260 || lineBreaks > 5) {
+      fontSize = isMobileWeb ? 14 : 16;
+    }
+    
+    if (textLength > 300 || lineBreaks > 6) {
+      fontSize = 14; // Minimum font size for all platforms
     }
     
     return fontSize;
   }, [item.question]);
+  
+  // Add lineHeight calculation for more condensed text
+  const lineHeight = useMemo(() => {
+    // Use a more condensed line height ratio (1.2 instead of default 1.5)
+    return Math.round(calculateFontSize * 1.2);
+  }, [calculateFontSize]);
   
   // Add debounce timer refs
   const mouseEnterTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -236,7 +255,10 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
 
           <View style={styles.questionContainer}>
             {/* Using ThemedText with question type for DM Serif and dynamic font size */}
-            <ThemedText type="question" style={[styles.questionText, { fontSize: calculateFontSize }]}>
+            <ThemedText type="question" style={[styles.questionText, { 
+              fontSize: calculateFontSize,
+              lineHeight: lineHeight 
+            }]}>
               {item.question}
             </ThemedText>
 
@@ -610,7 +632,7 @@ const styles = StyleSheet.create({
   learningCapsuleText: {
     color: 'white',
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 20,
   },
   disabledActionButton: {
     opacity: 0.5,
