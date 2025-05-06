@@ -233,7 +233,10 @@ const FeedScreen: React.FC = () => {
     const calculateViewportHeight = () => {
       if (Platform.OS === 'web') {
         // For web, account for the tab bar navigation height (49px)
-        setViewportHeight(window.innerHeight - 49);
+        // Use window.innerHeight for desktop browsers
+        // For mobile browsers, especially Safari, try to get the visual viewport height
+        const viewportHeight = window.visualViewport?.height || window.innerHeight;
+        setViewportHeight(viewportHeight - 49);
       } else {
         // For mobile, get the screen dimensions accounting for safe areas
         const windowHeight = Dimensions.get('window').height;
@@ -253,10 +256,21 @@ const FeedScreen: React.FC = () => {
     calculateViewportHeight();
     
     if (Platform.OS === 'web') {
-      // Listen for resize on web
+      // Listen for resize on web and visualViewport changes
       window.addEventListener('resize', calculateViewportHeight);
+      
+      // Listen for visualViewport changes if available (for mobile browsers)
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', calculateViewportHeight);
+        window.visualViewport.addEventListener('scroll', calculateViewportHeight);
+      }
+      
       return () => {
         window.removeEventListener('resize', calculateViewportHeight);
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', calculateViewportHeight);
+          window.visualViewport.removeEventListener('scroll', calculateViewportHeight);
+        }
       };
     } else {
       // For mobile, update on dimension changes
