@@ -59,13 +59,27 @@ export default function TabLayout() {
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
           // Fix tab bar position and styling for web
-          tabBarStyle: Platform.OS === 'ios' ? { position: 'absolute' } : undefined,
+          tabBarStyle: Platform.OS === 'ios' 
+            ? { position: 'absolute' } 
+            : Platform.OS === 'web' 
+              ? {
+                  paddingBottom: 8,
+                  height: 'auto',
+                  minHeight: 55,
+                }
+              : undefined,
           tabBarItemStyle: Platform.OS === 'web' ? {
             // Adjust tab item style for web
             flex: 1,
+            paddingBottom: 4,
+            paddingTop: 6,
+            height: 'auto',
           } : undefined,
           tabBarLabelStyle: Platform.OS === 'web' ? {
             fontSize: 14,
+            paddingBottom: 4,
+            marginTop: 2,
+            lineHeight: 16,
           } : undefined,
         }}
         initialRouteName="feed"
@@ -85,7 +99,11 @@ export default function TabLayout() {
           name="feed"
           options={{
             title: 'My Feed',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="lightbulb" color={color} weight="light" />,
+            tabBarIcon: ({ color }) => (
+              Platform.OS === 'ios' ?
+                <IconSymbol size={28} name="lightbulb" color={color} weight="light" /> :
+                <FeatherIcon name="book-open" size={24} color={color} />
+            ),
           }}
         />
         <Tabs.Screen
