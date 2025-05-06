@@ -232,11 +232,17 @@ const FeedScreen: React.FC = () => {
   useEffect(() => {
     const calculateViewportHeight = () => {
       if (Platform.OS === 'web') {
-        // For web, account for the tab bar navigation height (49px)
-        // Use window.innerHeight for desktop browsers
-        // For mobile browsers, especially Safari, try to get the visual viewport height
+        // For web, account for the tab bar navigation height
+        // Use visualViewport when available (more accurate on mobile browsers)
         const viewportHeight = window.visualViewport?.height || window.innerHeight;
-        setViewportHeight(viewportHeight - 49);
+        
+        // On mobile web browsers, especially Safari, we need to account for the toolbar height
+        // and potential safe area insets at the bottom
+        const isMobileBrowser = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const navBarHeight = isMobileBrowser ? 70 : 49; // Use larger value for mobile browsers
+        
+        console.log(`Web viewport height: ${viewportHeight}px, using navBarHeight: ${navBarHeight}px`);
+        setViewportHeight(viewportHeight - navBarHeight);
       } else {
         // For mobile, get the screen dimensions accounting for safe areas
         const windowHeight = Dimensions.get('window').height;
