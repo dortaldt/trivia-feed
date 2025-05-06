@@ -232,8 +232,17 @@ const FeedScreen: React.FC = () => {
   useEffect(() => {
     const calculateViewportHeight = () => {
       if (Platform.OS === 'web') {
-        // For web, account for the tab bar navigation height (49px)
-        setViewportHeight(window.innerHeight - 49);
+        // For web, account for the tab bar navigation height
+        // Use visualViewport when available (more accurate on mobile browsers)
+        const viewportHeight = window.visualViewport?.height || window.innerHeight;
+        
+        // On mobile web browsers, especially Safari, we need to account for the toolbar height
+        // and potential safe area insets at the bottom
+        const isMobileBrowser = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const navBarHeight = isMobileBrowser ? 70 : 49; // Use larger value for mobile browsers
+        
+        console.log(`Web viewport height: ${viewportHeight}px, using navBarHeight: ${navBarHeight}px`);
+        setViewportHeight(viewportHeight - navBarHeight);
       } else {
         // For mobile, get the screen dimensions accounting for safe areas
         const windowHeight = Dimensions.get('window').height;
@@ -253,10 +262,21 @@ const FeedScreen: React.FC = () => {
     calculateViewportHeight();
     
     if (Platform.OS === 'web') {
-      // Listen for resize on web
+      // Listen for resize on web and visualViewport changes
       window.addEventListener('resize', calculateViewportHeight);
+      
+      // Listen for visualViewport changes if available (for mobile browsers)
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', calculateViewportHeight);
+        window.visualViewport.addEventListener('scroll', calculateViewportHeight);
+      }
+      
       return () => {
         window.removeEventListener('resize', calculateViewportHeight);
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', calculateViewportHeight);
+          window.visualViewport.removeEventListener('scroll', calculateViewportHeight);
+        }
       };
     } else {
       // For mobile, update on dimension changes

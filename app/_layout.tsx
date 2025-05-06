@@ -127,6 +127,12 @@ export default function RootLayout() {
   // Add web-specific styles to document if on web platform
   useEffect(() => {
     if (Platform.OS === 'web') {
+      // Add viewport meta tag for mobile browsers
+      const viewportMeta = document.createElement('meta');
+      viewportMeta.name = 'viewport';
+      viewportMeta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0';
+      document.head.appendChild(viewportMeta);
+
       // Add CSS variables and styles for web
       const style = document.createElement('style');
       style.textContent = `
@@ -151,6 +157,7 @@ export default function RootLayout() {
           display: flex;
           flex-direction: column;
           min-height: 100vh;
+          min-height: 100svh; /* Use small viewport height for iOS Safari */
           width: 100%;
         }
         /* Fix for tab content display issues */
@@ -159,6 +166,32 @@ export default function RootLayout() {
           display: flex;
           flex-direction: column;
           height: 100%;
+        }
+        /* Fix for iOS Safari navbar issue */
+        nav.rn-tab-bar {
+          position: fixed !important;
+          bottom: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          z-index: 1000 !important;
+          padding-bottom: env(safe-area-inset-bottom, 8px) !important;
+          height: auto !important;
+          min-height: 49px !important;
+        }
+        /* Fix for tab labels being cut off at bottom */
+        nav.rn-tab-bar a[role="tab"] {
+          padding-bottom: 8px !important;
+          height: auto !important;
+          min-height: 49px !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
+        nav.rn-tab-bar a[role="tab"] div:last-child {
+          max-width: none !important;
+          overflow: visible !important;
+          white-space: normal !important;
+          padding-bottom: 4px !important;
+          margin-top: 2px !important;
         }
       `;
       document.head.appendChild(style);
