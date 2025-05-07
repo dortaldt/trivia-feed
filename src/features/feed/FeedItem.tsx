@@ -9,6 +9,9 @@ import {
   Platform,
   TextStyle,
   SafeAreaView,
+  Modal,
+  ScrollView,
+  Image,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { QuestionState } from '../../store/triviaSlice';
@@ -17,6 +20,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { useIOSAnimations } from '@/hooks/useIOSAnimations';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import Leaderboard from '../../components/Leaderboard';
+import { useAuth } from '../../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -42,9 +47,224 @@ type FeedItemProps = {
   onNextQuestion?: () => void;
 };
 
+// Simple ProfileView component to show in the modal
+const ProfileView = () => {
+  const { user, signOut } = useAuth();
+  
+  // Generate initials for the avatar placeholder
+  const getInitials = () => {
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return '?';
+  };
+
+  const handleSignOut = () => {
+    if (signOut) {
+      signOut();
+    }
+  };
+  
+  // Define styles within the component
+  const profileStyles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#1a1a1a',
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    emptyText: {
+      fontSize: 16,
+      textAlign: 'center',
+      color: 'rgba(255, 255, 255, 0.7)',
+    },
+    scrollView: {
+      flex: 1,
+    },
+    userInfoSection: {
+      alignItems: 'center',
+      padding: 20,
+      paddingBottom: 30,
+      borderBottomWidth: 0,
+    },
+    avatarContainer: {
+      marginBottom: 10,
+    },
+    avatarPlaceholder: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: '#ffc107',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarText: {
+      color: 'black',
+      fontSize: 36,
+      fontWeight: 'bold',
+    },
+    emailText: {
+      fontSize: 14,
+      color: 'rgba(255, 255, 255, 0.7)',
+      marginTop: 5,
+    },
+    detailsSection: {
+      paddingHorizontal: 20,
+    },
+    detailRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    detailLabel: {
+      color: 'rgba(255, 255, 255, 0.7)',
+      fontSize: 16,
+    },
+    detailValue: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: '500',
+    },
+    editButton: {
+      backgroundColor: '#ffc107',
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      alignSelf: 'center',
+      marginTop: 25,
+      marginBottom: 25,
+    },
+    editButtonText: {
+      color: 'black',
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    sectionTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: 'white',
+      marginTop: 25,
+      marginBottom: 15,
+      paddingHorizontal: 20,
+    },
+    menuItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 15,
+      paddingHorizontal: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    menuItemText: {
+      color: 'white',
+      fontSize: 16,
+    },
+    headerContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    headerTitle: {
+      fontSize: 18,
+      color: 'white',
+      fontWeight: '600',
+    },
+  });
+
+  if (!user) {
+    return (
+      <View style={profileStyles.emptyState}>
+        <ThemedText style={profileStyles.emptyText}>
+          You need to sign in to view your profile
+        </ThemedText>
+      </View>
+    );
+  }
+
+  return (
+    <View style={profileStyles.container}>
+      {/* Add back the header */}
+      <View style={profileStyles.headerContainer}>
+        <ThemedText style={profileStyles.headerTitle}>Profile</ThemedText>
+      </View>
+
+      <ScrollView style={profileStyles.scrollView}>
+        {/* User avatar and email */}
+        <View style={profileStyles.userInfoSection}>
+          <View style={profileStyles.avatarContainer}>
+            <View style={profileStyles.avatarPlaceholder}>
+              <ThemedText style={profileStyles.avatarText}>{getInitials()}</ThemedText>
+            </View>
+          </View>
+          <ThemedText style={profileStyles.emailText}>{user.email}</ThemedText>
+        </View>
+
+        {/* User details section */}
+        <View style={profileStyles.detailsSection}>
+          <View style={profileStyles.detailRow}>
+            <ThemedText style={profileStyles.detailLabel}>Username</ThemedText>
+            <ThemedText style={profileStyles.detailValue}>Animal Junk</ThemedText>
+          </View>
+          <View style={profileStyles.detailRow}>
+            <ThemedText style={profileStyles.detailLabel}>Full Name</ThemedText>
+            <ThemedText style={profileStyles.detailValue}>Not set</ThemedText>
+          </View>
+          <View style={profileStyles.detailRow}>
+            <ThemedText style={profileStyles.detailLabel}>Country</ThemedText>
+            <ThemedText style={profileStyles.detailValue}>Anguilla</ThemedText>
+          </View>
+        </View>
+
+        {/* Edit Profile button */}
+        <TouchableOpacity style={profileStyles.editButton}>
+          <ThemedText style={profileStyles.editButtonText}>Edit Profile</ThemedText>
+        </TouchableOpacity>
+
+        {/* Account section */}
+        <ThemedText style={profileStyles.sectionTitle}>Account</ThemedText>
+        
+        <TouchableOpacity style={profileStyles.menuItem}>
+          <ThemedText style={profileStyles.menuItemText}>Privacy & Security</ThemedText>
+          <FeatherIcon name="chevron-right" size={20} color="white" />
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={profileStyles.menuItem}>
+          <ThemedText style={profileStyles.menuItemText}>Notification Settings</ThemedText>
+          <FeatherIcon name="chevron-right" size={20} color="white" />
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={profileStyles.menuItem}>
+          <ThemedText style={profileStyles.menuItemText}>Change Password</ThemedText>
+          <FeatherIcon name="chevron-right" size={20} color="white" />
+        </TouchableOpacity>
+
+        {/* Sign out button at the bottom */}
+        <TouchableOpacity 
+          style={[profileStyles.editButton, { marginTop: 40, backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}
+          onPress={handleSignOut}
+        >
+          <ThemedText style={[profileStyles.editButtonText, { color: '#ff5c5c' }]}>Sign Out</ThemedText>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+};
+
 const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, onNextQuestion }) => {
   const [liked, setLiked] = useState(false);
   const [showLearningCapsule, setShowLearningCapsule] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [hoveredAnswerIndex, setHoveredAnswerIndex] = useState<number | null>(null);
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
   const renderCount = useRef(0);
@@ -118,8 +338,8 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
   } = useIOSAnimations();
 
   // Get theme colors
-  const colorScheme = useColorScheme() ?? 'light';
   const textColor = useThemeColor({}, 'text');
+  const colorScheme = useColorScheme() ?? 'light';
 
   // Get the question state from Redux store
   const questionState = useAppSelector(
@@ -136,6 +356,15 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     // Call the onAnswer prop if provided
     if (onAnswer && !isAnswered()) {
       onAnswer(index, item.answers[index].isCorrect);
+      
+      // Automatically show learning capsule if answer is incorrect
+      if (!item.answers[index].isCorrect) {
+        setShowLearningCapsule(true);
+        // Animate in after state update
+        setTimeout(() => {
+          animateIn();
+        }, 10);
+      }
     }
   };
 
@@ -162,6 +391,14 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
         animateIn();
       }, 10);
     }
+  };
+
+  const toggleLeaderboard = () => {
+    setShowLeaderboard(!showLeaderboard);
+  };
+
+  const toggleProfile = () => {
+    setShowProfile(!showProfile);
   };
 
   // Determine if we have an answer and if it's correct
@@ -362,50 +599,26 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
               </ThemedText>
             </TouchableOpacity>
             
-            <TouchableOpacity 
-              onPress={isAnswered() ? toggleLearningCapsule : undefined} 
+            {/* Leaderboard button */}
+            <TouchableOpacity
+              onPress={toggleLeaderboard}
               style={[
                 styles.actionButton,
-                !isAnswered() && styles.disabledActionButton,
-                Platform.OS === 'web' && isAnswered() && hoveredAction === 'learn' && styles.hoveredActionButton
+                Platform.OS === 'web' && hoveredAction === 'leaderboard' && styles.hoveredActionButton
               ]}
-              disabled={!isAnswered()}
-              {...(Platform.OS === 'web' && isAnswered() ? {
-                onMouseEnter: () => handleActionMouseEnter('learn'),
+              {...(Platform.OS === 'web' ? {
+                onMouseEnter: () => handleActionMouseEnter('leaderboard'),
                 onMouseLeave: handleActionMouseLeave
               } : {})}
             >
               <FeatherIcon 
-                name={showLearningCapsule ? "book" : "book-open"} 
+                name="award" 
                 size={20} 
                 color="white" 
-                style={[styles.icon, !isAnswered() && styles.disabledIcon]} 
+                style={styles.icon} 
               />
-              <ThemedText style={[styles.actionText, !isAnswered() && styles.disabledText]}>Learn</ThemedText>
+              <ThemedText style={styles.actionText}>Leaderboard</ThemedText>
             </TouchableOpacity>
-            
-            {/* Only show explanation button in dev mode */}
-            {__DEV__ && showExplanation && (
-              <TouchableOpacity
-                onPress={showExplanation}
-                style={[
-                  styles.actionButton,
-                  Platform.OS === 'web' && hoveredAction === 'explain' && styles.hoveredActionButton
-                ]}
-                {...(Platform.OS === 'web' ? {
-                  onMouseEnter: () => handleActionMouseEnter('explain'),
-                  onMouseLeave: handleActionMouseLeave
-                } : {})}
-              >
-                <FeatherIcon 
-                  name="info" 
-                  size={20} 
-                  color="white" 
-                  style={styles.icon} 
-                />
-                <ThemedText style={styles.actionText}>Explanations</ThemedText>
-              </TouchableOpacity>
-            )}
           </View>
         </View>
 
@@ -423,6 +636,62 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
             </ThemedText>
           </Animated.View>
         )}
+
+        {/* Leaderboard Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showLeaderboard}
+          onRequestClose={toggleLeaderboard}
+          statusBarTranslucent={true}
+        >
+          <View style={styles.leaderboardModalContainer}>
+            <View style={styles.leaderboardModalContent}>
+              <View style={styles.leaderboardModalHeader}>
+                <ThemedText style={styles.leaderboardModalTitle}>Leaderboard</ThemedText>
+                <TouchableOpacity 
+                  onPress={toggleLeaderboard} 
+                  style={styles.leaderboardCloseButton}
+                >
+                  <View style={styles.leaderboardCloseButtonCircle}>
+                    <FeatherIcon name="x" size={20} color="black" />
+                  </View>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.leaderboardModalBody}>
+                <Leaderboard limit={10} />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Profile Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showProfile}
+          onRequestClose={toggleProfile}
+          statusBarTranslucent={true}
+        >
+          <View style={styles.profileModalContainer}>
+            <View style={styles.profileModalContent}>
+              <View style={styles.profileModalHeader}>
+                <ThemedText style={styles.profileModalTitle}>Profile</ThemedText>
+                <TouchableOpacity 
+                  onPress={toggleProfile} 
+                  style={styles.profileCloseButton}
+                >
+                  <View style={styles.profileCloseButtonCircle}>
+                    <FeatherIcon name="x" size={20} color="black" />
+                  </View>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.profileModalBody}>
+                <ProfileView />
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -430,7 +699,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
 
 export default FeedItem;
 
-// Keep all existing styles
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -591,17 +859,9 @@ const styles = StyleSheet.create({
   },
   learningCapsule: {
     position: 'absolute',
-    top: 'auto',
-    bottom: 100, // Position it higher up from the bottom to avoid nav bar on iOS
-    ...(Platform.OS === 'web' ? {
-      left: '50%',
-      right: 'auto',
-      maxWidth: 560, // Slightly less than content to account for padding
-      transform: [{translateX: -280}], // Half of maxWidth to center
-    } : {
-      left: 20,
-      right: 20,
-    }),
+    top: 100, // Position near the top of the screen
+    left: 10,
+    right: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
     borderRadius: 16,
     padding: 20,
@@ -612,8 +872,14 @@ const styles = StyleSheet.create({
     elevation: 6,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    maxHeight: '50%',
+    maxHeight: '40%', // Limit height to avoid covering too much
     zIndex: 1000,
+    ...(Platform.OS === 'web' ? {
+      left: '5%',
+      right: '5%',
+      width: '90%',
+      alignSelf: 'center',
+    } : {})
   },
   learningCapsuleHeader: {
     flexDirection: 'row',
@@ -642,5 +908,93 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     opacity: 0.5,
+  },
+  leaderboardModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  leaderboardModalContent: {
+    width: '90%',
+    height: '80%',
+    backgroundColor: '#1a1a1a', // Darker background for better contrast
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    overflow: 'hidden',
+    ...(Platform.OS === 'web' ? {
+      maxWidth: 800,
+    } : {})
+  },
+  leaderboardModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: '#121212', // Darker header background
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  leaderboardModalTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  leaderboardModalBody: {
+    flex: 1,
+  },
+  leaderboardCloseButton: {
+    padding: 5,
+  },
+  leaderboardCloseButtonCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#ffc107', // Yellow close button like in the image
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileModalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  profileModalContent: {
+    height: '90%',
+    backgroundColor: '#1a1a1a',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    overflow: 'hidden',
+  },
+  profileModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: '#121212',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  profileModalTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  profileModalBody: {
+    flex: 1,
+  },
+  profileCloseButton: {
+    padding: 5,
+  },
+  profileCloseButtonCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#ffc107',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

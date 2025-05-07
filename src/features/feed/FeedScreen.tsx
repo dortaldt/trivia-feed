@@ -11,6 +11,9 @@ import {
   Platform,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Modal as RNModal,
+  SafeAreaView,
+  ScrollView,
 } from 'react-native';
 import { 
   Text, 
@@ -46,8 +49,223 @@ import {
 import { InteractionTracker } from '../../components/InteractionTracker';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, borderRadius } from '../../theme';
+import { FeatherIcon } from '@/components/FeatherIcon';
+import { ThemedText } from '@/components/ThemedText';
 
 const { width, height } = Dimensions.get('window');
+
+// Profile View component extracted from FeedItem
+const ProfileView: React.FC = () => {
+  const { user, signOut } = useAuth();
+  
+  // Generate initials for the avatar placeholder
+  const getInitials = () => {
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return '?';
+  };
+
+  const handleSignOut = () => {
+    if (signOut) {
+      signOut();
+    }
+  };
+  
+  // Define styles within the component
+  const profileStyles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#1a1a1a',
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    emptyText: {
+      fontSize: 16,
+      textAlign: 'center',
+      color: 'rgba(255, 255, 255, 0.7)',
+    },
+    scrollView: {
+      flex: 1,
+    },
+    userInfoSection: {
+      alignItems: 'center',
+      padding: 20,
+      paddingBottom: 30,
+      borderBottomWidth: 0,
+    },
+    avatarContainer: {
+      marginBottom: 10,
+    },
+    avatarPlaceholder: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: '#ffc107',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarText: {
+      color: 'black',
+      fontSize: 36,
+      fontWeight: 'bold',
+    },
+    emailText: {
+      fontSize: 14,
+      color: 'rgba(255, 255, 255, 0.7)',
+      marginTop: 5,
+    },
+    detailsSection: {
+      paddingHorizontal: 20,
+    },
+    detailRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    detailLabel: {
+      color: 'rgba(255, 255, 255, 0.7)',
+      fontSize: 16,
+    },
+    detailValue: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: '500',
+    },
+    editButton: {
+      backgroundColor: '#ffc107',
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      alignSelf: 'center',
+      marginTop: 25,
+      marginBottom: 25,
+    },
+    editButtonText: {
+      color: 'black',
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    sectionTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: 'white',
+      marginTop: 25,
+      marginBottom: 15,
+      paddingHorizontal: 20,
+    },
+    menuItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 15,
+      paddingHorizontal: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    menuItemText: {
+      color: 'white',
+      fontSize: 16,
+    },
+    headerContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    headerTitle: {
+      fontSize: 18,
+      color: 'white',
+      fontWeight: '600',
+    },
+  });
+
+  if (!user) {
+    return (
+      <View style={profileStyles.emptyState}>
+        <ThemedText style={profileStyles.emptyText}>
+          You need to sign in to view your profile
+        </ThemedText>
+      </View>
+    );
+  }
+
+  return (
+    <View style={profileStyles.container}>
+      {/* Add back the header */}
+      <View style={profileStyles.headerContainer}>
+        <ThemedText style={profileStyles.headerTitle}>Profile</ThemedText>
+      </View>
+
+      <ScrollView style={profileStyles.scrollView}>
+        {/* User avatar and email */}
+        <View style={profileStyles.userInfoSection}>
+          <View style={profileStyles.avatarContainer}>
+            <View style={profileStyles.avatarPlaceholder}>
+              <ThemedText style={profileStyles.avatarText}>{getInitials()}</ThemedText>
+            </View>
+          </View>
+          <ThemedText style={profileStyles.emailText}>{user.email}</ThemedText>
+        </View>
+
+        {/* User details section */}
+        <View style={profileStyles.detailsSection}>
+          <View style={profileStyles.detailRow}>
+            <ThemedText style={profileStyles.detailLabel}>Username</ThemedText>
+            <ThemedText style={profileStyles.detailValue}>Animal Junk</ThemedText>
+          </View>
+          <View style={profileStyles.detailRow}>
+            <ThemedText style={profileStyles.detailLabel}>Full Name</ThemedText>
+            <ThemedText style={profileStyles.detailValue}>Not set</ThemedText>
+          </View>
+          <View style={profileStyles.detailRow}>
+            <ThemedText style={profileStyles.detailLabel}>Country</ThemedText>
+            <ThemedText style={profileStyles.detailValue}>Anguilla</ThemedText>
+          </View>
+        </View>
+
+        {/* Edit Profile button */}
+        <TouchableOpacity style={profileStyles.editButton}>
+          <ThemedText style={profileStyles.editButtonText}>Edit Profile</ThemedText>
+        </TouchableOpacity>
+
+        {/* Account section */}
+        <ThemedText style={profileStyles.sectionTitle}>Account</ThemedText>
+        
+        <TouchableOpacity style={profileStyles.menuItem}>
+          <ThemedText style={profileStyles.menuItemText}>Privacy & Security</ThemedText>
+          <FeatherIcon name="chevron-right" size={20} color="white" />
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={profileStyles.menuItem}>
+          <ThemedText style={profileStyles.menuItemText}>Notification Settings</ThemedText>
+          <FeatherIcon name="chevron-right" size={20} color="white" />
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={profileStyles.menuItem}>
+          <ThemedText style={profileStyles.menuItemText}>Change Password</ThemedText>
+          <FeatherIcon name="chevron-right" size={20} color="white" />
+        </TouchableOpacity>
+
+        {/* Sign out button at the bottom */}
+        <TouchableOpacity 
+          style={[profileStyles.editButton, { marginTop: 40, backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}
+          onPress={handleSignOut}
+        >
+          <ThemedText style={[profileStyles.editButtonText, { color: '#ff5c5c' }]}>Sign Out</ThemedText>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+};
 
 const FeedScreen: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -61,6 +279,8 @@ const FeedScreen: React.FC = () => {
   // Add state for selection explanations 
   const [showExplanationModal, setShowExplanationModal] = useState(false);
   const [currentExplanation, setCurrentExplanation] = useState<string[]>([]);
+  // Add state for profile modal
+  const [showProfile, setShowProfile] = useState(false);
   
   // Get user from auth context
   const { user } = useAuth();
@@ -95,6 +315,14 @@ const FeedScreen: React.FC = () => {
   const [isActivelyScrolling, setIsActivelyScrolling] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastScrollPosition = useRef<number>(0);
+  
+  // Get user initials for the profile button
+  const getInitials = () => {
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return '?';
+  };
 
   // Fetch trivia questions from Supabase and apply personalization
   useEffect(() => {
@@ -548,77 +776,87 @@ const FeedScreen: React.FC = () => {
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0 && viewableItems[0].index !== null && personalizedFeed.length > 0) {
         const newIndex = viewableItems[0].index;
-        const currentItem = personalizedFeed[newIndex];
-        const currentItemId = currentItem.id;
+        // Make sure newIndex is within bounds
+        if (newIndex >= 0 && newIndex < personalizedFeed.length) {
+          const currentItem = personalizedFeed[newIndex];
+          // Add null check for currentItem
+          if (currentItem && currentItem.id) {
+            const currentItemId = currentItem.id;
 
-        // Mark previous question as skipped when scrolling to a new question
-        if (previousIndex.current !== newIndex) {
-          markPreviousAsSkipped(previousIndex.current, newIndex);
-        }
+            // Mark previous question as skipped when scrolling to a new question
+            if (previousIndex.current !== newIndex) {
+              markPreviousAsSkipped(previousIndex.current, newIndex);
+            }
 
-        previousIndex.current = newIndex;
-        lastVisibleItemId.current = currentItemId;
-        setCurrentIndex(newIndex);
-        
-        // Start tracking interaction time with this question
-        const currentTime = Date.now();
-        console.log(`Starting interaction tracking for question ${currentItemId} at ${new Date(currentTime).toISOString()}`);
-        dispatch(startInteraction({ questionId: currentItemId }));
-        
-        // Immediately check if we already have an existing interaction time
-        setTimeout(() => {
-          const startTime = interactionStartTimes[currentItemId];
-          if (startTime) {
-            console.log(`Confirmed interaction tracking for ${currentItemId}, start time: ${new Date(startTime).toISOString()}`);
+            previousIndex.current = newIndex;
+            lastVisibleItemId.current = currentItemId;
+            setCurrentIndex(newIndex);
+            
+            // Start tracking interaction time with this question
+            const currentTime = Date.now();
+            console.log(`Starting interaction tracking for question ${currentItemId} at ${new Date(currentTime).toISOString()}`);
+            dispatch(startInteraction({ questionId: currentItemId }));
+            
+            // Immediately check if we already have an existing interaction time
+            setTimeout(() => {
+              const startTime = interactionStartTimes[currentItemId];
+              if (startTime) {
+                console.log(`Confirmed interaction tracking for ${currentItemId}, start time: ${new Date(startTime).toISOString()}`);
+              } else {
+                console.warn(`Failed to start interaction tracking for ${currentItemId}`);
+              }
+            }, 50);
+            
+            // Set current explanation for debugging
+            if (__DEV__ && feedExplanations[currentItemId]) {
+              setCurrentExplanation(feedExplanations[currentItemId]);
+            }
           } else {
-            console.warn(`Failed to start interaction tracking for ${currentItemId}`);
+            console.warn(`Invalid feed item at index ${newIndex}: item is undefined or missing ID`);
           }
-        }, 50);
-        
-        // Set current explanation for debugging
-        if (__DEV__ && feedExplanations[currentItemId]) {
-          setCurrentExplanation(feedExplanations[currentItemId]);
-        }
-        
-        // Proactively check if we're getting close to the end of the feed (within 3 questions)
-        // and append more questions if needed
-        if (newIndex >= personalizedFeed.length - 3 && feedData.length > personalizedFeed.length) {
-          console.log('Getting close to the end of the feed, preemptively adding more questions');
           
-          const currentFeed = [...personalizedFeed];
-          const existingIds = new Set(currentFeed.map(item => item.id));
-          const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
-          
-          // Use personalization logic to select new questions instead of sequential selection
-          const { items: personalizedItems, explanations: personalizedExplanations } = 
-            getPersonalizedFeed(availableQuestions, userProfile, 8);
+          // Proactively check if we're getting close to the end of the feed (within 3 questions)
+          // and append more questions if needed
+          if (newIndex >= personalizedFeed.length - 3 && feedData.length > personalizedFeed.length) {
+            console.log('Getting close to the end of the feed, preemptively adding more questions');
             
-          // Take up to 5 new personalized questions
-          const newQuestions = personalizedItems.filter(item => !existingIds.has(item.id)).slice(0, 5);
-          
-          if (newQuestions.length > 0) {
-            console.log(`Proactively appending ${newQuestions.length} personalized questions to feed`);
+            const currentFeed = [...personalizedFeed];
+            const existingIds = new Set(currentFeed.map(item => item.id));
+            const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
             
-            // Create a new feed with existing + new questions
-            const updatedFeed = [...currentFeed, ...newQuestions];
+            // Use personalization logic to select new questions instead of sequential selection
+            const { items: personalizedItems, explanations: personalizedExplanations } = 
+              getPersonalizedFeed(availableQuestions, userProfile, 8);
+              
+            // Take up to 5 new personalized questions
+            const newQuestions = personalizedItems.filter(item => !existingIds.has(item.id)).slice(0, 5);
             
-            // Add additional explanation about why we added them
-            const combinedExplanations: Record<string, string[]> = { ...feedExplanations };
-            
-            // Add the explanations from the personalization system plus our message
-            newQuestions.forEach((item: FeedItemType) => {
-              combinedExplanations[item.id] = [
-                ...(personalizedExplanations[item.id] || []),
-                `Added to extend feed`
-              ];
-            });
-            
-            // Update the feed in Redux
-            dispatch(setPersonalizedFeed({
-              items: updatedFeed,
-              explanations: combinedExplanations
-            }));
+            if (newQuestions.length > 0) {
+              console.log(`Proactively appending ${newQuestions.length} personalized questions to feed`);
+              
+              // Create a new feed with existing + new questions
+              const updatedFeed = [...currentFeed, ...newQuestions];
+              
+              // Add additional explanation about why we added them
+              const combinedExplanations: Record<string, string[]> = { ...feedExplanations };
+              
+              // Add the explanations from the personalization system plus our message
+              newQuestions.forEach((item: FeedItemType) => {
+                combinedExplanations[item.id] = [
+                  ...(personalizedExplanations[item.id] || []),
+                  `Added to extend feed`
+                ];
+              });
+              
+              // Update the feed in Redux
+              dispatch(setPersonalizedFeed({
+                items: updatedFeed,
+                explanations: combinedExplanations
+              }));
+            }
           }
+        } else {
+          console.warn(`Invalid index ${newIndex}: outside of personalizedFeed bounds (0-${personalizedFeed.length - 1})`);
         }
       }
     },
@@ -971,7 +1209,13 @@ const FeedScreen: React.FC = () => {
       };
     }
     
-    return { inColdStart: false };
+    // When not in cold start, still return all properties with default values
+    return { 
+      inColdStart: false,
+      phase: 4,  // Assume phase 4 (steady state)
+      questionsInPhase: totalQuestionsAnswered,
+      phaseDescription: getPhaseDescription(4)
+    };
   }, [userProfile]);
 
   // Helper function to get phase description
@@ -988,6 +1232,11 @@ const FeedScreen: React.FC = () => {
       default:
         return "Personalizing your feed";
     }
+  };
+
+  // Toggle profile modal
+  const toggleProfile = () => {
+    setShowProfile(!showProfile);
   };
 
   // Loading state
@@ -1056,17 +1305,16 @@ const FeedScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {__DEV__ && (
-        <View style={styles.debugContainer}>
-          {personalizedFeed.length > 0 ? (
-            <Text style={styles.debugText}>
-              {`Rendering feed with ${personalizedFeed.length} items. `}
-              {`Unique IDs: ${new Set(personalizedFeed.map(item => item.id)).size} / ${personalizedFeed.length}`}
-            </Text>
-          ) : null}
+      {/* Profile Button with User Avatar (only appearing once on the feed level) */}
+      <TouchableOpacity 
+        style={styles.profileButton} 
+        onPress={toggleProfile}
+      >
+        <View style={styles.avatarCircle}>
+          <ThemedText style={styles.avatarText}>{getInitials()}</ThemedText>
         </View>
-      )}
-      
+      </TouchableOpacity>
+
       {/* Connection error banner */}
       {usingMockData && (
         <Surface style={styles.mockDataBanner}>
@@ -1106,7 +1354,37 @@ const FeedScreen: React.FC = () => {
       />
 
       {/* InteractionTracker Component */}
-      <InteractionTracker feedData={personalizedFeed.length > 0 ? personalizedFeed : feedData} />
+      <InteractionTracker 
+        feedData={personalizedFeed.length > 0 ? personalizedFeed : feedData} 
+      />
+
+      {/* Profile Modal */}
+      <RNModal
+        animationType="slide"
+        transparent={true}
+        visible={showProfile}
+        onRequestClose={toggleProfile}
+        statusBarTranslucent={true}
+      >
+        <View style={styles.profileModalContainer}>
+          <View style={styles.profileModalContent}>
+            <View style={styles.profileModalHeader}>
+              <ThemedText style={styles.profileModalTitle}>Profile</ThemedText>
+              <TouchableOpacity 
+                onPress={toggleProfile} 
+                style={styles.profileCloseButton}
+              >
+                <View style={styles.profileCloseButtonCircle}>
+                  <FeatherIcon name="x" size={20} color="black" />
+                </View>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.profileModalBody}>
+              <ProfileView />
+            </View>
+          </View>
+        </View>
+      </RNModal>
 
       {/* Debugging Modal for Personalization Explanations (DEV only) */}
       {__DEV__ && showExplanationModal && (
@@ -1198,17 +1476,6 @@ const FeedScreen: React.FC = () => {
             Got it
           </PaperButton>
         </Animated.View>
-      )}
-
-      {__DEV__ && getColdStartPhaseInfo().inColdStart && (
-        <Surface style={styles.coldStartBanner}>
-          <Text style={styles.coldStartBannerText}>
-            Cold Start Phase {getColdStartPhaseInfo().phase}: {getColdStartPhaseInfo().phaseDescription}
-          </Text>
-          <Text style={styles.coldStartBannerSubText}>
-            Question {getColdStartPhaseInfo().questionsInPhase} of 20
-          </Text>
-        </Surface>
       )}
     </View>
   );
@@ -1371,41 +1638,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing[2],
     fontSize: 14,
   },
-  coldStartBanner: {
-    position: 'absolute',
-    top: spacing[5],
-    left: spacing[5],
-    right: spacing[5],
-    backgroundColor: 'rgba(10, 126, 164, 0.8)',
-    padding: spacing[2],
-    borderRadius: borderRadius.md,
-    zIndex: 100,
-  },
-  coldStartBannerText: {
-    color: colors.foreground,
-    textAlign: 'center',
-  },
-  coldStartBannerSubText: {
-    color: colors.foreground,
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: spacing[1],
-  },
-  debugContainer: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    right: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 10,
-    borderRadius: 8,
-    zIndex: 100,
-  },
-  debugText: {
-    color: 'white',
-    fontSize: 14,
-    textAlign: 'center',
-  },
   mockDataBanner: {
     position: 'absolute',
     top: spacing[5],
@@ -1425,6 +1657,80 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
     fontWeight: 'bold',
+  },
+  // Update profile button styles
+  profileButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 25,
+    left: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    zIndex: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  avatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ffc107',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  avatarText: {
+    color: 'black',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  profileModalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  profileModalContent: {
+    height: '90%',
+    backgroundColor: '#1a1a1a',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    overflow: 'hidden',
+  },
+  profileModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: '#121212',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  profileModalTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  profileModalBody: {
+    flex: 1,
+  },
+  profileCloseButton: {
+    padding: 5,
+  },
+  profileCloseButtonCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#ffc107',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

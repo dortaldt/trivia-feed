@@ -58,16 +58,10 @@ export default function TabLayout() {
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
-          // Fix tab bar position and styling for web
-          tabBarStyle: Platform.OS === 'ios' 
-            ? { position: 'absolute' } 
-            : Platform.OS === 'web' 
-              ? {
-                  paddingBottom: 8,
-                  height: 'auto',
-                  minHeight: 55,
-                }
-              : undefined,
+          // Hide tab bar completely
+          tabBarStyle: { 
+            display: 'none'
+          },
           tabBarItemStyle: Platform.OS === 'web' ? {
             // Adjust tab item style for web
             flex: 1,

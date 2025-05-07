@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, useWindowDimensions, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, useWindowDimensions, Platform, Text } from 'react-native';
 import { fetchLeaderboard, LeaderboardUser, LeaderboardPeriod, fetchUserRank } from '../lib/leaderboardService';
 import { useAuth } from '../context/AuthContext';
 import { countries } from '../data/countries';
@@ -24,7 +24,7 @@ interface LeaderboardProps {
 }
 
 export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
-  const [activeTab, setActiveTab] = useState<LeaderboardTabKey>('Weekly');
+  const [activeTab, setActiveTab] = useState<LeaderboardTabKey>('Daily');
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
@@ -33,6 +33,11 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
   const isDark = colorScheme === 'dark';
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
+
+  // Yellow color theme
+  const YELLOW_PRIMARY = '#ffc107'; // Matches the X button
+  const YELLOW_LIGHT = '#fff8e1';
+  const YELLOW_DARK = '#c79100';
 
   useEffect(() => {
     loadLeaderboardData();
@@ -57,11 +62,17 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
     }
   };
 
-  // Get country name from country code
-  const getCountryName = (code: string | null) => {
-    if (!code) return '';
-    const country = countries.find(c => c.code === code);
-    return country ? country.name : '';
+  // Convert country code to flag emoji
+  const getCountryFlag = (code: string | null): string => {
+    if (!code || code.length !== 2) return '';
+    
+    // Country code to regional indicator symbols
+    // For example: 'US' becomes 🇺🇸
+    const codePoints = [...code.toUpperCase()].map(
+      char => 127397 + char.charCodeAt(0)
+    );
+    
+    return String.fromCodePoint(...codePoints);
   };
 
   // Get initials for avatar
@@ -100,36 +111,47 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
       <ThemedView style={[
         styles.itemContainer, 
         isCurrentUser && styles.currentUserItem,
-        { borderWidth: 1, borderColor: 'rgba(150, 150, 150, 0.2)' }
+        index % 2 === 1 && !isCurrentUser && styles.altItemContainer,
       ]}
       {...(Platform.OS === 'web' ? {
         className: `leaderboard-item ${isCurrentUser ? 'current-user' : ''}`
       } : {})}>
-        <ThemedText style={styles.rank}>{index + 1}</ThemedText>
+        <ThemedText style={[styles.rank, isCurrentUser && styles.currentUserRank]}>
+          {index + 1}
+        </ThemedText>
         
         <View style={styles.avatarContainer}>
           {item.avatar_url ? (
             <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
           ) : (
-            <View style={styles.avatarPlaceholder}>
+            <View style={[styles.avatarPlaceholder, isCurrentUser && styles.currentUserAvatar]}>
               <ThemedText style={styles.avatarText}>{getInitials(item.full_name, item.username)}</ThemedText>
             </View>
           )}
         </View>
         
         <View style={styles.userInfo}>
-          <ThemedText type="defaultSemiBold" style={styles.username}>
-            {item.full_name || item.username || 'Anonymous'} 
-            {isCurrentUser && <ThemedText style={styles.youLabel}> (You)</ThemedText>}
-          </ThemedText>
-          {item.country && (
-            <ThemedText style={styles.country}>{getCountryName(item.country)}</ThemedText>
-          )}
+          <View style={styles.usernameRow}>
+            <ThemedText style={[styles.username, isCurrentUser && styles.currentUserText]}>
+              {item.full_name || item.username || 'Anonymous'} 
+              {isCurrentUser && <ThemedText style={styles.youLabel}>(You)</ThemedText>}
+            </ThemedText>
+            
+            {item.country && (
+              <Text style={styles.flag}>
+                {getCountryFlag(item.country)}
+              </Text>
+            )}
+          </View>
         </View>
         
         <View style={styles.scoreContainer}>
-          <ThemedText style={[styles.scoreValue, { color: '#0a7ea4' }]}>{scoreToShow}</ThemedText>
-          <ThemedText style={styles.scoreLabel}>correct</ThemedText>
+          <ThemedText style={[styles.scoreValue, { color: isCurrentUser ? YELLOW_PRIMARY : YELLOW_DARK }]}>
+            {scoreToShow}
+          </ThemedText>
+          <ThemedText style={styles.scoreLabel}>
+            correct
+          </ThemedText>
         </View>
       </ThemedView>
     );
@@ -161,7 +183,7 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
       {user && userRank !== null && (
         <ThemedView style={styles.yourRankContainer}>
           <ThemedText style={styles.yourRankText}>
-            Your Rank: <ThemedText type="defaultSemiBold" style={styles.rankNumber}>#{userRank}</ThemedText>
+            Your Rank: <ThemedText style={styles.rankNumber}>#{userRank}</ThemedText>
           </ThemedText>
         </ThemedView>
       )}
@@ -212,8 +234,8 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
             border: 1px solid rgba(150, 150, 150, 0.2);
           }
           .leaderboard-item.current-user {
-            background-color: rgba(10, 126, 164, 0.08);
-            border-color: #0a7ea4;
+            background-color: #332b00; /* Dark yellow for dark theme */
+            border-color: transparent;
           }
         `;
         document.head.appendChild(style);
@@ -237,71 +259,80 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'white',
   },
   header: {
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(150, 150, 150, 0.2)',
     paddingTop: Platform.OS === 'ios' ? 60 : 16,
+    display: 'none', // Hide this header since we're using the modal header
   },
   headerTitle: {
     fontSize: 24,
   },
   tabContainer: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
+    backgroundColor: 'white',
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 15,
     alignItems: 'center',
   },
   activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#0a7ea4',
+    borderBottomWidth: 3,
+    borderBottomColor: '#ffc107', // Yellow active tab indicator
   },
   tabText: {
     fontSize: 14,
-    opacity: 0.7,
+    color: '#888888',
+    fontWeight: '500',
   },
   activeTabText: {
-    color: '#0a7ea4',
+    color: '#ffc107', // Yellow text for active tab
     fontWeight: '600',
-    opacity: 1,
   },
   yourRankContainer: {
-    padding: 12,
+    padding: 15,
+    backgroundColor: '#fff8e1', // Light yellow background
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
   },
   yourRankText: {
-    fontSize: 14,
+    fontSize: 16,
     textAlign: 'center',
+    color: '#333333',
+    fontWeight: '500',
   },
   rankNumber: {
-    color: '#0a7ea4',
+    color: '#ffc107', // Yellow rank number
+    fontWeight: 'bold',
   },
   listContent: {
-    padding: 12,
+    padding: 0,
   },
   itemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    padding: 16,
+    backgroundColor: 'white',
+  },
+  altItemContainer: {
+    backgroundColor: '#f9f9f9',
   },
   currentUserItem: {
-    borderColor: '#0a7ea4',
-    borderWidth: 1,
-    backgroundColor: 'rgba(10, 126, 164, 0.08)',
+    backgroundColor: '#fff8e1', // Light yellow background for current user
   },
   rank: {
     width: 30,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
+    color: '#666666',
+  },
+  currentUserRank: {
+    color: '#ffc107', // Yellow rank number for current user
   },
   avatarContainer: {
     marginRight: 12,
@@ -315,9 +346,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#c79100', // Darker yellow for avatar
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  currentUserAvatar: {
+    backgroundColor: '#ffc107', // Yellow avatar for current user
   },
   avatarText: {
     color: '#fff',
@@ -327,28 +361,38 @@ const styles = StyleSheet.create({
   userInfo: {
     flex: 1,
   },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   username: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  currentUserText: {
+    color: '#333333',
   },
   youLabel: {
     fontStyle: 'italic',
-    color: '#0a7ea4',
+    color: '#ffc107',
+    marginLeft: 4,
   },
-  country: {
-    fontSize: 14,
-    opacity: 0.7,
+  flag: {
+    fontSize: 18,
+    marginLeft: 8,
   },
   scoreContainer: {
-    alignItems: 'center',
-    minWidth: 50,
+    alignItems: 'flex-end',
+    minWidth: 60,
   },
   scoreValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
   },
   scoreLabel: {
     fontSize: 12,
-    opacity: 0.7,
+    color: '#888888',
   },
   loadingContainer: {
     flex: 1,
