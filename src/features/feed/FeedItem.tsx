@@ -47,287 +47,28 @@ type FeedItemProps = {
   onNextQuestion?: () => void;
 };
 
-// Simple ProfileView component to show in the modal
-const ProfileView = () => {
-  const { user, signOut } = useAuth();
-  
-  // Generate initials for the avatar placeholder
-  const getInitials = () => {
-    if (user?.email) {
-      return user.email.substring(0, 2).toUpperCase();
-    }
-    return '?';
-  };
-
-  const handleSignOut = () => {
-    if (signOut) {
-      signOut();
-    }
-  };
-  
-  // Define styles within the component
-  const profileStyles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#1a1a1a',
-    },
-    emptyState: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 20,
-    },
-    emptyText: {
-      fontSize: 16,
-      textAlign: 'center',
-      color: 'rgba(255, 255, 255, 0.7)',
-    },
-    scrollView: {
-      flex: 1,
-    },
-    userInfoSection: {
-      alignItems: 'center',
-      padding: 20,
-      paddingBottom: 30,
-      borderBottomWidth: 0,
-    },
-    avatarContainer: {
-      marginBottom: 10,
-    },
-    avatarPlaceholder: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      backgroundColor: '#ffc107',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    avatarText: {
-      color: 'black',
-      fontSize: 36,
-      fontWeight: 'bold',
-    },
-    emailText: {
-      fontSize: 14,
-      color: 'rgba(255, 255, 255, 0.7)',
-      marginTop: 5,
-    },
-    detailsSection: {
-      paddingHorizontal: 20,
-    },
-    detailRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingVertical: 15,
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    detailLabel: {
-      color: 'rgba(255, 255, 255, 0.7)',
-      fontSize: 16,
-    },
-    detailValue: {
-      color: 'white',
-      fontSize: 16,
-      fontWeight: '500',
-    },
-    editButton: {
-      backgroundColor: '#ffc107',
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 8,
-      alignSelf: 'center',
-      marginTop: 25,
-      marginBottom: 25,
-    },
-    editButtonText: {
-      color: 'black',
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    sectionTitle: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      color: 'white',
-      marginTop: 25,
-      marginBottom: 15,
-      paddingHorizontal: 20,
-    },
-    menuItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: 15,
-      paddingHorizontal: 20,
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    menuItemText: {
-      color: 'white',
-      fontSize: 16,
-    },
-    headerContainer: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    headerTitle: {
-      fontSize: 18,
-      color: 'white',
-      fontWeight: '600',
-    },
-  });
-
-  if (!user) {
-    return (
-      <View style={profileStyles.emptyState}>
-        <ThemedText style={profileStyles.emptyText}>
-          You need to sign in to view your profile
-        </ThemedText>
-      </View>
-    );
-  }
-
-  return (
-    <View style={profileStyles.container}>
-      {/* Add back the header */}
-      <View style={profileStyles.headerContainer}>
-        <ThemedText style={profileStyles.headerTitle}>Profile</ThemedText>
-      </View>
-
-      <ScrollView style={profileStyles.scrollView}>
-        {/* User avatar and email */}
-        <View style={profileStyles.userInfoSection}>
-          <View style={profileStyles.avatarContainer}>
-            <View style={profileStyles.avatarPlaceholder}>
-              <ThemedText style={profileStyles.avatarText}>{getInitials()}</ThemedText>
-            </View>
-          </View>
-          <ThemedText style={profileStyles.emailText}>{user.email}</ThemedText>
-        </View>
-
-        {/* User details section */}
-        <View style={profileStyles.detailsSection}>
-          <View style={profileStyles.detailRow}>
-            <ThemedText style={profileStyles.detailLabel}>Username</ThemedText>
-            <ThemedText style={profileStyles.detailValue}>Animal Junk</ThemedText>
-          </View>
-          <View style={profileStyles.detailRow}>
-            <ThemedText style={profileStyles.detailLabel}>Full Name</ThemedText>
-            <ThemedText style={profileStyles.detailValue}>Not set</ThemedText>
-          </View>
-          <View style={profileStyles.detailRow}>
-            <ThemedText style={profileStyles.detailLabel}>Country</ThemedText>
-            <ThemedText style={profileStyles.detailValue}>Anguilla</ThemedText>
-          </View>
-        </View>
-
-        {/* Edit Profile button */}
-        <TouchableOpacity style={profileStyles.editButton}>
-          <ThemedText style={profileStyles.editButtonText}>Edit Profile</ThemedText>
-        </TouchableOpacity>
-
-        {/* Account section */}
-        <ThemedText style={profileStyles.sectionTitle}>Account</ThemedText>
-        
-        <TouchableOpacity style={profileStyles.menuItem}>
-          <ThemedText style={profileStyles.menuItemText}>Privacy & Security</ThemedText>
-          <FeatherIcon name="chevron-right" size={20} color="white" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={profileStyles.menuItem}>
-          <ThemedText style={profileStyles.menuItemText}>Notification Settings</ThemedText>
-          <FeatherIcon name="chevron-right" size={20} color="white" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={profileStyles.menuItem}>
-          <ThemedText style={profileStyles.menuItemText}>Change Password</ThemedText>
-          <FeatherIcon name="chevron-right" size={20} color="white" />
-        </TouchableOpacity>
-
-        {/* Sign out button at the bottom */}
-        <TouchableOpacity 
-          style={[profileStyles.editButton, { marginTop: 40, backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}
-          onPress={handleSignOut}
-        >
-          <ThemedText style={[profileStyles.editButtonText, { color: '#ff5c5c' }]}>Sign Out</ThemedText>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
-  );
-};
-
 const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, onNextQuestion }) => {
-  const [liked, setLiked] = useState(false);
+  const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
+  const [isLiked, setIsLiked] = useState(false);
   const [showLearningCapsule, setShowLearningCapsule] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
   const [hoveredAnswerIndex, setHoveredAnswerIndex] = useState<number | null>(null);
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
+  
+  const mouseEnterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mouseLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const renderCount = useRef(0);
   
-  // Calculate responsive font size based on question length
-  const calculateFontSize = useMemo(() => {
-    const textLength = item.question.length;
-    const lineBreaks = (item.question.match(/\n/g) || []).length;
-    
-    // Default max font size - different for mobile web vs other platforms
-    const isMobileWeb = Platform.OS === 'web' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    let fontSize = isMobileWeb ? 24 : 42;
-    
-    if (textLength > 60 || lineBreaks > 0) {
-      fontSize = isMobileWeb ? 22 : 36;
-    }
-    
-    if (textLength > 100 || lineBreaks > 1) {
-      fontSize = isMobileWeb ? 20 : 32;
-    }
-    
-    if (textLength > 140 || lineBreaks > 2) {
-      fontSize = isMobileWeb ? 18 : 28;
-    }
-    
-    if (textLength > 180 || lineBreaks > 3) {
-      fontSize = isMobileWeb ? 16 : 24;
-    }
-    
-    // Added more conditions for very long content
-    if (textLength > 220 || lineBreaks > 4) {
-      fontSize = isMobileWeb ? 14 : 20;
-    }
-    
-    if (textLength > 260 || lineBreaks > 5) {
-      fontSize = isMobileWeb ? 14 : 16;
-    }
-    
-    if (textLength > 300 || lineBreaks > 6) {
-      fontSize = 14; // Minimum font size for all platforms
-    }
-    
-    return fontSize;
-  }, [item.question]);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   
-  // Add lineHeight calculation for more condensed text
-  const lineHeight = useMemo(() => {
-    // Use a more condensed line height ratio (1.2 instead of default 1.5)
-    return Math.round(calculateFontSize * 1.2);
-  }, [calculateFontSize]);
+  const colorScheme = useColorScheme();
   
-  // Add debounce timer refs
-  const mouseEnterTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const mouseLeaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const questionState = useAppSelector(state => 
+    state.trivia.questions[item.id] as QuestionState | undefined
+  );
   
-  // Log component renders
-  useEffect(() => {
-    renderCount.current += 1;
-    console.log(`[DEBUG] FeedItem component render #${renderCount.current} for item ${item.id}`);
-    console.log(`[DEBUG] Current state - hoveredAnswerIndex: ${hoveredAnswerIndex}, hoveredAction: ${hoveredAction}`);
-  });
+  const dispatch = useAppDispatch();
   
-  // Use our iOS animations hook for the learning capsule
   const { 
     animateIn, 
     animateOut, 
@@ -337,30 +78,57 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     isIOS
   } = useIOSAnimations();
 
-  // Get theme colors
+  const calculateFontSize = useMemo(() => {
+    const textLength = item.question.length;
+    const lineBreaks = (item.question.match(/\n/g) || []).length;
+    
+    const isMobileWeb = Platform.OS === 'web' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    let fontSize = isMobileWeb ? 24 : 42;
+    
+    if (textLength > 100 || lineBreaks > 1) {
+      fontSize = isMobileWeb ? 20 : 32;
+    }
+    
+    if (textLength > 150 || lineBreaks > 2) {
+      fontSize = isMobileWeb ? 18 : 28;
+    }
+    
+    if (textLength > 180 || lineBreaks > 3) {
+      fontSize = isMobileWeb ? 16 : 24;
+    }
+    
+    if (textLength > 220 || lineBreaks > 4) {
+      fontSize = isMobileWeb ? 14 : 20;
+    }
+    
+    if (textLength > 300 || lineBreaks > 6) {
+      fontSize = 14;
+    }
+    
+    return fontSize;
+  }, [item.question]);
+  
+  const lineHeight = useMemo(() => {
+    return Math.round(calculateFontSize * 1.2);
+  }, [calculateFontSize]);
+  
+  useEffect(() => {
+    console.log(`[DEBUG] FeedItem component render #${renderCount.current} for item ${item.id}`);
+    console.log(`[DEBUG] Current state - hoveredAnswerIndex: ${hoveredAnswerIndex}, hoveredAction: ${hoveredAction}`);
+  });
+  
   const textColor = useThemeColor({}, 'text');
-  const colorScheme = useColorScheme() ?? 'light';
-
-  // Get the question state from Redux store
-  const questionState = useAppSelector(
-    state => state.trivia.questions[item.id] as QuestionState | undefined
-  );
-  const dispatch = useAppDispatch();
 
   const selectAnswer = (index: number) => {
-    // Add iOS spring feedback when selecting an answer
     if (isIOS) {
       springAnimation();
     }
     
-    // Call the onAnswer prop if provided
     if (onAnswer && !isAnswered()) {
       onAnswer(index, item.answers[index].isCorrect);
       
-      // Automatically show learning capsule if answer is incorrect
       if (!item.answers[index].isCorrect) {
         setShowLearningCapsule(true);
-        // Animate in after state update
         setTimeout(() => {
           animateIn();
         }, 10);
@@ -369,24 +137,21 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
   };
 
   const toggleLike = () => {
-    // Add iOS spring feedback when liking
     if (isIOS) {
       springAnimation();
     }
     
-    setLiked(!liked);
+    setIsLiked(!isLiked);
   };
 
   const toggleLearningCapsule = () => {
     if (showLearningCapsule) {
-      // Animate out
       animateOut(() => {
         setShowLearningCapsule(false);
         resetAnimations();
       });
     } else {
       setShowLearningCapsule(true);
-      // Animate in after state update
       setTimeout(() => {
         animateIn();
       }, 10);
@@ -397,11 +162,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     setShowLeaderboard(!showLeaderboard);
   };
 
-  const toggleProfile = () => {
-    setShowProfile(!showProfile);
-  };
-
-  // Determine if we have an answer and if it's correct
   const isAnswered = () => {
     return questionState?.status === 'answered' && questionState?.answerIndex !== undefined;
   };
@@ -417,9 +177,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     return item.answers[questionState.answerIndex].isCorrect;
   };
 
-  // Handle mouse enter for hover state (web only)
   const handleMouseEnter = (index: number) => {
-    // Use debounce to avoid flickering on fast mouse movement
     if (mouseEnterTimerRef.current) {
       clearTimeout(mouseEnterTimerRef.current);
     }
@@ -428,9 +186,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     }, 30);
   };
 
-  // Handle mouse leave for hover state (web only)
   const handleMouseLeave = () => {
-    // Use debounce to avoid flickering on fast mouse movement
     if (mouseLeaveTimerRef.current) {
       clearTimeout(mouseLeaveTimerRef.current);
     }
@@ -439,17 +195,14 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     }, 30);
   };
 
-  // Handle mouse enter for action buttons
   const handleActionMouseEnter = (action: string) => {
     setHoveredAction(action);
   };
 
-  // Handle mouse leave for action buttons
   const handleActionMouseLeave = () => {
     setHoveredAction(null);
   };
 
-  // Custom styles for background color
   const dynamicStyles = StyleSheet.create({
     backgroundColor: {
       flex: 1,
@@ -467,7 +220,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Solid color background instead of image */}
         <View style={dynamicStyles.backgroundColor} />
         
         <View style={[styles.overlay, {zIndex: 1}]} />
@@ -477,21 +229,20 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
             <Text style={styles.category}>{item.category}</Text>
             <View style={[styles.difficulty, { 
               backgroundColor: 
-                item.difficulty?.toLowerCase() === 'easy' ? '#8BC34A' :  // Light green for easy
-                item.difficulty?.toLowerCase() === 'medium' ? '#FFEB3B' : // Yellow for medium
-                '#9C27B0'  // Purple for hard
+                item.difficulty?.toLowerCase() === 'easy' ? '#8BC34A' :
+                item.difficulty?.toLowerCase() === 'medium' ? '#FFEB3B' :
+                '#9C27B0'
             }]}>
               <Text style={[styles.difficultyText, { 
                 color: 
-                  item.difficulty?.toLowerCase() === 'easy' ? '#507523' :  // Darker green for text
-                  item.difficulty?.toLowerCase() === 'medium' ? '#806F00' : // Darker yellow for text
-                  '#4A1158'  // Darker purple for text
+                  item.difficulty?.toLowerCase() === 'easy' ? '#507523' :
+                  item.difficulty?.toLowerCase() === 'medium' ? '#806F00' :
+                  '#4A1158'
               }]}>{item.difficulty}</Text>
             </View>
           </View>
 
           <View style={styles.questionContainer}>
-            {/* Using ThemedText with question type for DM Serif and dynamic font size */}
             <ThemedText type="question" style={[styles.questionText, { 
               fontSize: calculateFontSize,
               lineHeight: lineHeight 
@@ -499,7 +250,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
               {item.question}
             </ThemedText>
 
-            {/* Show "Skipped" banner if question was skipped */}
             {isSkipped() && (
               <View style={styles.skippedContainer}>
                 <FeatherIcon name="skip-forward" size={24} color="#FFC107" style={styles.skippedIcon} />
@@ -526,27 +276,21 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                       questionState?.answerIndex === index && 
                       !answer.isCorrect && 
                       styles.incorrectAnswerOption,
-                      // Highlight the correct answer when any wrong answer is selected
                       isAnswered() && 
                       questionState?.answerIndex !== index && 
                       answer.isCorrect && 
                       !isSelectedAnswerCorrect() && 
                       styles.correctAnswerOption,
-                      // Add hover state for web
                       Platform.OS === 'web' && hoveredAnswerIndex === index && styles.hoveredAnswerOption,
-                      // Add skipped state styling
                       isSkipped() && styles.skippedAnswerOption,
                     ]}
                     onPress={() => selectAnswer(index)}
-                    // Don't disable if skipped so user can still answer
                     disabled={isAnswered()}
-                    // Add onMouseEnter and onMouseLeave conditionally for web
                     {...(Platform.OS === 'web' ? {
                       onMouseEnter: () => handleMouseEnter(index),
                       onMouseLeave: handleMouseLeave
                     } : {})}
                   >
-                    {/* Use ThemedText for answers to ensure Inter font */}
                     <ThemedText 
                       type="default"
                       style={[
@@ -589,17 +333,16 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
               } : {})}
             >
               <FeatherIcon 
-                name={liked ? "heart" : "heart"} 
+                name={isLiked ? "heart" : "heart"} 
                 size={20} 
-                color={liked ? '#F44336' : 'white'} 
-                style={[styles.icon, liked ? {} : {opacity: 0.8}]} 
+                color={isLiked ? '#F44336' : 'white'} 
+                style={[styles.icon, isLiked ? {} : {opacity: 0.8}]} 
               />
               <ThemedText style={styles.actionText}>
-                {liked ? item.likes + 1 : item.likes}
+                {isLiked ? item.likes + 1 : item.likes}
               </ThemedText>
             </TouchableOpacity>
             
-            {/* Leaderboard button */}
             <TouchableOpacity
               onPress={toggleLeaderboard}
               style={[
@@ -622,7 +365,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
           </View>
         </View>
 
-        {/* Learning Capsule Popup */}
         {showLearningCapsule && (
           <Animated.View style={[styles.learningCapsule, getPopupAnimatedStyle()]}>
             <View style={styles.learningCapsuleHeader}>
@@ -637,7 +379,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
           </Animated.View>
         )}
 
-        {/* Leaderboard Modal */}
         <Modal
           animationType="slide"
           transparent={true}
@@ -660,34 +401,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
               </View>
               <View style={styles.leaderboardModalBody}>
                 <Leaderboard limit={10} />
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Profile Modal */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={showProfile}
-          onRequestClose={toggleProfile}
-          statusBarTranslucent={true}
-        >
-          <View style={styles.profileModalContainer}>
-            <View style={styles.profileModalContent}>
-              <View style={styles.profileModalHeader}>
-                <ThemedText style={styles.profileModalTitle}>Profile</ThemedText>
-                <TouchableOpacity 
-                  onPress={toggleProfile} 
-                  style={styles.profileCloseButton}
-                >
-                  <View style={styles.profileCloseButtonCircle}>
-                    <FeatherIcon name="x" size={20} color="black" />
-                  </View>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.profileModalBody}>
-                <ProfileView />
               </View>
             </View>
           </View>
@@ -720,7 +433,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)', // Semi-transparent overlay for better text visibility
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   content: {
     paddingHorizontal: 20,
@@ -763,7 +476,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     ...(Platform.OS === 'web' ? { textShadow: '0px 2px 4px rgba(0, 0, 0, 0.5)' } as any : {}),
-    // fontSize is now applied dynamically
   },
   answersContainer: {
     marginTop: 10,
@@ -776,7 +488,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    // Add pressed state styles
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
@@ -788,11 +499,11 @@ const styles = StyleSheet.create({
     borderColor: 'white',
   },
   correctAnswerOption: {
-    backgroundColor: 'rgba(76, 175, 80, 0.3)', // Green with opacity for correct
+    backgroundColor: 'rgba(76, 175, 80, 0.3)',
     borderColor: '#4CAF50',
   },
   incorrectAnswerOption: {
-    backgroundColor: 'rgba(244, 67, 54, 0.3)', // Red with opacity for incorrect
+    backgroundColor: 'rgba(244, 67, 54, 0.3)',
     borderColor: '#F44336',
   },
   hoveredAnswerOption: {
@@ -859,7 +570,7 @@ const styles = StyleSheet.create({
   },
   learningCapsule: {
     position: 'absolute',
-    top: 100, // Position near the top of the screen
+    top: 100,
     alignSelf: 'center',
     width: '90%',
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
@@ -872,10 +583,10 @@ const styles = StyleSheet.create({
     elevation: 6,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    maxHeight: '40%', // Limit height to avoid covering too much
+    maxHeight: '40%',
     zIndex: 1000,
     ...(Platform.OS === 'web' ? {
-      maxWidth: 600, // Max width for web to match question content
+      maxWidth: 600,
       width: '80%',
     } : {})
   },
@@ -916,7 +627,7 @@ const styles = StyleSheet.create({
   leaderboardModalContent: {
     width: '90%',
     height: '80%',
-    backgroundColor: '#1a1a1a', // Darker background for better contrast
+    backgroundColor: '#1a1a1a',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
@@ -930,7 +641,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 15,
-    backgroundColor: '#121212', // Darker header background
+    backgroundColor: '#121212',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
@@ -946,48 +657,6 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   leaderboardCloseButtonCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#ffc107', // Yellow close button like in the image
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileModalContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-  },
-  profileModalContent: {
-    height: '90%',
-    backgroundColor: '#1a1a1a',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    overflow: 'hidden',
-  },
-  profileModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    backgroundColor: '#121212',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  profileModalTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  profileModalBody: {
-    flex: 1,
-  },
-  profileCloseButton: {
-    padding: 5,
-  },
-  profileCloseButtonCircle: {
     width: 30,
     height: 30,
     borderRadius: 15,
