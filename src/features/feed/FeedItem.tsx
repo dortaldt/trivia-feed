@@ -83,25 +83,25 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     const lineBreaks = (item.question.match(/\n/g) || []).length;
     
     const isMobileWeb = Platform.OS === 'web' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    let fontSize = isMobileWeb ? 24 : 42;
+    let fontSize = isMobileWeb ? 24 : 38;
     
-    if (textLength > 100 || lineBreaks > 1) {
+    if (textLength > 50 || lineBreaks > 1) {
       fontSize = isMobileWeb ? 20 : 32;
     }
     
-    if (textLength > 150 || lineBreaks > 2) {
-      fontSize = isMobileWeb ? 18 : 28;
+    if (textLength > 100 || lineBreaks > 2) {
+      fontSize = isMobileWeb ? 18 : 24;
     }
     
-    if (textLength > 180 || lineBreaks > 3) {
-      fontSize = isMobileWeb ? 16 : 24;
+    if (textLength > 130 || lineBreaks > 3) {
+      fontSize = isMobileWeb ? 16 : 20;
     }
     
-    if (textLength > 220 || lineBreaks > 4) {
-      fontSize = isMobileWeb ? 14 : 20;
+    if (textLength > 180 || lineBreaks > 4) {
+      fontSize = isMobileWeb ? 14 : 18;
     }
     
-    if (textLength > 300 || lineBreaks > 6) {
+    if (textLength > 200 || lineBreaks > 6) {
       fontSize = 14;
     }
     
