@@ -299,7 +299,7 @@ const FeedScreen: React.FC = () => {
 
   // State to track viewport height on web for proper sizing
   const [viewportHeight, setViewportHeight] = useState(
-    Platform.OS === 'web' ? window.innerHeight - 49 : height
+    Platform.OS === 'web' ? window.innerHeight : height
   );
 
   // Use our custom iOS animations hook
@@ -494,29 +494,15 @@ const FeedScreen: React.FC = () => {
   useEffect(() => {
     const calculateViewportHeight = () => {
       if (Platform.OS === 'web') {
-        // For web, account for the tab bar navigation height
-        // Use visualViewport when available (more accurate on mobile browsers)
+        // For web, use the full viewport height since we don't have a navbar anymore
         const viewportHeight = window.visualViewport?.height || window.innerHeight;
-        
-        // On mobile web browsers, especially Safari, we need to account for the toolbar height
-        // and potential safe area insets at the bottom
-        const isMobileBrowser = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        const navBarHeight = isMobileBrowser ? 70 : 49; // Use larger value for mobile browsers
-        
-        console.log(`Web viewport height: ${viewportHeight}px, using navBarHeight: ${navBarHeight}px`);
-        setViewportHeight(viewportHeight - navBarHeight);
+        console.log(`Web viewport height: ${viewportHeight}px`);
+        setViewportHeight(viewportHeight);
       } else {
-        // For mobile, get the screen dimensions accounting for safe areas
+        // For mobile, get the full screen dimensions without navbar deduction
         const windowHeight = Dimensions.get('window').height;
-        // Account for status bar and navigation bar on mobile
-        // Adjust these values based on the actual navbar height in your app
-        const statusBarHeight = Platform.OS === 'ios' ? 44 : 24; 
-        const bottomNavHeight = Platform.OS === 'ios' ? 49 : 49; // Using 49px for both to match web
-        
-        // Calculate available height minus navigation areas
-        const calculatedHeight = windowHeight - bottomNavHeight;
-        console.log(`Calculated viewport height: ${calculatedHeight}px (window: ${windowHeight}px)`);
-        setViewportHeight(calculatedHeight);
+        console.log(`Mobile viewport height: ${windowHeight}px`);
+        setViewportHeight(windowHeight);
       }
     };
     
