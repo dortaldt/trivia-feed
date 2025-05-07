@@ -860,8 +860,8 @@ const styles = StyleSheet.create({
   learningCapsule: {
     position: 'absolute',
     top: 100, // Position near the top of the screen
-    left: 10,
-    right: 10,
+    alignSelf: 'center',
+    width: '90%',
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
     borderRadius: 16,
     padding: 20,
@@ -875,10 +875,8 @@ const styles = StyleSheet.create({
     maxHeight: '40%', // Limit height to avoid covering too much
     zIndex: 1000,
     ...(Platform.OS === 'web' ? {
-      left: '5%',
-      right: '5%',
-      width: '90%',
-      alignSelf: 'center',
+      maxWidth: 600, // Max width for web to match question content
+      width: '80%',
     } : {})
   },
   learningCapsuleHeader: {
