@@ -14,10 +14,13 @@ import {
   Modal as RNModal,
   SafeAreaView,
   ScrollView,
+  Image,
+  TextInput,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { 
   Text, 
-  ActivityIndicator, 
   IconButton,
   Surface, 
   Portal, 
@@ -53,25 +56,113 @@ import { syncWeightChanges } from '../../lib/syncService';
 import { loadUserDataThunk } from '../../store/thunks';
 import { FeatherIcon } from '@/components/FeatherIcon';
 import { ThemedText } from '@/components/ThemedText';
+import { useColorScheme } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { supabase } from '../../lib/supabaseClient';
+import { countries } from '../../data/countries';
 
 const { width, height } = Dimensions.get('window');
 
 // Profile View component extracted from FeedItem
 const ProfileView: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, updateProfile, isLoading: authLoading } = useAuth();
+  const [username, setUsername] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [country, setCountry] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const colorScheme = useColorScheme() ?? 'dark';
+  const isDark = colorScheme === 'dark';
+  
+  useEffect(() => {
+    fetchUserProfile();
+  }, [user]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      setLoadingProfile(true);
+      
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setProfileData(data);
+        setUsername(data.username || '');
+        setFullName(data.full_name || '');
+        setAvatarUrl(data.avatar_url || '');
+        setCountry(data.country || '');
+      }
+    } catch (error: any) {
+      console.error('Error fetching user profile:', error.message);
+      Alert.alert('Error', 'Failed to load profile data');
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    try {
+      setIsUpdating(true);
+      
+      await updateProfile({
+        username,
+        fullName,
+        avatarUrl,
+        country
+      });
+      
+      setIsEditing(false);
+      fetchUserProfile(); // Refresh the profile data
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign Out', style: 'destructive', onPress: signOut }
+      ]
+    );
+  };
+
+  // Find country name by code
+  const getCountryName = (code: string) => {
+    if (!code) return 'Not set';
+    const countryObj = countries.find((c: { code: string; name: string }) => c.code === code);
+    return countryObj ? countryObj.name : code;
+  };
   
   // Generate initials for the avatar placeholder
   const getInitials = () => {
+    if (fullName) {
+      return fullName.split(' ').map(name => name[0]).join('').toUpperCase();
+    }
+    if (username) {
+      return username.substring(0, 2).toUpperCase();
+    }
     if (user?.email) {
       return user.email.substring(0, 2).toUpperCase();
     }
     return '?';
-  };
-
-  const handleSignOut = () => {
-    if (signOut) {
-      signOut();
-    }
   };
   
   // Define styles within the component
@@ -188,6 +279,115 @@ const ProfileView: React.FC = () => {
       color: 'white',
       fontWeight: '600',
     },
+    inputContainer: {
+      marginBottom: 15,
+    },
+    inputLabel: {
+      fontSize: 14,
+      marginBottom: 6,
+      color: 'rgba(255, 255, 255, 0.7)',
+    },
+    input: {
+      paddingVertical: 12,
+      paddingHorizontal: 15,
+      borderRadius: 8,
+      fontSize: 16,
+      borderWidth: 1,
+      borderColor: 'rgba(150, 150, 150, 0.2)',
+      color: 'white',
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    pickerContainer: {
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: 'rgba(150, 150, 150, 0.2)',
+      overflow: 'hidden',
+    },
+    countryPickerButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 15,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: 'rgba(150, 150, 150, 0.2)',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    countryPickerButtonText: {
+      fontSize: 16,
+      color: 'white',
+    },
+    modalContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      height: '100%',
+      justifyContent: 'flex-end',
+    },
+    pickerModalContent: {
+      borderTopLeftRadius: 15,
+      borderTopRightRadius: 15,
+      backgroundColor: '#1a1a1a',
+    },
+    pickerHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    pickerTitle: {
+      fontSize: 18,
+      color: 'white',
+      fontWeight: '600',
+    },
+    pickerCancel: {
+      color: '#ff5c5c',
+      fontSize: 16,
+    },
+    pickerDone: {
+      color: '#007aff',
+      fontSize: 16,
+    },
+    pickerIOS: {
+      height: 215,
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 20,
+    },
+    actionButton: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+      marginHorizontal: 5,
+    },
+    cancelButton: {
+      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    },
+    cancelButtonText: {
+      color: 'rgba(255, 255, 255, 0.8)',
+      fontSize: 16,
+    },
+    saveButton: {
+      backgroundColor: '#ffc107',
+    },
+    saveButtonText: {
+      color: 'black',
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    }
   });
 
   if (!user) {
@@ -200,71 +400,219 @@ const ProfileView: React.FC = () => {
     );
   }
 
+  if (authLoading || loadingProfile) {
+    return (
+      <View style={[profileStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#ffc107" />
+      </View>
+    );
+  }
+
   return (
     <View style={profileStyles.container}>
-      {/* Add back the header */}
-      <View style={profileStyles.headerContainer}>
-        <ThemedText style={profileStyles.headerTitle}>Profile</ThemedText>
-      </View>
-
       <ScrollView style={profileStyles.scrollView}>
         {/* User avatar and email */}
         <View style={profileStyles.userInfoSection}>
           <View style={profileStyles.avatarContainer}>
-            <View style={profileStyles.avatarPlaceholder}>
-              <ThemedText style={profileStyles.avatarText}>{getInitials()}</ThemedText>
-            </View>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={profileStyles.avatarPlaceholder} />
+            ) : (
+              <View style={profileStyles.avatarPlaceholder}>
+                <ThemedText style={profileStyles.avatarText}>{getInitials()}</ThemedText>
+              </View>
+            )}
           </View>
           <ThemedText style={profileStyles.emailText}>{user.email}</ThemedText>
         </View>
 
-        {/* User details section */}
-        <View style={profileStyles.detailsSection}>
-          <View style={profileStyles.detailRow}>
-            <ThemedText style={profileStyles.detailLabel}>Username</ThemedText>
-            <ThemedText style={profileStyles.detailValue}>Animal Junk</ThemedText>
+        {!isEditing ? (
+          <View>
+            {/* User details section */}
+            <View style={profileStyles.detailsSection}>
+              <View style={profileStyles.detailRow}>
+                <ThemedText style={profileStyles.detailLabel}>Username</ThemedText>
+                <ThemedText style={profileStyles.detailValue}>{username || 'Not set'}</ThemedText>
+              </View>
+              
+              <View style={profileStyles.detailRow}>
+                <ThemedText style={profileStyles.detailLabel}>Full Name</ThemedText>
+                <ThemedText style={profileStyles.detailValue}>{fullName || 'Not set'}</ThemedText>
+              </View>
+              
+              <View style={profileStyles.detailRow}>
+                <ThemedText style={profileStyles.detailLabel}>Country</ThemedText>
+                <ThemedText style={profileStyles.detailValue}>{getCountryName(country)}</ThemedText>
+              </View>
+            </View>
+
+            {/* Edit Profile button */}
+            <TouchableOpacity 
+              style={profileStyles.editButton} 
+              onPress={() => setIsEditing(true)}
+            >
+              <ThemedText style={profileStyles.editButtonText}>Edit Profile</ThemedText>
+            </TouchableOpacity>
+
+            {/* Account section */}
+            <ThemedText style={profileStyles.sectionTitle}>Account</ThemedText>
+            
+            <TouchableOpacity style={profileStyles.menuItem}>
+              <ThemedText style={profileStyles.menuItemText}>Privacy & Security</ThemedText>
+              <FeatherIcon name="chevron-right" size={20} color="white" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={profileStyles.menuItem}>
+              <ThemedText style={profileStyles.menuItemText}>Notification Settings</ThemedText>
+              <FeatherIcon name="chevron-right" size={20} color="white" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={profileStyles.menuItem}>
+              <ThemedText style={profileStyles.menuItemText}>Change Password</ThemedText>
+              <FeatherIcon name="chevron-right" size={20} color="white" />
+            </TouchableOpacity>
+
+            {/* Sign out button at the bottom */}
+            <TouchableOpacity 
+              style={[profileStyles.editButton, { marginTop: 40, backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}
+              onPress={handleSignOut}
+            >
+              <ThemedText style={[profileStyles.editButtonText, { color: '#ff5c5c' }]}>Sign Out</ThemedText>
+            </TouchableOpacity>
           </View>
-          <View style={profileStyles.detailRow}>
-            <ThemedText style={profileStyles.detailLabel}>Full Name</ThemedText>
-            <ThemedText style={profileStyles.detailValue}>Not set</ThemedText>
+        ) : (
+          <View style={profileStyles.detailsSection}>
+            <View style={profileStyles.inputContainer}>
+              <ThemedText style={profileStyles.inputLabel}>Username</ThemedText>
+              <TextInput
+                style={profileStyles.input}
+                value={username}
+                onChangeText={setUsername}
+                placeholder="Enter username"
+                placeholderTextColor="rgba(255,255,255,0.5)"
+              />
+            </View>
+            
+            <View style={profileStyles.inputContainer}>
+              <ThemedText style={profileStyles.inputLabel}>Full Name</ThemedText>
+              <TextInput
+                style={profileStyles.input}
+                value={fullName}
+                onChangeText={setFullName}
+                placeholder="Enter full name"
+                placeholderTextColor="rgba(255,255,255,0.5)"
+              />
+            </View>
+            
+            <View style={profileStyles.inputContainer}>
+              <ThemedText style={profileStyles.inputLabel}>Country</ThemedText>
+              {Platform.OS === 'ios' ? (
+                <TouchableOpacity 
+                  style={profileStyles.countryPickerButton}
+                  onPress={() => setShowCountryPicker(true)}
+                >
+                  <ThemedText style={profileStyles.countryPickerButtonText}>
+                    {getCountryName(country)}
+                  </ThemedText>
+                  <FeatherIcon name="chevron-down" size={20} color="white" />
+                </TouchableOpacity>
+              ) : (
+                <View style={[profileStyles.pickerContainer, {backgroundColor: 'rgba(255,255,255,0.1)'}]}>
+                  <Picker
+                    selectedValue={country}
+                    onValueChange={(itemValue: string) => setCountry(itemValue)}
+                    style={{color: 'white'}}
+                    dropdownIconColor="white"
+                  >
+                    <Picker.Item label="Select a country" value="" />
+                    {countries.map((countryItem: { code: string; name: string }) => (
+                      <Picker.Item
+                        key={countryItem.code}
+                        label={countryItem.name}
+                        value={countryItem.code}
+                        color={isDark ? 'white' : 'black'}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              )}
+            </View>
+            
+            <View style={profileStyles.inputContainer}>
+              <ThemedText style={profileStyles.inputLabel}>Avatar URL</ThemedText>
+              <TextInput
+                style={profileStyles.input}
+                value={avatarUrl}
+                onChangeText={setAvatarUrl}
+                placeholder="Enter avatar URL"
+                placeholderTextColor="rgba(255,255,255,0.5)"
+              />
+            </View>
+            
+            <View style={profileStyles.buttonRow}>
+              <TouchableOpacity 
+                style={[profileStyles.actionButton, profileStyles.cancelButton]}
+                onPress={() => {
+                  setIsEditing(false);
+                  // Reset to original values
+                  if (profileData) {
+                    setUsername(profileData.username || '');
+                    setFullName(profileData.full_name || '');
+                    setAvatarUrl(profileData.avatar_url || '');
+                    setCountry(profileData.country || '');
+                  }
+                }}
+              >
+                <ThemedText style={profileStyles.cancelButtonText}>Cancel</ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[profileStyles.actionButton, profileStyles.saveButton]}
+                onPress={handleUpdateProfile}
+              >
+                <ThemedText style={profileStyles.saveButtonText}>Save</ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={profileStyles.detailRow}>
-            <ThemedText style={profileStyles.detailLabel}>Country</ThemedText>
-            <ThemedText style={profileStyles.detailValue}>Anguilla</ThemedText>
+        )}
+      </ScrollView>
+      
+      {/* Country Picker Modal for iOS */}
+      {Platform.OS === 'ios' && showCountryPicker && (
+        <View style={profileStyles.modalContainer}>
+          <View style={profileStyles.pickerModalContent}>
+            <View style={profileStyles.pickerHeader}>
+              <TouchableOpacity onPress={() => setShowCountryPicker(false)}>
+                <ThemedText style={profileStyles.pickerCancel}>Cancel</ThemedText>
+              </TouchableOpacity>
+              <ThemedText style={profileStyles.pickerTitle}>Select Country</ThemedText>
+              <TouchableOpacity onPress={() => setShowCountryPicker(false)}>
+                <ThemedText style={profileStyles.pickerDone}>Done</ThemedText>
+              </TouchableOpacity>
+            </View>
+            <Picker
+              selectedValue={country}
+              onValueChange={(itemValue: string) => setCountry(itemValue)}
+              style={profileStyles.pickerIOS}
+            >
+              <Picker.Item label="Select a country" value="" color={isDark ? '#fff' : '#000'} />
+              {countries.map((countryItem: { code: string; name: string }) => (
+                <Picker.Item
+                  key={countryItem.code}
+                  label={countryItem.name}
+                  value={countryItem.code}
+                  color={isDark ? '#fff' : '#000'}
+                />
+              ))}
+            </Picker>
           </View>
         </View>
-
-        {/* Edit Profile button */}
-        <TouchableOpacity style={profileStyles.editButton}>
-          <ThemedText style={profileStyles.editButtonText}>Edit Profile</ThemedText>
-        </TouchableOpacity>
-
-        {/* Account section */}
-        <ThemedText style={profileStyles.sectionTitle}>Account</ThemedText>
-        
-        <TouchableOpacity style={profileStyles.menuItem}>
-          <ThemedText style={profileStyles.menuItemText}>Privacy & Security</ThemedText>
-          <FeatherIcon name="chevron-right" size={20} color="white" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={profileStyles.menuItem}>
-          <ThemedText style={profileStyles.menuItemText}>Notification Settings</ThemedText>
-          <FeatherIcon name="chevron-right" size={20} color="white" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={profileStyles.menuItem}>
-          <ThemedText style={profileStyles.menuItemText}>Change Password</ThemedText>
-          <FeatherIcon name="chevron-right" size={20} color="white" />
-        </TouchableOpacity>
-
-        {/* Sign out button at the bottom */}
-        <TouchableOpacity 
-          style={[profileStyles.editButton, { marginTop: 40, backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}
-          onPress={handleSignOut}
-        >
-          <ThemedText style={[profileStyles.editButtonText, { color: '#ff5c5c' }]}>Sign Out</ThemedText>
-        </TouchableOpacity>
-      </ScrollView>
+      )}
+      
+      {isUpdating && (
+        <View style={profileStyles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#ffc107" />
+        </View>
+      )}
     </View>
   );
 };
