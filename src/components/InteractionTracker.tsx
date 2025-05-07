@@ -389,6 +389,48 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
     };
   };
   
+  // Helper function to get weight trend based on recent weight changes
+  const getWeightTrend = (
+    name: string, 
+    type: 'topic' | 'subtopic' | 'branch', 
+    parentTopic?: string, 
+    parentSubtopic?: string
+  ): number => {
+    // Look at the most recent weight changes (last 5)
+    const recentChanges = weightChanges
+      .filter(change => {
+        if (type === 'topic') {
+          return change.category === name;
+        } else if (type === 'subtopic') {
+          return change.category === parentTopic && change.subtopic === name;
+        } else {
+          return change.category === parentTopic && 
+                change.subtopic === parentSubtopic && 
+                change.branch === name;
+        }
+      })
+      .slice(-5); // Get the most recent 5 changes
+    
+    if (recentChanges.length === 0) return 0;
+    
+    // Calculate the trend as the sum of recent changes
+    let trend = 0;
+    recentChanges.forEach(change => {
+      if (type === 'topic') {
+        trend += change.newWeights.topicWeight - change.oldWeights.topicWeight;
+      } else if (type === 'subtopic' && change.newWeights.subtopicWeight !== undefined && 
+        change.oldWeights.subtopicWeight !== undefined) {
+        trend += change.newWeights.subtopicWeight - change.oldWeights.subtopicWeight;
+      } else if (type === 'branch' && change.newWeights.branchWeight !== undefined && 
+        change.oldWeights.branchWeight !== undefined) {
+        trend += change.newWeights.branchWeight - change.oldWeights.branchWeight;
+      }
+    });
+    
+    // Round to 2 decimal places to avoid tiny floating point differences
+    return Math.round(trend * 100) / 100;
+  };
+  
   const renderInteractionsTab = () => (
     <ScrollView style={styles.tabScrollView}>
       <View style={styles.summaryContainer}>
@@ -893,6 +935,146 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
             See how topic weights change as you interact with questions
           </ThemedText>
         </ThemedView>
+
+        {/* Add Current Weights section */}
+        <ThemedView style={styles.currentWeightsContainer}>
+          <ThemedText style={styles.sectionTitle}>Current Weights from Database</ThemedText>
+          
+          {Object.keys(userProfile.topics).length === 0 ? (
+            <View style={styles.emptyState}>
+              <ThemedText style={styles.emptyText}>No topic weights in user profile yet</ThemedText>
+            </View>
+          ) : (
+            // Sort topics by weight descending
+            Object.entries(userProfile.topics)
+              .sort(([, topicA], [, topicB]) => topicB.weight - topicA.weight)
+              .map(([topicName, topic]) => {
+                // Calculate trend by looking at recent weight changes
+                const topicTrend = getWeightTrend(topicName, 'topic');
+                const topicPercentage = Math.round(topic.weight * 100);
+                
+                return (
+                <View key={topicName} style={styles.topicWeightItem}>
+                  <View style={styles.weightHeaderRow}>
+                    <ThemedText style={styles.topicName}>{topicName}</ThemedText>
+                    <View style={styles.weightValueContainer}>
+                      <ThemedText style={styles.weightValue}>{topic.weight.toFixed(2)}</ThemedText>
+                      {topicTrend !== 0 && (
+                        <View style={styles.trendContainer}>
+                          <Feather 
+                            name={topicTrend > 0 ? "trending-up" : "trending-down"} 
+                            size={16} 
+                            color={topicTrend > 0 ? '#4CAF50' : '#F44336'} 
+                          />
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                  
+                  <View style={styles.weightInfoRow}>
+                    <View style={styles.percentageContainer}>
+                      <ThemedText style={styles.percentageText}>{topicPercentage}%</ThemedText>
+                    </View>
+                    <ThemedText style={styles.trendsText}>
+                      {topicTrend > 0 ? `+${topicTrend.toFixed(2)} recently` : 
+                       topicTrend < 0 ? `${topicTrend.toFixed(2)} recently` : 
+                       'No recent changes'}
+                    </ThemedText>
+                  </View>
+                  
+                  {/* Sort subtopics by weight descending */}
+                  {Object.entries(topic.subtopics)
+                    .sort(([, subtopicA], [, subtopicB]) => subtopicB.weight - subtopicA.weight)
+                    .map(([subtopicName, subtopic]) => {
+                      // Calculate trend for subtopic
+                      const subtopicTrend = getWeightTrend(subtopicName, 'subtopic', topicName);
+                      const subtopicPercentage = Math.round(subtopic.weight * 100);
+                      
+                      return (
+                      <View key={`${topicName}-${subtopicName}`} style={styles.subtopicWeightItem}>
+                        <View style={styles.weightHeaderRow}>
+                          <ThemedText style={styles.subtopicName}>{subtopicName}</ThemedText>
+                          <View style={styles.weightValueContainer}>
+                            <ThemedText style={styles.weightValue}>{subtopic.weight.toFixed(2)}</ThemedText>
+                            {subtopicTrend !== 0 && (
+                              <View style={styles.trendContainer}>
+                                <Feather 
+                                  name={subtopicTrend > 0 ? "trending-up" : "trending-down"} 
+                                  size={14} 
+                                  color={subtopicTrend > 0 ? '#4CAF50' : '#F44336'} 
+                                />
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                        
+                        <View style={styles.weightInfoRow}>
+                          <View style={[styles.percentageContainer, styles.subtopicPercentage]}>
+                            <ThemedText style={styles.percentageText}>{subtopicPercentage}%</ThemedText>
+                          </View>
+                          <ThemedText style={styles.trendsText}>
+                            {subtopicTrend > 0 ? `+${subtopicTrend.toFixed(2)} recently` : 
+                             subtopicTrend < 0 ? `${subtopicTrend.toFixed(2)} recently` : 
+                             'No recent changes'}
+                          </ThemedText>
+                        </View>
+                        
+                        {/* Only show branches if there are more than just the default "General" branch */}
+                        {Object.keys(subtopic.branches).length > 1 && 
+                          // Sort branches by weight descending
+                          Object.entries(subtopic.branches)
+                            .sort(([, branchA], [, branchB]) => branchB.weight - branchA.weight)
+                            .map(([branchName, branch]) => {
+                              // Calculate trend for branch
+                              const branchTrend = getWeightTrend(branchName, 'branch', topicName, subtopicName);
+                              const branchPercentage = Math.round(branch.weight * 100);
+                              
+                              return (
+                              <View key={`${topicName}-${subtopicName}-${branchName}`} style={styles.branchWeightItem}>
+                                <View style={styles.weightHeaderRow}>
+                                  <ThemedText style={styles.branchName}>{branchName}</ThemedText>
+                                  <View style={styles.weightValueContainer}>
+                                    <ThemedText style={styles.weightValue}>{branch.weight.toFixed(2)}</ThemedText>
+                                    {branchTrend !== 0 && (
+                                      <View style={styles.trendContainer}>
+                                        <Feather 
+                                          name={branchTrend > 0 ? "trending-up" : "trending-down"} 
+                                          size={12} 
+                                          color={branchTrend > 0 ? '#4CAF50' : '#F44336'} 
+                                        />
+                                      </View>
+                                    )}
+                                  </View>
+                                </View>
+                                
+                                <View style={styles.weightInfoRow}>
+                                  <View style={[styles.percentageContainer, styles.branchPercentage]}>
+                                    <ThemedText style={styles.percentageText}>{branchPercentage}%</ThemedText>
+                                  </View>
+                                  <ThemedText style={styles.trendsText}>
+                                    {branchTrend > 0 ? `+${branchTrend.toFixed(2)} recently` : 
+                                     branchTrend < 0 ? `${branchTrend.toFixed(2)} recently` : 
+                                     'No recent changes'}
+                                  </ThemedText>
+                                </View>
+                              </View>
+                            );
+                          })
+                        }
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })
+          )}
+
+          <ThemedText style={styles.lastUpdatedText}>
+            Last refreshed: {new Date().toLocaleString()}
+          </ThemedText>
+        </ThemedView>
+        
+        <ThemedText style={styles.sectionTitle}>Weight Change History</ThemedText>
         
         <ThemedView style={styles.weightChangesContainer}>
           {weightChanges.length === 0 ? (
@@ -1288,10 +1470,14 @@ const styles = StyleSheet.create({
   emptyState: {
     padding: 20,
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    marginVertical: 5,
   },
   emptyText: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: 'rgba(255, 255, 255, 0.7)',
     fontStyle: 'italic',
+    textAlign: 'center',
   },
   floatingButton: {
     position: 'absolute',
@@ -1424,7 +1610,8 @@ const styles = StyleSheet.create({
   },
   weightValue: {
     fontWeight: 'bold',
-    color: '#0A7EA4',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   allFeedItemsContainer: {
     marginBottom: 20,
@@ -1571,16 +1758,24 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     margin: 10,
-    padding: 10,
-    borderRadius: 5,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    padding: 15,
+    borderRadius: 8,
+    backgroundColor: 'rgba(10, 126, 164, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   statsCardTitle: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
+  },
+  statsSubtitle: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
   },
   detailedStats: {
     marginTop: 10,
@@ -1650,14 +1845,19 @@ const styles = StyleSheet.create({
   },
   weightChangesContainer: {
     marginTop: 10,
+    marginBottom: 15,
   },
   weightChangeItem: {
     marginBottom: 12,
     padding: 10,
     borderRadius: 8,
-    backgroundColor: 'rgba(10, 126, 164, 0.1)',
+    backgroundColor: 'rgba(30, 30, 30, 0.6)',
     borderLeftWidth: 3,
     borderLeftColor: '#0A7EA4',
+    borderWidth: 1,
+    borderTopColor: 'transparent',
+    borderRightColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   weightChangeHeader: {
     flexDirection: 'row',
@@ -1667,6 +1867,7 @@ const styles = StyleSheet.create({
   weightChangeCategory: {
     fontWeight: 'bold',
     fontSize: 14,
+    color: 'white',
   },
   weightChangeInfo: {
     flexDirection: 'row',
@@ -1678,22 +1879,23 @@ const styles = StyleSheet.create({
   },
   weightChangeTime: {
     fontSize: 12,
-    opacity: 0.7,
+    color: 'rgba(255, 255, 255, 0.6)',
   },
   weightChangeQuestion: {
     fontSize: 13,
     marginBottom: 10,
     fontStyle: 'italic',
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   weightTable: {
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 4,
     overflow: 'hidden',
   },
   weightTableHeader: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   weightTableRow: {
     flexDirection: 'row',
@@ -1705,20 +1907,116 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   weightTableHeaderText: {
     fontWeight: 'bold',
+    color: 'white',
   },
   weightIncreaseText: {
     color: '#4CAF50',
+    fontWeight: 'bold',
   },
   weightDecreaseText: {
     color: '#F44336',
+    fontWeight: 'bold',
   },
-  statsSubtitle: {
+  currentWeightsContainer: {
+    marginVertical: 15,
+    backgroundColor: 'rgba(30, 30, 30, 0.6)',
+    borderRadius: 12,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginVertical: 10,
+    color: 'white',
+  },
+  topicWeightItem: {
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#4CAF50',
+    paddingLeft: 10,
+  },
+  topicName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 5,
+  },
+  subtopicWeightItem: {
+    marginLeft: 15,
+    marginBottom: 8,
+    borderLeftWidth: 2,
+    borderLeftColor: '#2196F3',
+    paddingLeft: 10,
+  },
+  subtopicName: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 3,
+  },
+  branchWeightItem: {
+    marginLeft: 15,
+    marginBottom: 4,
+    paddingLeft: 10,
+  },
+  branchName: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  lastUpdatedText: {
     fontSize: 12,
-    textAlign: 'center',
-    marginTop: 4,
-    opacity: 0.7,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginTop: 10,
+    textAlign: 'right',
+    fontStyle: 'italic',
+  },
+  weightHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  weightValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  weightInfoRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  percentageContainer: {
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    marginRight: 8,
+  },
+  percentageText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  trendsText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  subtopicPercentage: {
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    marginRight: 8,
+  },
+  branchPercentage: {
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    marginRight: 8,
+  },
+  trendContainer: {
+    marginLeft: 8,
   },
 }); 

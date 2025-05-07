@@ -691,7 +691,12 @@ const FeedScreen: React.FC = () => {
         );
         
         // Save updated profile to Redux
-        dispatch(updateUserProfileAction({ profile: updatedProfile, userId: user?.id }));
+        // IMPORTANT: Pass weightChange to ensure it's tracked in the weights tab
+        dispatch(updateUserProfileAction({ 
+          profile: updatedProfile, 
+          userId: user?.id,
+          weightChange: weightChange || undefined // Convert null to undefined to match expected type
+        }));
         
         // Sync weight change with Supabase if user is logged in and weight change exists
         if (user?.id && weightChange) {
@@ -1046,7 +1051,12 @@ const FeedScreen: React.FC = () => {
     const currentFeed = [...personalizedFeed];
     
     // Save updated profile to Redux
-    dispatch(updateUserProfileAction({ profile: updatedProfile, userId: user?.id }));
+    // IMPORTANT: Pass weightChange to ensure it's tracked in the weights tab
+    dispatch(updateUserProfileAction({ 
+      profile: updatedProfile, 
+      userId: user?.id,
+      weightChange: weightChange || undefined // Convert null to undefined to match expected type
+    }));
     
     // Sync weight change with Supabase if user is logged in and weight change exists
     if (user?.id && weightChange) {
