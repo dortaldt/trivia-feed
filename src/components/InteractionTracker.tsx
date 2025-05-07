@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
-import { useAppSelector } from '../store/hooks';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { Feather } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { FeedItem } from '../lib/triviaService';
 import { dbEventEmitter } from '../lib/syncService';
 import { WeightChange } from '../types/trackerTypes';
+import { fetchWeightChanges } from '../lib/syncService';
+import { loadUserDataThunk } from '../store/thunks';
+import { useAuth } from '../context/AuthContext';
+import { getDatabaseInfo, attemptDatabaseFix } from '../lib/databaseDebugger';
 
 interface InteractionLog {
   timestamp: number;
@@ -71,6 +75,8 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
   const [activeTab, setActiveTab] = useState<'interactions' | 'feed' | 'feedList' | 'dbLog' | 'weights'>('interactions');
   const [expandedExplanations, setExpandedExplanations] = useState<{[id: string]: boolean}>({});
   const [expandedData, setExpandedData] = useState<string | null>(null);
+  const [lastWeightUpdateTime, setLastWeightUpdateTime] = useState<number>(0);
+  const [isLoadingWeights, setIsLoadingWeights] = useState<boolean>(false);
   const [summary, setSummary] = useState({
     correct: 0,
     incorrect: 0,
@@ -79,16 +85,118 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
     avgTime: 0,
   });
   
+  // Get auth context
+  const { user } = useAuth();
+  const dispatch = useAppDispatch();
+  
   // Get state from Redux store
   const questions = useAppSelector(state => state.trivia.questions);
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   const personalizedFeed = useAppSelector(state => state.trivia.personalizedFeed);
   const feedExplanations = useAppSelector(state => state.trivia.feedExplanations);
   const syncedWeightChanges = useAppSelector(state => state.trivia.syncedWeightChanges);
+  const lastSyncTime = useAppSelector(state => state.trivia.lastSyncTime);
   
   // Store previous profile and feed to track changes
   const prevProfileRef = useRef(userProfile);
   const prevFeedRef = useRef<string[]>([]);
+  
+  // Function to load weights from database
+  const loadWeightsFromDB = async () => {
+    if (user?.id) {
+      try {
+        setIsLoadingWeights(true);
+        console.log('InteractionTracker: Fetching user data from database for user:', user.id);
+        
+        // Log current profile state
+        console.log('InteractionTracker: Before fetch - current user profile state:', {
+          topicCount: Object.keys(userProfile.topics || {}).length,
+          lastRefreshed: userProfile.lastRefreshed,
+          coldStartComplete: userProfile.coldStartComplete,
+          totalQuestionsAnswered: userProfile.totalQuestionsAnswered,
+        });
+        
+        // Fetch the latest data by dispatching the thunk - store the result directly for verification
+        const userData = await dispatch(loadUserDataThunk(user.id)) as any;
+        // The result may be directly available, or inside a fulfilled property depending on thunk middleware version
+        const result = userData.payload || userData;
+        
+        console.log('InteractionTracker: Data received from loadUserDataThunk:', {
+          profileReceived: !!(result.profile),
+          weightChangesCount: result.weightChanges?.length || 0,
+          interactionsCount: result.interactions?.length || 0,
+          feedChangesCount: result.feedChanges?.length || 0,
+        });
+        
+        if (result.profile) {
+          // Check if topics is null or undefined, and provide a default empty object
+          const topics = result.profile.topics || {};
+          console.log('InteractionTracker: Profile data from DB:', {
+            topicCount: Object.keys(topics).length,
+            topicsIsNull: result.profile.topics === null,
+            topicsIsUndefined: result.profile.topics === undefined,
+            topicsDataType: typeof result.profile.topics,
+            lastRefreshed: result.profile.lastRefreshed,
+            coldStartComplete: result.profile.coldStartComplete,
+            totalQuestionsAnswered: result.profile.totalQuestionsAnswered,
+          });
+          
+          // If topics is empty in result.profile but we have local topics, consider pushing local data to server
+          if (Object.keys(topics).length === 0 && Object.keys(userProfile.topics || {}).length > 0) {
+            console.log('InteractionTracker: DB topics empty but local topics exist. Consider syncing local to server.');
+            
+            // Import the required function
+            const { syncUserProfile } = await import('../lib/syncService');
+            
+            // Force sync local profile to server
+            try {
+              await syncUserProfile(user.id, userProfile);
+              console.log('InteractionTracker: Force synced local topics to server');
+            } catch (syncError) {
+              console.error('InteractionTracker: Error syncing local topics to server:', syncError);
+            }
+          }
+        }
+        
+        // Direct fetch from API if we need a backup approach
+        if (!result.profile || !result.profile.topics || Object.keys(result.profile.topics || {}).length === 0) {
+          console.log('InteractionTracker: No profile data from thunk, trying direct fetch...');
+          
+          // Import the required function
+          const { fetchUserProfile, fetchWeightChanges } = await import('../lib/syncService');
+          
+          // Direct API calls as backup
+          const directProfile = await fetchUserProfile(user.id);
+          const directWeightChanges = await fetchWeightChanges(user.id);
+          
+          console.log('InteractionTracker: Direct API fetch results:', {
+            profileReceived: !!directProfile,
+            topicCount: directProfile ? Object.keys(directProfile.topics || {}).length : 0,
+            weightChangesCount: directWeightChanges.length
+          });
+        }
+        
+        // Update our timestamp regardless
+        setLastWeightUpdateTime(Date.now());
+        
+        // Log the current state of Redux store after thunk
+        const currentProfileState = userProfile;
+        console.log('InteractionTracker: After fetch - Redux profile state:', {
+          topicCount: Object.keys(currentProfileState.topics || {}).length,
+          lastRefreshed: currentProfileState.lastRefreshed,
+          syncedWeightChangesCount: syncedWeightChanges.length
+        });
+        
+        console.log('InteractionTracker: Successfully loaded user data from database');
+      } catch (error) {
+        console.error('InteractionTracker: Error loading user data:', error);
+      } finally {
+        setIsLoadingWeights(false);
+      }
+    } else {
+      console.log('InteractionTracker: No user logged in, skipping data fetch');
+    }
+  };
   
   // Toggle explanation visibility
   const toggleExplanation = (itemId: string) => {
@@ -179,6 +287,19 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
     processFeedChanges();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array - only run once
+  
+  // Fetch weight changes from database on component mount
+  useEffect(() => {
+    loadWeightsFromDB();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]); // Only run when user changes
+  
+  // Track last sync time changes
+  useEffect(() => {
+    if (lastSyncTime > 0) {
+      setLastWeightUpdateTime(lastSyncTime);
+    }
+  }, [lastSyncTime]);
   
   // Watch for changes in the userProfile
   useEffect(() => {
@@ -925,6 +1046,46 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
     );
   };
   
+  // Add state for database debugging
+  const [dbDebugResults, setDbDebugResults] = useState<any>(null);
+  const [isFixingDb, setIsFixingDb] = useState<boolean>(false);
+
+  // Add function to debug database
+  const debugDatabase = async () => {
+    if (user?.id) {
+      try {
+        console.log('InteractionTracker: Debugging database');
+        const dbInfo = await getDatabaseInfo();
+        setDbDebugResults(dbInfo);
+        console.log('InteractionTracker: Database debug results:', dbInfo);
+      } catch (error) {
+        console.error('InteractionTracker: Error debugging database:', error);
+      }
+    }
+  };
+  
+  // Add function to attempt database fix
+  const fixDatabase = async () => {
+    if (user?.id) {
+      try {
+        setIsFixingDb(true);
+        console.log('InteractionTracker: Attempting to fix database');
+        const fixResult = await attemptDatabaseFix(user.id);
+        console.log('InteractionTracker: Database fix result:', fixResult);
+        
+        // Re-run debugger to see changes
+        await debugDatabase();
+        
+        // Refresh weights from database
+        await loadWeightsFromDB();
+      } catch (error) {
+        console.error('InteractionTracker: Error fixing database:', error);
+      } finally {
+        setIsFixingDb(false);
+      }
+    }
+  };
+  
   // Render the weights tab
   const renderWeightsTab = () => {
     return (
@@ -938,9 +1099,159 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
 
         {/* Add Current Weights section */}
         <ThemedView style={styles.currentWeightsContainer}>
-          <ThemedText style={styles.sectionTitle}>Current Weights from Database</ThemedText>
+          <View style={styles.currentWeightsHeader}>
+            <ThemedText style={styles.sectionTitle}>Current Weights from Database</ThemedText>
+            <View style={{flexDirection: 'row'}}>
+              <TouchableOpacity 
+                style={[styles.refreshButton, {marginRight: 8}]}
+                onPress={async () => {
+                  if (!isLoadingWeights && user?.id) {
+                    await loadWeightsFromDB();
+                  }
+                }}
+                disabled={isLoadingWeights || !user?.id}
+              >
+                {isLoadingWeights ? (
+                  <ThemedText style={styles.refreshingText}>Loading...</ThemedText>
+                ) : (
+                  <>
+                    <Feather name="refresh-cw" size={16} color="rgba(255, 255, 255, 0.8)" />
+                    <ThemedText style={styles.refreshText}>Refresh</ThemedText>
+                  </>
+                )}
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.refreshButton, {backgroundColor: '#5b6ae8'}]}
+                onPress={debugDatabase}
+                disabled={!user?.id}
+              >
+                <Feather name="database" size={16} color="rgba(255, 255, 255, 0.8)" />
+                <ThemedText style={styles.refreshText}>Debug DB</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
           
-          {Object.keys(userProfile.topics).length === 0 ? (
+          {dbDebugResults && (
+            <ThemedView style={styles.debugResultsContainer}>
+              <View style={styles.debugResultsHeader}>
+                <ThemedText style={styles.debugResultsTitle}>Database Debug Results</ThemedText>
+                <TouchableOpacity
+                  style={[styles.refreshButton, {backgroundColor: '#e85b5b'}]}
+                  onPress={() => setDbDebugResults(null)}
+                >
+                  <Feather name="x" size={16} color="rgba(255, 255, 255, 0.8)" />
+                  <ThemedText style={styles.refreshText}>Close</ThemedText>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.tableExistsContainer}>
+                <ThemedText style={styles.debugSectionTitle}>Tables Exist:</ThemedText>
+                {Object.entries(dbDebugResults.tablesExist || {}).map(([tableName, exists]) => (
+                  <View key={tableName} style={styles.tableExistsRow}>
+                    <ThemedText style={styles.tableNameText}>{tableName}:</ThemedText>
+                    <ThemedText style={[
+                      styles.tableExistsText, 
+                      (exists ? styles.tableExistsTrue : styles.tableExistsFalse)
+                    ]}>
+                      {exists ? 'YES' : 'NO'}
+                    </ThemedText>
+                  </View>
+                ))}
+              </View>
+              
+              {dbDebugResults.error && (
+                <View style={styles.debugDetailRow}>
+                  <ThemedText style={styles.debugErrorText}>
+                    Error: {dbDebugResults.error}
+                  </ThemedText>
+                </View>
+              )}
+              
+              {/* Show column information for each table that exists */}
+              {dbDebugResults.tableColumns && Object.keys(dbDebugResults.tableColumns).length > 0 && (
+                <View>
+                  <ThemedText style={styles.debugSectionTitle}>Table Structure:</ThemedText>
+                  {Object.entries(dbDebugResults.tableColumns).map(([tableName, columns]) => (
+                    <View key={`columns-${tableName}`} style={styles.columnInfoContainer}>
+                      <ThemedText style={styles.columnInfoTitle}>{tableName}</ThemedText>
+                      {Array.isArray(columns) && columns.map((column: any, index: number) => (
+                        <View key={`column-${tableName}-${index}`} style={styles.columnRow}>
+                          <ThemedText style={styles.columnName}>{column.column_name}</ThemedText>
+                          <ThemedText style={styles.columnType}>
+                            {column.data_type}{column.is_nullable === 'YES' ? ' (nullable)' : ''}
+                          </ThemedText>
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              )}
+              
+              {!Object.values(dbDebugResults.tablesExist || {}).some(Boolean) && (
+                <TouchableOpacity
+                  style={[
+                    styles.refreshButton, 
+                    {backgroundColor: '#4CAF50', alignSelf: 'center', marginTop: 12}
+                  ]}
+                  onPress={fixDatabase}
+                  disabled={isFixingDb}
+                >
+                  {isFixingDb ? (
+                    <ThemedText style={styles.refreshingText}>Fixing...</ThemedText>
+                  ) : (
+                    <>
+                      <Feather name="tool" size={16} color="rgba(255, 255, 255, 0.8)" />
+                      <ThemedText style={styles.refreshText}>Fix Missing Tables</ThemedText>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+              
+              {isFixingDb && (
+                <ThemedText style={styles.refreshProgressText}>
+                  Creating missing tables and initializing data...
+                </ThemedText>
+              )}
+              
+              {/* Add additional debug information button */}
+              <TouchableOpacity
+                style={[
+                  styles.refreshButton, 
+                  {backgroundColor: '#5b6ae8', alignSelf: 'center', marginTop: 12}
+                ]}
+                onPress={debugDatabase}
+                disabled={isFixingDb}
+              >
+                <Feather name="refresh-cw" size={16} color="rgba(255, 255, 255, 0.8)" />
+                <ThemedText style={styles.refreshText}>Refresh Debug Info</ThemedText>
+              </TouchableOpacity>
+              
+              {/* Add specific fix button for topics data */}
+              {(dbDebugResults.tablesExist?.user_profile_data && 
+                (!Object.keys(userProfile.topics || {}).length || userProfile.topics === null)) && (
+                <TouchableOpacity
+                  style={[
+                    styles.refreshButton, 
+                    {backgroundColor: '#f39c12', alignSelf: 'center', marginTop: 12}
+                  ]}
+                  onPress={() => fixDatabase()}
+                  disabled={isFixingDb}
+                >
+                  {isFixingDb ? (
+                    <ThemedText style={styles.refreshingText}>Initializing...</ThemedText>
+                  ) : (
+                    <>
+                      <Feather name="database" size={16} color="rgba(255, 255, 255, 0.8)" />
+                      <ThemedText style={styles.refreshText}>Initialize Topics Data</ThemedText>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+            </ThemedView>
+          )}
+          
+          {Object.keys(userProfile.topics || {}).length === 0 ? (
             <View style={styles.emptyState}>
               <ThemedText style={styles.emptyText}>No topic weights in user profile yet</ThemedText>
             </View>
@@ -1068,9 +1379,18 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
               );
             })
           )}
-
+          
           <ThemedText style={styles.lastUpdatedText}>
-            Last refreshed: {new Date().toLocaleString()}
+            {lastWeightUpdateTime > 0 ? (
+              <>
+                <Feather name="database" size={12} color="rgba(255, 255, 255, 0.5)" style={{marginRight: 4}} />
+                Last pulled from DB: {new Date(lastWeightUpdateTime).toLocaleString()}
+              </>
+            ) : user?.id ? (
+              "Weights not yet synced with database"
+            ) : (
+              "Sign in to sync weights with database"
+            )}
           </ThemedText>
         </ThemedView>
         
@@ -1673,17 +1993,25 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   refreshButton: {
-    padding: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(10, 126, 164, 0.1)',
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(10, 126, 164, 0.3)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(10, 126, 164, 0.5)',
   },
   refreshText: {
     fontSize: 12,
     fontWeight: 'bold',
     marginLeft: 4,
-    color: '#0A7EA4',
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  refreshingText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 12,
+    marginLeft: 4,
   },
   statusSection: {
     marginBottom: 16,
@@ -2018,5 +2346,116 @@ const styles = StyleSheet.create({
   },
   trendContainer: {
     marginLeft: 8,
+  },
+  currentWeightsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  debugResultsContainer: {
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: 'rgba(30, 30, 30, 0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  debugResultsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  debugResultsTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  tableExistsContainer: {
+    marginBottom: 10,
+  },
+  tableExistsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  tableNameText: {
+    color: 'white',
+    fontSize: 12,
+  },
+  tableExistsText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  tableExistsTrue: {
+    color: '#4CAF50',
+  },
+  tableExistsFalse: {
+    color: '#F44336',
+  },
+  debugSectionTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 6,
+  },
+  debugDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    paddingHorizontal: 10,
+  },
+  debugDetailText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  debugErrorText: {
+    fontSize: 12,
+    color: '#ff6b6b',
+  },
+  debugSuccessText: {
+    fontSize: 12,
+    color: '#4CAF50',
+  },
+  debugInfoMessage: {
+    fontSize: 13,
+    color: '#5b6ae8',
+    margin: 10,
+    textAlign: 'center',
+  },
+  columnInfoContainer: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: 'rgba(30, 30, 30, 0.5)',
+    borderRadius: 6,
+  },
+  columnInfoTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginBottom: 6,
+  },
+  columnRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  columnName: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  columnType: {
+    fontSize: 12,
+    color: '#f1c40f',
+  },
+  refreshProgressText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontStyle: 'italic',
+    alignSelf: 'center',
+    margin: 8,
   },
 }); 
