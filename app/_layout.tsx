@@ -13,6 +13,7 @@ import { store } from '@/src/store';
 import { AuthProvider, useAuth } from '@/src/context/AuthContext';
 import { ThemeProvider } from '@/src/theme/ThemeProvider';
 import { Colors } from '@/constants/Colors';
+import { SyncManager } from '@/src/components/SyncManager';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -218,18 +219,20 @@ export default function RootLayout() {
       <AuthProvider>
         <ThemeProvider initialTheme="dark">
           <NavigationThemeProvider value={DarkTheme}>
-            <AuthWrapper>
-              <View style={styles.container}>
-                <Stack>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-                  <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
-                  <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
-                  <Stack.Screen name="+not-found" />
-                </Stack>
-                <StatusBar style="light" />
-              </View>
-            </AuthWrapper>
+            <SyncManager>
+              <AuthWrapper>
+                <View style={styles.container}>
+                  <Stack>
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+                    <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
+                    <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
+                    <Stack.Screen name="+not-found" />
+                  </Stack>
+                  <StatusBar style="light" />
+                </View>
+              </AuthWrapper>
+            </SyncManager>
           </NavigationThemeProvider>
         </ThemeProvider>
       </AuthProvider>

@@ -811,7 +811,7 @@ export function getColdStartFeed(
   const state = initColdStartState();
   
   // Calculate actual state from the user profile
-  const totalQuestionsAnswered = Object.keys(userProfile.interactions).length;
+  const totalQuestionsAnswered = Object.keys(userProfile?.interactions || {}).length;
   console.log(`Total questions answered: ${totalQuestionsAnswered}`);
   
   // Update the phase based on the number of questions answered
@@ -826,7 +826,7 @@ export function getColdStartFeed(
   }
   
   // Process past interactions to build the cold start state
-  Object.entries(userProfile.interactions).forEach(([questionId, interaction]) => {
+  Object.entries(userProfile?.interactions || {}).forEach(([questionId, interaction]) => {
     // Find the question related to this interaction
     const question = allQuestions.find(q => q.id === questionId);
     if (question) {

@@ -46,6 +46,8 @@ import {
 import { InteractionTracker } from '../../components/InteractionTracker';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, borderRadius } from '../../theme';
+import { syncWeightChanges } from '../../lib/syncService';
+import { loadUserDataThunk } from '../../store/thunks';
 
 const { width, height } = Dimensions.get('window');
 
@@ -90,11 +92,43 @@ const FeedScreen: React.FC = () => {
   const personalizedFeed = useAppSelector(state => state.trivia.personalizedFeed);
   const feedExplanations = useAppSelector(state => state.trivia.feedExplanations);
   const interactionStartTimes = useAppSelector(state => state.trivia.interactionStartTimes);
+  const isSyncing = useAppSelector(state => state.trivia.isSyncing);
+  const lastSyncTime = useAppSelector(state => state.trivia.lastSyncTime);
 
   // Add state to track scroll activity
   const [isActivelyScrolling, setIsActivelyScrolling] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastScrollPosition = useRef<number>(0);
+
+  // Load user data when component mounts if user is logged in
+  useEffect(() => {
+    if (user?.id) {
+      console.log('User is logged in, loading user data');
+      
+      // Dispatch the thunk to load all user data
+      dispatch(loadUserDataThunk(user.id))
+        .then((userData) => {
+          console.log('User data loaded successfully');
+          
+          // After loading data, if we have a personalized feed, we may want to
+          // rebuild it with the latest user profile data
+          if (userData.profile && personalizedFeed.length === 0 && feedData.length > 0) {
+            console.log('Generating personalized feed with loaded user profile');
+            const { items, explanations } = getPersonalizedFeed(feedData, userData.profile);
+            
+            // Store the feed items in a stable order
+            dispatch(setPersonalizedFeed({ 
+              items, 
+              explanations,
+              userId: user.id
+            }));
+          }
+        })
+        .catch(error => {
+          console.error('Failed to load user data:', error);
+        });
+    }
+  }, [user?.id, dispatch, personalizedFeed.length, feedData]); // Include all dependencies
 
   // Fetch trivia questions from Supabase and apply personalization
   useEffect(() => {
@@ -184,14 +218,14 @@ const FeedScreen: React.FC = () => {
     // Skip if userProfile hasn't changed since last check
     const prevProfile = previousUserProfileRef.current;
     if (prevProfile && 
-        prevProfile.totalQuestionsAnswered === userProfile.totalQuestionsAnswered && 
-        prevProfile.coldStartComplete === userProfile.coldStartComplete) {
+        prevProfile.totalQuestionsAnswered === userProfile?.totalQuestionsAnswered && 
+        prevProfile.coldStartComplete === userProfile?.coldStartComplete) {
       return; // Profile hasn't changed in a way that affects feed ordering
     }
     
     // Only apply this logic during initial loading, not after answering questions
-    const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
-    const inColdStart = !userProfile.coldStartComplete && totalQuestionsAnswered < 20;
+    const totalQuestionsAnswered = userProfile?.totalQuestionsAnswered || 0;
+    const inColdStart = !userProfile?.coldStartComplete && totalQuestionsAnswered < 20;
     
     // Only use this effect for initial feed generation
     // Skip if we already have a feed and have answered questions
@@ -432,7 +466,7 @@ const FeedScreen: React.FC = () => {
         const currentFeed = [...personalizedFeed];
         
         // Update user profile for personalization
-        const updatedProfile = updateUserProfile(
+        const { updatedProfile, weightChange } = updateUserProfile(
           userProfile,
           previousQuestionId,
           { 
@@ -443,11 +477,16 @@ const FeedScreen: React.FC = () => {
         );
         
         // Save updated profile to Redux
-        dispatch(updateUserProfileAction(updatedProfile));
+        dispatch(updateUserProfileAction({ profile: updatedProfile, userId: user?.id }));
         
+        // Sync weight change with Supabase if user is logged in and weight change exists
+        if (user?.id && weightChange) {
+          syncWeightChanges(user.id, [weightChange]);
+        }
+
         // Check if we need to append new questions to the feed
-        const inColdStart = !updatedProfile.coldStartComplete && 
-                          (updatedProfile.totalQuestionsAnswered || 0) < 20;
+        const inColdStart = !updatedProfile?.coldStartComplete && 
+                         (updatedProfile?.totalQuestionsAnswered || 0) < 20;
         
         // Always append questions when skipping to avoid running out
         if (feedData.length > currentFeed.length) {
@@ -487,7 +526,8 @@ const FeedScreen: React.FC = () => {
             // Update the feed in Redux
             dispatch(setPersonalizedFeed({
               items: updatedFeed,
-              explanations: combinedExplanations
+              explanations: combinedExplanations,
+              userId: user?.id
             }));
           }
         }
@@ -500,7 +540,7 @@ const FeedScreen: React.FC = () => {
           'Status:', questionState.status);
       }
     }
-  }, [dispatch, questions, personalizedFeed, userProfile, interactionStartTimes, feedData, feedExplanations]);
+  }, [dispatch, interactionStartTimes, personalizedFeed, questions, user?.id, userProfile, feedData, feedExplanations]);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (event.nativeEvent.contentOffset.y !== 0 && showTooltip) {
@@ -766,7 +806,7 @@ const FeedScreen: React.FC = () => {
     dispatch(answerQuestion({ questionId, answerIndex, isCorrect, userId }));
     
     // Update user profile for personalization
-    const updatedProfile = updateUserProfile(
+    const { updatedProfile, weightChange } = updateUserProfile(
       userProfile,
       questionId,
       {
@@ -782,11 +822,16 @@ const FeedScreen: React.FC = () => {
     const currentFeed = [...personalizedFeed];
     
     // Save updated profile to Redux
-    dispatch(updateUserProfileAction(updatedProfile));
+    dispatch(updateUserProfileAction({ profile: updatedProfile, userId: user?.id }));
+    
+    // Sync weight change with Supabase if user is logged in and weight change exists
+    if (user?.id && weightChange) {
+      syncWeightChanges(user.id, [weightChange]);
+    }
     
     // Determine if we should append new questions to maintain feed continuity
-    const inColdStart = !updatedProfile.coldStartComplete && 
-                       (updatedProfile.totalQuestionsAnswered || 0) < 20;
+    const inColdStart = !updatedProfile?.coldStartComplete && 
+                        (updatedProfile?.totalQuestionsAnswered || 0) < 20;
     
     if (feedData.length > currentFeed.length) {
       console.log('Cold start active - maintaining feed continuity');
@@ -950,10 +995,10 @@ const FeedScreen: React.FC = () => {
 
   // Add this function inside FeedScreen component to determine if we're in cold start mode
   const getColdStartPhaseInfo = useCallback(() => {
-    const totalInteractions = Object.keys(userProfile.interactions).length;
-    const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
+    const totalInteractions = Object.keys(userProfile?.interactions || {}).length;
+    const totalQuestionsAnswered = userProfile?.totalQuestionsAnswered || 0;
     
-    if (!userProfile.coldStartComplete && (totalInteractions < 20 || totalQuestionsAnswered < 20)) {
+    if (!userProfile?.coldStartComplete && (totalInteractions < 20 || totalQuestionsAnswered < 20)) {
       let phase = 1;
       if (totalQuestionsAnswered >= 12) {
         phase = 3;
