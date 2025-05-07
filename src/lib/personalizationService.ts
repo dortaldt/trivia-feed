@@ -1,5 +1,6 @@
 import { FeedItem } from './triviaService';
 import { getColdStartFeed } from './coldStartStrategy';
+import { WeightChange } from '../types/trackerTypes';
 
 // Types for user interaction metrics
 export type QuestionInteraction = {
@@ -138,7 +139,7 @@ export function updateUserProfile(
   questionId: string,
   interaction: Partial<QuestionInteraction>,
   question: FeedItem
-): UserProfile {
+): { updatedProfile: UserProfile; weightChange: WeightChange | null } {
   // Use JSON parse/stringify for a full deep clone to avoid extensibility issues
   const updatedProfile = JSON.parse(JSON.stringify(userProfile)) as UserProfile;
   
@@ -195,10 +196,25 @@ export function updateUserProfile(
   const subtopicNode = topicNode.subtopics[subtopic];
   const branchNode = subtopicNode.branches[branch];
   
+  // Store old weights before updating
+  const oldWeights = {
+    topicWeight: topicNode.weight,
+    subtopicWeight: subtopicNode.weight,
+    branchWeight: branchNode.weight
+  };
+  
   // Update timestamps
   topicNode.lastViewed = currentTime;
   subtopicNode.lastViewed = currentTime;
   branchNode.lastViewed = currentTime;
+  
+  // Determine interaction type
+  let interactionType: 'correct' | 'incorrect' | 'skipped' = 'skipped';
+  if (interaction.wasCorrect === true) {
+    interactionType = 'correct';
+  } else if (interaction.wasCorrect === false) {
+    interactionType = 'incorrect';
+  }
   
   // If question was correct, increase weights
   if (interaction.wasCorrect) {
@@ -220,7 +236,24 @@ export function updateUserProfile(
     branchNode.weight = Math.max(0.1, branchNode.weight - 0.1);
   }
   
-  return updatedProfile;
+  // Create weight change record
+  const weightChange: WeightChange = {
+    timestamp: currentTime,
+    questionId,
+    interactionType,
+    questionText: question.question || `Question ${questionId.substring(0, 5)}...`,
+    category: topic,
+    subtopic,
+    branch,
+    oldWeights,
+    newWeights: {
+      topicWeight: topicNode.weight,
+      subtopicWeight: subtopicNode.weight,
+      branchWeight: branchNode.weight
+    }
+  };
+  
+  return { updatedProfile, weightChange };
 }
 
 /**

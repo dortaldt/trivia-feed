@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { useAppSelector } from '../store/hooks';
 import { Feather } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { FeedItem } from '../lib/triviaService';
+import { dbEventEmitter } from '../lib/syncService';
+import { WeightChange } from '../types/trackerTypes';
 
 interface InteractionLog {
   timestamp: number;
@@ -37,6 +39,19 @@ interface FeedChange {
   };
 }
 
+// Database operation log interface
+interface DbOperation {
+  timestamp: number;
+  direction: 'sent' | 'received';
+  table: string;
+  operation: 'insert' | 'update' | 'select' | 'upsert';
+  records: number;
+  data: any;
+  userId?: string;
+  status: 'success' | 'error';
+  error?: string;
+}
+
 interface InteractionTrackerProps {
   feedData?: FeedItem[];
 }
@@ -51,8 +66,11 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
   const [interactions, setInteractions] = useState<InteractionLog[]>([]);
   const [profileChanges, setProfileChanges] = useState<ProfileChange[]>([]);
   const [feedChanges, setFeedChanges] = useState<FeedChange[]>([]);
-  const [activeTab, setActiveTab] = useState<'interactions' | 'feed' | 'feedList'>('interactions');
+  const [dbOperations, setDbOperations] = useState<DbOperation[]>([]);
+  const [weightChanges, setWeightChanges] = useState<WeightChange[]>([]);
+  const [activeTab, setActiveTab] = useState<'interactions' | 'feed' | 'feedList' | 'dbLog' | 'weights'>('interactions');
   const [expandedExplanations, setExpandedExplanations] = useState<{[id: string]: boolean}>({});
+  const [expandedData, setExpandedData] = useState<string | null>(null);
   const [summary, setSummary] = useState({
     correct: 0,
     incorrect: 0,
@@ -66,6 +84,7 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   const personalizedFeed = useAppSelector(state => state.trivia.personalizedFeed);
   const feedExplanations = useAppSelector(state => state.trivia.feedExplanations);
+  const syncedWeightChanges = useAppSelector(state => state.trivia.syncedWeightChanges);
   
   // Store previous profile and feed to track changes
   const prevProfileRef = useRef(userProfile);
@@ -230,6 +249,21 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
     prevProfileRef.current = userProfile;
   }, [userProfile]); // Remove interactions dependency
   
+  // Listen for database operations
+  useEffect(() => {
+    // Add listener for database operations
+    const handleDbOperation = (operation: DbOperation) => {
+      setDbOperations(prev => [operation, ...prev].slice(0, 100)); // Limit to last 100 operations
+    };
+    
+    dbEventEmitter.on('db-operation', handleDbOperation);
+    
+    // Clean up the listener when component unmounts
+    return () => {
+      dbEventEmitter.removeListener('db-operation', handleDbOperation);
+    };
+  }, []);
+  
   // Watch for changes in the questions state
   useEffect(() => {
     // Find the most recent question that's changed
@@ -294,6 +328,23 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
       });
     }
   }, [questions, feedData]);
+  
+  // Track weight changes
+  useEffect(() => {
+    // Check if there are new weight changes
+    if (syncedWeightChanges.length > 0) {
+      const existingIds = new Set(weightChanges.map(wc => `${wc.timestamp}-${wc.questionId}`));
+      
+      // Filter only new weight changes
+      const newWeightChanges = syncedWeightChanges.filter(
+        wc => !existingIds.has(`${wc.timestamp}-${wc.questionId}`)
+      );
+      
+      if (newWeightChanges.length > 0) {
+        setWeightChanges(prev => [...prev, ...newWeightChanges]);
+      }
+    }
+  }, [syncedWeightChanges]);
   
   // Helper to get question text
   const getQuestionText = (questionId: string): string => {
@@ -656,6 +707,316 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
     );
   };
   
+  // Calculate database operation stats
+  const getDbStats = () => {
+    const totalOperations = dbOperations.length;
+    const sentOperations = dbOperations.filter(op => op.direction === 'sent').length;
+    const receivedOperations = dbOperations.filter(op => op.direction === 'received').length;
+    const successOperations = dbOperations.filter(op => op.status === 'success').length;
+    const errorOperations = dbOperations.filter(op => op.status === 'error').length;
+    
+    // Count operations by table
+    const tableStats: {[table: string]: number} = {};
+    dbOperations.forEach(op => {
+      tableStats[op.table] = (tableStats[op.table] || 0) + 1;
+    });
+    
+    // Count operations by operation type
+    const operationStats: {[operation: string]: number} = {};
+    dbOperations.forEach(op => {
+      operationStats[op.operation] = (operationStats[op.operation] || 0) + 1;
+    });
+    
+    return {
+      totalOperations,
+      sentOperations,
+      receivedOperations,
+      successOperations,
+      errorOperations,
+      tableStats,
+      operationStats
+    };
+  };
+
+  // Render the database operations log tab
+  const renderDbLogTab = () => {
+    const stats = getDbStats();
+    
+    return (
+      <ScrollView style={styles.scrollView}>
+        {/* Summary statistics */}
+        <ThemedView style={styles.statsCard}>
+          <ThemedText style={styles.statsCardTitle}>Database Operations Summary</ThemedText>
+          
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statValue}>{stats.totalOperations}</ThemedText>
+              <ThemedText style={styles.statLabel}>Total</ThemedText>
+            </View>
+            <View style={styles.statItem}>
+              <ThemedText style={[styles.statValue, styles.sentText]}>{stats.sentOperations}</ThemedText>
+              <ThemedText style={styles.statLabel}>Sent</ThemedText>
+            </View>
+            <View style={styles.statItem}>
+              <ThemedText style={[styles.statValue, styles.receivedText]}>{stats.receivedOperations}</ThemedText>
+              <ThemedText style={styles.statLabel}>Received</ThemedText>
+            </View>
+            <View style={styles.statItem}>
+              <ThemedText style={[styles.statValue, styles.successText]}>{stats.successOperations}</ThemedText>
+              <ThemedText style={styles.statLabel}>Success</ThemedText>
+            </View>
+            <View style={styles.statItem}>
+              <ThemedText style={[styles.statValue, styles.errorText]}>{stats.errorOperations}</ThemedText>
+              <ThemedText style={styles.statLabel}>Errors</ThemedText>
+            </View>
+          </View>
+          
+          {/* Table statistics */}
+          <View style={styles.detailedStats}>
+            <ThemedText style={styles.detailedStatsTitle}>By Table:</ThemedText>
+            <View style={styles.detailedStatsContent}>
+              {Object.entries(stats.tableStats).map(([table, count]) => (
+                <View key={table} style={styles.detailedStatItem}>
+                  <ThemedText style={styles.detailedStatLabel}>{table}:</ThemedText>
+                  <ThemedText style={styles.detailedStatValue}>{count}</ThemedText>
+                </View>
+              ))}
+            </View>
+          </View>
+          
+          {/* Operation statistics */}
+          <View style={styles.detailedStats}>
+            <ThemedText style={styles.detailedStatsTitle}>By Operation:</ThemedText>
+            <View style={styles.detailedStatsContent}>
+              {Object.entries(stats.operationStats).map(([operation, count]) => (
+                <View key={operation} style={styles.detailedStatItem}>
+                  <ThemedText style={styles.detailedStatLabel}>{operation}:</ThemedText>
+                  <ThemedText style={styles.detailedStatValue}>{count}</ThemedText>
+                </View>
+              ))}
+            </View>
+          </View>
+        </ThemedView>
+      
+        {/* Operations table */}
+        <ThemedView style={styles.tableContainer}>
+          <View style={styles.tableHeader}>
+            <ThemedText style={[styles.headerCell, styles.timeCell]}>Time</ThemedText>
+            <ThemedText style={[styles.headerCell, styles.directionCell]}>Direction</ThemedText>
+            <ThemedText style={[styles.headerCell, styles.tableCell]}>Table</ThemedText>
+            <ThemedText style={[styles.headerCell, styles.operationCell]}>Operation</ThemedText>
+            <ThemedText style={[styles.headerCell, styles.recordsCell]}>Records</ThemedText>
+            <ThemedText style={[styles.headerCell, styles.statusCell]}>Status</ThemedText>
+            <ThemedText style={[styles.headerCell, styles.dataCell]}>Data</ThemedText>
+          </View>
+          
+          {dbOperations.map((operation, index) => (
+            <React.Fragment key={`${operation.timestamp}-${index}`}>
+              <TouchableOpacity 
+                style={styles.tableRow}
+                onPress={() => console.log('DB Operation Details:', operation)}
+              >
+                <ThemedText style={[styles.cell, styles.timeCell]}>
+                  {formatTimestamp(operation.timestamp)}
+                </ThemedText>
+                <ThemedText 
+                  style={[
+                    styles.cell, 
+                    styles.directionCell, 
+                    operation.direction === 'sent' ? styles.sentText : styles.receivedText
+                  ]}
+                >
+                  {operation.direction === 'sent' ? '↑' : '↓'} {operation.direction}
+                </ThemedText>
+                <ThemedText style={[styles.cell, styles.tableCell]}>
+                  {operation.table}
+                </ThemedText>
+                <ThemedText style={[styles.cell, styles.operationCell]}>
+                  {operation.operation}
+                </ThemedText>
+                <ThemedText style={[styles.cell, styles.recordsCell]}>
+                  {operation.records}
+                </ThemedText>
+                <ThemedText 
+                  style={[
+                    styles.cell, 
+                    styles.statusCell, 
+                    operation.status === 'success' ? styles.successText : styles.errorText
+                  ]}
+                >
+                  {operation.status}
+                </ThemedText>
+                <TouchableOpacity 
+                  style={styles.dataCell}
+                  onPress={() => {
+                    setExpandedData(prev => 
+                      prev === `${operation.timestamp}-${index}` 
+                        ? null 
+                        : `${operation.timestamp}-${index}`
+                    );
+                  }}
+                >
+                  <ThemedText style={styles.cell}>
+                    {expandedData === `${operation.timestamp}-${index}` ? 'Hide' : 'View'}
+                  </ThemedText>
+                </TouchableOpacity>
+              </TouchableOpacity>
+              {expandedData === `${operation.timestamp}-${index}` && (
+                <View style={styles.expandedDataContainer}>
+                  <ScrollView style={styles.dataScrollView} horizontal={true}>
+                    <ThemedText style={styles.dataText}>
+                      {JSON.stringify(operation.data, null, 2)}
+                    </ThemedText>
+                  </ScrollView>
+                </View>
+              )}
+            </React.Fragment>
+          ))}
+          
+          {dbOperations.length === 0 && (
+            <View style={styles.emptyState}>
+              <ThemedText style={styles.emptyText}>No database operations logged yet</ThemedText>
+            </View>
+          )}
+        </ThemedView>
+      </ScrollView>
+    );
+  };
+  
+  // Render the weights tab
+  const renderWeightsTab = () => {
+    return (
+      <ScrollView style={styles.tabScrollView}>
+        <ThemedView style={styles.statsCard}>
+          <ThemedText style={styles.statsCardTitle}>Topic Weights Tracking</ThemedText>
+          <ThemedText style={styles.statsSubtitle}>
+            See how topic weights change as you interact with questions
+          </ThemedText>
+        </ThemedView>
+        
+        <ThemedView style={styles.weightChangesContainer}>
+          {weightChanges.length === 0 ? (
+            <View style={styles.emptyState}>
+              <ThemedText style={styles.emptyText}>No weight changes recorded yet</ThemedText>
+            </View>
+          ) : (
+            weightChanges.slice().reverse().map((change, index) => (
+              <View key={index} style={styles.weightChangeItem}>
+                <View style={styles.weightChangeHeader}>
+                  <ThemedText style={styles.weightChangeCategory}>
+                    {change.category} {change.subtopic ? `> ${change.subtopic}` : ''}
+                    {change.branch ? `> ${change.branch}` : ''}
+                  </ThemedText>
+                  <View style={styles.weightChangeInfo}>
+                    <ThemedText style={[
+                      styles.weightChangeType, 
+                      change.interactionType === 'correct' ? styles.correctText : 
+                      change.interactionType === 'incorrect' ? styles.incorrectText : 
+                      styles.skippedText
+                    ]}>
+                      {change.interactionType.toUpperCase()}
+                    </ThemedText>
+                    <ThemedText style={styles.weightChangeTime}>
+                      {new Date(change.timestamp).toLocaleTimeString()}
+                    </ThemedText>
+                  </View>
+                </View>
+                
+                <ThemedText style={styles.weightChangeQuestion}>
+                  {change.questionText || `Question ${change.questionId.substring(0, 8)}...`}
+                </ThemedText>
+                
+                <View style={styles.weightTable}>
+                  <View style={styles.weightTableHeader}>
+                    <ThemedText style={[styles.weightTableCell, styles.weightTableHeaderText]}>Weight Type</ThemedText>
+                    <ThemedText style={[styles.weightTableCell, styles.weightTableHeaderText]}>Before</ThemedText>
+                    <ThemedText style={[styles.weightTableCell, styles.weightTableHeaderText]}>After</ThemedText>
+                    <ThemedText style={[styles.weightTableCell, styles.weightTableHeaderText]}>Change</ThemedText>
+                  </View>
+                  
+                  <View style={styles.weightTableRow}>
+                    <ThemedText style={styles.weightTableCell}>Topic</ThemedText>
+                    <ThemedText style={styles.weightTableCell}>
+                      {change.oldWeights.topicWeight.toFixed(2)}
+                    </ThemedText>
+                    <ThemedText style={styles.weightTableCell}>
+                      {change.newWeights.topicWeight.toFixed(2)}
+                    </ThemedText>
+                    <ThemedText 
+                      style={[
+                        styles.weightTableCell, 
+                        change.newWeights.topicWeight > change.oldWeights.topicWeight 
+                          ? styles.weightIncreaseText 
+                          : styles.weightDecreaseText
+                      ]}
+                    >
+                      {(change.newWeights.topicWeight - change.oldWeights.topicWeight) > 0 ? '+' : ''}
+                      {(change.newWeights.topicWeight - change.oldWeights.topicWeight).toFixed(2)}
+                    </ThemedText>
+                  </View>
+                  
+                  {change.oldWeights.subtopicWeight !== undefined && 
+                   change.newWeights.subtopicWeight !== undefined && (
+                    <View style={styles.weightTableRow}>
+                      <ThemedText style={styles.weightTableCell}>Subtopic</ThemedText>
+                      <ThemedText style={styles.weightTableCell}>
+                        {change.oldWeights.subtopicWeight.toFixed(2)}
+                      </ThemedText>
+                      <ThemedText style={styles.weightTableCell}>
+                        {change.newWeights.subtopicWeight.toFixed(2)}
+                      </ThemedText>
+                      <ThemedText 
+                        style={[
+                          styles.weightTableCell, 
+                          change.newWeights.subtopicWeight > change.oldWeights.subtopicWeight 
+                            ? styles.weightIncreaseText 
+                            : styles.weightDecreaseText
+                        ]}
+                      >
+                        {(change.newWeights.subtopicWeight - change.oldWeights.subtopicWeight) > 0 ? '+' : ''}
+                        {(change.newWeights.subtopicWeight - change.oldWeights.subtopicWeight).toFixed(2)}
+                      </ThemedText>
+                    </View>
+                  )}
+                  
+                  {change.oldWeights.branchWeight !== undefined && 
+                   change.newWeights.branchWeight !== undefined && (
+                    <View style={styles.weightTableRow}>
+                      <ThemedText style={styles.weightTableCell}>Branch</ThemedText>
+                      <ThemedText style={styles.weightTableCell}>
+                        {change.oldWeights.branchWeight.toFixed(2)}
+                      </ThemedText>
+                      <ThemedText style={styles.weightTableCell}>
+                        {change.newWeights.branchWeight.toFixed(2)}
+                      </ThemedText>
+                      <ThemedText 
+                        style={[
+                          styles.weightTableCell, 
+                          change.newWeights.branchWeight > change.oldWeights.branchWeight 
+                            ? styles.weightIncreaseText 
+                            : styles.weightDecreaseText
+                        ]}
+                      >
+                        {(change.newWeights.branchWeight - change.oldWeights.branchWeight) > 0 ? '+' : ''}
+                        {(change.newWeights.branchWeight - change.oldWeights.branchWeight).toFixed(2)}
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
+              </View>
+            ))
+          )}
+        </ThemedView>
+      </ScrollView>
+    );
+  };
+  
+  // Helper function to format timestamp
+  const formatTimestamp = (timestamp: number): string => {
+    const date = new Date(timestamp);
+    return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}.${date.getMilliseconds()}`;
+  };
+  
   if (!visible) {
     return (
       <TouchableOpacity 
@@ -702,11 +1063,29 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
             Feed List
           </ThemedText>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'dbLog' && styles.activeTab]} 
+          onPress={() => setActiveTab('dbLog')}
+        >
+          <ThemedText style={[styles.tabText, activeTab === 'dbLog' && styles.activeTabText]}>
+            DB Log
+          </ThemedText>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'weights' && styles.activeTab]} 
+          onPress={() => setActiveTab('weights')}
+        >
+          <ThemedText style={[styles.tabText, activeTab === 'weights' && styles.activeTabText]}>
+            Weights
+          </ThemedText>
+        </TouchableOpacity>
       </View>
       
       {activeTab === 'interactions' ? renderInteractionsTab() : 
        activeTab === 'feed' ? renderFeedStatusTab() : 
-       renderFeedListTab()}
+       activeTab === 'feedList' ? renderFeedListTab() : 
+       activeTab === 'dbLog' ? renderDbLogTab() :
+       renderWeightsTab()}
     </ThemedView>
   );
 }
@@ -714,12 +1093,216 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 50,
     right: 10,
-    width: 300,
-    maxHeight: 500,
-    borderRadius: 12,
-    padding: 16,
+    width: '95%',
+    maxWidth: 500,
+    backgroundColor: 'rgba(30, 30, 30, 0.9)',
+    borderRadius: 10,
+    padding: 10,
+    maxHeight: '80%',
+    zIndex: 1000,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  title: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  tabs: {
+    flexDirection: 'row',
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginRight: 5,
+  },
+  activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#3498db',
+  },
+  tabText: {
+    color: 'white',
+    fontSize: 14,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  toggleButton: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: 'rgba(30, 30, 30, 0.9)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  interactionRow: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  feedRow: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  explanations: {
+    marginTop: 5,
+    paddingLeft: 10,
+  },
+  explanationText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  correctText: {
+    color: '#2ecc71',
+  },
+  incorrectText: {
+    color: '#e74c3c',
+  },
+  skippedText: {
+    color: '#f39c12',
+  },
+  itemId: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  questionText: {
+    color: 'white',
+    marginBottom: 5,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  infoLabel: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+    width: 80,
+  },
+  infoValue: {
+    color: 'white',
+    fontSize: 12,
+    flex: 1,
+  },
+  timestamp: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: 10,
+    textAlign: 'right',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statValue: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  statLabel: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+  },
+  // Table styles for database log
+  tableContainer: {
+    marginBottom: 10,
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(52, 152, 219, 0.3)',
+    paddingVertical: 8,
+    paddingHorizontal: 5,
+  },
+  headerCell: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 8,
+    paddingHorizontal: 5,
+  },
+  cell: {
+    color: 'white',
+    fontSize: 11,
+  },
+  timeCell: {
+    width: 80,
+  },
+  directionCell: {
+    width: 70,
+    textAlign: 'center',
+  },
+  tableCell: {
+    width: 100,
+  },
+  operationCell: {
+    width: 70,
+  },
+  recordsCell: {
+    width: 50,
+    textAlign: 'center',
+  },
+  statusCell: {
+    flex: 1,
+    textAlign: 'center',
+  },
+  sentText: {
+    color: '#f39c12', // Orange for sent
+  },
+  receivedText: {
+    color: '#3498db', // Blue for received
+  },
+  successText: {
+    color: '#2ecc71', // Green for success
+  },
+  errorText: {
+    color: '#e74c3c', // Red for error
+  },
+  emptyState: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontStyle: 'italic',
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#0A7EA4',
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -730,12 +1313,6 @@ const styles = StyleSheet.create({
     elevation: 5,
     zIndex: 1000,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
   tabsContainer: {
     flexDirection: 'row',
     marginBottom: 12,
@@ -743,17 +1320,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  activeTab: {
-    backgroundColor: '#0A7EA4',
-  },
-  tabText: {
-    fontSize: 12,
   },
   activeTabText: {
     color: 'white',
@@ -766,28 +1332,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
   },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  statLabel: {
-    fontSize: 12,
-  },
-  logContainer: {
-    maxHeight: 200,
-  },
-  tabScrollView: {
-    flex: 1,
-    height: 350, // Fixed height to ensure proper scrolling
-  },
-  profileChangesContainer: {
-    marginBottom: 20, // Add bottom margin to ensure space at the end
-  },
   interactionsContainer: {
-    marginBottom: 20, // Add bottom margin to ensure space at the end
+    marginBottom: 20,
   },
   logItem: {
     marginBottom: 8,
@@ -822,113 +1368,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.7,
   },
-  logQuestion: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  logTimeSpent: {
-    fontSize: 12,
-    opacity: 0.7,
-  },
-  emptyText: {
-    textAlign: 'center',
-    opacity: 0.7,
-    marginTop: 20,
-  },
-  floatingButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#0A7EA4',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    zIndex: 1000,
-  },
-  // Feed status styles
-  feedStatusContainer: {
-    marginBottom: 12,
-  },
-  statusSection: {
-    marginBottom: 16,
-  },
-  statusLabel: {
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  statusValue: {
-    fontSize: 16,
-  },
-  statusSubtext: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginTop: 4,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    borderRadius: 4,
-    marginTop: 8,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  coldStartProgress: {
-    backgroundColor: '#FF9800',
-  },
-  personalizedProgress: {
-    backgroundColor: '#4CAF50',
-  },
-  interestItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 6,
-  },
-  interestName: {
-    width: 90,
-    fontSize: 13,
-  },
-  interestBar: {
-    flex: 1,
-    height: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    borderRadius: 4,
-    marginHorizontal: 8,
-    overflow: 'hidden',
-  },
-  interestFill: {
-    height: '100%',
-    backgroundColor: '#0A7EA4',
-    borderRadius: 4,
-  },
-  interestScore: {
-    width: 30,
-    fontSize: 12,
-    textAlign: 'right',
-  },
-  preferenceItem: {
-    flexDirection: 'row',
-    marginVertical: 4,
-  },
-  preferenceName: {
-    width: 90,
-    fontSize: 13,
-  },
-  preferenceValue: {
-    fontSize: 13,
-    fontWeight: 'bold',
+  profileChangesContainer: {
+    marginBottom: 20,
   },
   profileChangeItem: {
     marginBottom: 8,
@@ -970,14 +1411,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#0A7EA4',
   },
-  explanationText: {
-    marginBottom: 4,
-    fontSize: 12,
-    paddingLeft: 4,
+  weightFactorsContainer: {
+    backgroundColor: 'rgba(10, 126, 164, 0.1)',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 8,
   },
-  sectionHeader: {
+  weightFactorText: {
+    fontSize: 12,
+    marginBottom: 4,
+    color: '#444',
+  },
+  weightValue: {
     fontWeight: 'bold',
-    marginBottom: 12,
+    color: '#0A7EA4',
   },
   allFeedItemsContainer: {
     marginBottom: 20,
@@ -1051,19 +1498,227 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     color: '#0A7EA4',
   },
-  weightFactorsContainer: {
-    backgroundColor: 'rgba(10, 126, 164, 0.1)',
+  statusSection: {
+    marginBottom: 16,
+  },
+  statusLabel: {
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  statusValue: {
+    fontSize: 16,
+  },
+  statusSubtext: {
+    fontSize: 12,
+    opacity: 0.7,
+    marginTop: 4,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 4,
+    marginTop: 8,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  coldStartProgress: {
+    backgroundColor: '#FF9800',
+  },
+  personalizedProgress: {
+    backgroundColor: '#4CAF50',
+  },
+  interestItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 6,
+  },
+  interestName: {
+    width: 90,
+    fontSize: 13,
+  },
+  interestBar: {
+    flex: 1,
+    height: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 4,
+    marginHorizontal: 8,
+    overflow: 'hidden',
+  },
+  interestFill: {
+    height: '100%',
+    backgroundColor: '#0A7EA4',
+    borderRadius: 4,
+  },
+  interestScore: {
+    width: 30,
+    fontSize: 12,
+    textAlign: 'right',
+  },
+  preferenceItem: {
+    flexDirection: 'row',
+    marginVertical: 4,
+  },
+  preferenceName: {
+    width: 90,
+    fontSize: 13,
+  },
+  preferenceValue: {
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  statsCard: {
+    margin: 10,
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  statsCardTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  detailedStats: {
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  detailedStatsTitle: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  detailedStatsContent: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  detailedStatItem: {
+    flexDirection: 'row',
+    width: '50%',
+    marginBottom: 3,
+  },
+  detailedStatLabel: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 11,
+    marginRight: 5,
+  },
+  detailedStatValue: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  dataCell: {
+    width: 60,
+    alignItems: 'center',
+  },
+  expandedDataContainer: {
+    padding: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  dataScrollView: {
+    maxHeight: 200,
+  },
+  dataText: {
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  tabScrollView: {
+    flex: 1,
+  },
+  logQuestion: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  logTimeSpent: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  feedStatusContainer: {
+    marginBottom: 20,
+  },
+  sectionHeader: {
+    marginVertical: 10,
+  },
+  weightChangesContainer: {
+    marginTop: 10,
+  },
+  weightChangeItem: {
+    marginBottom: 12,
     padding: 10,
     borderRadius: 8,
-    marginTop: 8,
+    backgroundColor: 'rgba(10, 126, 164, 0.1)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#0A7EA4',
   },
-  weightFactorText: {
-    fontSize: 12,
-    marginBottom: 4,
-    color: '#444',
+  weightChangeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  weightValue: {
+  weightChangeCategory: {
     fontWeight: 'bold',
-    color: '#0A7EA4',
+    fontSize: 14,
+  },
+  weightChangeInfo: {
+    flexDirection: 'row',
+  },
+  weightChangeType: {
+    fontWeight: 'bold',
+    fontSize: 12,
+    marginRight: 8,
+  },
+  weightChangeTime: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  weightChangeQuestion: {
+    fontSize: 13,
+    marginBottom: 10,
+    fontStyle: 'italic',
+  },
+  weightTable: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  weightTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  weightTableRow: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  weightTableCell: {
+    padding: 6,
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 12,
+  },
+  weightTableHeaderText: {
+    fontWeight: 'bold',
+  },
+  weightIncreaseText: {
+    color: '#4CAF50',
+  },
+  weightDecreaseText: {
+    color: '#F44336',
+  },
+  statsSubtitle: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
+    opacity: 0.7,
   },
 }); 

@@ -2,6 +2,8 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { UserProfile, createInitialUserProfile } from '../lib/personalizationService';
 import { FeedItem } from '../lib/triviaService';
 import { recordUserAnswer } from '../lib/leaderboardService';
+import { syncUserProfile, syncUserInteractions, syncFeedChanges, syncWeightChanges, loadUserData } from '../lib/syncService';
+import { InteractionLog, FeedChange, WeightChange } from '../types/trackerTypes';
 
 // Define a type for possible question states
 export type QuestionState = {
@@ -20,6 +22,11 @@ interface TriviaState {
   feedExplanations: { [questionId: string]: string[] }; // For explaining personalization logic
   personalizedFeed: FeedItem[]; // Ordered list of personalized feed items
   interactionStartTimes: { [questionId: string]: number }; // Track when user started interacting with a question
+  syncedInteractions: InteractionLog[]; // Track interactions that have been synced with the server
+  syncedFeedChanges: FeedChange[]; // Track feed changes that have been synced with the server
+  syncedWeightChanges: WeightChange[];
+  lastSyncTime: number; // Track when the last sync with the server was performed
+  isSyncing: boolean; // Track whether a sync is in progress
 }
 
 const initialState: TriviaState = {
@@ -29,6 +36,11 @@ const initialState: TriviaState = {
   feedExplanations: {},
   personalizedFeed: [],
   interactionStartTimes: {},
+  syncedInteractions: [],
+  syncedFeedChanges: [],
+  syncedWeightChanges: [],
+  lastSyncTime: 0,
+  isSyncing: false,
 };
 
 const triviaSlice = createSlice({
@@ -60,10 +72,25 @@ const triviaSlice = createSlice({
       if (userId) {
         // We use void to avoid awaiting the promise
         void recordUserAnswer(userId, questionId, isCorrect, answerIndex);
+        
+        // Add to synced interactions if user is logged in
+        const newInteraction: InteractionLog = {
+          timestamp: Date.now(),
+          type: isCorrect ? 'correct' : 'incorrect',
+          questionId,
+          timeSpent,
+          questionText: `Question ${questionId}`
+        };
+        
+        state.syncedInteractions.push(newInteraction);
+        
+        // Sync user profile and interactions with server
+        void syncUserProfile(userId, state.userProfile);
+        void syncUserInteractions(userId, [newInteraction]);
       }
     },
-    skipQuestion: (state, action: PayloadAction<{ questionId: string }>) => {
-      const { questionId } = action.payload;
+    skipQuestion: (state, action: PayloadAction<{ questionId: string; userId?: string }>) => {
+      const { questionId, userId } = action.payload;
       // Only mark as skipped if it hasn't been answered yet
       if (!state.questions[questionId] || state.questions[questionId].status !== 'answered') {
         // Calculate time spent
@@ -80,6 +107,23 @@ const triviaSlice = createSlice({
         
         // Clear interaction start time
         delete state.interactionStartTimes[questionId];
+        
+        // Add to synced interactions if user is logged in
+        if (userId) {
+          const newInteraction: InteractionLog = {
+            timestamp: Date.now(),
+            type: 'skipped',
+            questionId,
+            timeSpent,
+            questionText: `Question ${questionId}`
+          };
+          
+          state.syncedInteractions.push(newInteraction);
+          
+          // Sync user profile and interactions with server
+          void syncUserProfile(userId, state.userProfile);
+          void syncUserInteractions(userId, [newInteraction]);
+        }
       } else {
         console.log(`[Redux] Skip ignored for question ${questionId}: already in '${state.questions[questionId].status}' state`);
       }
@@ -91,13 +135,68 @@ const triviaSlice = createSlice({
       state.interactionStartTimes[questionId] = now;
       console.log(`[Redux] Started interaction timer for question ${questionId} at ${new Date(now).toISOString()}`);
     },
-    setPersonalizedFeed: (state, action: PayloadAction<{ items: FeedItem[]; explanations: { [questionId: string]: string[] } }>) => {
-      const { items, explanations } = action.payload;
+    setPersonalizedFeed: (state, action: PayloadAction<{ 
+      items: FeedItem[]; 
+      explanations: { [questionId: string]: string[] };
+      userId?: string; 
+    }>) => {
+      const { items, explanations, userId } = action.payload;
+      
+      // Find new items compared to current feed
+      const currentIds = new Set(state.personalizedFeed.map(item => item.id));
+      const newItems = items.filter(item => !currentIds.has(item.id));
+      
+      // Update state
       state.personalizedFeed = items;
       state.feedExplanations = explanations;
+      
+      // If user is logged in and there are new items, sync the feed changes
+      if (userId && newItems.length > 0) {
+        const now = Date.now();
+        const feedChanges: FeedChange[] = newItems.map(item => {
+          // Extract weight-based selection info
+          const weightFactors = {
+            category: item.category,
+          };
+          
+          // Get explanations for this item
+          const itemExplanations = explanations[item.id] || [];
+          
+          return {
+            timestamp: now,
+            type: 'added',
+            itemId: item.id,
+            questionText: item.question || `Question ${item.id.substring(0, 5)}...`,
+            explanations: itemExplanations,
+            weightFactors
+          };
+        });
+        
+        // Add to synced feed changes
+        state.syncedFeedChanges.push(...feedChanges);
+        
+        // Sync feed changes with server
+        void syncFeedChanges(userId, feedChanges);
+      }
     },
-    updateUserProfile: (state, action: PayloadAction<UserProfile>) => {
-      state.userProfile = action.payload;
+    updateUserProfile: (state, action: PayloadAction<{ profile: UserProfile; userId?: string; weightChange?: WeightChange }>) => {
+      const { profile, userId, weightChange } = action.payload;
+      state.userProfile = profile;
+      
+      // If a weight change was provided, add it to the synced weight changes
+      if (weightChange) {
+        state.syncedWeightChanges.push(weightChange);
+      }
+      
+      // Sync user profile with server if user is logged in
+      if (userId) {
+        void syncUserProfile(userId, profile);
+        
+        // Sync weight change with server if provided
+        if (weightChange) {
+          void syncWeightChanges(userId, [weightChange]);
+        }
+      }
     },
     markTooltipAsViewed: (state) => {
       state.hasViewedTooltip = true;
@@ -107,10 +206,98 @@ const triviaSlice = createSlice({
       state.hasViewedTooltip = false; // Reset tooltip state when questions are reset
       state.interactionStartTimes = {};
     },
-    resetPersonalization: (state) => {
+    resetPersonalization: (state, action: PayloadAction<{ userId?: string }>) => {
+      const { userId } = action.payload;
       state.userProfile = createInitialUserProfile();
       state.feedExplanations = {};
       state.personalizedFeed = [];
+      
+      // Sync reset profile with server if user is logged in
+      if (userId) {
+        void syncUserProfile(userId, state.userProfile);
+      }
+    },
+    startSync: (state) => {
+      state.isSyncing = true;
+    },
+    finishSync: (state, action: PayloadAction<number>) => {
+      state.isSyncing = false;
+      state.lastSyncTime = action.payload;
+    },
+    syncFailed: (state) => {
+      state.isSyncing = false;
+    },
+    loadUserDataStart: (state, action: PayloadAction<{ userId: string }>) => {
+      state.isSyncing = true;
+    },
+    loadUserDataSuccess: (state, action: PayloadAction<{ 
+      profile: UserProfile | null;
+      interactions: InteractionLog[];
+      feedChanges: FeedChange[];
+      weightChanges: WeightChange[];
+      timestamp: number;
+    }>) => {
+      const { profile, interactions, feedChanges, weightChanges, timestamp } = action.payload;
+      
+      // Only update profile if we received one
+      if (profile) {
+        // Check if the server profile is newer than our local one
+        if (profile.lastRefreshed > state.userProfile.lastRefreshed) {
+          console.log('Updating local profile with newer server profile');
+          state.userProfile = profile;
+        } else {
+          console.log('Local profile is newer than server profile, keeping local changes');
+        }
+      }
+      
+      // Merge interactions (avoid duplicates by questionId and timestamp)
+      const existingInteractionKeys = new Set(
+        state.syncedInteractions.map(i => `${i.questionId}-${i.timestamp}`)
+      );
+      
+      const newInteractions = interactions.filter(
+        i => !existingInteractionKeys.has(`${i.questionId}-${i.timestamp}`)
+      );
+      
+      if (newInteractions.length > 0) {
+        console.log(`Adding ${newInteractions.length} new interactions from server`);
+        state.syncedInteractions = [...state.syncedInteractions, ...newInteractions];
+      }
+      
+      // Merge feed changes (avoid duplicates by itemId and timestamp)
+      const existingFeedChangeKeys = new Set(
+        state.syncedFeedChanges.map(f => `${f.itemId}-${f.timestamp}`)
+      );
+      
+      const newFeedChanges = feedChanges.filter(
+        f => !existingFeedChangeKeys.has(`${f.itemId}-${f.timestamp}`)
+      );
+      
+      if (newFeedChanges.length > 0) {
+        console.log(`Adding ${newFeedChanges.length} feed changes from server`);
+        state.syncedFeedChanges = [...state.syncedFeedChanges, ...newFeedChanges];
+      }
+      
+      // Merge weight changes (avoid duplicates by questionId and timestamp)
+      const existingWeightChangeKeys = new Set(
+        state.syncedWeightChanges.map(w => `${w.questionId}-${w.timestamp}`)
+      );
+      
+      const newWeightChanges = weightChanges.filter(
+        w => !existingWeightChangeKeys.has(`${w.questionId}-${w.timestamp}`)
+      );
+      
+      if (newWeightChanges.length > 0) {
+        console.log(`Adding ${newWeightChanges.length} weight changes from server`);
+        state.syncedWeightChanges = [...state.syncedWeightChanges, ...newWeightChanges];
+      }
+      
+      // Update sync state
+      state.isSyncing = false;
+      state.lastSyncTime = timestamp;
+    },
+    loadUserDataFailure: (state) => {
+      state.isSyncing = false;
     },
   },
 });
@@ -123,6 +310,12 @@ export const {
   startInteraction,
   setPersonalizedFeed,
   updateUserProfile,
-  resetPersonalization
+  resetPersonalization,
+  startSync,
+  finishSync,
+  syncFailed,
+  loadUserDataStart,
+  loadUserDataSuccess,
+  loadUserDataFailure
 } = triviaSlice.actions;
 export default triviaSlice.reducer;
