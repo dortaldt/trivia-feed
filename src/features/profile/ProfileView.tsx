@@ -879,7 +879,11 @@ const ProfileView: React.FC = () => {
     return (
       <View style={[profileStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <View style={profileStyles.guestModeContainer}>
-          <FeatherIcon name="user-x" size={50} color="#ffc107" style={{ marginBottom: 16 }} />
+          <Image 
+            source={require('../../../assets/images/guest-avatar.png')}
+            style={{ width: 80, height: 80, marginBottom: 16, borderRadius: 40 }}
+            resizeMode="cover"
+          />
           
           <ThemedText style={profileStyles.guestModeTitle}>
             You're in Guest Mode
@@ -962,7 +966,11 @@ const ProfileView: React.FC = () => {
       return (
         <View style={[profileStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
           <View style={profileStyles.guestModeContainer}>
-            <FeatherIcon name="user-x" size={50} color="#ffc107" style={{ marginBottom: 16 }} />
+            <Image 
+              source={require('../../../assets/images/guest-avatar.png')}
+              style={{ width: 80, height: 80, marginBottom: 16, borderRadius: 40 }}
+              resizeMode="cover"
+            />
             
             <ThemedText style={profileStyles.guestModeTitle}>
               You're in Guest Mode

@@ -149,10 +149,12 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
             // If the user has an avatar image - show it
             <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
           ) : !user ? (
-            // If no user is logged in (app user, not leaderboard item) - show a user icon 
-            <View style={[styles.avatarPlaceholder, isCurrentUser && styles.currentUserAvatar]}>
-              <FeatherIcon name="user" size={36} color="#fff" />
-            </View>
+            // If no user is logged in (app user, not leaderboard item) - show the guest avatar
+            <Image 
+              source={require('../../assets/images/guest-avatar.png')}
+              style={styles.avatar}
+              resizeMode="cover"
+            />
           ) : (
             // If user is logged in but the leaderboard item has no avatar - show initials
             <View style={[styles.avatarPlaceholder, isCurrentUser && styles.currentUserAvatar]}>
@@ -268,11 +270,10 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
         styles.guestPromptContainer,
         { backgroundColor: isDark ? 'rgba(255, 193, 7, 0.15)' : 'rgba(255, 193, 7, 0.2)' }
       ]}>
-        <FeatherIcon 
-          name="award" 
-          size={24} 
-          color="#ffc107" 
-          style={{ marginRight: 12 }}
+        <Image 
+          source={require('../../assets/images/guest-avatar.png')}
+          style={{ width: 42, height: 42, borderRadius: 21, marginRight: 12 }}
+          resizeMode="cover"
         />
         <View style={{ flex: 1 }}>
           <ThemedText style={styles.guestPromptTitle}>
