@@ -833,6 +833,10 @@ export async function syncWeightChanges(
       new_topic_weight: change.newWeights.topicWeight,
       new_subtopic_weight: change.newWeights.subtopicWeight,
       new_branch_weight: change.newWeights.branchWeight,
+      skip_compensation_applied: change.skipCompensation?.applied || false,
+      skip_compensation_topic: change.skipCompensation?.topicCompensation || 0,
+      skip_compensation_subtopic: change.skipCompensation?.subtopicCompensation || 0,
+      skip_compensation_branch: change.skipCompensation?.branchCompensation || 0,
       synced_from_device: deviceId
     }));
     
@@ -953,7 +957,16 @@ export async function fetchWeightChanges(
         topicWeight: item.new_topic_weight,
         subtopicWeight: item.new_subtopic_weight,
         branchWeight: item.new_branch_weight
-      }
+      },
+      // Include skip compensation data if it exists
+      ...(item.skip_compensation_applied && {
+        skipCompensation: {
+          applied: item.skip_compensation_applied,
+          topicCompensation: item.skip_compensation_topic || 0,
+          subtopicCompensation: item.skip_compensation_subtopic || 0,
+          branchCompensation: item.skip_compensation_branch || 0
+        }
+      })
     }));
   } catch (error) {
     console.error('Error in fetchWeightChanges:', error);
