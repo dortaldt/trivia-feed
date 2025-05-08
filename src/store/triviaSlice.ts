@@ -76,20 +76,28 @@ const triviaSlice = createSlice({
     answerQuestion: (state, action: PayloadAction<{ questionId: string; answerIndex: number; isCorrect: boolean; userId?: string }>) => {
       const { questionId, answerIndex, isCorrect, userId } = action.payload;
       
+      // Get previous state for logging
+      const previousState = state.questions[questionId]?.status || 'unanswered';
+      
       // Calculate time spent
       const startTime = state.interactionStartTimes[questionId] || Date.now();
       const timeSpent = Date.now() - startTime;
       
       // Log the answered question and timing information
-      console.log(`[Redux] Answering question ${questionId}: answer=${answerIndex}, correct=${isCorrect}, time spent=${timeSpent}ms`);
+      console.log(`[Redux] Answering question ${questionId}: answer=${answerIndex}, correct=${isCorrect}, time spent=${timeSpent}ms, previous state=${previousState}`);
       
-      // Update question state
+      // Always update question state, regardless of previous status (answer overrides skip)
       state.questions[questionId] = { 
         status: 'answered',
         answerIndex,
         isCorrect,
         timeSpent
       };
+      
+      // If this was previously skipped, let's log that we're overriding it
+      if (previousState === 'skipped') {
+        console.log(`[Redux] Overriding previous 'skipped' state for question ${questionId} with 'answered' state`);
+      }
       
       // Update user profile with new weight changes
       if (state.userProfile) {
@@ -122,35 +130,49 @@ const triviaSlice = createSlice({
       const { questionId, userId } = action.payload;
       // Only mark as skipped if it hasn't been answered yet
       if (!state.questions[questionId] || state.questions[questionId].status !== 'answered') {
+        // Get previous state for logging
+        const previousState = state.questions[questionId]?.status || 'unanswered';
+        
         // Calculate time spent
         const startTime = state.interactionStartTimes[questionId] || Date.now();
         const timeSpent = Date.now() - startTime;
         
-        // Log the skipped question and timing information
-        console.log(`[Redux] Skipping question ${questionId}: time spent = ${timeSpent}ms`);
-        
-        state.questions[questionId] = { 
-          status: 'skipped',
-          timeSpent
-        };
-        
-        // Record interaction for sync
-        const now = Date.now();
-        const interaction: InteractionLog = {
-          questionId,
-          type: 'skipped',
-          timestamp: now,
-          timeSpent,
-          questionText: 'Question ' + questionId.substring(0, 5) // Just for display
-        };
-        
-        // Add to synced interactions
-        state.syncedInteractions.push(interaction);
-        
-        // If user is logged in, sync the interaction
-        if (userId && state.userProfile) {
-          // Always use safer version that handles null checking
-          safeSyncUserProfile(userId, state.userProfile);
+        // Skip logging if already marked as skipped (avoids duplicate log entries)
+        if (previousState !== 'skipped') {
+          // Log the skipped question and timing information
+          console.log(`[Redux] Skipping question ${questionId}: time spent = ${timeSpent}ms`);
+          
+          state.questions[questionId] = { 
+            status: 'skipped',
+            timeSpent
+          };
+          
+          // Record interaction for sync
+          const now = Date.now();
+          const interaction: InteractionLog = {
+            questionId,
+            type: 'skipped',
+            timestamp: now,
+            timeSpent,
+            questionText: 'Question ' + questionId.substring(0, 5) // Just for display
+          };
+          
+          // Only add to synced interactions if we don't already have a skip record for this question
+          const hasExistingSkip = state.syncedInteractions.some(
+            i => i.questionId === questionId && i.type === 'skipped'
+          );
+          
+          if (!hasExistingSkip) {
+            state.syncedInteractions.push(interaction);
+            
+            // If user is logged in, sync the interaction
+            if (userId && state.userProfile) {
+              // Always use safer version that handles null checking
+              safeSyncUserProfile(userId, state.userProfile);
+            }
+          }
+        } else {
+          console.log(`[Redux] Redundant skip for question ${questionId}: already in 'skipped' state`);
         }
       } else {
         console.log(`[Redux] Skip ignored for question ${questionId}: already in '${state.questions[questionId].status}' state`);
