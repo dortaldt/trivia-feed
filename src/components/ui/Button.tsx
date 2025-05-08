@@ -1,236 +1,93 @@
 import React from 'react';
 import { 
   TouchableOpacity, 
-  TouchableOpacityProps, 
-  ActivityIndicator, 
+  Text, 
   StyleSheet, 
-  ViewStyle,
-  TextStyle,
+  ViewStyle, 
+  TextStyle, 
+  TouchableOpacityProps 
 } from 'react-native';
-import { useDesignSystem } from '../../hooks/useDesignSystem';
-import { Text } from './Text';
-import { View } from './View';
+import { buttons, colors } from '../../theme';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'link';
-export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+// Supported button sizes
+type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
-export interface ButtonProps extends TouchableOpacityProps {
-  /**
-   * Button variant
-   */
+// Supported button variants
+type ButtonVariant = 
+  | 'primary' 
+  | 'secondary' 
+  | 'accent' 
+  | 'outline' 
+  | 'ghost' 
+  | 'destructive'
+  | 'success'
+  | 'warning'
+  | 'info';
+
+// Button props
+interface ButtonProps extends TouchableOpacityProps {
+  children: React.ReactNode;
   variant?: ButtonVariant;
-  
-  /**
-   * Button size
-   */
   size?: ButtonSize;
-  
-  /**
-   * Button text/label
-   */
-  label?: string;
-  
-  /**
-   * Is button in loading state
-   */
-  loading?: boolean;
-  
-  /**
-   * Left icon component
-   */
-  leftIcon?: React.ReactNode;
-  
-  /**
-   * Right icon component
-   */
-  rightIcon?: React.ReactNode;
-  
-  /**
-   * Custom styles for the button container
-   */
-  containerStyle?: ViewStyle;
-  
-  /**
-   * Custom styles for the button text
-   */
-  textStyle?: TextStyle;
-  
-  /**
-   * Whether the button should take full width
-   */
   fullWidth?: boolean;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+  textStyle?: TextStyle;
+  disabled?: boolean;
 }
 
-// Size configurations
-const sizeConfig: Record<ButtonSize, { padding: number, fontSize: keyof typeof fontSizes, iconSize: number }> = {
-  xs: { padding: 8, fontSize: 'xs', iconSize: 14 },
-  sm: { padding: 10, fontSize: 'sm', iconSize: 16 },
-  md: { padding: 12, fontSize: 'md', iconSize: 18 },
-  lg: { padding: 14, fontSize: 'lg', iconSize: 20 },
-  xl: { padding: 16, fontSize: 'xl', iconSize: 22 },
-};
-
-// Font size mapping
-const fontSizes = {
-  xs: 'sm',
-  sm: 'sm',
-  md: 'md',
-  lg: 'md',
-  xl: 'lg',
-} as const;
-
-export function Button({
+const Button: React.FC<ButtonProps> = ({
+  children,
   variant = 'primary',
   size = 'md',
-  label,
-  loading = false,
+  fullWidth = false,
   leftIcon,
   rightIcon,
-  containerStyle,
-  textStyle,
-  fullWidth = false,
-  disabled = false,
   style,
-  children,
+  textStyle,
+  disabled = false,
   ...rest
-}: ButtonProps) {
-  const { colors, borderRadius } = useDesignSystem();
-  const sizeDetails = sizeConfig[size];
+}) => {
+  // Get variant and size styles from theme
+  const variantStyle = buttons.variants[variant];
+  const sizeStyle = buttons.sizes[size];
   
-  // Style configurations based on variant
-  const getVariantStyles = (): ViewStyle => {
-    switch (variant) {
-      case 'primary':
-        return {
-          backgroundColor: disabled ? colors.primaryLighter : colors.primary,
-          borderColor: 'transparent',
-        };
-      case 'secondary':
-        return {
-          backgroundColor: 'transparent',
-          borderWidth: 1,
-          borderColor: colors.primary,
-        };
-      case 'outline':
-        return {
-          backgroundColor: 'transparent',
-          borderWidth: 1,
-          borderColor: colors.border,
-        };
-      case 'ghost':
-        return {
-          backgroundColor: 'transparent',
-          borderColor: 'transparent',
-        };
-      case 'destructive':
-        return {
-          backgroundColor: colors.error,
-          borderColor: 'transparent',
-        };
-      case 'link':
-        return {
-          backgroundColor: 'transparent',
-          borderColor: 'transparent',
-          paddingVertical: 0,
-          paddingHorizontal: 0,
-        };
-      default:
-        return {
-          backgroundColor: colors.primary,
-          borderColor: 'transparent',
-        };
-    }
+  // Build container style
+  const containerStyle: ViewStyle = {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: disabled ? 0.6 : 1,
+    width: fullWidth ? '100%' : undefined,
+    ...sizeStyle,
+    ...variantStyle,
   };
   
-  // Get text color based on variant
-  const getTextColor = (): string => {
-    switch (variant) {
-      case 'primary':
-        return colors.textInverted;
-      case 'secondary':
-      case 'ghost':
-      case 'outline':
-      case 'link':
-        return colors.primary;
-      case 'destructive':
-        return colors.textInverted;
-      default:
-        return colors.textInverted;
-    }
+  // Build text style
+  const textStyleBase: TextStyle = {
+    fontWeight: '600',
+    fontSize: sizeStyle.fontSize,
+    color: variantStyle.color,
   };
   
   return (
     <TouchableOpacity
-      activeOpacity={0.8}
-      disabled={disabled || loading}
-      style={[
-        styles.button,
-        {
-          paddingVertical: variant === 'link' ? 0 : sizeDetails.padding,
-          paddingHorizontal: variant === 'link' ? 0 : sizeDetails.padding * 2,
-          borderRadius: borderRadius.md,
-        },
-        getVariantStyles(),
-        fullWidth && styles.fullWidth,
-        containerStyle,
-        style,
-      ]}
+      style={[containerStyle, style]}
+      disabled={disabled}
+      activeOpacity={0.7}
       {...rest}
     >
-      <View row center style={styles.contentContainer}>
-        {loading ? (
-          <ActivityIndicator 
-            size="small" 
-            color={getTextColor()}
-            style={leftIcon ? styles.leftIcon : undefined} 
-          />
-        ) : leftIcon ? (
-          <View style={styles.leftIcon}>{leftIcon}</View>
-        ) : null}
-        
-        {label && (
-          <Text
-            variant={fontSizes[size] as any}
-            color={getTextColor()}
-            style={[
-              variant === 'link' && styles.linkText,
-              textStyle,
-            ]}
-          >
-            {label}
-          </Text>
-        )}
-        
-        {children}
-        
-        {rightIcon && !loading && (
-          <View style={styles.rightIcon}>{rightIcon}</View>
-        )}
-      </View>
+      {leftIcon && <React.Fragment>{leftIcon}</React.Fragment>}
+      
+      {typeof children === 'string' ? (
+        <Text style={[textStyleBase, textStyle]}>{children}</Text>
+      ) : (
+        children
+      )}
+      
+      {rightIcon && <React.Fragment>{rightIcon}</React.Fragment>}
     </TouchableOpacity>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  contentContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fullWidth: {
-    width: '100%',
-  },
-  leftIcon: {
-    marginRight: 8,
-  },
-  rightIcon: {
-    marginLeft: 8,
-  },
-  linkText: {
-    textDecorationLine: 'underline',
-  },
-}); 
+export default Button; 

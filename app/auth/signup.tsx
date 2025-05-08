@@ -12,7 +12,7 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { signUp, signInWithGoogle, signInWithApple, isLoading } = useAuth();
+  const { signUp, isLoading } = useAuth();
   
   // Get search params to check if we deliberately navigated here
   const params = useLocalSearchParams();
@@ -59,14 +59,6 @@ export default function SignUpScreen() {
     }
     
     await signUp(email, password);
-  };
-
-  const handleGoogleSignIn = async () => {
-    await signInWithGoogle();
-  };
-
-  const handleAppleSignIn = async () => {
-    await signInWithApple();
   };
 
   const navigateToLogin = () => {
@@ -167,24 +159,6 @@ export default function SignUpScreen() {
           <TouchableOpacity onPress={handleSignUp} style={styles.signUpButton}>
             <Text style={styles.signUpButtonText}>Sign Up</Text>
           </TouchableOpacity>
-
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <View style={styles.socialButtonsContainer}>
-            <TouchableOpacity onPress={handleGoogleSignIn} style={styles.socialButton}>
-              <Ionicons name="logo-google" size={22} color="#DB4437" />
-              <Text style={styles.socialButtonText}>Google</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity onPress={handleAppleSignIn} style={styles.socialButton}>
-              <Ionicons name="logo-apple" size={22} color="#000" />
-              <Text style={styles.socialButtonText}>Apple</Text>
-            </TouchableOpacity>
-          </View>
         </View>
 
         <View style={styles.loginContainer}>
@@ -286,42 +260,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#ddd',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#999',
-    fontSize: 14,
-  },
-  socialButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    flex: 0.48,
-  },
-  socialButtonText: {
-    marginLeft: 10,
-    color: '#333',
-    fontSize: 14,
-    fontWeight: '500',
   },
   loginContainer: {
     flexDirection: 'row',

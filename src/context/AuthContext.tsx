@@ -432,122 +432,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Sign in with Google
+  // Google sign in - disabled
   const signInWithGoogle = async () => {
-    try {
-      setIsLoading(true);
-      console.log('Attempting to sign in with Google');
-      
-      const redirectUri = makeRedirectUri({
-        scheme: 'trivia-universe-feed'
-      });
-      
-      console.log('Redirect URI:', redirectUri);
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUri,
-          skipBrowserRedirect: true
-        }
-      });
-      
-      if (error) {
-        console.error('Google OAuth error:', error.message);
-        throw error;
-      }
-      
-      if (data?.url) {
-        console.log('Opening browser for OAuth flow');
-        // Open the URL in a browser
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
-        
-        if (result.type === 'success') {
-          console.log('OAuth successful, exchanging code for session');
-          // The user was redirected back to our app
-          // Exchange the code for a session
-          const { url } = result;
-          const { data, error } = await supabase.auth.exchangeCodeForSession(url);
-          
-          if (error) {
-            console.error('Code exchange error:', error.message);
-            throw error;
-          }
-          
-          console.log('Session obtained:', data.session ? 'Valid session' : 'No session');
-          
-          // Explicitly update the state to ensure immediate response
-          setSession(data.session);
-          setUser(data.user);
-        } else {
-          console.warn('OAuth flow was not successful:', result.type);
-        }
-      }
-    } catch (error: any) {
-      console.error('Google sign in error:', error.message);
-      Alert.alert('Error', error.message);
-    } finally {
-      setIsLoading(false);
-    }
+    Alert.alert(
+      'Feature Not Available',
+      'Sign in with Google is currently not supported.'
+    );
+    return;
   };
 
-  // Sign in with Apple
+  // Apple sign in - disabled
   const signInWithApple = async () => {
-    try {
-      setIsLoading(true);
-      console.log('Attempting to sign in with Apple');
-      
-      const redirectUri = makeRedirectUri({
-        scheme: 'trivia-universe-feed'
-      });
-      
-      console.log('Redirect URI:', redirectUri);
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: redirectUri,
-          skipBrowserRedirect: true
-        }
-      });
-      
-      if (error) {
-        console.error('Apple OAuth error:', error.message);
-        throw error;
-      }
-      
-      if (data?.url) {
-        console.log('Opening browser for Apple OAuth flow');
-        // Open the URL in a browser
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
-        
-        if (result.type === 'success') {
-          console.log('Apple OAuth successful, exchanging code for session');
-          // The user was redirected back to our app
-          // Exchange the code for a session
-          const { url } = result;
-          const { data, error } = await supabase.auth.exchangeCodeForSession(url);
-          
-          if (error) {
-            console.error('Code exchange error:', error.message);
-            throw error;
-          }
-          
-          console.log('Session obtained:', data.session ? 'Valid session' : 'No session');
-          
-          // Explicitly update the state to ensure immediate response
-          setSession(data.session);
-          setUser(data.user);
-        } else {
-          console.warn('Apple OAuth flow was not successful:', result.type);
-        }
-      }
-    } catch (error: any) {
-      console.error('Apple sign in error:', error.message);
-      Alert.alert('Error', error.message);
-    } finally {
-      setIsLoading(false);
-    }
+    Alert.alert(
+      'Feature Not Available',
+      'Sign in with Apple is currently not supported.'
+    );
+    return;
   };
 
   // Reset password

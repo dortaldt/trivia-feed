@@ -12,6 +12,7 @@ import { WebContainer } from '@/components/WebContainer';
 import { colors, spacing, borderRadius } from '@/src/theme';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Button from './ui/Button';
 
 const LeaderboardTabs = {
   Daily: 'day',
@@ -279,12 +280,14 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
           <ThemedText style={styles.guestPromptTitle}>
             Want to join the leaderboard?
           </ThemedText>
-          <ThemedText style={styles.guestPromptDescription}>
-            Sign in or create an account to track your stats and compete with others!
+          <ThemedText style={styles.guestPromptText}>
+            Sign in to track your progress and compete with others!
           </ThemedText>
         </View>
-        <TouchableOpacity 
-          style={styles.guestPromptButton}
+        <Button
+          variant="accent"
+          size="sm"
+          leftIcon={<FeatherIcon name="log-in" size={16} color="#000" />}
           onPress={() => {
             // Navigate to login page
             if (Platform.OS === 'web') {
@@ -298,10 +301,8 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
             }
           }}
         >
-          <ThemedText style={styles.guestPromptButtonText}>
-            Sign In
-          </ThemedText>
-        </TouchableOpacity>
+          Sign In
+        </Button>
       </View>
     );
   };
@@ -552,20 +553,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 4,
   },
-  guestPromptDescription: {
+  guestPromptText: {
     fontSize: 14,
     opacity: 0.8,
-  },
-  guestPromptButton: {
-    backgroundColor: '#ffc107',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginLeft: 8,
-  },
-  guestPromptButtonText: {
-    color: '#000',
-    fontWeight: 'bold',
-    fontSize: 14,
   },
 }); 
