@@ -23,6 +23,7 @@ import { MediaTypeOptions } from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 
 // Add interface for countries
 interface Country {
@@ -31,7 +32,7 @@ interface Country {
 }
 
 const ProfileView: React.FC = () => {
-  const { user, signOut, updateProfile, isLoading: authLoading } = useAuth();
+  const { user, signOut, updateProfile, isLoading: authLoading, isGuest } = useAuth();
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -45,6 +46,27 @@ const ProfileView: React.FC = () => {
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
   
+  // Add debug log for current auth state
+  useEffect(() => {
+    console.log('ProfileView - Auth state:', { 
+      user: user ? `User ID: ${user.id.substring(0, 5)}...` : 'No user', 
+      isGuest, 
+      authLoading 
+    });
+    
+    // Check AsyncStorage directly for debugging
+    const checkGuestMode = async () => {
+      try {
+        const guestMode = await AsyncStorage.getItem('guestMode');
+        console.log('ProfileView - Guest mode in AsyncStorage:', guestMode);
+      } catch (e) {
+        console.error('Error checking guest mode in ProfileView:', e);
+      }
+    };
+    
+    checkGuestMode();
+  }, [user, isGuest, authLoading]);
+
   useEffect(() => {
     fetchUserProfile();
   }, [user]);
@@ -804,9 +826,203 @@ const ProfileView: React.FC = () => {
       height: 100,
       borderRadius: 50,
     },
+    guestModeContainer: {
+      alignItems: 'center',
+      padding: 20,
+      borderRadius: 12,
+      width: '100%',
+      maxWidth: 500,
+      backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+      borderWidth: 1,
+      borderColor: 'rgba(150, 150, 150, 0.2)',
+    },
+    guestModeTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      marginBottom: 12,
+      color: '#ffc107',
+    },
+    guestModeMessage: {
+      fontSize: 16,
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    guestModeBenefits: {
+      alignSelf: 'stretch',
+      marginBottom: 20,
+    },
+    benefitRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    benefitText: {
+      fontSize: 16,
+    },
+    signInButton: {
+      backgroundColor: '#0a7ea4',
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      alignSelf: 'stretch',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    signInButtonText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: '500',
+    },
   });
 
+  if (isGuest) {
+    return (
+      <View style={[profileStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <View style={profileStyles.guestModeContainer}>
+          <FeatherIcon name="user-x" size={50} color="#ffc107" style={{ marginBottom: 16 }} />
+          
+          <ThemedText style={profileStyles.guestModeTitle}>
+            You're in Guest Mode
+          </ThemedText>
+          
+          <ThemedText style={profileStyles.guestModeMessage}>
+            Sign in or create an account to:
+          </ThemedText>
+          
+          <View style={profileStyles.guestModeBenefits}>
+            <View style={profileStyles.benefitRow}>
+              <FeatherIcon name="check-circle" size={18} color="#4caf50" style={{ marginRight: 8 }} />
+              <ThemedText style={profileStyles.benefitText}>Save your game progress</ThemedText>
+            </View>
+            <View style={profileStyles.benefitRow}>
+              <FeatherIcon name="check-circle" size={18} color="#4caf50" style={{ marginRight: 8 }} />
+              <ThemedText style={profileStyles.benefitText}>Join the leaderboard</ThemedText>
+            </View>
+            <View style={profileStyles.benefitRow}>
+              <FeatherIcon name="check-circle" size={18} color="#4caf50" style={{ marginRight: 8 }} />
+              <ThemedText style={profileStyles.benefitText}>Personalize your profile</ThemedText>
+            </View>
+          </View>
+          
+          <TouchableOpacity 
+            style={profileStyles.signInButton}
+            onPress={() => {
+              // Navigate to login screen
+              if (Platform.OS === 'web') {
+                window.location.href = '/auth/login?direct=true';
+              } else {
+                // Use Expo Router for iOS/Android navigation
+                router.push({
+                  pathname: '/auth/login',
+                  params: { direct: 'true' }
+                });
+              }
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <FeatherIcon name="log-in" size={18} color="#fff" style={{ marginRight: 8 }} />
+              <ThemedText style={profileStyles.signInButtonText}>Sign In or Register</ThemedText>
+            </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={profileStyles.signOutButton}
+            onPress={handleSignOut}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <FeatherIcon name="log-out" size={18} color="#fff" style={{ marginRight: 8 }} />
+              <ThemedText style={profileStyles.signOutButtonText}>Exit Guest Mode</ThemedText>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   if (!user) {
+    // Check AsyncStorage directly to decide whether to show guest UI
+    const [localIsGuest, setLocalIsGuest] = useState(false);
+    
+    useEffect(() => {
+      const checkGuestMode = async () => {
+        try {
+          const guestMode = await AsyncStorage.getItem('guestMode');
+          console.log('ProfileView fallback - Direct AsyncStorage check for guest mode:', guestMode);
+          setLocalIsGuest(guestMode === 'true');
+        } catch (e) {
+          console.error('Error in local guest mode check in ProfileView:', e);
+        }
+      };
+      
+      checkGuestMode();
+    }, []);
+    
+    // If guest mode is detected in AsyncStorage, show guest UI even if context isGuest is false
+    if (localIsGuest) {
+      return (
+        <View style={[profileStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <View style={profileStyles.guestModeContainer}>
+            <FeatherIcon name="user-x" size={50} color="#ffc107" style={{ marginBottom: 16 }} />
+            
+            <ThemedText style={profileStyles.guestModeTitle}>
+              You're in Guest Mode
+            </ThemedText>
+            
+            <ThemedText style={profileStyles.guestModeMessage}>
+              Sign in or create an account to:
+            </ThemedText>
+            
+            <View style={profileStyles.guestModeBenefits}>
+              <View style={profileStyles.benefitRow}>
+                <FeatherIcon name="check-circle" size={18} color="#4caf50" style={{ marginRight: 8 }} />
+                <ThemedText style={profileStyles.benefitText}>Save your game progress</ThemedText>
+              </View>
+              <View style={profileStyles.benefitRow}>
+                <FeatherIcon name="check-circle" size={18} color="#4caf50" style={{ marginRight: 8 }} />
+                <ThemedText style={profileStyles.benefitText}>Join the leaderboard</ThemedText>
+              </View>
+              <View style={profileStyles.benefitRow}>
+                <FeatherIcon name="check-circle" size={18} color="#4caf50" style={{ marginRight: 8 }} />
+                <ThemedText style={profileStyles.benefitText}>Personalize your profile</ThemedText>
+              </View>
+            </View>
+            
+            <TouchableOpacity 
+              style={profileStyles.signInButton}
+              onPress={() => {
+                // Navigate to login screen
+                if (Platform.OS === 'web') {
+                  window.location.href = '/auth/login?direct=true';
+                } else {
+                  // Use Expo Router for iOS/Android navigation
+                  router.push({
+                    pathname: '/auth/login',
+                    params: { direct: 'true' }
+                  });
+                }
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <FeatherIcon name="log-in" size={18} color="#fff" style={{ marginRight: 8 }} />
+                <ThemedText style={profileStyles.signInButtonText}>Sign In or Register</ThemedText>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={profileStyles.signOutButton}
+              onPress={handleSignOut}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <FeatherIcon name="log-out" size={18} color="#fff" style={{ marginRight: 8 }} />
+                <ThemedText style={profileStyles.signOutButtonText}>Exit Guest Mode</ThemedText>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+    
+    // Normal case for non-guest users who are not logged in
     return (
       <View style={profileStyles.emptyState}>
         <ThemedText style={profileStyles.emptyText}>
