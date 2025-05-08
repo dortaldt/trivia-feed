@@ -86,6 +86,9 @@ const FeedScreen: React.FC = () => {
   // Get user from auth context
   const { user } = useAuth();
   
+  // Add a new state for the avatar URL
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  
   const flatListRef = useRef<FlatList>(null);
   const lastInteractionTime = useRef(Date.now());
   const lastVisibleItemId = useRef<string | null>(null);
@@ -1088,6 +1091,34 @@ const FeedScreen: React.FC = () => {
     setShowProfile(!showProfile);
   };
 
+  // Get user profile when component mounts
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('avatar_url')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) {
+          console.error('Error fetching user profile:', error);
+          return;
+        }
+        
+        if (data && data.avatar_url) {
+          setAvatarUrl(data.avatar_url);
+        }
+      } catch (error) {
+        console.error('Error in fetchUserProfile:', error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, [user]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -1160,7 +1191,11 @@ const FeedScreen: React.FC = () => {
         onPress={toggleProfile}
       >
         <View style={styles.avatarCircle}>
-          <ThemedText style={styles.avatarText}>{getInitials()}</ThemedText>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+          ) : (
+            <ThemedText style={styles.avatarText}>{getInitials()}</ThemedText>
+          )}
         </View>
       </TouchableOpacity>
 
@@ -1516,6 +1551,11 @@ const styles = StyleSheet.create({
     color: 'black',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
 });
 

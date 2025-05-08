@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View, Platform } from 'react-native';
 import BottomSheet from './BottomSheet';
 import Leaderboard from '../components/Leaderboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { spacing } from '@/src/theme';
 
 type LeaderboardBottomSheetProps = {
   isVisible: boolean;
@@ -55,7 +56,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollViewContent: {
-    paddingBottom: 20,
+    paddingBottom: spacing[5],
   }
 });
 
