@@ -24,6 +24,8 @@ import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import { colors } from '../../theme';
+import Button from '../../components/ui/Button';
 
 // Add interface for countries
 interface Country {
@@ -45,6 +47,7 @@ const ProfileView: React.FC = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
+  const [localIsGuest, setLocalIsGuest] = useState(false);
   
   // Add debug log for current auth state
   useEffect(() => {
@@ -859,23 +862,9 @@ const ProfileView: React.FC = () => {
     benefitText: {
       fontSize: 16,
     },
-    signInButton: {
-      backgroundColor: '#0a7ea4',
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 8,
-      alignSelf: 'stretch',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    signInButtonText: {
-      color: 'white',
-      fontSize: 16,
-      fontWeight: '500',
-    },
   });
 
-  if (isGuest) {
+  if (isGuest || localIsGuest) {
     return (
       <View style={[profileStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <View style={profileStyles.guestModeContainer}>
@@ -908,8 +897,10 @@ const ProfileView: React.FC = () => {
             </View>
           </View>
           
-          <TouchableOpacity 
-            style={profileStyles.signInButton}
+          <Button
+            variant="accent"
+            fullWidth
+            leftIcon={<FeatherIcon name="log-in" size={18} color="#000" style={{ marginRight: 8 }} />}
             onPress={() => {
               // Navigate to login screen
               if (Platform.OS === 'web') {
@@ -923,21 +914,8 @@ const ProfileView: React.FC = () => {
               }
             }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <FeatherIcon name="log-in" size={18} color="#fff" style={{ marginRight: 8 }} />
-              <ThemedText style={profileStyles.signInButtonText}>Sign In or Register</ThemedText>
-            </View>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={profileStyles.signOutButton}
-            onPress={handleSignOut}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <FeatherIcon name="log-out" size={18} color="#fff" style={{ marginRight: 8 }} />
-              <ThemedText style={profileStyles.signOutButtonText}>Exit Guest Mode</ThemedText>
-            </View>
-          </TouchableOpacity>
+            Sign In
+          </Button>
         </View>
       </View>
     );
@@ -995,8 +973,10 @@ const ProfileView: React.FC = () => {
               </View>
             </View>
             
-            <TouchableOpacity 
-              style={profileStyles.signInButton}
+            <Button
+              variant="accent"
+              fullWidth
+              leftIcon={<FeatherIcon name="log-in" size={18} color="#000" style={{ marginRight: 8 }} />}
               onPress={() => {
                 // Navigate to login screen
                 if (Platform.OS === 'web') {
@@ -1010,21 +990,8 @@ const ProfileView: React.FC = () => {
                 }
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <FeatherIcon name="log-in" size={18} color="#fff" style={{ marginRight: 8 }} />
-                <ThemedText style={profileStyles.signInButtonText}>Sign In or Register</ThemedText>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={profileStyles.signOutButton}
-              onPress={handleSignOut}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                <FeatherIcon name="log-out" size={18} color="#fff" style={{ marginRight: 8 }} />
-                <ThemedText style={profileStyles.signOutButtonText}>Exit Guest Mode</ThemedText>
-              </View>
-            </TouchableOpacity>
+              Sign In
+            </Button>
           </View>
         </View>
       );
