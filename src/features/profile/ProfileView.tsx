@@ -18,6 +18,7 @@ import { Picker } from '@react-native-picker/picker';
 import { countries } from '../../data/countries';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
+import * as ImagePicker from 'expo-image-picker';
 
 // Add interface for countries
 interface Country {
@@ -36,6 +37,7 @@ const ProfileView: React.FC = () => {
   const [profileData, setProfileData] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
   
@@ -124,6 +126,502 @@ const ProfileView: React.FC = () => {
       return user.email.substring(0, 2).toUpperCase();
     }
     return '?';
+  };
+
+  // Image picker function
+  const pickImage = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        // Web platform: Create a file input element
+        console.log('Web platform detected, using file input picker');
+        
+        return new Promise((resolve) => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.style.display = 'none';
+          
+          input.onchange = async (e: any) => {
+            const file = e.target.files[0];
+            if (!file) {
+              resolve(false);
+              return;
+            }
+            
+            console.log('File selected on web:', { 
+              name: file.name,
+              type: file.type,
+              size: file.size
+            });
+            
+            // Check file size
+            if (file.size > 2 * 1024 * 1024) {
+              Alert.alert(
+                'Image too large', 
+                'Please select an image smaller than 2MB.',
+                [{ text: 'OK' }]
+              );
+              resolve(false);
+              return;
+            }
+            
+            // For web, pass the file directly
+            await uploadAvatar(file);
+            resolve(true);
+            
+            // Remove the input from the DOM
+            document.body.removeChild(input);
+          };
+          
+          // Append the input to the body and trigger a click
+          document.body.appendChild(input);
+          input.click();
+        });
+      } else {
+        // Native platforms: Use expo-image-picker
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.6, // Reduce quality to ensure smaller file size
+          allowsMultipleSelection: false,
+          exif: false, // Don't include EXIF data to reduce file size
+        });
+        
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const selectedImage = result.assets[0];
+          console.log('Selected image:', { 
+            uri: selectedImage.uri,
+            width: selectedImage.width,
+            height: selectedImage.height,
+            fileSize: selectedImage.fileSize,
+            type: selectedImage.type
+          });
+          
+          // Check file size before upload (2MB limit)
+          if (selectedImage.fileSize && selectedImage.fileSize > 2 * 1024 * 1024) {
+            Alert.alert(
+              'Image too large', 
+              'Please select an image smaller than 2MB.',
+              [{ text: 'OK' }]
+            );
+            return;
+          }
+          
+          await uploadAvatar(selectedImage.uri);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+  
+  // Upload avatar to Supabase Storage
+  const uploadAvatar = async (uriOrFile: string | File, retryCount = 0) => {
+    try {
+      setUploadingImage(true);
+      console.log('Starting avatar upload:', 
+        typeof uriOrFile === 'string' ? 'from URI' : 'from File object', 
+        'Retry count:', retryCount
+      );
+      
+      // Create a unique file name
+      const fileExt = typeof uriOrFile === 'string' 
+        ? uriOrFile.split('.').pop()?.toLowerCase() || 'jpg'
+        : (uriOrFile as File).name.split('.').pop()?.toLowerCase() || 'jpg';
+      
+      const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
+      const filePath = fileName;
+      
+      console.log('Preparing to upload file:', { fileName, fileExt, filePath });
+      console.log('User ID:', user?.id, 'Auth status:', !!user);
+      
+      // Log Supabase session status
+      try {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        console.log('Session check before upload:', {
+          hasSession: !!sessionData?.session,
+          sessionError: sessionError?.message || 'none',
+          expiresAt: sessionData?.session?.expires_at ? new Date(sessionData.session.expires_at*1000).toISOString() : 'unknown'
+        });
+      } catch (sessionCheckError) {
+        console.error('Error checking session:', sessionCheckError);
+      }
+      
+      // For native platforms
+      if (Platform.OS !== 'web' && typeof uriOrFile === 'string') {
+        // Fetch the image data as blob
+        try {
+          console.log('Fetching image data as blob');
+          const response = await fetch(uriOrFile);
+          
+          console.log('Image fetch response status:', response.status, response.statusText);
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+          }
+          
+          const blob = await response.blob();
+          console.log('Blob created successfully:', { 
+            size: blob.size, 
+            type: blob.type || `image/${fileExt}`,
+            emptyBlob: blob.size === 0 ? 'YES-ERROR' : 'no'
+          });
+          
+          // Try direct fetch upload if supabase client has issues
+          try {
+            // Upload to Supabase Storage
+            console.log('Uploading to Supabase storage bucket: userimages');
+            console.log('Supabase instance check:', {
+              hasClient: !!supabase,
+              hasStorage: !!supabase?.storage,
+              hasFrom: !!supabase?.storage?.from
+            });
+            
+            const { data, error } = await supabase
+              .storage
+              .from('userimages')
+              .upload(filePath, blob, {
+                contentType: blob.type || `image/${fileExt}`,
+                upsert: true,
+                cacheControl: '3600'
+              });
+            
+            if (error) {
+              console.error('Supabase storage upload error:', error);
+              console.error('Error details:', {
+                message: error.message,
+                statusCode: error.statusCode,
+                errorType: error.name,
+                details: error.details
+              });
+              
+              // Try alternative direct upload method if the supabase client fails
+              throw error;
+            }
+            
+            console.log('Upload successful, data:', data);
+          } catch (uploadError: any) {
+            console.log('Trying alternative upload method via fetch API');
+            console.log('Upload error details:', {
+              message: uploadError.message,
+              name: uploadError.name,
+              stack: uploadError.stack?.substring(0, 200) // First 200 chars of stack trace
+            });
+            
+            // Get the current session
+            const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+            console.log('Session check for direct upload:', {
+              hasSession: !!sessionData?.session,
+              sessionError: sessionError?.message || 'none',
+              tokenLength: sessionData?.session?.access_token?.length || 0
+            });
+            
+            const session = sessionData?.session;
+            
+            if (!session) {
+              throw new Error('No authenticated session available');
+            }
+            
+            // If the Supabase client upload fails, try a direct fetch request
+            const supabaseUrl = 'https://vdrmtsifivvpioonpqqc.supabase.co';
+            const endpoint = `${supabaseUrl}/storage/v1/object/userimages/${filePath}`;
+            
+            console.log('Making direct API request to:', endpoint);
+            console.log('Request details:', {
+              method: 'POST',
+              contentType: blob.type || `image/${fileExt}`,
+              blobSize: blob.size,
+              headers: {
+                'Authorization': 'Bearer [REDACTED]',
+                'apikey': '[REDACTED]',
+                'x-upsert': 'true'
+              }
+            });
+            
+            try {
+              const uploadResponse = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${session.access_token}`,
+                  'apikey': session.access_token,
+                  'Content-Type': blob.type || `image/${fileExt}`,
+                  'x-upsert': 'true'
+                },
+                body: blob
+              });
+              
+              console.log('Direct fetch response:', {
+                status: uploadResponse.status,
+                statusText: uploadResponse.statusText,
+                ok: uploadResponse.ok,
+                headers: Object.fromEntries([...uploadResponse.headers.entries()].map(([key, value]) => [key, value]))
+              });
+              
+              if (!uploadResponse.ok) {
+                const errorText = await uploadResponse.text();
+                console.error('Direct upload failed with status:', uploadResponse.status);
+                console.error('Response:', errorText);
+                throw new Error(`Direct upload failed: ${uploadResponse.status} - ${errorText}`);
+              }
+              
+              console.log('Direct fetch upload successful');
+            } catch (fetchError: any) {
+              console.error('Fetch API error during direct upload:', fetchError);
+              console.error('Network details:', {
+                online: typeof navigator !== 'undefined' ? navigator.onLine : 'unknown',
+                error: fetchError.message,
+                name: fetchError.name
+              });
+              throw fetchError;
+            }
+          }
+          
+          // Get the public URL
+          const { data: publicUrlData } = supabase
+            .storage
+            .from('userimages')
+            .getPublicUrl(filePath);
+          
+          const newAvatarUrl = publicUrlData.publicUrl;
+          console.log('Public URL generated:', newAvatarUrl);
+          
+          // Update state and profile
+          setAvatarUrl(newAvatarUrl);
+          
+          // Test if the image is accessible by fetching it
+          try {
+            console.log('Verifying image URL accessibility');
+            const testFetch = await fetch(newAvatarUrl, { method: 'HEAD' });
+            console.log('Image accessibility check:', {
+              status: testFetch.status,
+              statusText: testFetch.statusText,
+              ok: testFetch.ok,
+              contentType: testFetch.headers.get('content-type'),
+              contentLength: testFetch.headers.get('content-length')
+            });
+            
+            if (!testFetch.ok) {
+              console.warn('Image URL may not be accessible:', testFetch.status);
+            } else {
+              console.log('Image URL verified as accessible');
+            }
+          } catch (testError: any) {
+            console.warn('Could not verify image URL access:', testError);
+            console.warn('Verification error details:', {
+              message: testError.message,
+              name: testError.name,
+              url: newAvatarUrl
+            });
+          }
+          
+          Alert.alert('Success', 'Avatar uploaded successfully');
+        } catch (fetchError: any) {
+          console.error('Error processing image:', fetchError);
+          console.error('Fetch error details:', {
+            message: fetchError.message,
+            name: fetchError.name,
+            type: typeof fetchError,
+            code: fetchError.code,
+            stack: fetchError.stack?.substring(0, 200) // First 200 chars of stack trace
+          });
+          throw new Error(`Error processing image: ${fetchError.message}`);
+        }
+      } else {
+        // Web platform
+        console.log('Web platform upload handling...');
+        
+        try {
+          // Get the file object (directly passed for web)
+          const file = uriOrFile as File;
+          
+          // Upload to Supabase using the file object directly
+          console.log('Uploading web file to Supabase storage:', {
+            name: file.name,
+            size: file.size,
+            type: file.type
+          });
+          
+          // Upload the file to Supabase
+          const { data, error } = await supabase
+            .storage
+            .from('userimages')
+            .upload(filePath, file, {
+              contentType: file.type || `image/${fileExt}`,
+              upsert: true,
+              cacheControl: '3600'
+            });
+          
+          if (error) {
+            console.error('Supabase storage web upload error:', error);
+            throw error;
+          }
+          
+          console.log('Web upload successful, data:', data);
+          
+          // Get the public URL
+          const { data: publicUrlData } = supabase
+            .storage
+            .from('userimages')
+            .getPublicUrl(filePath);
+          
+          const newAvatarUrl = publicUrlData.publicUrl;
+          console.log('Web upload - Public URL generated:', newAvatarUrl);
+          
+          // Update state and profile
+          setAvatarUrl(newAvatarUrl);
+          
+          // Test the URL accessibility
+          try {
+            const testFetch = await fetch(newAvatarUrl, { method: 'HEAD' });
+            if (!testFetch.ok) {
+              console.warn('Web upload - Image URL may not be accessible:', testFetch.status);
+            } else {
+              console.log('Web upload - Image URL verified as accessible');
+            }
+          } catch (testError) {
+            console.warn('Web upload - Could not verify image URL access:', testError);
+          }
+          
+          Alert.alert('Success', 'Avatar uploaded successfully');
+        } catch (webError: any) {
+          console.error('Web upload error:', webError);
+          console.error('Web error details:', {
+            message: webError.message || 'Unknown error',
+            name: webError.name,
+            stack: webError.stack?.substring(0, 200)
+          });
+          
+          // Try alternative direct upload method if needed
+          try {
+            console.log('Trying alternative web upload method');
+            
+            // Get current session
+            const { data: sessionData } = await supabase.auth.getSession();
+            const session = sessionData?.session;
+            
+            if (!session) {
+              throw new Error('No authenticated session available for web upload');
+            }
+            
+            const file = uriOrFile as File;
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Direct fetch upload
+            const supabaseUrl = 'https://vdrmtsifivvpioonpqqc.supabase.co';
+            const endpoint = `${supabaseUrl}/storage/v1/object/userimages/${filePath}`;
+            
+            const uploadResponse = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'apikey': session.access_token,
+                // Note: Do not set Content-Type header with FormData
+              },
+              body: file  // Send file directly
+            });
+            
+            if (!uploadResponse.ok) {
+              const errorText = await uploadResponse.text();
+              console.error('Alternative web upload failed:', uploadResponse.status);
+              console.error('Response:', errorText);
+              throw new Error(`Alternative web upload failed: ${uploadResponse.status}`);
+            }
+            
+            console.log('Alternative web upload successful');
+            
+            // Get the public URL
+            const { data: publicUrlData } = supabase
+              .storage
+              .from('userimages')
+              .getPublicUrl(filePath);
+            
+            const newAvatarUrl = publicUrlData.publicUrl;
+            console.log('Alternative web upload - URL generated:', newAvatarUrl);
+            
+            // Update state and profile
+            setAvatarUrl(newAvatarUrl);
+            
+            Alert.alert('Success', 'Avatar uploaded successfully');
+          } catch (altWebError: any) {
+            console.error('Alternative web upload failed:', altWebError);
+            throw altWebError;
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error.message, error);
+      console.error('Full error object:', {
+        message: error.message,
+        name: error.name, 
+        code: error.code,
+        cause: error.cause?.message,
+        stack: error.stack?.substring(0, 200) // First 200 chars of stack trace
+      });
+      
+      // Retry logic - try up to 2 times with a small delay
+      if (retryCount < 2) {
+        console.log(`Retrying upload (attempt ${retryCount + 1})...`);
+        
+        // Show retry message
+        Alert.alert(
+          'Upload Failed',
+          'Retrying upload automatically...',
+          [{ text: 'OK' }]
+        );
+        
+        // Wait a bit before retrying
+        setTimeout(() => {
+          uploadAvatar(uriOrFile, retryCount + 1);
+        }, 1000);
+        return;
+      }
+      
+      Alert.alert('Error uploading avatar', 
+        `Failed to upload image after ${retryCount + 1} attempts. ${error.message || 'Please check your connection and try again.'}`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      if (retryCount === 0) {
+        setUploadingImage(false);
+      }
+    }
+  };
+  
+  // Remove avatar from Supabase Storage
+  const removeAvatar = async () => {
+    try {
+      if (!avatarUrl) return;
+      
+      setUploadingImage(true);
+      
+      // Extract file name from URL
+      const fileName = avatarUrl.split('/').pop();
+      
+      if (fileName) {
+        // Delete from Supabase Storage
+        const { error } = await supabase
+          .storage
+          .from('userimages')
+          .remove([fileName]);
+        
+        if (error) {
+          throw error;
+        }
+      }
+      
+      // Update state and profile
+      setAvatarUrl('');
+      
+      Alert.alert('Success', 'Avatar removed successfully');
+    } catch (error: any) {
+      console.error('Error removing avatar:', error.message);
+      Alert.alert('Error', 'Failed to remove avatar. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const profileStyles = StyleSheet.create({
@@ -325,7 +823,82 @@ const ProfileView: React.FC = () => {
       backgroundColor: 'rgba(0, 0, 0, 0.7)',
       justifyContent: 'center',
       alignItems: 'center',
-    }
+    },
+    avatarTipContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+      padding: 10,
+      backgroundColor: 'rgba(10, 126, 164, 0.1)',
+      borderRadius: 8,
+      borderLeftWidth: 3,
+      borderLeftColor: '#0a7ea4',
+    },
+    avatarTip: {
+      marginLeft: 10,
+      fontSize: 14,
+      color: '#0a7ea4',
+      flex: 1,
+    },
+    avatarButtonsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 8,
+    },
+    avatarButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 15,
+      borderRadius: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flex: 1,
+      marginHorizontal: 5,
+      flexDirection: 'row',
+    },
+    uploadButton: {
+      backgroundColor: '#0a7ea4',
+    },
+    removeButton: {
+      backgroundColor: '#e74c3c',
+    },
+    avatarButtonText: {
+      color: '#fff',
+      fontSize: 14,
+      fontWeight: '500',
+      marginLeft: 8,
+    },
+    addPhotoHint: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 10,
+      backgroundColor: 'rgba(10, 126, 164, 0.1)',
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 20,
+    },
+    addPhotoText: {
+      color: '#0a7ea4',
+      fontSize: 14,
+      marginLeft: 6,
+    },
+    editAvatarButton: {
+      position: 'absolute',
+      right: 0,
+      bottom: 0,
+      backgroundColor: '#0a7ea4',
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 3,
+      borderColor: '#fff',
+    },
+    avatarImage: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+    },
   });
 
   if (!user) {
@@ -351,15 +924,54 @@ const ProfileView: React.FC = () => {
       {/* User avatar and email */}
       <View style={profileStyles.userInfoSection}>
         <View style={profileStyles.avatarContainer}>
-          {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={profileStyles.avatarPlaceholder} />
-          ) : (
+          {uploadingImage ? (
             <View style={profileStyles.avatarPlaceholder}>
-              <ThemedText style={profileStyles.avatarText}>{getInitials()}</ThemedText>
+              <ActivityIndicator size="large" color="#0a7ea4" />
+            </View>
+          ) : avatarUrl ? (
+            <View>
+              <Image 
+                source={{ uri: avatarUrl }} 
+                style={profileStyles.avatarImage} 
+                resizeMode="cover"
+              />
+              {!isEditing && (
+                <TouchableOpacity 
+                  style={profileStyles.editAvatarButton}
+                  onPress={() => setIsEditing(true)}
+                >
+                  <FeatherIcon name="camera" size={18} color="#fff" />
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            <View>
+              <View style={profileStyles.avatarPlaceholder}>
+                <ThemedText style={profileStyles.avatarText}>{getInitials()}</ThemedText>
+              </View>
+              {!isEditing && (
+                <TouchableOpacity 
+                  style={profileStyles.editAvatarButton}
+                  onPress={() => setIsEditing(true)}
+                >
+                  <FeatherIcon name="camera" size={18} color="#fff" />
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
-        <ThemedText style={profileStyles.emailText}>{user.email}</ThemedText>
+        
+        {!isEditing && !avatarUrl && (
+          <TouchableOpacity 
+            onPress={() => setIsEditing(true)}
+            style={profileStyles.addPhotoHint}
+          >
+            <FeatherIcon name="camera" size={14} color="#0a7ea4" />
+            <ThemedText style={profileStyles.addPhotoText}>Add a profile photo</ThemedText>
+          </TouchableOpacity>
+        )}
+        
+        <ThemedText style={profileStyles.emailText}>{user?.email}</ThemedText>
       </View>
 
       {!isEditing ? (
@@ -427,14 +1039,42 @@ const ProfileView: React.FC = () => {
           </View>
           
           <View style={profileStyles.inputContainer}>
-            <ThemedText style={profileStyles.inputLabel}>Avatar URL</ThemedText>
-            <TextInput
-              style={profileStyles.input}
-              value={avatarUrl}
-              onChangeText={setAvatarUrl}
-              placeholder="Enter image URL"
-              placeholderTextColor={isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)'}
-            />
+            <ThemedText style={profileStyles.inputLabel}>Profile Picture</ThemedText>
+            <View style={profileStyles.avatarTipContainer}>
+              <FeatherIcon name="info" size={16} color="#0a7ea4" />
+              <ThemedText style={profileStyles.avatarTip}>
+                Upload a profile picture to personalize your account
+              </ThemedText>
+            </View>
+            <View style={profileStyles.avatarButtonsContainer}>
+              <TouchableOpacity
+                style={[profileStyles.avatarButton, profileStyles.uploadButton]}
+                onPress={pickImage}
+                disabled={uploadingImage}
+              >
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <FeatherIcon name="upload" size={16} color="#fff" />
+                    <ThemedText style={profileStyles.avatarButtonText}>
+                      Upload Image
+                    </ThemedText>
+                  </>
+                )}
+              </TouchableOpacity>
+              
+              {avatarUrl ? (
+                <TouchableOpacity
+                  style={[profileStyles.avatarButton, profileStyles.removeButton]}
+                  onPress={removeAvatar}
+                  disabled={uploadingImage}
+                >
+                  <FeatherIcon name="trash-2" size={16} color="#fff" />
+                  <ThemedText style={profileStyles.avatarButtonText}>Remove</ThemedText>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           </View>
           
           <View style={profileStyles.inputContainer}>
@@ -547,7 +1187,7 @@ const ProfileView: React.FC = () => {
       
       {isUpdating && (
         <View style={profileStyles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#ffc107" />
+          <ActivityIndicator size="large" color={isDark ? 'white' : '#0a7ea4'} />
         </View>
       )}
     </View>
