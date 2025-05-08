@@ -247,6 +247,9 @@ const ProfileView: React.FC = () => {
       setUploadingImage(true);
       console.log('Starting avatar upload...');
       
+      // Store the old avatar URL for deletion after successful upload
+      const oldAvatarUrl = avatarUrl;
+      
       // Create a unique file name
       const fileExt = typeof uriOrFile === 'string' 
         ? uriOrFile.split('.').pop()?.toLowerCase() || 'jpg'
@@ -256,6 +259,8 @@ const ProfileView: React.FC = () => {
       const filePath = fileName;
       
       console.log('Upload details:', { fileName, fileExt });
+      
+      let newAvatarUrl = '';
       
       // Web platform
       if (Platform.OS === 'web' && typeof uriOrFile !== 'string') {
@@ -280,9 +285,7 @@ const ProfileView: React.FC = () => {
           .from('userimages')
           .getPublicUrl(filePath);
         
-        setAvatarUrl(publicUrlData.publicUrl);
-        Alert.alert('Success', 'Avatar uploaded successfully');
-        return;
+        newAvatarUrl = publicUrlData.publicUrl;
       }
       
       // Native platforms - iOS and Android
@@ -306,12 +309,6 @@ const ProfileView: React.FC = () => {
         
         // Format depends on platform
         if (Platform.OS === 'ios') {
-          // For iOS, we need to ensure we have a proper file:// URL
-          // If we have a ph:// URL from photo library, it might cause issues
-          if (uriOrFile.startsWith('ph://')) {
-            console.log('iOS photo library asset detected, may need special handling');
-          }
-          
           // iOS typically needs this format
           const fileInfo = {
             uri: uriOrFile,
@@ -321,12 +318,6 @@ const ProfileView: React.FC = () => {
           
           // @ts-ignore - This is the standard approach for React Native
           formData.append('file', fileInfo);
-          
-          console.log('iOS FormData created with:', {
-            uri: uriOrFile.substring(0, 30) + '...',
-            type: `image/${fileExt}`,
-            name: fileName
-          });
         } else {
           // Android format
           const fileInfo = {
@@ -337,75 +328,58 @@ const ProfileView: React.FC = () => {
           
           // @ts-ignore - Type checking doesn't fully support FormData in React Native
           formData.append('file', fileInfo);
-          
-          console.log('Android FormData created');
         }
         
-        // Log before upload attempt
-        console.log('Uploading to:', endpoint);
-        console.log('Using access token length:', session.access_token.length);
+        // Make a direct fetch request for reliability
+        const uploadResponse = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': session.access_token,
+          },
+          body: formData
+        });
         
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          throw new Error(`Upload failed with status ${uploadResponse.status}`);
+        }
+        
+        // Generate the public URL
+        const { data: publicUrlData } = supabase
+          .storage
+          .from('userimages')
+          .getPublicUrl(filePath);
+        
+        newAvatarUrl = publicUrlData.publicUrl;
+        
+        // Verify the image has content
         try {
-          // Make a direct fetch request for reliability
-          const uploadResponse = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-              'apikey': session.access_token,
-              // Important: Do NOT set Content-Type header when using FormData
-            },
-            body: formData
-          });
-          
-          console.log('Upload response status:', uploadResponse.status);
-          
-          if (!uploadResponse.ok) {
-            const errorText = await uploadResponse.text();
-            console.error('Upload failed:', errorText);
-            throw new Error(`Upload failed with status ${uploadResponse.status}`);
+          const checkResponse = await fetch(newAvatarUrl, { method: 'HEAD' });
+          if (checkResponse.status !== 200 || parseInt(checkResponse.headers.get('content-length') || '0') === 0) {
+            console.warn('Image may be empty or not accessible yet');
           }
-          
-          const responseData = await uploadResponse.json();
-          console.log('Upload success:', responseData);
-          
-          // Generate the public URL
-          const { data: publicUrlData } = supabase
-            .storage
-            .from('userimages')
-            .getPublicUrl(filePath);
-          
-          // Before setting the URL, verify it exists
-          try {
-            const checkResponse = await fetch(publicUrlData.publicUrl, { method: 'HEAD' });
-            
-            if (checkResponse.status === 200 && parseInt(checkResponse.headers.get('content-length') || '0') > 0) {
-              console.log('Image verified:', {
-                size: checkResponse.headers.get('content-length'),
-                type: checkResponse.headers.get('content-type')
-              });
-            } else {
-              console.warn('Image may be empty:', {
-                status: checkResponse.status, 
-                size: checkResponse.headers.get('content-length')
-              });
-              
-              // Wait a moment for eventual consistency
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-          } catch (verifyError) {
-            console.warn('Error verifying image:', verifyError);
-          }
-          
-          const newAvatarUrl = publicUrlData.publicUrl;
-          console.log('Setting avatar URL to:', newAvatarUrl);
-          
-          // Set avatar URL and show success message
-          setAvatarUrl(newAvatarUrl);
-          Alert.alert('Success', 'Avatar uploaded successfully');
-        } catch (uploadError: any) {
-          console.error('Upload request failed:', uploadError);
-          throw new Error(`Upload request failed: ${uploadError.message}`);
+        } catch (verifyError) {
+          console.warn('Error verifying image:', verifyError);
         }
+      }
+      
+      if (newAvatarUrl) {
+        // Just update the avatar URL in the UI without refreshing the entire profile
+        setAvatarUrl(newAvatarUrl);
+        
+        // Silently update the database without refreshing the profile view
+        updateAvatarUrlInDatabase(newAvatarUrl);
+        
+        // Delete the old avatar file if it exists
+        if (oldAvatarUrl) {
+          deleteOldAvatar(oldAvatarUrl).catch(error => {
+            console.error('Failed to delete old avatar:', error);
+          });
+        }
+        
+        // Success message without refreshing the view
+        Alert.alert('Success', 'Avatar updated');
       }
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -415,6 +389,68 @@ const ProfileView: React.FC = () => {
     }
   };
   
+  // Delete the old avatar file from storage
+  const deleteOldAvatar = async (oldAvatarUrl: string) => {
+    try {
+      // Extract the file name from the URL
+      // Example URL: https://vdrmtsifivvpioonpqqc.supabase.co/storage/v1/object/public/userimages/filename.jpg
+      const urlParts = oldAvatarUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      
+      if (!fileName) {
+        throw new Error('Could not extract file name from URL');
+      }
+      
+      console.log('Deleting old avatar file:', fileName);
+      
+      // Delete the file from Supabase storage
+      const { error } = await supabase
+        .storage
+        .from('userimages')
+        .remove([fileName]);
+      
+      if (error) {
+        console.error('Error deleting old avatar:', error);
+      } else {
+        console.log('Old avatar deleted successfully');
+      }
+    } catch (error) {
+      console.error('Error in deleteOldAvatar:', error);
+      // Don't throw so this doesn't disrupt the main flow
+    }
+  };
+  
+  // Silently update just the avatar URL in the database without refreshing the profile
+  const updateAvatarUrlInDatabase = async (newAvatarUrl: string) => {
+    try {
+      console.log('Silently updating avatar URL in database');
+      
+      // Only update the avatar_url field directly using supabase client
+      // This avoids triggering any navigation or screen refreshes
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ avatar_url: newAvatarUrl })
+        .eq('id', user?.id);
+      
+      if (error) {
+        console.error('Error updating avatar URL in database:', error);
+      } else {
+        console.log('Avatar URL updated successfully in database');
+        
+        // Update profileData state without triggering full refresh
+        if (profileData) {
+          // Create a new object to maintain immutability but only update the avatar_url
+          setProfileData({
+            ...profileData,
+            avatar_url: newAvatarUrl
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Silent update error:', error);
+    }
+  };
+
   // Remove avatar from Supabase Storage
   const removeAvatar = async () => {
     try {
