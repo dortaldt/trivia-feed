@@ -1507,9 +1507,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Platform.OS === 'ios' ? 50 : 25,
     left: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     zIndex: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1520,9 +1520,9 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   avatarCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#ffc107',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1531,13 +1531,13 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: 'black',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
 });
 
