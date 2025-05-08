@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, TextInput, Text, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');
@@ -12,6 +13,34 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { signUp, signInWithGoogle, signInWithApple, isLoading } = useAuth();
+  
+  // Get search params to check if we deliberately navigated here
+  const params = useLocalSearchParams();
+  const isDirectNavigation = params.direct === 'true';
+  
+  // Prevent auto-redirection when directly navigating to this screen
+  useEffect(() => {
+    console.log('📱 SignUp screen mounted, direct navigation:', isDirectNavigation);
+
+    // Track this view to prevent unwanted redirects in _layout.tsx
+    const trackAuthScreenView = async () => {
+      try {
+        await AsyncStorage.setItem('currentlyViewingAuthScreen', 'true');
+        console.log('📱 Marked user as currently viewing auth screen');
+      } catch (e) {
+        console.error('Error setting auth screen marker:', e);
+      }
+    };
+    
+    trackAuthScreenView();
+    
+    // Cleanup function to remove the marker when leaving the screen
+    return () => {
+      AsyncStorage.removeItem('currentlyViewingAuthScreen')
+        .then(() => console.log('📱 Cleared auth screen viewing marker'))
+        .catch(e => console.error('Error clearing auth screen marker:', e));
+    };
+  }, [isDirectNavigation]);
 
   const handleSignUp = async () => {
     if (!email || !password || !confirmPassword) {
@@ -41,7 +70,10 @@ export default function SignUpScreen() {
   };
 
   const navigateToLogin = () => {
-    router.push('/auth/login');
+    router.push({
+      pathname: '/auth/login',
+      params: { direct: 'true' }
+    });
   };
 
   if (isLoading) {

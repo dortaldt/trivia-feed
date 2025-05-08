@@ -10,6 +10,8 @@ import { Colors } from '@/constants/Colors';
 import { FeatherIcon } from '@/components/FeatherIcon';
 import { WebContainer } from '@/components/WebContainer';
 import { colors, spacing, borderRadius } from '@/src/theme';
+import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LeaderboardTabs = {
   Daily: 'day',
@@ -30,7 +32,7 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
   const { width } = useWindowDimensions();
@@ -39,6 +41,27 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
   // Use theme colors instead of hardcoded values
   const ACCENT_COLOR = colors.accent;
   const ACCENT_FOREGROUND = colors.accentForeground;
+
+  // Add debug log for auth state
+  useEffect(() => {
+    console.log('Leaderboard - Auth state:', { 
+      hasUser: !!user, 
+      isGuest, 
+      activeTab 
+    });
+    
+    // Check AsyncStorage directly for debugging
+    const checkGuestMode = async () => {
+      try {
+        const guestMode = await AsyncStorage.getItem('guestMode');
+        console.log('Leaderboard - Guest mode in AsyncStorage:', guestMode);
+      } catch (e) {
+        console.error('Error checking guest mode in Leaderboard:', e);
+      }
+    };
+    
+    checkGuestMode();
+  }, [user, isGuest, activeTab]);
 
   useEffect(() => {
     loadLeaderboardData();
@@ -217,6 +240,71 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
     );
   };
 
+  // Render a sign-in prompt banner for guest users
+  const renderGuestPrompt = () => {
+    // Always check AsyncStorage directly to be doubly sure
+    const [localIsGuest, setLocalIsGuest] = useState(isGuest);
+    
+    useEffect(() => {
+      const checkLocalGuestMode = async () => {
+        try {
+          const guestMode = await AsyncStorage.getItem('guestMode');
+          const isGuestMode = guestMode === 'true';
+          console.log('Leaderboard banner - Guest mode check:', isGuestMode);
+          setLocalIsGuest(isGuestMode || isGuest);
+        } catch (e) {
+          console.error('Error in local guest mode check:', e);
+        }
+      };
+      
+      checkLocalGuestMode();
+    }, [isGuest]);
+    
+    if (!localIsGuest && !!user) return null;
+    
+    // If we're in guest mode or don't have a user, show the banner
+    return (
+      <View style={[
+        styles.guestPromptContainer,
+        { backgroundColor: isDark ? 'rgba(255, 193, 7, 0.15)' : 'rgba(255, 193, 7, 0.2)' }
+      ]}>
+        <FeatherIcon 
+          name="award" 
+          size={24} 
+          color="#ffc107" 
+          style={{ marginRight: 12 }}
+        />
+        <View style={{ flex: 1 }}>
+          <ThemedText style={styles.guestPromptTitle}>
+            Want to join the leaderboard?
+          </ThemedText>
+          <ThemedText style={styles.guestPromptDescription}>
+            Sign in or create an account to track your stats and compete with others!
+          </ThemedText>
+        </View>
+        <TouchableOpacity 
+          style={styles.guestPromptButton}
+          onPress={() => {
+            // Navigate to login page
+            if (Platform.OS === 'web') {
+              window.location.href = '/auth/login?direct=true';
+            } else {
+              // Use Expo Router for iOS/Android navigation
+              router.push({
+                pathname: '/auth/login',
+                params: { direct: 'true' }
+              });
+            }
+          }}
+        >
+          <ThemedText style={styles.guestPromptButtonText}>
+            Sign In
+          </ThemedText>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   const content = (
     <ThemedView 
       style={styles.container}
@@ -247,6 +335,8 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
           </ThemedText>
         </ThemedView>
       )}
+      
+      {renderGuestPrompt()}
       
       {renderLeaderboardContent()}
     </ThemedView>
@@ -446,5 +536,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     opacity: 0.7,
     textAlign: 'center',
+  },
+  guestPromptContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#ffc107',
+  },
+  guestPromptTitle: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  guestPromptDescription: {
+    fontSize: 14,
+    opacity: 0.8,
+  },
+  guestPromptButton: {
+    backgroundColor: '#ffc107',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginLeft: 8,
+  },
+  guestPromptButtonText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 }); 
