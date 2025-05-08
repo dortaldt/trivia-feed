@@ -21,24 +21,44 @@ export const logDbOperation = (
   // Only log in development mode
   if (!__DEV__) return;
   
-  const logData = {
-    timestamp: Date.now(),
-    direction,
-    table,
-    operation,
-    records,
-    data,
-    userId,
-    status,
-    error
-  };
-  
-  // Emit the db operation event
-  dbEventEmitter.emit('db-operation', logData);
-  
-  // Also log to console
-  console.log(`[DB ${direction.toUpperCase()}] ${operation.toUpperCase()} ${records} records to ${table}`, 
-    status === 'error' ? `ERROR: ${error}` : 'Success');
+  try {
+    // Safe copy of data to prevent proxy handler errors
+    let safeData: any;
+    try {
+      // Handle potential circular references or proxy objects
+      safeData = JSON.parse(JSON.stringify(data || {}));
+    } catch (jsonError) {
+      // If JSON serialization fails, create a simplified representation
+      safeData = { 
+        note: "Original data couldn't be safely serialized",
+        type: typeof data,
+        isNull: data === null,
+        isUndefined: data === undefined
+      };
+    }
+    
+    const logData = {
+      timestamp: Date.now(),
+      direction,
+      table,
+      operation,
+      records,
+      data: safeData,
+      userId: userId || 'unknown',
+      status,
+      error: error || null
+    };
+    
+    // Emit the db operation event
+    dbEventEmitter.emit('db-operation', logData);
+    
+    // Also log to console
+    console.log(`[DB ${direction.toUpperCase()}] ${operation.toUpperCase()} ${records} records to ${table}`, 
+      status === 'error' ? `ERROR: ${error}` : 'Success');
+  } catch (loggingError) {
+    // Fallback if even our error handling fails
+    console.log(`Failed to log DB operation: ${loggingError instanceof Error ? loggingError.message : 'Unknown error'}`);
+  }
 };
 
 // Get a unique device identifier for tracking sync sources
@@ -58,14 +78,37 @@ export async function syncUserProfile(userId: string, userProfile: UserProfile):
       return;
     }
 
+    // Add null check for userProfile
+    if (!userProfile) {
+      console.log('User profile is null or undefined, cannot sync');
+      return;
+    }
+
     console.log('Syncing user profile data for user:', userId);
     
     // First, check if profile exists
-    const { data: existingProfile, error: fetchError } = await supabase
-      .from('user_profile_data')
-      .select('version, last_refreshed')
-      .eq('id', userId)
-      .single();
+    let existingProfile = null;
+    let fetchError = null;
+    
+    try {
+      const result = await supabase
+        .from('user_profile_data')
+        .select('version, last_refreshed')
+        .eq('id', userId)
+        .single();
+      
+      existingProfile = result.data;
+      fetchError = result.error;
+    } catch (supabaseError) {
+      console.error('Supabase request failed:', supabaseError);
+      return; // Exit early if the database query itself fails
+    }
+    
+    // Safely create the query object for logging
+    const queryObject = { 
+      id: userId, 
+      columns: ['version', 'last_refreshed'] 
+    };
     
     // Log the select operation
     logDbOperation(
@@ -73,7 +116,7 @@ export async function syncUserProfile(userId: string, userProfile: UserProfile):
       'user_profile_data', 
       'select', 
       1, 
-      { query: { id: userId }, columns: ['version', 'last_refreshed'] },
+      { query: queryObject },
       userId,
       fetchError && fetchError.code !== 'PGRST116' ? 'error' : 'success',
       fetchError?.message
@@ -102,82 +145,127 @@ export async function syncUserProfile(userId: string, userProfile: UserProfile):
       // Profile doesn't exist, create it
       console.log('Creating new profile in database');
       
+      // Ensure all properties exist and have default values
       const profileData = {
         id: userId,
-        topics: userProfile.topics,
+        topics: userProfile.topics || {},
         cold_start_complete: userProfile.coldStartComplete || false,
         total_questions_answered: userProfile.totalQuestionsAnswered || 0,
-        last_refreshed: userProfile.lastRefreshed
+        last_refreshed: userProfile.lastRefreshed || Date.now()
       };
       
-      const { error: insertError } = await supabase
-        .from('user_profile_data')
-        .insert(profileData);
-      
-      // Log the insert operation
-      logDbOperation(
-        'sent', 
-        'user_profile_data', 
-        'insert', 
-        1, 
-        profileData,
-        userId,
-        insertError ? 'error' : 'success',
-        insertError?.message
-      );
-      
-      if (insertError) {
-        console.error('Error inserting profile data:', insertError);
+      try {
+        const { error: insertError } = await supabase
+          .from('user_profile_data')
+          .insert(profileData);
+        
+        // Log the insert operation
+        logDbOperation(
+          'sent', 
+          'user_profile_data', 
+          'insert', 
+          1, 
+          profileData,
+          userId,
+          insertError ? 'error' : 'success',
+          insertError?.message
+        );
+        
+        if (insertError) {
+          console.error('Error inserting profile data:', insertError);
+        }
+      } catch (insertError) {
+        console.error('Failed to insert profile:', insertError);
       }
     } else {
       // Profile exists, check if we need to update
       console.log('Existing profile found, checking if update needed');
       
+      // Make sure lastRefreshed values are properly initialized
+      const localLastRefreshed = userProfile.lastRefreshed || 0;
+      const serverLastRefreshed = existingProfile.last_refreshed || 0;
+      
       // Only update if our data is newer
-      if (userProfile.lastRefreshed > existingProfile.last_refreshed) {
+      if (localLastRefreshed > serverLastRefreshed) {
         console.log('Local profile is newer, updating server');
         
         const updateData = {
-          topics: userProfile.topics,
+          topics: userProfile.topics || {},
           cold_start_complete: userProfile.coldStartComplete || false,
           total_questions_answered: userProfile.totalQuestionsAnswered || 0,
-          last_refreshed: userProfile.lastRefreshed,
-          version: existingProfile.version + 1
+          last_refreshed: localLastRefreshed,
+          version: (existingProfile.version || 0) + 1
         };
         
-        const { error: updateError } = await supabase
-          .from('user_profile_data')
-          .update(updateData)
-          .eq('id', userId)
-          .eq('version', existingProfile.version); // Optimistic concurrency control
-        
-        // Log the update operation
-        logDbOperation(
-          'sent', 
-          'user_profile_data', 
-          'update', 
-          1, 
-          { query: { id: userId, version: existingProfile.version }, data: updateData },
-          userId,
-          updateError ? 'error' : 'success',
-          updateError?.message
-        );
-        
-        if (updateError) {
-          console.error('Error updating profile data:', updateError);
+        try {
+          const { error: updateError } = await supabase
+            .from('user_profile_data')
+            .update(updateData)
+            .eq('id', userId)
+            .eq('version', existingProfile.version || 0); // Optimistic concurrency control
           
-          // If error is due to concurrency violation, fetch latest and handle merge
-          if (updateError.code === '23514') { // Constraint violation
-            console.log('Concurrency conflict detected, handling merge');
-            await handleProfileMerge(userId, userProfile);
+          // Safely create query object for logging
+          const safeQueryObject = {
+            id: userId,
+            version: existingProfile.version || 0
+          };
+          
+          // Log the update operation - with safe objects
+          logDbOperation(
+            'sent', 
+            'user_profile_data', 
+            'update', 
+            1, 
+            { query: safeQueryObject, data: updateData },
+            userId,
+            updateError ? 'error' : 'success',
+            updateError?.message
+          );
+          
+          if (updateError) {
+            console.error('Error updating profile data:', updateError);
+            
+            // If error is due to concurrency violation, fetch latest and handle merge
+            if (updateError.code === '23514') { // Constraint violation
+              console.log('Concurrency conflict detected, handling merge');
+              await handleProfileMerge(userId, userProfile);
+            }
           }
+        } catch (updateError) {
+          console.error('Failed to update profile:', updateError);
         }
       } else {
         console.log('Server profile is newer, no update needed');
       }
     }
   } catch (error) {
-    console.error('Error in syncUserProfile:', error);
+    // Handle error safely to prevent Proxy handler is null errors
+    try {
+      // Structured error logging with safety checks
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
+      const errorName = error instanceof Error ? error.name : 'UnknownError';
+      const errorStack = error instanceof Error ? error.stack : '';
+      
+      console.error('Error in syncUserProfile:', {
+        name: errorName,
+        message: errorMsg,
+        userId: userId || 'undefined',
+        hasUserProfile: userProfile ? 'yes' : 'no',
+        stackPreview: errorStack ? errorStack.split('\n').slice(0, 3).join('\n') : 'No stack trace'
+      });
+      
+      // Log the error for debugging
+      console.log('DEBUG: syncUserProfile execution failed. Context:', {
+        time: new Date().toISOString(),
+        userId: typeof userId === 'string' ? userId : 'invalid',
+        userProfileValid: userProfile !== null && userProfile !== undefined,
+        error: errorMsg
+      });
+    } catch (nestedError) {
+      // Ultimate fallback if even our error handling code fails
+      console.log('CRITICAL ERROR: Failed to handle error in syncUserProfile:', 
+        nestedError instanceof Error ? nestedError.message : 'Unknown nested error');
+    }
   }
 }
 
@@ -186,20 +274,43 @@ export async function syncUserProfile(userId: string, userProfile: UserProfile):
  */
 async function handleProfileMerge(userId: string, localProfile: UserProfile): Promise<void> {
   try {
-    // Fetch the latest server profile
-    const { data: serverProfile, error } = await supabase
-      .from('user_profile_data')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    // Check if localProfile is valid
+    if (!userId || !localProfile) {
+      console.log('Invalid arguments for profile merge:', {
+        hasUserId: !!userId,
+        hasLocalProfile: !!localProfile
+      });
+      return;
+    }
+
+    let serverProfile = null;
+    let error = null;
     
-    // Log the select operation
+    // Fetch the latest server profile
+    try {
+      const result = await supabase
+        .from('user_profile_data')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      serverProfile = result.data;
+      error = result.error;
+    } catch (fetchError) {
+      console.error('Supabase request failed during profile merge:', fetchError);
+      return;
+    }
+    
+    // Safely create query object for logging
+    const safeQueryObject = { id: userId };
+    
+    // Log the select operation with safe objects
     logDbOperation(
       'sent', 
       'user_profile_data', 
       'select', 
       1, 
-      { query: { id: userId }, columns: ['*'] },
+      { query: safeQueryObject, columns: ['*'] },
       userId,
       error ? 'error' : 'success',
       error?.message
@@ -210,7 +321,13 @@ async function handleProfileMerge(userId: string, localProfile: UserProfile): Pr
       return;
     }
     
-    // Log the received data
+    // Verify serverProfile exists
+    if (!serverProfile) {
+      console.log('Server profile not found, cannot perform merge');
+      return;
+    }
+    
+    // Log the received data safely
     logDbOperation(
       'received', 
       'user_profile_data', 
@@ -220,42 +337,73 @@ async function handleProfileMerge(userId: string, localProfile: UserProfile): Pr
       userId
     );
     
+    // Ensure timestamp values are properly initialized
+    const localLastRefreshed = localProfile.lastRefreshed || 0;
+    const serverLastRefreshed = serverProfile.last_refreshed || 0;
+    
     // TODO: Implement more sophisticated merge logic
     // For now, we'll keep the profile with the most recent lastRefreshed timestamp
-    if (localProfile.lastRefreshed > serverProfile.last_refreshed) {
+    if (localLastRefreshed > serverLastRefreshed) {
       // Local profile is newer, try update again
       const updateData = {
-        topics: localProfile.topics,
+        topics: localProfile.topics || {},
         cold_start_complete: localProfile.coldStartComplete || false,
         total_questions_answered: localProfile.totalQuestionsAnswered || 0,
-        last_refreshed: localProfile.lastRefreshed,
-        version: serverProfile.version + 1
+        last_refreshed: localLastRefreshed,
+        version: (serverProfile.version || 0) + 1
       };
       
-      const { error: updateError } = await supabase
-        .from('user_profile_data')
-        .update(updateData)
-        .eq('id', userId)
-        .eq('version', serverProfile.version);
-      
-      // Log the update operation
-      logDbOperation(
-        'sent', 
-        'user_profile_data', 
-        'update', 
-        1, 
-        { query: { id: userId, version: serverProfile.version }, data: updateData },
-        userId,
-        updateError ? 'error' : 'success',
-        updateError?.message
-      );
-      
-      if (updateError) {
-        console.error('Error during profile merge update:', updateError);
+      try {
+        const { error: updateError } = await supabase
+          .from('user_profile_data')
+          .update(updateData)
+          .eq('id', userId)
+          .eq('version', serverProfile.version || 0);
+        
+        // Create safe query object for logging
+        const safeUpdateQuery = {
+          id: userId,
+          version: serverProfile.version || 0
+        };
+        
+        // Log the update operation with safe objects
+        logDbOperation(
+          'sent', 
+          'user_profile_data', 
+          'update', 
+          1, 
+          { query: safeUpdateQuery, data: updateData },
+          userId,
+          updateError ? 'error' : 'success',
+          updateError?.message
+        );
+        
+        if (updateError) {
+          console.error('Error during profile merge update:', updateError);
+        }
+      } catch (updateError) {
+        console.error('Failed to execute profile merge update:', updateError);
       }
     }
   } catch (error) {
-    console.error('Error in handleProfileMerge:', error);
+    // Handle error safely to prevent Proxy handler is null errors
+    try {
+      // Structured error logging with safety checks
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
+      const errorName = error instanceof Error ? error.name : 'UnknownError';
+      const errorStack = error instanceof Error ? error.stack : '';
+      
+      console.error('Error in handleProfileMerge:', {
+        name: errorName,
+        message: errorMsg,
+        userId: userId || 'undefined',
+        hasLocalProfile: localProfile ? 'yes' : 'no',
+        stackPreview: errorStack ? errorStack.split('\n').slice(0, 3).join('\n') : 'No stack trace'
+      });
+    } catch (nestedError) {
+      // Ultimate fallback
+      console.log('CRITICAL ERROR: Failed to handle error in profile merge.');
+    }
   }
 }
 
