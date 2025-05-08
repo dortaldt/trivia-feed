@@ -45,13 +45,13 @@ type FeedItemProps = {
   onAnswer?: (answerIndex: number, isCorrect: boolean) => void;
   showExplanation?: () => void;
   onNextQuestion?: () => void;
+  onToggleLeaderboard?: () => void;
 };
 
-const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, onNextQuestion }) => {
+const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, onNextQuestion, onToggleLeaderboard }) => {
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [showLearningCapsule, setShowLearningCapsule] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [hoveredAnswerIndex, setHoveredAnswerIndex] = useState<number | null>(null);
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
   
@@ -158,9 +158,11 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     }
   };
 
-  const toggleLeaderboard = () => {
-    setShowLeaderboard(!showLeaderboard);
-  };
+  const toggleLeaderboard = useCallback(() => {
+    if (onToggleLeaderboard) {
+      onToggleLeaderboard();
+    }
+  }, [onToggleLeaderboard]);
 
   const isAnswered = () => {
     return questionState?.status === 'answered' && questionState?.answerIndex !== undefined;
@@ -378,33 +380,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
             </ThemedText>
           </Animated.View>
         )}
-
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={showLeaderboard}
-          onRequestClose={toggleLeaderboard}
-          statusBarTranslucent={true}
-        >
-          <View style={styles.leaderboardModalContainer}>
-            <View style={styles.leaderboardModalContent}>
-              <View style={styles.leaderboardModalHeader}>
-                <ThemedText style={styles.leaderboardModalTitle}>Leaderboard</ThemedText>
-                <TouchableOpacity 
-                  onPress={toggleLeaderboard} 
-                  style={styles.leaderboardCloseButton}
-                >
-                  <View style={styles.leaderboardCloseButtonCircle}>
-                    <FeatherIcon name="x" size={20} color="black" />
-                  </View>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.leaderboardModalBody}>
-                <Leaderboard limit={10} />
-              </View>
-            </View>
-          </View>
-        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -617,51 +592,5 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     opacity: 0.5,
-  },
-  leaderboardModalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-  },
-  leaderboardModalContent: {
-    width: '90%',
-    height: '80%',
-    backgroundColor: '#1a1a1a',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    overflow: 'hidden',
-    ...(Platform.OS === 'web' ? {
-      maxWidth: 800,
-    } : {})
-  },
-  leaderboardModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    backgroundColor: '#121212',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  leaderboardModalTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  leaderboardModalBody: {
-    flex: 1,
-  },
-  leaderboardCloseButton: {
-    padding: 5,
-  },
-  leaderboardCloseButtonCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#ffc107',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });

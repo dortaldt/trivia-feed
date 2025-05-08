@@ -63,9 +63,7 @@ module.exports = {
     enabled: true,
     checkAutomatically: "ON_LOAD"
   },
-  runtimeVersion: {
-    policy: "sdkVersion"
-  },
+  runtimeVersion: "1.0.0",
   splash: {
     image: "./assets/images/splash-icon.png",
     resizeMode: "contain",
@@ -76,7 +74,15 @@ module.exports = {
   ],
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.triviafeed"
+    bundleIdentifier: "com.triviafeed",
+    infoPlist: {
+      UIAppFonts: [
+        "AntDesign.ttf",
+        "Feather.ttf",
+        "FontAwesome.ttf",
+        "MaterialIcons.ttf"
+      ]
+    }
   },
   android: {
     adaptiveIcon: {

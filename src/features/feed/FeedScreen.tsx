@@ -61,6 +61,7 @@ import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../../lib/supabaseClient';
 import { countries } from '../../data/countries';
 import ProfileBottomSheet from '../../components/ProfileBottomSheet';
+import LeaderboardBottomSheet from '../../components/LeaderboardBottomSheet';
 
 const { width, height } = Dimensions.get('window');
 
@@ -78,6 +79,9 @@ const FeedScreen: React.FC = () => {
   const [currentExplanation, setCurrentExplanation] = useState<string[]>([]);
   // Add state for profile modal
   const [showProfile, setShowProfile] = useState(false);
+  // Add a state variable for the leaderboard visibility
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [currentLeaderboardItemId, setCurrentLeaderboardItemId] = useState<string | null>(null);
   
   // Get user from auth context
   const { user } = useAuth();
@@ -984,6 +988,14 @@ const FeedScreen: React.FC = () => {
     }
   }, [currentIndex, personalizedFeed, viewportHeight, feedData, feedExplanations, dispatch]);
 
+  // Add a function to toggle the leaderboard
+  const toggleLeaderboard = useCallback((itemId?: string) => {
+    if (itemId) {
+      setCurrentLeaderboardItemId(itemId);
+    }
+    setShowLeaderboard(prev => !prev);
+  }, []);
+
   const renderItem = ({ item, index }: { item: FeedItemType; index: number }) => {
     // Add debug logging for duplicate detection and feed stability
     console.log(`Rendering item ${index}: ${item.id} - "${item.question.substring(0, 30)}..."`, 
@@ -1002,7 +1014,8 @@ const FeedScreen: React.FC = () => {
               setShowExplanationModal(true);
             }
           }}
-          onNextQuestion={handleNextQuestion} 
+          onNextQuestion={handleNextQuestion}
+          onToggleLeaderboard={() => toggleLeaderboard(item.id)}
         />
       </View>
     );
@@ -1196,6 +1209,9 @@ const FeedScreen: React.FC = () => {
 
       {/* Profile Bottom Sheet */}
       <ProfileBottomSheet isVisible={showProfile} onClose={toggleProfile} />
+
+      {/* Leaderboard Bottom Sheet */}
+      <LeaderboardBottomSheet isVisible={showLeaderboard} onClose={toggleLeaderboard} />
 
       {/* Debugging Modal for Personalization Explanations (DEV only) */}
       {__DEV__ && showExplanationModal && (
