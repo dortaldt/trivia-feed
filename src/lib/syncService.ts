@@ -11,7 +11,7 @@ export const dbEventEmitter = new EventEmitter();
 export const logDbOperation = (
   direction: 'sent' | 'received',
   table: string,
-  operation: 'insert' | 'update' | 'select' | 'upsert',
+  operation: 'insert' | 'update' | 'select' | 'upsert' | 'delete',
   records: number,
   data: any,
   userId?: string,
@@ -618,6 +618,7 @@ export async function fetchUserInteractions(
 
 /**
  * Syncs feed changes with Supabase
+ * With aggressive optimization to minimize database growth
  */
 export async function syncFeedChanges(
   userId: string, 
@@ -628,19 +629,51 @@ export async function syncFeedChanges(
       return;
     }
 
-    console.log(`Syncing ${feedChanges.length} feed changes`);
+    // More aggressive filtering: 
+    // 1. Skip small batches entirely
+    if (feedChanges.length < 10) {
+      console.log(`Skipping sync of only ${feedChanges.length} feed changes (minimum 10)`);
+      return;
+    }
+    
+    // 2. Deduplicate the feed changes before sending
+    const uniqueChanges = feedChanges.reduce((unique: FeedChange[], change) => {
+      // Check if we already have a similar change
+      const exists = unique.some(
+        c => c.itemId === change.itemId && 
+             c.type === change.type &&
+             Math.abs(c.timestamp - change.timestamp) < 5000 // Within 5 seconds
+      );
+      
+      if (!exists) {
+        unique.push(change);
+      }
+      return unique;
+    }, []);
+    
+    // 3. After deduplication, check if we still have enough changes
+    if (uniqueChanges.length < 5) {
+      console.log(`Skipping sync after deduplication: only ${uniqueChanges.length} unique changes`);
+      return;
+    }
+
+    console.log(`Syncing ${uniqueChanges.length} unique feed changes (from original ${feedChanges.length})`);
     
     const deviceId = getDeviceId();
     
-    // Prepare feed changes for insert
-    const formattedChanges = feedChanges.map(change => ({
+    // 4. Prepare feed changes with minimal data storage
+    const formattedChanges = uniqueChanges.map(change => ({
       user_id: userId,
       timestamp: change.timestamp,
       change_type: change.type,
       item_id: change.itemId,
-      question_text: change.questionText,
-      explanations: change.explanations,
-      weight_factors: change.weightFactors,
+      question_text: change.questionText?.substring(0, 100) || '', // Limit text length
+      // Maximum 1 explanation, truncated to 100 chars
+      explanations: change.explanations?.slice(0, 1).map(e => e.substring(0, 100)) || [],
+      // Minimal weight factors
+      weight_factors: change.weightFactors ? {
+        category: change.weightFactors.category
+      } : null,
       synced_from_device: deviceId
     }));
     
@@ -654,7 +687,7 @@ export async function syncFeedChanges(
       'sent', 
       'user_feed_changes', 
       'insert', 
-      feedChanges.length, 
+      formattedChanges.length, 
       formattedChanges,
       userId,
       error ? 'error' : 'success',
@@ -664,7 +697,16 @@ export async function syncFeedChanges(
     if (error) {
       console.error('Error syncing feed changes:', error);
     } else {
-      console.log(`Successfully synced ${feedChanges.length} feed changes`);
+      console.log(`Successfully synced ${formattedChanges.length} feed changes`);
+      
+      // 5. Run cleanup periodically after successfully syncing
+      // This helps maintain database size without requiring app restart
+      if (Math.random() < 0.1) { // 10% chance to run cleanup
+        console.log('Running post-sync feed changes cleanup');
+        cleanupFeedChanges(userId).catch(err => 
+          console.error('Error in post-sync cleanup:', err)
+        );
+      }
     }
   } catch (error) {
     console.error('Error in syncFeedChanges:', error);
@@ -689,7 +731,8 @@ export async function fetchFeedChanges(
       .from('user_feed_changes')
       .select('*')
       .eq('user_id', userId)
-      .order('timestamp', { ascending: false });
+      .order('timestamp', { ascending: false })
+      .limit(100); // Limit to most recent 100 records to improve performance
     
     // If afterTimestamp is provided, only get newer changes
     if (afterTimestamp) {
@@ -704,7 +747,7 @@ export async function fetchFeedChanges(
       1, 
       { 
         query: { user_id: userId, timestamp: afterTimestamp ? `>${afterTimestamp}` : undefined },
-        options: { order: 'timestamp', ascending: false } 
+        options: { order: 'timestamp', ascending: false, limit: 100 } 
       },
       userId
     );
@@ -1006,5 +1049,66 @@ export async function loadUserData(userId: string): Promise<{
       feedChanges: [],
       weightChanges: []
     };
+  }
+}
+
+/**
+ * Aggressively cleans up feed changes to prevent database bloat
+ * This function runs during app startup and periodically
+ */
+export async function cleanupFeedChanges(userId: string): Promise<void> {
+  try {
+    if (!userId) {
+      return;
+    }
+    
+    console.log('Aggressively cleaning up feed changes');
+    
+    // 1. Delete old records (3 days instead of 7)
+    const oldTimestamp = Date.now() - (3 * 24 * 60 * 60 * 1000);
+    
+    const { error: deleteError } = await supabase
+      .from('user_feed_changes')
+      .delete()
+      .eq('user_id', userId)
+      .lt('timestamp', oldTimestamp);
+    
+    // 2. Fix any records with future timestamps
+    const { error: fixTimestampError } = await supabase
+      .rpc('fix_future_timestamps', { user_id_param: userId });
+    
+    // 3. Enforce maximum records per user (100)
+    const { error: limitError } = await supabase
+      .rpc('limit_feed_changes_per_user', { 
+        user_id_param: userId,
+        max_records: 100
+      });
+    
+    // Log the operations
+    logDbOperation(
+      'sent', 
+      'user_feed_changes', 
+      'delete', 
+      1, 
+      { 
+        operations: [
+          { type: 'delete_old', timestamp_threshold: oldTimestamp },
+          { type: 'fix_timestamps' },
+          { type: 'limit_records', max_per_user: 100 }
+        ]
+      },
+      userId,
+      deleteError || fixTimestampError || limitError ? 'error' : 'success',
+      deleteError?.message || fixTimestampError?.message || limitError?.message
+    );
+    
+    if (deleteError || fixTimestampError || limitError) {
+      console.error('Error during feed changes cleanup:', 
+        deleteError || fixTimestampError || limitError);
+    } else {
+      console.log('Successfully cleaned up feed changes');
+    }
+  } catch (error) {
+    console.error('Error in cleanupFeedChanges:', error);
   }
 } 

@@ -1,0 +1,18 @@
+-- Copy and paste these commands into a direct psql connection to the database
+-- Do NOT run these in the Supabase SQL Editor
+-- These must run outside any transaction block
+
+-- 1. Connect to your database (replace your_database_name with your actual DB name)
+\c your_database_name
+
+-- 2. Run vacuum to reclaim space
+VACUUM FULL VERBOSE public.user_feed_changes;
+
+-- 3. Update statistics for query planning
+ANALYZE VERBOSE public.user_feed_changes;
+
+-- 4. Check table size after optimization
+SELECT pg_size_pretty(pg_total_relation_size('public.user_feed_changes')) as table_size;
+
+-- NOTE: If you don't have direct psql access, you may need to run these commands
+-- through another connection method or ask your database administrator to run them for you. 
