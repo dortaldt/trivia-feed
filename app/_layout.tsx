@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import { Provider } from 'react-redux';
 import { View, Text, StyleSheet, Platform, Image } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { store } from '@/src/store';
@@ -215,28 +216,30 @@ export default function RootLayout() {
 
   // Proceed with the app whether fonts loaded or not
   return (
-    <Provider store={store}>
-      <AuthProvider>
-        <ThemeProvider initialTheme="dark">
-          <NavigationThemeProvider value={DarkTheme}>
-            <SyncManager>
-              <AuthWrapper>
-                <View style={styles.container}>
-                  <Stack>
-                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                    <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-                    <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
-                    <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
-                    <Stack.Screen name="+not-found" />
-                  </Stack>
-                  <StatusBar style="light" />
-                </View>
-              </AuthWrapper>
-            </SyncManager>
-          </NavigationThemeProvider>
-        </ThemeProvider>
-      </AuthProvider>
-    </Provider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Provider store={store}>
+        <AuthProvider>
+          <ThemeProvider initialTheme="dark">
+            <NavigationThemeProvider value={DarkTheme}>
+              <SyncManager>
+                <AuthWrapper>
+                  <View style={styles.container}>
+                    <Stack>
+                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                      <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+                      <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
+                      <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
+                      <Stack.Screen name="+not-found" />
+                    </Stack>
+                    <StatusBar style="light" />
+                  </View>
+                </AuthWrapper>
+              </SyncManager>
+            </NavigationThemeProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </Provider>
+    </GestureHandlerRootView>
   );
 }
 
