@@ -68,4 +68,10 @@ export interface WeightChange {
     subtopicWeight?: number;
     branchWeight?: number;
   };
+  skipCompensation?: {
+    applied: boolean;
+    topicCompensation: number;
+    subtopicCompensation: number;
+    branchCompensation: number;
+  };
 } 

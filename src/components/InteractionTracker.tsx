@@ -411,11 +411,17 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
       const question = questions[id];
       if (!question) return;
       
-      // Skip if already processed
-      if (interactions.some(log => log.questionId === id)) return;
+      // Get existing interaction for this question if any
+      const existingInteraction = interactions.find(log => log.questionId === id);
       
-      // Only process answered or skipped questions
-      if (question.status !== 'unanswered') {
+      // Only process if: 
+      // 1. No existing interaction for this question, or
+      // 2. Status has changed (e.g., from skipped to answered)
+      const shouldProcess = 
+        !existingInteraction || 
+        (existingInteraction && question.status === 'answered' && existingInteraction.type === 'skipped');
+      
+      if (question.status !== 'unanswered' && shouldProcess) {
         const timeSpent = question.timeSpent || 0;
         
         // Determine if correct or incorrect for answered questions
@@ -439,13 +445,36 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
           questionText
         };
         
-        // Add to new interactions array
-        newInteractions.push(newInteraction);
+        // If updating an existing interaction
+        if (existingInteraction) {
+          console.log(`Updating interaction for ${id} from ${existingInteraction.type} to ${type}`);
+          
+          // Update the interactions array by replacing the old interaction
+          setInteractions(prev => 
+            prev.map(log => 
+              log.questionId === id ? newInteraction : log
+            )
+          );
+          
+          // Update summary to reflect the change
+          setSummary(prev => {
+            const updatedSummary = { ...prev };
+            // Decrement the old type count
+            updatedSummary[existingInteraction.type]--;
+            // Increment the new type count
+            updatedSummary[type]++;
+            return updatedSummary;
+          });
+        } else {
+          // New interaction - add to array for batch update
+          newInteractions.push(newInteraction);
+        }
       }
     });
     
     // Update state once with all new interactions
     if (newInteractions.length > 0) {
+      console.log(`Adding ${newInteractions.length} new interactions to tracker`);
       setInteractions(prev => [...prev, ...newInteractions]);
       
       // Update summary based on new interactions
@@ -460,7 +489,7 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
         return newSummary;
       });
     }
-  }, [questions, feedData]);
+  }, [questions, feedData, interactions]);
   
   // Track weight changes
   useEffect(() => {
@@ -721,11 +750,11 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
                 {personalizedFeed.length} Questions
               </ThemedText>
               <TouchableOpacity 
-                style={styles.refreshButton}
+                style={[styles.refreshButton, {backgroundColor: 'rgba(10, 126, 164, 0.3)'}]}
                 onPress={() => processFeedChanges()}
               >
                 <Feather name="refresh-cw" size={16} color="#0A7EA4" />
-                <ThemedText style={styles.refreshText}>Refresh</ThemedText>
+                <ThemedText style={[styles.refreshText, {color: '#0A7EA4'}]}>Refresh</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -1139,16 +1168,16 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
           {filteredOperations.length > visibleDbRecords && !showAllRecords && (
             <View style={styles.loadMoreContainer}>
               <TouchableOpacity 
-                style={styles.loadMoreButton}
+                style={[styles.loadMoreButton, {backgroundColor: '#0A7EA4'}]}
                 onPress={() => setVisibleDbRecords(prev => prev + 100)}
               >
-                <ThemedText style={styles.loadMoreText}>Load 100 More</ThemedText>
+                <ThemedText style={{color: 'white', fontSize: 12, fontWeight: '500'}}>Load 100 More</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={styles.showAllButton}
+                style={[styles.showAllButton, {backgroundColor: '#555'}]}
                 onPress={() => setShowAllRecords(true)}
               >
-                <ThemedText style={styles.showAllText}>Show All ({filteredOperations.length})</ThemedText>
+                <ThemedText style={{color: 'white', fontSize: 12, fontWeight: '500'}}>Show All ({filteredOperations.length})</ThemedText>
               </TouchableOpacity>
             </View>
           )}
@@ -1156,13 +1185,13 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
           {/* Show fewer button when showing all records */}
           {showAllRecords && filteredOperations.length > 100 && (
             <TouchableOpacity 
-              style={styles.showFewerButton}
+              style={[styles.showFewerButton, {backgroundColor: '#555'}]}
               onPress={() => {
                 setShowAllRecords(false);
                 setVisibleDbRecords(100);
               }}
             >
-              <ThemedText style={styles.showFewerText}>Show Fewer (100)</ThemedText>
+              <ThemedText style={{color: 'white', fontSize: 12, fontWeight: '500'}}>Show Fewer (100)</ThemedText>
             </TouchableOpacity>
           )}
         </ThemedView>
@@ -1227,7 +1256,7 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
             <ThemedText style={styles.sectionTitle}>Current Weights from Database</ThemedText>
             <View style={{flexDirection: 'row'}}>
               <TouchableOpacity 
-                style={[styles.refreshButton, {marginRight: 8}]}
+                style={[styles.refreshButton, {marginRight: 8, backgroundColor: 'rgba(10, 126, 164, 0.3)'}]}
                 onPress={async () => {
                   if (!isLoadingWeights && user?.id) {
                     await loadWeightsFromDB();
@@ -1236,22 +1265,22 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
                 disabled={isLoadingWeights || !user?.id}
               >
                 {isLoadingWeights ? (
-                  <ThemedText style={styles.refreshingText}>Loading...</ThemedText>
+                  <ThemedText style={[styles.refreshingText, {color: '#555'}]}>Loading...</ThemedText>
                 ) : (
                   <>
-                    <Feather name="refresh-cw" size={16} color="rgba(255, 255, 255, 0.8)" />
-                    <ThemedText style={styles.refreshText}>Refresh</ThemedText>
+                    <Feather name="refresh-cw" size={16} color="#0A7EA4" />
+                    <ThemedText style={[styles.refreshText, {color: '#0A7EA4'}]}>Refresh</ThemedText>
                   </>
                 )}
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={[styles.refreshButton, {backgroundColor: '#5b6ae8'}]}
+                style={[styles.refreshButton, {backgroundColor: 'rgba(91, 106, 232, 0.3)'}]}
                 onPress={debugDatabase}
                 disabled={!user?.id}
               >
-                <Feather name="database" size={16} color="rgba(255, 255, 255, 0.8)" />
-                <ThemedText style={styles.refreshText}>Debug DB</ThemedText>
+                <Feather name="database" size={16} color="#5b6ae8" />
+                <ThemedText style={[styles.refreshText, {color: '#5b6ae8'}]}>Debug DB</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -1261,11 +1290,11 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
               <View style={styles.debugResultsHeader}>
                 <ThemedText style={styles.debugResultsTitle}>Database Debug Results</ThemedText>
                 <TouchableOpacity
-                  style={[styles.refreshButton, {backgroundColor: '#e85b5b'}]}
+                  style={[styles.refreshButton, {backgroundColor: 'rgba(232, 91, 91, 0.2)'}]}
                   onPress={() => setDbDebugResults(null)}
                 >
-                  <Feather name="x" size={16} color="rgba(255, 255, 255, 0.8)" />
-                  <ThemedText style={styles.refreshText}>Close</ThemedText>
+                  <Feather name="x" size={16} color="#e85b5b" />
+                  <ThemedText style={[styles.refreshText, {color: '#e85b5b'}]}>Close</ThemedText>
                 </TouchableOpacity>
               </View>
               
@@ -1316,17 +1345,17 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
                 <TouchableOpacity
                   style={[
                     styles.refreshButton, 
-                    {backgroundColor: '#4CAF50', alignSelf: 'center', marginTop: 12}
+                    {backgroundColor: 'rgba(76, 175, 80, 0.2)', alignSelf: 'center', marginTop: 12}
                   ]}
                   onPress={fixDatabase}
                   disabled={isFixingDb}
                 >
                   {isFixingDb ? (
-                    <ThemedText style={styles.refreshingText}>Fixing...</ThemedText>
+                    <ThemedText style={[styles.refreshingText, {color: '#4CAF50'}]}>Fixing...</ThemedText>
                   ) : (
                     <>
-                      <Feather name="tool" size={16} color="rgba(255, 255, 255, 0.8)" />
-                      <ThemedText style={styles.refreshText}>Fix Missing Tables</ThemedText>
+                      <Feather name="tool" size={16} color="#4CAF50" />
+                      <ThemedText style={[styles.refreshText, {color: '#4CAF50'}]}>Fix Missing Tables</ThemedText>
                     </>
                   )}
                 </TouchableOpacity>
@@ -1342,13 +1371,13 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
               <TouchableOpacity
                 style={[
                   styles.refreshButton, 
-                  {backgroundColor: '#5b6ae8', alignSelf: 'center', marginTop: 12}
+                  {backgroundColor: 'rgba(91, 106, 232, 0.2)', alignSelf: 'center', marginTop: 12}
                 ]}
                 onPress={debugDatabase}
                 disabled={isFixingDb}
               >
-                <Feather name="refresh-cw" size={16} color="rgba(255, 255, 255, 0.8)" />
-                <ThemedText style={styles.refreshText}>Refresh Debug Info</ThemedText>
+                <Feather name="refresh-cw" size={16} color="#5b6ae8" />
+                <ThemedText style={[styles.refreshText, {color: '#5b6ae8'}]}>Refresh Debug Info</ThemedText>
               </TouchableOpacity>
               
               {/* Add specific fix button for topics data */}
@@ -1357,17 +1386,17 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
                 <TouchableOpacity
                   style={[
                     styles.refreshButton, 
-                    {backgroundColor: '#f39c12', alignSelf: 'center', marginTop: 12}
+                    {backgroundColor: 'rgba(243, 156, 18, 0.2)', alignSelf: 'center', marginTop: 12}
                   ]}
                   onPress={() => fixDatabase()}
                   disabled={isFixingDb}
                 >
                   {isFixingDb ? (
-                    <ThemedText style={styles.refreshingText}>Initializing...</ThemedText>
+                    <ThemedText style={[styles.refreshingText, {color: '#f39c12'}]}>Initializing...</ThemedText>
                   ) : (
                     <>
-                      <Feather name="database" size={16} color="rgba(255, 255, 255, 0.8)" />
-                      <ThemedText style={styles.refreshText}>Initialize Topics Data</ThemedText>
+                      <Feather name="database" size={16} color="#f39c12" />
+                      <ThemedText style={[styles.refreshText, {color: '#f39c12'}]}>Initialize Topics Data</ThemedText>
                     </>
                   )}
                 </TouchableOpacity>
@@ -1643,79 +1672,86 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
     return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}.${date.getMilliseconds()}`;
   };
   
-  if (!visible) {
-    return (
-      <TouchableOpacity 
-        style={styles.floatingButton}
-        onPress={() => setVisible(true)}
-      >
-        <Feather name="activity" size={24} color="white" />
-      </TouchableOpacity>
-    );
-  }
-  
+  // Return a modified rendering for a light mode UI
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText type="subtitle">What This</ThemedText>
-        <TouchableOpacity onPress={() => setVisible(false)}>
-          <Feather name="x" size={24} color="#FF5C5C" />
-        </TouchableOpacity>
-      </View>
+    <>
+      {visible && (
+        <ThemedView 
+          style={[styles.container, {backgroundColor: '#FFFFFF'}]} 
+          lightColor="#FFFFFF" 
+          darkColor="#FFFFFF"
+        >
+          <View style={[styles.header, {borderBottomColor: '#e0e0e0'}]}>
+            <ThemedText style={[styles.title, {color: '#333333'}]}>Debug Panel</ThemedText>
+            <TouchableOpacity onPress={() => setVisible(false)}>
+              <Feather name="x" size={24} color="#333333" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={[styles.tabs, {borderBottomColor: '#e0e0e0'}]}>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'interactions' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
+              onPress={() => setActiveTab('interactions')}
+            >
+              <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'interactions' && {color: '#3498db'}]}>
+                Interactions
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'feed' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
+              onPress={() => setActiveTab('feed')}
+            >
+              <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'feed' && {color: '#3498db'}]}>
+                Feed Status
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'feedList' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
+              onPress={() => setActiveTab('feedList')}
+            >
+              <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'feedList' && {color: '#3498db'}]}>
+                Feed List
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'dbLog' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
+              onPress={() => setActiveTab('dbLog')}
+            >
+              <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'dbLog' && {color: '#3498db'}]}>
+                DB Log
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'weights' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
+              onPress={() => setActiveTab('weights')}
+            >
+              <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'weights' && {color: '#3498db'}]}>
+                Weights
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+          
+          {activeTab === 'interactions' ? renderInteractionsTab() : 
+           activeTab === 'feed' ? renderFeedStatusTab() : 
+           activeTab === 'feedList' ? renderFeedListTab() : 
+           activeTab === 'dbLog' ? renderDbLogTab() :
+           renderWeightsTab()}
+        </ThemedView>
+      )}
       
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
+      {!visible && (
         <TouchableOpacity 
-          style={[styles.tab, activeTab === 'interactions' && styles.activeTab]} 
-          onPress={() => setActiveTab('interactions')}
+          style={[styles.toggleButton, {backgroundColor: '#FFFFFF'}]} 
+          onPress={() => setVisible(true)}
         >
-          <ThemedText style={[styles.tabText, activeTab === 'interactions' && styles.activeTabText]}>
-            Interactions
-          </ThemedText>
+          <Feather name="activity" size={20} color="#333333" />
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'feed' && styles.activeTab]} 
-          onPress={() => setActiveTab('feed')}
-        >
-          <ThemedText style={[styles.tabText, activeTab === 'feed' && styles.activeTabText]}>
-            Feed Status
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'feedList' && styles.activeTab]} 
-          onPress={() => setActiveTab('feedList')}
-        >
-          <ThemedText style={[styles.tabText, activeTab === 'feedList' && styles.activeTabText]}>
-            Feed List
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'dbLog' && styles.activeTab]} 
-          onPress={() => setActiveTab('dbLog')}
-        >
-          <ThemedText style={[styles.tabText, activeTab === 'dbLog' && styles.activeTabText]}>
-            DB Log
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'weights' && styles.activeTab]} 
-          onPress={() => setActiveTab('weights')}
-        >
-          <ThemedText style={[styles.tabText, activeTab === 'weights' && styles.activeTabText]}>
-            Weights
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
-      
-      {activeTab === 'interactions' ? renderInteractionsTab() : 
-       activeTab === 'feed' ? renderFeedStatusTab() : 
-       activeTab === 'feedList' ? renderFeedListTab() : 
-       activeTab === 'dbLog' ? renderDbLogTab() :
-       renderWeightsTab()}
-    </ThemedView>
+      )}
+    </>
   );
 }
 
+// Update container style to ensure light mode appearance
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
@@ -1723,19 +1759,29 @@ const styles = StyleSheet.create({
     right: 10,
     width: '95%',
     maxWidth: 500,
-    backgroundColor: 'rgba(30, 30, 30, 0.9)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 10,
     padding: 10,
     maxHeight: '80%',
     zIndex: 1000,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    paddingBottom: 8,
   },
   title: {
-    color: 'white',
+    color: '#333333',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -1743,7 +1789,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+    borderBottomColor: '#e0e0e0',
   },
   tab: {
     paddingVertical: 8,
@@ -1755,7 +1801,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#3498db',
   },
   tabText: {
-    color: 'white',
+    color: '#333333',
     fontSize: 14,
   },
   scrollView: {
@@ -1765,30 +1811,37 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 10,
     right: 10,
-    backgroundColor: 'rgba(30, 30, 30, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 20,
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   interactionRow: {
     padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   feedRow: {
     padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   explanations: {
     marginTop: 5,
     paddingLeft: 10,
   },
   explanationText: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#666666',
     fontSize: 12,
     marginBottom: 2,
   },
@@ -1802,12 +1855,12 @@ const styles = StyleSheet.create({
     color: '#f39c12',
   },
   itemId: {
-    color: 'white',
+    color: '#333333',
     fontWeight: 'bold',
     marginBottom: 2,
   },
   questionText: {
-    color: 'white',
+    color: '#333333',
     marginBottom: 5,
   },
   infoRow: {
@@ -1816,17 +1869,17 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   infoLabel: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#666666',
     fontSize: 12,
     width: 80,
   },
   infoValue: {
-    color: 'white',
+    color: '#333333',
     fontSize: 12,
     flex: 1,
   },
   timestamp: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#999999',
     fontSize: 10,
     textAlign: 'right',
   },
@@ -1834,7 +1887,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     padding: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(240, 240, 240, 0.5)',
     borderRadius: 5,
     marginBottom: 10,
   },
@@ -1842,12 +1895,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    color: 'white',
+    color: '#333333',
     fontSize: 18,
     fontWeight: 'bold',
   },
   statLabel: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#666666',
     fontSize: 12,
   },
   // Table styles for database log
@@ -1855,28 +1908,30 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 5,
     overflow: 'hidden',
-    maxHeight: 2000, // Remove any height constraint
+    maxHeight: 2000,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(52, 152, 219, 0.3)',
+    backgroundColor: 'rgba(52, 152, 219, 0.2)',
     paddingVertical: 8,
     paddingHorizontal: 5,
   },
   headerCell: {
-    color: 'white',
+    color: '#333333',
     fontWeight: 'bold',
     fontSize: 12,
   },
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
     paddingVertical: 8,
     paddingHorizontal: 5,
   },
   cell: {
-    color: 'white',
+    color: '#333333',
     fontSize: 11,
   },
   timeCell: {
@@ -1915,34 +1970,14 @@ const styles = StyleSheet.create({
   emptyState: {
     padding: 20,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(240, 240, 240, 0.5)',
     borderRadius: 8,
     marginVertical: 5,
   },
   emptyText: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#666666',
     fontStyle: 'italic',
     textAlign: 'center',
-  },
-  floatingButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#0A7EA4',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    zIndex: 1000,
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -1953,7 +1988,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 0, 0, 0.1)',
   },
   activeTabText: {
-    color: 'white',
+    color: '#3498db',
     fontWeight: 'bold',
   },
   summaryContainer: {
@@ -1962,6 +1997,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingVertical: 12,
     borderRadius: 8,
+    backgroundColor: 'rgba(240, 240, 240, 0.5)',
   },
   interactionsContainer: {
     marginBottom: 20,
@@ -1994,10 +2030,12 @@ const styles = StyleSheet.create({
   logType: {
     fontWeight: 'bold',
     fontSize: 12,
+    color: '#333333',
   },
   logTime: {
     fontSize: 12,
     opacity: 0.7,
+    color: '#666666',
   },
   profileChangesContainer: {
     marginBottom: 20,
@@ -2013,6 +2051,7 @@ const styles = StyleSheet.create({
   changeText: {
     fontSize: 14,
     marginBottom: 4,
+    color: '#333333',
   },
   feedListContainer: {
     marginBottom: 20,
@@ -2056,7 +2095,7 @@ const styles = StyleSheet.create({
   weightValue: {
     fontWeight: 'bold',
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#333333',
   },
   allFeedItemsContainer: {
     marginBottom: 20,
@@ -2077,12 +2116,15 @@ const styles = StyleSheet.create({
   feedItemNumber: {
     fontWeight: 'bold',
     fontSize: 12,
+    color: '#333333',
   },
   feedItemCategory: {
     fontSize: 12,
+    color: '#666666',
   },
   feedItemText: {
     fontSize: 14,
+    color: '#333333',
   },
   tagsContainer: {
     flexDirection: 'row',
@@ -2096,6 +2138,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 12,
+    color: '#333333',
   },
   explanationButton: {
     marginTop: 8,
@@ -2131,10 +2174,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     marginLeft: 4,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#333333',
   },
   refreshingText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#666666',
     fontSize: 12,
     marginLeft: 4,
   },
@@ -2144,14 +2187,17 @@ const styles = StyleSheet.create({
   statusLabel: {
     fontWeight: 'bold',
     marginBottom: 4,
+    color: '#333333',
   },
   statusValue: {
     fontSize: 16,
+    color: '#333333',
   },
   statusSubtext: {
     fontSize: 12,
     opacity: 0.7,
     marginTop: 4,
+    color: '#666666',
   },
   progressBar: {
     height: 8,
@@ -2178,6 +2224,7 @@ const styles = StyleSheet.create({
   interestName: {
     width: 90,
     fontSize: 13,
+    color: '#333333',
   },
   interestBar: {
     flex: 1,
@@ -2196,6 +2243,7 @@ const styles = StyleSheet.create({
     width: 30,
     fontSize: 12,
     textAlign: 'right',
+    color: '#333333',
   },
   preferenceItem: {
     flexDirection: 'row',
@@ -2204,10 +2252,12 @@ const styles = StyleSheet.create({
   preferenceName: {
     width: 90,
     fontSize: 13,
+    color: '#333333',
   },
   preferenceValue: {
     fontSize: 13,
     fontWeight: 'bold',
+    color: '#333333',
   },
   statsCard: {
     margin: 10,
@@ -2215,17 +2265,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: 'rgba(10, 126, 164, 0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#e0e0e0',
   },
   statsCardTitle: {
-    color: 'white',
+    color: '#333333',
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
   },
   statsSubtitle: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#666666',
     fontSize: 12,
     textAlign: 'center',
     marginTop: 4,
@@ -2234,10 +2284,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
   },
   detailedStatsTitle: {
-    color: 'white',
+    color: '#333333',
     fontSize: 13,
     fontWeight: 'bold',
     marginBottom: 5,
@@ -2252,12 +2302,12 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   detailedStatLabel: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#666666',
     fontSize: 11,
     marginRight: 5,
   },
   detailedStatValue: {
-    color: 'white',
+    color: '#333333',
     fontSize: 11,
     fontWeight: 'bold',
   },
@@ -2267,9 +2317,9 @@ const styles = StyleSheet.create({
   },
   expandedDataContainer: {
     padding: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    backgroundColor: 'rgba(240, 240, 240, 0.5)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   dataScrollView: {
     maxHeight: 200,
@@ -2277,7 +2327,7 @@ const styles = StyleSheet.create({
   dataText: {
     fontSize: 10,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#333333',
   },
   tabScrollView: {
     flex: 1,
@@ -2285,16 +2335,19 @@ const styles = StyleSheet.create({
   logQuestion: {
     fontSize: 14,
     marginBottom: 4,
+    color: '#333333',
   },
   logTimeSpent: {
     fontSize: 12,
     opacity: 0.7,
+    color: '#666666',
   },
   feedStatusContainer: {
     marginBottom: 20,
   },
   sectionHeader: {
     marginVertical: 10,
+    color: '#333333',
   },
   weightChangesContainer: {
     marginTop: 10,
@@ -2304,13 +2357,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     padding: 10,
     borderRadius: 8,
-    backgroundColor: 'rgba(30, 30, 30, 0.6)',
+    backgroundColor: 'rgba(240, 240, 240, 0.5)',
     borderLeftWidth: 3,
     borderLeftColor: '#0A7EA4',
     borderWidth: 1,
     borderTopColor: 'transparent',
-    borderRightColor: 'rgba(255, 255, 255, 0.1)',
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderRightColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   weightChangeHeader: {
     flexDirection: 'row',
@@ -2320,7 +2373,7 @@ const styles = StyleSheet.create({
   weightChangeCategory: {
     fontWeight: 'bold',
     fontSize: 14,
-    color: 'white',
+    color: '#333333',
   },
   weightChangeInfo: {
     flexDirection: 'row',
@@ -2332,39 +2385,39 @@ const styles = StyleSheet.create({
   },
   weightChangeTime: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#666666',
   },
   weightChangeQuestion: {
     fontSize: 13,
     marginBottom: 10,
     fontStyle: 'italic',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#666666',
   },
   weightTable: {
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(0, 0, 0, 0.1)',
     borderRadius: 4,
     overflow: 'hidden',
   },
   weightTableHeader: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(240, 240, 240, 0.7)',
   },
   weightTableRow: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
   },
   weightTableCell: {
     padding: 6,
     flex: 1,
     textAlign: 'center',
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#333333',
   },
   weightTableHeaderText: {
     fontWeight: 'bold',
-    color: 'white',
+    color: '#333333',
   },
   weightIncreaseText: {
     color: '#4CAF50',
@@ -2376,17 +2429,17 @@ const styles = StyleSheet.create({
   },
   currentWeightsContainer: {
     marginVertical: 15,
-    backgroundColor: 'rgba(30, 30, 30, 0.6)',
+    backgroundColor: 'rgba(240, 240, 240, 0.5)',
     borderRadius: 12,
     padding: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#e0e0e0',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginVertical: 10,
-    color: 'white',
+    color: '#333333',
   },
   topicWeightItem: {
     marginBottom: 12,
@@ -2397,7 +2450,7 @@ const styles = StyleSheet.create({
   topicName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#333333',
     marginBottom: 5,
   },
   subtopicWeightItem: {
@@ -2410,7 +2463,7 @@ const styles = StyleSheet.create({
   subtopicName: {
     fontSize: 15,
     fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#333333',
     marginBottom: 3,
   },
   branchWeightItem: {
@@ -2420,11 +2473,11 @@ const styles = StyleSheet.create({
   },
   branchName: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#333333',
   },
   lastUpdatedText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#666666',
     marginTop: 10,
     textAlign: 'right',
     fontStyle: 'italic',
@@ -2445,28 +2498,28 @@ const styles = StyleSheet.create({
   percentageContainer: {
     padding: 4,
     borderRadius: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
     marginRight: 8,
   },
   percentageText: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#333333',
   },
   trendsText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#666666',
   },
   subtopicPercentage: {
     padding: 4,
     borderRadius: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
     marginRight: 8,
   },
   branchPercentage: {
     padding: 4,
     borderRadius: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
     marginRight: 8,
   },
   trendContainer: {
@@ -2482,9 +2535,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     padding: 10,
     borderRadius: 8,
-    backgroundColor: 'rgba(30, 30, 30, 0.6)',
+    backgroundColor: 'rgba(240, 240, 240, 0.5)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#e0e0e0',
   },
   debugResultsHeader: {
     flexDirection: 'row',
@@ -2493,7 +2546,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   debugResultsTitle: {
-    color: 'white',
+    color: '#333333',
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -2507,11 +2560,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   tableNameText: {
-    color: 'white',
+    color: '#333333',
     fontSize: 12,
   },
   tableExistsText: {
-    color: 'white',
+    color: '#333333',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -2522,7 +2575,7 @@ const styles = StyleSheet.create({
     color: '#F44336',
   },
   debugSectionTitle: {
-    color: 'white',
+    color: '#333333',
     fontSize: 14,
     fontWeight: 'bold',
     marginBottom: 6,
@@ -2535,7 +2588,7 @@ const styles = StyleSheet.create({
   },
   debugDetailText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#666666',
   },
   debugErrorText: {
     fontSize: 12,
@@ -2554,13 +2607,13 @@ const styles = StyleSheet.create({
   columnInfoContainer: {
     marginTop: 10,
     padding: 10,
-    backgroundColor: 'rgba(30, 30, 30, 0.5)',
+    backgroundColor: 'rgba(240, 240, 240, 0.5)',
     borderRadius: 6,
   },
   columnInfoTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: '#333333',
     marginBottom: 6,
   },
   columnRow: {
@@ -2570,41 +2623,41 @@ const styles = StyleSheet.create({
   },
   columnName: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#333333',
   },
   columnType: {
     fontSize: 12,
-    color: '#f1c40f',
+    color: '#855A00',
   },
   refreshProgressText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#666666',
     fontStyle: 'italic',
     alignSelf: 'center',
     margin: 8,
   },
   tableScrollView: {
-    maxHeight: 500, // Allow the table to scroll with a reasonable height 
+    maxHeight: 500,
   },
   recordsInfo: {
     padding: 8,
     marginBottom: 8,
-    backgroundColor: 'rgba(30, 30, 30, 0.5)',
+    backgroundColor: 'rgba(240, 240, 240, 0.5)',
     borderRadius: 5,
     alignItems: 'center',
   },
   recordsInfoText: {
     fontSize: 12,
     textAlign: 'center',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#666666',
   },
   loadMoreContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 8,
-    backgroundColor: 'rgba(30, 30, 30, 0.5)',
+    backgroundColor: 'rgba(240, 240, 240, 0.5)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
   },
   loadMoreButton: {
     padding: 8,
@@ -2646,7 +2699,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   selectedTableFilter: {
-    backgroundColor: 'rgba(10, 126, 164, 0.3)',
+    backgroundColor: 'rgba(10, 126, 164, 0.2)',
     borderRadius: 4,
     padding: 2,
   },
@@ -2658,7 +2711,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 4,
     paddingHorizontal: 8,
-    backgroundColor: 'rgba(255, 87, 87, 0.3)',
+    backgroundColor: 'rgba(255, 87, 87, 0.2)',
     borderRadius: 4,
   },
   clearFilterText: {
@@ -2673,14 +2726,37 @@ const styles = StyleSheet.create({
   filterShortcutButton: {
     paddingVertical: 6,
     paddingHorizontal: 10,
-    backgroundColor: 'rgba(30, 30, 30, 0.5)',
+    backgroundColor: 'rgba(240, 240, 240, 0.8)',
     borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   activeFilterShortcut: {
-    backgroundColor: 'rgba(10, 126, 164, 0.5)',
+    backgroundColor: 'rgba(10, 126, 164, 0.2)',
   },
   filterShortcutText: {
     fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#333333',
+  },
+  skipCompensationContainer: {
+    marginTop: 8,
+    padding: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  skipCompensationTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 4,
+  },
+  skipCompensationExplanation: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    color: '#666666',
+    marginTop: 4,
+    textAlign: 'center',
   },
 }); 
