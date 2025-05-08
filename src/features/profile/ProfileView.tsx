@@ -22,6 +22,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { MediaTypeOptions } from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Add interface for countries
 interface Country {
@@ -100,12 +101,55 @@ const ProfileView: React.FC = () => {
   };
 
   const handleSignOut = () => {
+    console.log('Sign out button pressed - showing confirmation dialog');
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out?',
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: signOut }
+        { text: 'Cancel', style: 'cancel', onPress: () => console.log('Sign out canceled by user') },
+        { 
+          text: 'Sign Out', 
+          style: 'destructive', 
+          onPress: async () => {
+            console.log('User confirmed sign out - attempting to sign out');
+            try {
+              // Use the improved signOut function from AuthContext
+              const success = await signOut();
+              console.log('Sign out process completed, success:', success);
+              
+              // If on web, reload the page to ensure clean state
+              if (Platform.OS === 'web') {
+                console.log('Web platform detected, reloading page');
+                window.location.reload();
+                return;
+              }
+              
+              // If signOut was not successful or we're on a native platform,
+              // use more aggressive cleanup
+              if (!success) {
+                console.log('Sign out reported failure or on native platform - performing force cleanup');
+                
+                // Force reset of auth state
+                await AsyncStorage.clear();
+                console.log('AsyncStorage cleared');
+                
+                // Show a message to restart the app if needed
+                Alert.alert(
+                  'Sign Out Status',
+                  'You have been signed out, but the app may need to be restarted to complete the process.',
+                  [{ text: 'OK' }]
+                );
+              }
+            } catch (error) {
+              console.error('Sign out failed with error:', error);
+              Alert.alert(
+                'Sign Out Failed',
+                'There was a problem signing out. Please try again or restart the app.',
+                [{ text: 'OK' }]
+              );
+            }
+          }
+        }
       ]
     );
   };
@@ -868,12 +912,77 @@ const ProfileView: React.FC = () => {
           {/* Account section */}
           <View style={profileStyles.accountSection}>
             <ThemedText style={profileStyles.accountSectionTitle}>Account</ThemedText>
-            <TouchableOpacity 
-              style={profileStyles.signOutButton}
-              onPress={handleSignOut}
-            >
-              <ThemedText style={profileStyles.signOutButtonText}>Sign Out</ThemedText>
-            </TouchableOpacity>
+            
+            {/* Sign Out button - Using direct logout logic for web */}
+            {Platform.OS === 'web' ? (
+              <View>
+                <button 
+                  style={{
+                    backgroundColor: '#ff3b30',
+                    color: 'white',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    width: '100%',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '500',
+                    fontSize: '16px'
+                  }}
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                    e.stopPropagation();
+                    console.log('Web sign out button clicked');
+                    
+                    // Show confirmation dialog
+                    if (window.confirm('Are you sure you want to sign out?')) {
+                      console.log('User confirmed sign out - direct web logout triggered');
+                      
+                      // Direct logout without using context for web
+                      try {
+                        // Direct access to supabase auth
+                        supabase.auth.signOut({ scope: 'global' })
+                          .then(() => {
+                            console.log('Sign out completed');
+                            // Clear localStorage
+                            localStorage.removeItem('supabase.auth.token');
+                            localStorage.clear();
+                            // Reload page
+                            window.location.href = '/';
+                          })
+                          .catch((err: Error) => {
+                            console.error('Sign out failed:', err);
+                            // Force reload anyway
+                            window.location.href = '/';
+                          });
+                      } catch (error) {
+                        console.error('Sign out error:', error);
+                        window.location.href = '/';
+                      }
+                    } else {
+                      console.log('Sign out canceled by user');
+                    }
+                  }}
+                >
+                  <span style={{ marginRight: '8px' }}>Sign Out</span>
+                </button>
+              </View>
+            ) : (
+              // Native platforms - use the TouchableOpacity approach
+              <TouchableOpacity 
+                style={profileStyles.signOutButton}
+                onPress={handleSignOut}
+                accessibilityLabel="Sign out from your account"
+                accessibilityHint="Double-tap to sign out from your account"
+                activeOpacity={0.6}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                  <FeatherIcon name="log-out" size={18} color="#fff" style={{ marginRight: 8 }} />
+                  <ThemedText style={profileStyles.signOutButtonText}>Sign Out</ThemedText>
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       ) : (
