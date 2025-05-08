@@ -1,30 +1,89 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, TextInput, Text, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { signIn, signInWithGoogle, signInWithApple, isLoading } = useAuth();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const { signIn, isLoading, continueAsGuest, isAuthenticated } = useAuth();
+  // Get search params to check if we deliberately navigated here
+  const params = useLocalSearchParams();
+  const isDirectNavigation = params.direct === 'true';
+  
+  // Prevent auto-redirection when directly navigating to this screen
+  useEffect(() => {
+    console.log('📱 Login screen mounted, direct navigation:', isDirectNavigation);
+
+    // Track this view to prevent unwanted redirects in _layout.tsx
+    const trackAuthScreenView = async () => {
+      try {
+        await AsyncStorage.setItem('currentlyViewingAuthScreen', 'true');
+        console.log('📱 Marked user as currently viewing auth screen');
+      } catch (e) {
+        console.error('Error setting auth screen marker:', e);
+      }
+    };
+    
+    trackAuthScreenView();
+    
+    // Cleanup function to remove the marker when leaving the screen
+    return () => {
+      AsyncStorage.removeItem('currentlyViewingAuthScreen')
+        .then(() => console.log('📱 Cleared auth screen viewing marker'))
+        .catch(e => console.error('Error clearing auth screen marker:', e));
+    };
+  }, [isDirectNavigation]);
 
   const handleLogin = async () => {
     if (!email || !password) {
       alert('Please enter your email and password');
       return;
     }
-    await signIn(email, password);
+    
+    try {
+      console.log('📱 Login attempt with:', { email, passwordProvided: !!password });
+      
+      // Show loading state immediately for better feedback
+      setIsLoggingIn(true);
+      
+      // Call signIn method from auth context with proper await and error handling
+      await signIn(email, password);
+      
+      console.log('✅ Sign in API call completed');
+      
+      // If we're on iOS, perform an explicit navigation to ensure the app updates
+      if (Platform.OS === 'ios') {
+        console.log('📱 iOS platform detected, forcing navigation to home');
+        setTimeout(() => {
+          router.replace('/');
+        }, 500);
+      }
+    } catch (error) {
+      console.error('❌ Login error:', error);
+      
+      // Show a user-friendly error message
+      alert('Login failed. Please check your email and password and try again.');
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
-
-  const handleGoogleSignIn = async () => {
-    await signInWithGoogle();
+  
+  const handleGuestMode = async () => {
+    await continueAsGuest();
+    router.replace('/');
   };
-
-  const handleAppleSignIn = async () => {
-    await signInWithApple();
+  
+  const handleGoBack = async () => {
+    // Go back to feed in guest mode
+    await continueAsGuest();
+    // Use router.replace consistently across platforms
+    router.replace('/');
   };
 
   const navigateToSignUp = () => {
@@ -49,6 +108,20 @@ export default function LoginScreen() {
       style={styles.container}
     >
       <StatusBar style="dark" />
+      
+      {/* Back button at the top */}
+      <View style={styles.headerContainer}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={handleGoBack}
+          accessibilityLabel="Go back to feed"
+          accessibilityHint="Returns to the feed in guest mode"
+        >
+          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Text style={styles.backButtonText}>Back to Feed</Text>
+        </TouchableOpacity>
+      </View>
+      
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.logoContainer}>
           <Image 
@@ -100,27 +173,26 @@ export default function LoginScreen() {
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleLogin} style={styles.signInButton}>
-            <Text style={styles.signInButtonText}>Sign In</Text>
+          <TouchableOpacity 
+            onPress={handleLogin} 
+            style={[
+              styles.signInButton,
+              isLoggingIn && styles.signInButtonDisabled
+            ]}
+            disabled={isLoggingIn}
+            activeOpacity={0.7}
+          >
+            {isLoggingIn ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.signInButtonText}>Sign In</Text>
+            )}
           </TouchableOpacity>
-
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <View style={styles.socialButtonsContainer}>
-            <TouchableOpacity onPress={handleGoogleSignIn} style={styles.socialButton}>
-              <Ionicons name="logo-google" size={22} color="#DB4437" />
-              <Text style={styles.socialButtonText}>Google</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity onPress={handleAppleSignIn} style={styles.socialButton}>
-              <Ionicons name="logo-apple" size={22} color="#000" />
-              <Text style={styles.socialButtonText}>Apple</Text>
-            </TouchableOpacity>
-          </View>
+          
+          <TouchableOpacity onPress={handleGuestMode} style={styles.guestModeButton}>
+            <Ionicons name="person-outline" size={18} color="#666" style={{ marginRight: 8 }} />
+            <Text style={styles.guestModeButtonText}>Continue as Guest</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.createAccountContainer}>
@@ -139,6 +211,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  headerContainer: {
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    backgroundColor: '#fff',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f4f4f4',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignSelf: 'flex-start',
+  },
+  backButtonText: {
+    marginLeft: 6,
+    color: '#333',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -148,7 +241,7 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
     paddingBottom: 40,
   },
   logoContainer: {
@@ -214,47 +307,27 @@ const styles = StyleSheet.create({
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   signInButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  dividerContainer: {
-    flexDirection: 'row',
+  guestModeButton: {
+    backgroundColor: '#f4f4f4',
+    borderRadius: 8,
+    height: 50,
+    justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#ddd',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#999',
-    fontSize: 14,
-  },
-  socialButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    flex: 0.48,
   },
-  socialButtonText: {
-    marginLeft: 10,
-    color: '#333',
-    fontSize: 14,
+  guestModeButtonText: {
+    color: '#666',
+    fontSize: 16,
     fontWeight: '500',
   },
   createAccountContainer: {
@@ -272,5 +345,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     marginLeft: 5,
+  },
+  signInButtonDisabled: {
+    backgroundColor: '#97c4e3',
   },
 }); 

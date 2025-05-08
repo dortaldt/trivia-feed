@@ -84,7 +84,7 @@ const FeedScreen: React.FC = () => {
   const [currentLeaderboardItemId, setCurrentLeaderboardItemId] = useState<string | null>(null);
   
   // Get user from auth context
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   
   // Add a new state for the avatar URL
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -1164,9 +1164,18 @@ const FeedScreen: React.FC = () => {
         onPress={toggleProfile}
       >
         <View style={styles.avatarCircle}>
-          {avatarUrl ? (
+          {isGuest ? (
+            // If in guest mode, use the guest avatar image
+            <Image 
+              source={require('../../../assets/images/guest-avatar.png')} 
+              style={styles.avatar}
+              resizeMode="cover"
+            />
+          ) : avatarUrl ? (
+            // If user has an avatar, use it
             <Image source={{ uri: avatarUrl }} style={styles.avatar} />
           ) : (
+            // Otherwise show initials
             <ThemedText style={styles.avatarText}>{getInitials()}</ThemedText>
           )}
         </View>

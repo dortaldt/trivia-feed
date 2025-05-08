@@ -9,6 +9,7 @@ import { Provider } from 'react-redux';
 import { View, Text, StyleSheet, Platform, Image } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Font from 'expo-font';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import icons - use default imports instead of named imports
 // This can help resolve some naming conflicts
@@ -31,7 +32,18 @@ SplashScreen.preventAutoHideAsync();
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
   const router = useRouter();
-  const { user, session, isLoading } = useAuth();
+  const { user, session, isLoading, isGuest, continueAsGuest } = useAuth();
+  // Track if the user explicitly navigated to the auth pages
+  const [explicitAuthNavigation, setExplicitAuthNavigation] = useState(false);
+
+  // Detect explicit navigation to auth pages
+  useEffect(() => {
+    const inAuthGroup = segments[0] === 'auth';
+    if (inAuthGroup && !explicitAuthNavigation) {
+      console.log('🔐 User explicitly navigated to auth page');
+      setExplicitAuthNavigation(true);
+    }
+  }, [segments, explicitAuthNavigation]);
 
   // Separate useEffect for debugging the current auth state
   useEffect(() => {
@@ -40,9 +52,57 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
     console.log('🔑 Auth state:', { 
       user: user ? `User: ${user.id} (${user.email})` : 'No user',
       session: session ? `Valid until: ${new Date(session.expires_at! * 1000).toLocaleString()}` : 'No session',
-      isLoading
+      isLoading,
+      isGuest: isGuest ? 'In guest mode' : 'Not in guest mode',
+      explicitAuthNavigation
     });
-  }, [user, session, segments, isLoading]);
+  }, [user, session, segments, isLoading, isGuest, explicitAuthNavigation]);
+
+  // Effect to automatically put users in guest mode when not logged in
+  useEffect(() => {
+    // Only run this logic once when initially determining auth state
+    if (!isLoading && !user && !isGuest) {
+      const inAuthGroup = segments[0] === 'auth';
+      
+      // If user is actively trying to log in, don't force guest mode
+      if (!inAuthGroup && !explicitAuthNavigation) {
+        console.log('🧪 No authenticated user detected - automatically enabling guest mode');
+        
+        // Special handling for web platform
+        if (Platform.OS === 'web') {
+          console.log('🌐 Web platform detected - using web-specific guest mode activation');
+          
+          // Directly set guest mode in localStorage for immediate effect
+          localStorage.setItem('guestMode', 'true');
+          
+          // For web, use a more direct approach
+          (async () => {
+            try {
+              // Directly set in AsyncStorage too for consistency
+              await AsyncStorage.setItem('guestMode', 'true');
+              
+              // Call the context method
+              await continueAsGuest();
+              
+              console.log('🏠 Guest mode activated on web - forcing navigation');
+              
+              // Force an immediate hard navigation for web
+              window.location.href = '/';
+            } catch (error) {
+              console.error('Error during web guest mode activation:', error);
+            }
+          })();
+        } else {
+          // Mobile platforms - use the router approach
+          (async () => {
+            await continueAsGuest();
+            console.log('🏠 Guest mode activated - forcing navigation to home');
+            router.replace('/');
+          })();
+        }
+      }
+    }
+  }, [isLoading, user, isGuest, segments, explicitAuthNavigation]);
 
   // Main effect for handling redirections
   useEffect(() => {
@@ -52,29 +112,79 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Define a function to check if user is currently on an auth screen
+    const checkAuthScreenViewing = async () => {
+      try {
+        const viewingAuthScreen = await AsyncStorage.getItem('currentlyViewingAuthScreen');
+        return viewingAuthScreen === 'true';
+      } catch (e) {
+        console.error('Error checking auth screen marker:', e);
+        return false;
+      }
+    };
+
+    // Special check for web platform - check localStorage directly
+    if (Platform.OS === 'web' && !user && !isGuest) {
+      const directGuestCheck = localStorage.getItem('guestMode') === 'true';
+      if (directGuestCheck) {
+        console.log('🌐 Found guest mode in localStorage but not in state yet - deferring');
+        return;
+      }
+    }
+
+    // If we're in the process of setting up guest mode, don't do other redirects
+    if (!user && !isGuest && !segments.join('/').startsWith('auth')) {
+      console.log('⏳ Waiting for guest mode setup - deferring standard redirection');
+      return;
+    }
+
     const currentPath = segments.join('/');
     const inAuthGroup = segments[0] === 'auth';
     
     console.log('🧭 Evaluating redirection:', {
       isAuthenticated: !!user,
       hasSession: !!session,
+      isGuest,
       inAuthGroup,
       currentPath,
+      explicitAuthNavigation
     });
 
     // Force a small delay to ensure our redirection happens after any state updates
-    setTimeout(() => {
-      if (!user && !inAuthGroup) {
+    setTimeout(async () => {
+      // Check if user deliberately wants to stay on auth screen
+      const isViewingAuthScreen = await checkAuthScreenViewing();
+      
+      // If user is currently viewing auth screen or explicitly navigated there, let them stay
+      if ((inAuthGroup && explicitAuthNavigation) || isViewingAuthScreen) {
+        console.log('✋ User explicitly viewing auth screen - allowing them to stay');
+        return;
+      }
+      
+      // Only redirect if not logged in AND not in guest mode AND not already on auth page
+      if (!user && !isGuest && !inAuthGroup) {
         console.log('🔄 Redirecting unauthenticated user to login');
-        router.replace('/auth/login');
-      } else if (user && inAuthGroup) {
-        console.log('🔄 Redirecting authenticated user to home');
-        router.replace('/');
+        
+        // For web, use direct location change for more reliable redirect
+        if (Platform.OS === 'web') {
+          window.location.href = '/auth/login';
+        } else {
+          router.replace('/auth/login');
+        }
+      } else if ((user || isGuest) && inAuthGroup && !explicitAuthNavigation && !isViewingAuthScreen) {
+        console.log('🔄 Redirecting user to home (authenticated or guest)');
+        
+        // For web, use direct location change for more reliable redirect
+        if (Platform.OS === 'web') {
+          window.location.href = '/';
+        } else {
+          router.replace('/');
+        }
       } else {
         console.log('✅ No redirection needed - correct route for auth state');
       }
     }, 100);
-  }, [user, session, segments, isLoading]);
+  }, [user, session, isGuest, segments, isLoading, explicitAuthNavigation]);
 
   if (isLoading) {
     return (

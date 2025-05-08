@@ -4,19 +4,24 @@ import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 // Define the shape of our auth context
 type AuthContextType = {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  isGuest: boolean;
+  isAuthenticated: boolean;
   signUp: (email: string, password: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<boolean | void>;
+  signOut: () => Promise<boolean>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateProfile: (userData: { username?: string; fullName?: string; avatarUrl?: string; country?: string }) => Promise<void>;
+  continueAsGuest: () => Promise<void>;
 };
 
 // Create the context with a default value
@@ -27,19 +32,72 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
 
   // Initialize auth state when the provider mounts
   useEffect(() => {
-    // Check for an existing session
-    supabase.auth.getSession().then((response: { data: { session: Session | null } }) => {
-      const currentSession = response.data.session;
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setIsLoading(false);
-    });
+    const initAuth = async () => {
+      // Check if user is in guest mode from AsyncStorage
+      try {
+        console.log('Checking for guest mode in AsyncStorage...');
+        const guestMode = await AsyncStorage.getItem('guestMode');
+        console.log('Guest mode AsyncStorage value:', guestMode);
+        
+        if (guestMode === 'true') {
+          console.log('Found guest mode flag, initializing as guest');
+          setIsGuest(true);
+          setIsLoading(false);
+          return; // Skip Supabase auth check for guest users
+        }
+      } catch (error) {
+        console.error('Error checking guest mode:', error);
+      }
+      
+      // Normal auth flow for non-guest users
+      console.log('Checking for existing Supabase session...');
+      supabase.auth.getSession().then((response: { data: { session: Session | null } }) => {
+        const currentSession = response.data.session;
+        console.log('Session check result:', currentSession ? 'Session found' : 'No session found');
+        
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        // If no session, set guest mode automatically
+        if (!currentSession) {
+          console.log('No active session found, enabling guest mode');
+          setIsGuest(true);
+          AsyncStorage.setItem('guestMode', 'true')
+            .then(() => console.log('Guest mode flag set in AsyncStorage'))
+            .catch(err => console.error('Failed to set guest mode flag:', err));
+        }
+        
+        setIsLoading(false);
+      });
+    };
+    
+    initAuth();
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, newSession: Session | null) => {
+      console.log('Auth state changed:', _event, newSession ? 'New session' : 'No session');
+      
+      // If user logs in, clear guest mode
+      if (newSession) {
+        console.log('User logged in, clearing guest mode');
+        setIsGuest(false);
+        AsyncStorage.removeItem('guestMode')
+          .then(() => console.log('Guest mode flag cleared'))
+          .catch(err => console.error('Failed to clear guest mode flag:', err));
+      }
+      // If user logs out, enable guest mode
+      else if (_event === 'SIGNED_OUT') {
+        console.log('User signed out, enabling guest mode');
+        setIsGuest(true);
+        AsyncStorage.setItem('guestMode', 'true')
+          .then(() => console.log('Guest mode flag set on sign out'))
+          .catch(err => console.error('Failed to set guest mode flag on sign out:', err));
+      }
+      
       setSession(newSession);
       setUser(newSession?.user ?? null);
       setIsLoading(false);
@@ -130,17 +188,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      console.log('Attempting to sign in with email/password', { email });
+      console.log('AuthContext: Attempting to sign in with email/password', { email });
+      
+      // Clear any previous guest mode when signing in
+      if (isGuest) {
+        console.log('AuthContext: Clearing guest mode before sign in');
+        await AsyncStorage.removeItem('guestMode');
+        setIsGuest(false);
+      }
       
       // Proceed with sign in attempt
+      console.log('AuthContext: Calling Supabase signInWithPassword');
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
-        console.error('Sign in error:', error.message, error.status);
+        console.error('AuthContext: Sign in error:', error.message, error.status);
         
         // Special handling for unconfirmed emails
         if (error.message.includes('Email not confirmed')) {
-          console.log('Email not confirmed for user');
+          console.log('AuthContext: Email not confirmed for user');
           Alert.alert(
             'Email Not Confirmed',
             'Your email address has not been confirmed. Would you like to resend the confirmation email?',
@@ -153,14 +219,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 text: 'Resend Email',
                 onPress: async () => {
                   try {
-                    console.log('User requested to resend confirmation email');
+                    console.log('AuthContext: User requested to resend confirmation email');
                     const { error: resendError } = await supabase.auth.resend({
                       type: 'signup',
                       email: email,
                     });
                     
                     if (resendError) {
-                      console.error('Failed to resend confirmation email:', resendError);
+                      console.error('AuthContext: Failed to resend confirmation email:', resendError);
                       
                       // Handle rate limiting errors specifically
                       if (resendError.message.includes('after')) {
@@ -173,7 +239,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         Alert.alert('Error', resendError.message);
                       }
                     } else {
-                      console.log('Confirmation email resent successfully');
+                      console.log('AuthContext: Confirmation email resent successfully');
                       Alert.alert(
                         'Confirmation Email Sent',
                         'Please check your email and click the confirmation link to complete your registration.',
@@ -181,7 +247,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                       );
                     }
                   } catch (resendError: any) {
-                    console.error('Error in resend flow:', resendError.message);
+                    console.error('AuthContext: Error in resend flow:', resendError.message);
                     Alert.alert('Error', 'Failed to resend confirmation email. Please try again later.');
                   }
                 }
@@ -194,7 +260,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw error;
       }
       
-      console.log('Sign in successful - Response:', {
+      if (!data.user || !data.session) {
+        console.error('AuthContext: Sign in succeeded but no user or session data returned');
+        throw new Error('Authentication succeeded but no user data returned. Please try again.');
+      }
+      
+      console.log('AuthContext: Sign in successful - Response:', {
         user: data.user ? {
           id: data.user.id,
           email: data.user.email,
@@ -208,20 +279,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } : 'No session'
       });
       
-      // Explicitly update the state to ensure immediate response
-      setSession(data.session);
-      setUser(data.user);
+      // Platform-specific post-sign-in handling
+      if (Platform.OS === 'ios') {
+        console.log('AuthContext: Applying iOS-specific sign-in handling');
+        
+        // On iOS, we make sure to enforce state updates sequentially with small delays
+        // This helps with state synchronization issues that can occur on iOS
+        setTimeout(() => {
+          setSession(data.session);
+          setTimeout(() => {
+            setUser(data.user);
+            setTimeout(() => {
+              console.log('AuthContext: iOS state update sequence completed');
+            }, 100);
+          }, 100);
+        }, 100);
+      } else {
+        // Standard flow for other platforms
+        setSession(data.session);
+        setUser(data.user);
+      }
       
       // Force a delay to ensure state update is processed
-      setTimeout(() => {
-        console.log('Forced state check after delay:', {
-          userSet: data.user?.id,
-          sessionSet: data.session?.access_token ? 'Present' : 'Missing'
-        });
-      }, 500);
+      await new Promise(resolve => setTimeout(resolve, 500));
       
+      console.log('AuthContext: Forced state check after delay:', {
+        userSet: data.user?.id,
+        sessionSet: data.session?.access_token ? 'Present' : 'Missing'
+      });
+      
+      return true;
     } catch (error: any) {
-      console.error('Sign in error:', error.message, error.status || '');
+      console.error('AuthContext: Sign in error:', error.message, error.status || '');
       
       let errorMessage = error.message;
       // Make error messages more user-friendly
@@ -230,6 +319,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       Alert.alert('Sign In Failed', errorMessage);
+      
+      // Important: Re-throw the error so calling code can handle it
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -238,134 +330,124 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Sign out
   const signOut = async () => {
     try {
+      console.log('AuthContext: Starting signOut process');
       setIsLoading(true);
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
+      
+      // If already in guest mode, just clear it and return
+      if (isGuest) {
+        console.log('AuthContext: Clearing guest mode');
+        await AsyncStorage.removeItem('guestMode');
+        setIsGuest(false);
+        setIsLoading(false);
+        return true;
       }
+      
+      // First attempt - Standard signOut with global scope
+      console.log('AuthContext: Attempting signOut with global scope');
+      const { error: error1 } = await supabase.auth.signOut({ scope: 'global' });
+      if (error1) {
+        console.warn('AuthContext: First signOut attempt failed:', error1.message);
+        // Continue with next approach rather than throwing
+      } else {
+        console.log('AuthContext: First signOut attempt successful');
+      }
+
+      // Second attempt - Forcefully kill the session if first attempt doesn't work
+      try {
+        console.log('AuthContext: Manually killing session in Supabase');
+        await supabase.auth.killSession();
+      } catch (killError) {
+        console.warn('AuthContext: killSession attempt failed:', killError);
+      }
+
+      // Directly manipulate the internal state of the Supabase instance
+      try {
+        console.log('AuthContext: Manually clearing auth state in Supabase instance');
+        // @ts-ignore - Accessing internal methods
+        if (supabase.auth.setAuth) {
+          // @ts-ignore
+          supabase.auth.setAuth(null);
+        }
+        // @ts-ignore
+        if (supabase.auth.clearStore) {
+          // @ts-ignore
+          await supabase.auth.clearStore();
+        }
+      } catch (clearError) {
+        console.warn('AuthContext: Error clearing auth store:', clearError);
+      }
+
+      // Force clear AsyncStorage
+      try {
+        console.log('AuthContext: Clearing auth from AsyncStorage');
+        const keys = await AsyncStorage.getAllKeys();
+        const authKeys = keys.filter(key => 
+          key.startsWith('supabase.auth') || 
+          key.includes('token') || 
+          key.includes('session')
+        );
+        
+        if (authKeys.length > 0) {
+          console.log('AuthContext: Found auth keys to remove:', authKeys);
+          await AsyncStorage.multiRemove(authKeys);
+        } else {
+          console.log('AuthContext: No auth keys found in AsyncStorage');
+        }
+      } catch (storageError) {
+        console.warn('AuthContext: Error clearing AsyncStorage:', storageError);
+      }
+
+      // After signing out, enable guest mode automatically
+      console.log('AuthContext: Enabling guest mode after sign out');
+      setIsGuest(true);
+      await AsyncStorage.setItem('guestMode', 'true');
+      
+      // Explicitly reset the React state
+      console.log('AuthContext: Resetting auth state in React context');
+      setUser(null);
+      setSession(null);
+
+      console.log('AuthContext: SignOut process completed');
+      
+      // Force a small delay to ensure all async operations complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      return true;
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      console.error('AuthContext: Error during signOut process:', error.message);
+      
+      // Even if there was an error, try to enable guest mode
+      try {
+        console.log('AuthContext: Attempting to enable guest mode after error');
+        setIsGuest(true);
+        await AsyncStorage.setItem('guestMode', 'true');
+      } catch (guestError) {
+        console.error('AuthContext: Failed to enable guest mode after error:', guestError);
+      }
+      
+      Alert.alert('Error', 'Failed to sign out properly. Please restart the app.');
+      return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Sign in with Google
+  // Google sign in - disabled
   const signInWithGoogle = async () => {
-    try {
-      setIsLoading(true);
-      console.log('Attempting to sign in with Google');
-      
-      const redirectUri = makeRedirectUri({
-        scheme: 'trivia-universe-feed'
-      });
-      
-      console.log('Redirect URI:', redirectUri);
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUri,
-          skipBrowserRedirect: true
-        }
-      });
-      
-      if (error) {
-        console.error('Google OAuth error:', error.message);
-        throw error;
-      }
-      
-      if (data?.url) {
-        console.log('Opening browser for OAuth flow');
-        // Open the URL in a browser
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
-        
-        if (result.type === 'success') {
-          console.log('OAuth successful, exchanging code for session');
-          // The user was redirected back to our app
-          // Exchange the code for a session
-          const { url } = result;
-          const { data, error } = await supabase.auth.exchangeCodeForSession(url);
-          
-          if (error) {
-            console.error('Code exchange error:', error.message);
-            throw error;
-          }
-          
-          console.log('Session obtained:', data.session ? 'Valid session' : 'No session');
-          
-          // Explicitly update the state to ensure immediate response
-          setSession(data.session);
-          setUser(data.user);
-        } else {
-          console.warn('OAuth flow was not successful:', result.type);
-        }
-      }
-    } catch (error: any) {
-      console.error('Google sign in error:', error.message);
-      Alert.alert('Error', error.message);
-    } finally {
-      setIsLoading(false);
-    }
+    Alert.alert(
+      'Feature Not Available',
+      'Sign in with Google is currently not supported.'
+    );
+    return;
   };
 
-  // Sign in with Apple
+  // Apple sign in - disabled
   const signInWithApple = async () => {
-    try {
-      setIsLoading(true);
-      console.log('Attempting to sign in with Apple');
-      
-      const redirectUri = makeRedirectUri({
-        scheme: 'trivia-universe-feed'
-      });
-      
-      console.log('Redirect URI:', redirectUri);
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: redirectUri,
-          skipBrowserRedirect: true
-        }
-      });
-      
-      if (error) {
-        console.error('Apple OAuth error:', error.message);
-        throw error;
-      }
-      
-      if (data?.url) {
-        console.log('Opening browser for Apple OAuth flow');
-        // Open the URL in a browser
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
-        
-        if (result.type === 'success') {
-          console.log('Apple OAuth successful, exchanging code for session');
-          // The user was redirected back to our app
-          // Exchange the code for a session
-          const { url } = result;
-          const { data, error } = await supabase.auth.exchangeCodeForSession(url);
-          
-          if (error) {
-            console.error('Code exchange error:', error.message);
-            throw error;
-          }
-          
-          console.log('Session obtained:', data.session ? 'Valid session' : 'No session');
-          
-          // Explicitly update the state to ensure immediate response
-          setSession(data.session);
-          setUser(data.user);
-        } else {
-          console.warn('Apple OAuth flow was not successful:', result.type);
-        }
-      }
-    } catch (error: any) {
-      console.error('Apple sign in error:', error.message);
-      Alert.alert('Error', error.message);
-    } finally {
-      setIsLoading(false);
-    }
+    Alert.alert(
+      'Feature Not Available',
+      'Sign in with Apple is currently not supported.'
+    );
+    return;
   };
 
   // Reset password
@@ -424,6 +506,58 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Continue as guest function
+  const continueAsGuest = async () => {
+    try {
+      setIsLoading(true);
+      console.log('Setting up guest mode');
+      
+      // Only sign out if we're authenticated to avoid unnecessary operations
+      if (user || session) {
+        console.log('Clearing existing auth session before enabling guest mode');
+        await signOut();
+      }
+      
+      // Set guest mode flag in AsyncStorage - do this before state updates to ensure it's saved
+      await AsyncStorage.setItem('guestMode', 'true');
+      console.log('Guest mode flag saved in AsyncStorage');
+      
+      // Update state
+      setIsGuest(true);
+      setUser(null);
+      setSession(null);
+      
+      // On iOS, ensure changes are applied sequentially with small delays
+      if (Platform.OS === 'ios') {
+        console.log('iOS platform: applying sequential state updates with delays');
+        // Force a small delay to ensure state updates are processed
+        return new Promise<void>(resolve => {
+          setTimeout(() => {
+            console.log('Guest mode activation complete on iOS');
+            setIsLoading(false);
+            resolve();
+          }, 100);
+        });
+      }
+      
+      console.log('Guest mode activated successfully');
+    } catch (error) {
+      console.error('Error setting up guest mode:', error);
+      
+      // Try one more time directly
+      try {
+        console.log('Retrying guest mode activation directly');
+        setIsGuest(true);
+        await AsyncStorage.setItem('guestMode', 'true');
+      } catch (retryError) {
+        console.error('Retry also failed:', retryError);
+        Alert.alert('Error', 'Failed to continue as guest. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Provide the auth context to children components
   return (
     <AuthContext.Provider
@@ -431,13 +565,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         session,
         isLoading,
+        isGuest,
+        isAuthenticated: !!user,
         signUp,
         signIn,
         signOut,
         signInWithGoogle,
         signInWithApple,
         resetPassword,
-        updateProfile
+        updateProfile,
+        continueAsGuest
       }}
     >
       {children}
