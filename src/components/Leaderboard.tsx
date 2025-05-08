@@ -9,6 +9,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { FeatherIcon } from '@/components/FeatherIcon';
 import { WebContainer } from '@/components/WebContainer';
+import { colors, spacing, borderRadius } from '@/src/theme';
 
 const LeaderboardTabs = {
   Daily: 'day',
@@ -34,10 +35,9 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
 
-  // Yellow color theme
-  const YELLOW_PRIMARY = '#ffc107'; // Matches the X button
-  const YELLOW_LIGHT = '#fff8e1';
-  const YELLOW_DARK = '#c79100';
+  // Use theme colors instead of hardcoded values
+  const ACCENT_COLOR = colors.accent;
+  const ACCENT_FOREGROUND = colors.accentForeground;
 
   useEffect(() => {
     loadLeaderboardData();
@@ -122,8 +122,15 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
         
         <View style={styles.avatarContainer}>
           {item.avatar_url ? (
+            // If the user has an avatar image - show it
             <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+          ) : !user ? (
+            // If no user is logged in (app user, not leaderboard item) - show a user icon 
+            <View style={[styles.avatarPlaceholder, isCurrentUser && styles.currentUserAvatar]}>
+              <FeatherIcon name="user" size={36} color="#fff" />
+            </View>
           ) : (
+            // If user is logged in but the leaderboard item has no avatar - show initials
             <View style={[styles.avatarPlaceholder, isCurrentUser && styles.currentUserAvatar]}>
               <ThemedText style={styles.avatarText}>{getInitials(item.full_name, item.username)}</ThemedText>
             </View>
@@ -146,7 +153,7 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
         </View>
         
         <View style={styles.scoreContainer}>
-          <ThemedText style={[styles.scoreValue, { color: isCurrentUser ? YELLOW_PRIMARY : YELLOW_DARK }]}>
+          <ThemedText style={[styles.scoreValue, { color: isCurrentUser ? ACCENT_COLOR : isDark ? ACCENT_COLOR : colors.secondary }]}>
             {scoreToShow}
           </ThemedText>
           <ThemedText style={styles.scoreLabel}>
@@ -226,28 +233,25 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
         const style = document.createElement('style');
         style.textContent = `
           .leaderboard-container {
-            background-color: #151718;
-            color: #ECEDEE;
+            background-color: ${colors.background};
+            color: ${colors.foreground};
           }
           .leaderboard-item {
-            background-color: #1c1c1c;
-            border: 1px solid rgba(150, 150, 150, 0.2);
+            background-color: ${colors.card};
+            border: 1px solid ${colors.border};
           }
           .leaderboard-item.current-user {
-            background-color: #332b00; /* Dark yellow for dark theme */
-            border-color: transparent;
+            background-color: ${isDark ? '#2b2206' : '#fff8e1'};
+            border-color: ${colors.accent};
           }
         `;
         document.head.appendChild(style);
         
         return () => {
-          document.body.classList.remove('dark-theme');
           document.head.removeChild(style);
         };
       }
-      return () => {
-        document.body.classList.remove('dark-theme');
-      };
+      return () => {};
     }, [isDark]);
     
     return <WebContainer>{content}</WebContainer>;
@@ -259,13 +263,12 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
   },
   header: {
-    padding: 16,
+    padding: spacing[4],
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
-    paddingTop: Platform.OS === 'ios' ? 60 : 16,
+    borderBottomColor: colors.border,
+    paddingTop: Platform.OS === 'ios' ? 60 : spacing[4],
     display: 'none', // Hide this header since we're using the modal header
   },
   headerTitle: {
@@ -273,40 +276,37 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'white',
   },
   tab: {
     flex: 1,
-    paddingVertical: 15,
+    paddingVertical: spacing[3],
     alignItems: 'center',
   },
   activeTab: {
     borderBottomWidth: 3,
-    borderBottomColor: '#ffc107', // Yellow active tab indicator
+    borderBottomColor: colors.accent,
   },
   tabText: {
     fontSize: 14,
-    color: '#888888',
+    color: colors.mutedForeground,
     fontWeight: '500',
   },
   activeTabText: {
-    color: '#ffc107', // Yellow text for active tab
+    color: colors.accent,
     fontWeight: '600',
   },
   yourRankContainer: {
-    padding: 15,
-    backgroundColor: '#fff8e1', // Light yellow background
+    padding: spacing[3],
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+    borderBottomColor: colors.border,
   },
   yourRankText: {
     fontSize: 16,
     textAlign: 'center',
-    color: '#333333',
     fontWeight: '500',
   },
   rankNumber: {
-    color: '#ffc107', // Yellow rank number
+    color: colors.accent,
     fontWeight: 'bold',
   },
   listContent: {
@@ -315,27 +315,33 @@ const styles = StyleSheet.create({
   itemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'white',
+    padding: spacing[4],
   },
   altItemContainer: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: Platform.select({
+      ios: colors.muted + '20',
+      android: colors.muted + '20',
+      default: 'transparent'
+    }),
   },
   currentUserItem: {
-    backgroundColor: '#fff8e1', // Light yellow background for current user
+    backgroundColor: Platform.select({
+      ios: colors.accent + '20',
+      android: colors.accent + '20',
+      default: 'transparent'
+    }),
   },
   rank: {
     width: 30,
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
-    color: '#666666',
   },
   currentUserRank: {
-    color: '#ffc107', // Yellow rank number for current user
+    color: colors.accent,
   },
   avatarContainer: {
-    marginRight: 12,
+    marginRight: spacing[3],
   },
   avatar: {
     width: 40,
@@ -346,15 +352,15 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#c79100', // Darker yellow for avatar
+    backgroundColor: colors.muted,
     justifyContent: 'center',
     alignItems: 'center',
   },
   currentUserAvatar: {
-    backgroundColor: '#ffc107', // Yellow avatar for current user
+    backgroundColor: colors.accent,
   },
   avatarText: {
-    color: '#fff',
+    color: colors.foreground,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -368,14 +374,13 @@ const styles = StyleSheet.create({
   username: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333333',
   },
   currentUserText: {
-    color: '#333333',
+    fontWeight: '700',
   },
   youLabel: {
     fontStyle: 'italic',
-    color: '#ffc107',
+    color: colors.accent,
     marginLeft: 4,
   },
   flag: {
@@ -392,22 +397,22 @@ const styles = StyleSheet.create({
   },
   scoreLabel: {
     fontSize: 12,
-    color: '#888888',
+    color: colors.mutedForeground,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing[5],
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing[5],
   },
   emptyText: {
-    marginTop: 16,
+    marginTop: spacing[4],
     fontSize: 16,
     opacity: 0.7,
     textAlign: 'center',
