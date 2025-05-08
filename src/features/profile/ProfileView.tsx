@@ -1093,87 +1093,33 @@ const ProfileView: React.FC = () => {
           </View>
 
           {/* Edit Profile button */}
-          <TouchableOpacity 
-            style={profileStyles.editButton} 
+          <Button 
+            variant="accent"
+            size="md"
+            fullWidth
+            leftIcon={<FeatherIcon name="edit-2" size={18} color="#000" style={{ marginRight: 8 }} />}
             onPress={() => setIsEditing(true)}
+            style={{ marginTop: 20 }}
           >
-            <ThemedText style={profileStyles.editButtonText}>Edit Profile</ThemedText>
-          </TouchableOpacity>
+            Edit Profile
+          </Button>
 
           {/* Account section */}
           <View style={profileStyles.accountSection}>
             <ThemedText style={profileStyles.accountSectionTitle}>Account</ThemedText>
             
-            {/* Sign Out button - Using direct logout logic for web */}
-            {Platform.OS === 'web' ? (
-              <View>
-                <button 
-                  style={{
-                    backgroundColor: '#ff3b30',
-                    color: 'white',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    width: '100%',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: '500',
-                    fontSize: '16px'
-                  }}
-                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                    e.stopPropagation();
-                    console.log('Web sign out button clicked');
-                    
-                    // Show confirmation dialog
-                    if (window.confirm('Are you sure you want to sign out?')) {
-                      console.log('User confirmed sign out - direct web logout triggered');
-                      
-                      // Direct logout without using context for web
-                      try {
-                        // Direct access to supabase auth
-                        supabase.auth.signOut({ scope: 'global' })
-                          .then(() => {
-                            console.log('Sign out completed');
-                            // Clear localStorage
-                            localStorage.removeItem('supabase.auth.token');
-                            localStorage.clear();
-                            // Reload page
-                            window.location.href = '/';
-                          })
-                          .catch((err: Error) => {
-                            console.error('Sign out failed:', err);
-                            // Force reload anyway
-                            window.location.href = '/';
-                          });
-                      } catch (error) {
-                        console.error('Sign out error:', error);
-                        window.location.href = '/';
-                      }
-                    } else {
-                      console.log('Sign out canceled by user');
-                    }
-                  }}
-                >
-                  <span style={{ marginRight: '8px' }}>Sign Out</span>
-                </button>
-              </View>
-            ) : (
-              // Native platforms - use the TouchableOpacity approach
-              <TouchableOpacity 
-                style={profileStyles.signOutButton}
-                onPress={handleSignOut}
-                accessibilityLabel="Sign out from your account"
-                accessibilityHint="Double-tap to sign out from your account"
-                activeOpacity={0.6}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                  <FeatherIcon name="log-out" size={18} color="#fff" style={{ marginRight: 8 }} />
-                  <ThemedText style={profileStyles.signOutButtonText}>Sign Out</ThemedText>
-                </View>
-              </TouchableOpacity>
-            )}
+            {/* Sign Out button - Using proper Button component for web and native */}
+            <Button 
+              variant="destructive"
+              size="md"
+              fullWidth
+              leftIcon={<FeatherIcon name="log-out" size={18} color="#fff" style={{ marginRight: 8 }} />}
+              onPress={handleSignOut}
+              accessibilityLabel="Sign out from your account"
+              accessibilityHint="Double-tap to sign out from your account"
+            >
+              Sign Out
+            </Button>
           </View>
         </View>
       ) : (
@@ -1210,32 +1156,28 @@ const ProfileView: React.FC = () => {
               </ThemedText>
             </View>
             <View style={profileStyles.avatarButtonsContainer}>
-              <TouchableOpacity
-                style={[profileStyles.avatarButton, profileStyles.uploadButton]}
+              <Button
+                variant="accent"
+                size="sm"
+                style={{ flex: 1, marginRight: avatarUrl ? 5 : 0 }}
+                leftIcon={<FeatherIcon name="upload" size={16} color="#000" />}
                 onPress={pickImage}
                 disabled={uploadingImage}
               >
-                {uploadingImage ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <FeatherIcon name="upload" size={16} color="#fff" />
-                    <ThemedText style={profileStyles.avatarButtonText}>
-                      Upload Image
-                    </ThemedText>
-                  </>
-                )}
-              </TouchableOpacity>
+                {uploadingImage ? 'Uploading...' : 'Upload Image'}
+              </Button>
               
               {avatarUrl ? (
-                <TouchableOpacity
-                  style={[profileStyles.avatarButton, profileStyles.removeButton]}
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  style={{ flex: 1, marginLeft: 5 }}
+                  leftIcon={<FeatherIcon name="trash-2" size={16} color="#fff" />}
                   onPress={removeAvatar}
                   disabled={uploadingImage}
                 >
-                  <FeatherIcon name="trash-2" size={16} color="#fff" />
-                  <ThemedText style={profileStyles.avatarButtonText}>Remove</ThemedText>
-                </TouchableOpacity>
+                  Remove
+                </Button>
               ) : null}
             </View>
           </View>
@@ -1273,8 +1215,10 @@ const ProfileView: React.FC = () => {
           </View>
           
           <View style={profileStyles.buttonRow}>
-            <TouchableOpacity 
-              style={[profileStyles.actionButton, profileStyles.cancelButton]}
+            <Button 
+              variant="ghost"
+              size="md"
+              style={{ flex: 1, marginRight: 5 }}
               onPress={() => {
                 setIsEditing(false);
                 // Reset to original values
@@ -1286,15 +1230,17 @@ const ProfileView: React.FC = () => {
                 }
               }}
             >
-              <ThemedText style={profileStyles.cancelButtonText}>Cancel</ThemedText>
-            </TouchableOpacity>
+              Cancel
+            </Button>
             
-            <TouchableOpacity 
-              style={[profileStyles.actionButton, profileStyles.saveButton]}
+            <Button 
+              variant="accent"
+              size="md"
+              style={{ flex: 1, marginLeft: 5 }}
               onPress={handleUpdateProfile}
             >
-              <ThemedText style={profileStyles.saveButtonText}>Save</ThemedText>
-            </TouchableOpacity>
+              Save Changes
+            </Button>
           </View>
         </View>
       )}
