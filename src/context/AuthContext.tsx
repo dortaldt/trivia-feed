@@ -4,6 +4,7 @@ import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Define the shape of our auth context
 type AuthContextType = {
@@ -12,7 +13,7 @@ type AuthContextType = {
   isLoading: boolean;
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<boolean>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -238,13 +239,79 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Sign out
   const signOut = async () => {
     try {
+      console.log('AuthContext: Starting signOut process');
       setIsLoading(true);
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
+      
+      // First attempt - Standard signOut with global scope
+      console.log('AuthContext: Attempting signOut with global scope');
+      const { error: error1 } = await supabase.auth.signOut({ scope: 'global' });
+      if (error1) {
+        console.warn('AuthContext: First signOut attempt failed:', error1.message);
+        // Continue with next approach rather than throwing
+      } else {
+        console.log('AuthContext: First signOut attempt successful');
       }
+
+      // Second attempt - Forcefully kill the session if first attempt doesn't work
+      try {
+        console.log('AuthContext: Manually killing session in Supabase');
+        await supabase.auth.killSession();
+      } catch (killError) {
+        console.warn('AuthContext: killSession attempt failed:', killError);
+      }
+
+      // Directly manipulate the internal state of the Supabase instance
+      try {
+        console.log('AuthContext: Manually clearing auth state in Supabase instance');
+        // @ts-ignore - Accessing internal methods
+        if (supabase.auth.setAuth) {
+          // @ts-ignore
+          supabase.auth.setAuth(null);
+        }
+        // @ts-ignore
+        if (supabase.auth.clearStore) {
+          // @ts-ignore
+          await supabase.auth.clearStore();
+        }
+      } catch (clearError) {
+        console.warn('AuthContext: Error clearing auth store:', clearError);
+      }
+
+      // Force clear AsyncStorage
+      try {
+        console.log('AuthContext: Clearing auth from AsyncStorage');
+        const keys = await AsyncStorage.getAllKeys();
+        const authKeys = keys.filter(key => 
+          key.startsWith('supabase.auth') || 
+          key.includes('token') || 
+          key.includes('session')
+        );
+        
+        if (authKeys.length > 0) {
+          console.log('AuthContext: Found auth keys to remove:', authKeys);
+          await AsyncStorage.multiRemove(authKeys);
+        } else {
+          console.log('AuthContext: No auth keys found in AsyncStorage');
+        }
+      } catch (storageError) {
+        console.warn('AuthContext: Error clearing AsyncStorage:', storageError);
+      }
+
+      // Explicitly reset the React state
+      console.log('AuthContext: Resetting auth state in React context');
+      setUser(null);
+      setSession(null);
+
+      console.log('AuthContext: SignOut process completed');
+      
+      // Force a small delay to ensure all async operations complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      return true;
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      console.error('AuthContext: Error during signOut process:', error.message);
+      Alert.alert('Error', 'Failed to sign out properly. Please restart the app.');
+      return false;
     } finally {
       setIsLoading(false);
     }
