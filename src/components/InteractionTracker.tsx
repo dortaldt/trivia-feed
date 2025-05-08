@@ -77,6 +77,9 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
   const [expandedData, setExpandedData] = useState<string | null>(null);
   const [lastWeightUpdateTime, setLastWeightUpdateTime] = useState<number>(0);
   const [isLoadingWeights, setIsLoadingWeights] = useState<boolean>(false);
+  const [visibleDbRecords, setVisibleDbRecords] = useState<number>(100); // Default show 100 records
+  const [showAllRecords, setShowAllRecords] = useState<boolean>(false); // State to track if showing all records
+  const [tableFilter, setTableFilter] = useState<string>(''); // Filter records by table name
   const [summary, setSummary] = useState({
     correct: 0,
     incorrect: 0,
@@ -374,7 +377,16 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
   useEffect(() => {
     // Add listener for database operations
     const handleDbOperation = (operation: DbOperation) => {
-      setDbOperations(prev => [operation, ...prev].slice(0, 100)); // Limit to last 100 operations
+      // Filter operations for user_feed_changes table to reduce noise
+      if (operation.table === 'user_feed_changes') {
+        // Only track operations with significant record count for feed changes
+        if (operation.records > 5 || operation.operation !== 'insert') {
+          setDbOperations(prev => [operation, ...prev].slice(0, 50)); // Limit to 50 operations for feed changes
+        }
+      } else {
+        // For other tables: keep more detailed history
+        setDbOperations(prev => [operation, ...prev].slice(0, 100));
+      }
     };
     
     dbEventEmitter.on('db-operation', handleDbOperation);
@@ -905,6 +917,16 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
   const renderDbLogTab = () => {
     const stats = getDbStats();
     
+    // Filter operations by table name if filter is set
+    const filteredOperations = tableFilter 
+      ? dbOperations.filter(op => op.table.includes(tableFilter)) 
+      : dbOperations;
+    
+    // Calculate how many records to display
+    const recordsToDisplay = showAllRecords 
+      ? filteredOperations 
+      : filteredOperations.slice(0, visibleDbRecords);
+    
     return (
       <ScrollView style={styles.scrollView}>
         {/* Summary statistics */}
@@ -939,10 +961,27 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
             <ThemedText style={styles.detailedStatsTitle}>By Table:</ThemedText>
             <View style={styles.detailedStatsContent}>
               {Object.entries(stats.tableStats).map(([table, count]) => (
-                <View key={table} style={styles.detailedStatItem}>
-                  <ThemedText style={styles.detailedStatLabel}>{table}:</ThemedText>
-                  <ThemedText style={styles.detailedStatValue}>{count}</ThemedText>
-                </View>
+                <TouchableOpacity 
+                  key={table} 
+                  style={[
+                    styles.detailedStatItem,
+                    tableFilter === table && styles.selectedTableFilter
+                  ]}
+                  onPress={() => setTableFilter(tableFilter === table ? '' : table)}
+                >
+                  <ThemedText style={[
+                    styles.detailedStatLabel,
+                    tableFilter === table && styles.selectedTableFilterText
+                  ]}>
+                    {table}:
+                  </ThemedText>
+                  <ThemedText style={[
+                    styles.detailedStatValue,
+                    tableFilter === table && styles.selectedTableFilterText
+                  ]}>
+                    {count}
+                  </ThemedText>
+                </TouchableOpacity>
               ))}
             </View>
           </View>
@@ -961,6 +1000,56 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
           </View>
         </ThemedView>
       
+        {/* Record count info */}
+        <View style={styles.recordsInfo}>
+          <ThemedText style={styles.recordsInfoText}>
+            Showing {recordsToDisplay.length} of {filteredOperations.length} records
+            {tableFilter && ` (filtered by "${tableFilter}")`}
+          </ThemedText>
+          
+          {tableFilter && (
+            <TouchableOpacity 
+              style={styles.clearFilterButton}
+              onPress={() => setTableFilter('')}
+            >
+              <ThemedText style={styles.clearFilterText}>Clear Filter</ThemedText>
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        {/* Common table filter shortcuts */}
+        <View style={styles.filterShortcutsContainer}>
+          <TouchableOpacity 
+            style={[
+              styles.filterShortcutButton,
+              tableFilter === 'user_feed_changes' && styles.activeFilterShortcut
+            ]}
+            onPress={() => setTableFilter(tableFilter === 'user_feed_changes' ? '' : 'user_feed_changes')}
+          >
+            <ThemedText style={styles.filterShortcutText}>Feed Changes</ThemedText>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[
+              styles.filterShortcutButton,
+              tableFilter === 'user_interactions' && styles.activeFilterShortcut
+            ]}
+            onPress={() => setTableFilter(tableFilter === 'user_interactions' ? '' : 'user_interactions')}
+          >
+            <ThemedText style={styles.filterShortcutText}>Interactions</ThemedText>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[
+              styles.filterShortcutButton,
+              tableFilter === 'user_weight_changes' && styles.activeFilterShortcut
+            ]}
+            onPress={() => setTableFilter(tableFilter === 'user_weight_changes' ? '' : 'user_weight_changes')}
+          >
+            <ThemedText style={styles.filterShortcutText}>Weight Changes</ThemedText>
+          </TouchableOpacity>
+        </View>
+        
         {/* Operations table */}
         <ThemedView style={styles.tableContainer}>
           <View style={styles.tableHeader}>
@@ -973,73 +1062,108 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
             <ThemedText style={[styles.headerCell, styles.dataCell]}>Data</ThemedText>
           </View>
           
-          {dbOperations.map((operation, index) => (
-            <React.Fragment key={`${operation.timestamp}-${index}`}>
-              <TouchableOpacity 
-                style={styles.tableRow}
-                onPress={() => console.log('DB Operation Details:', operation)}
-              >
-                <ThemedText style={[styles.cell, styles.timeCell]}>
-                  {formatTimestamp(operation.timestamp)}
-                </ThemedText>
-                <ThemedText 
-                  style={[
-                    styles.cell, 
-                    styles.directionCell, 
-                    operation.direction === 'sent' ? styles.sentText : styles.receivedText
-                  ]}
-                >
-                  {operation.direction === 'sent' ? '↑' : '↓'} {operation.direction}
-                </ThemedText>
-                <ThemedText style={[styles.cell, styles.tableCell]}>
-                  {operation.table}
-                </ThemedText>
-                <ThemedText style={[styles.cell, styles.operationCell]}>
-                  {operation.operation}
-                </ThemedText>
-                <ThemedText style={[styles.cell, styles.recordsCell]}>
-                  {operation.records}
-                </ThemedText>
-                <ThemedText 
-                  style={[
-                    styles.cell, 
-                    styles.statusCell, 
-                    operation.status === 'success' ? styles.successText : styles.errorText
-                  ]}
-                >
-                  {operation.status}
-                </ThemedText>
+          <ScrollView style={styles.tableScrollView} nestedScrollEnabled={true}>
+            {recordsToDisplay.map((operation, index) => (
+              <React.Fragment key={`${operation.timestamp}-${index}`}>
                 <TouchableOpacity 
-                  style={styles.dataCell}
-                  onPress={() => {
-                    setExpandedData(prev => 
-                      prev === `${operation.timestamp}-${index}` 
-                        ? null 
-                        : `${operation.timestamp}-${index}`
-                    );
-                  }}
+                  style={styles.tableRow}
+                  onPress={() => console.log('DB Operation Details:', operation)}
                 >
-                  <ThemedText style={styles.cell}>
-                    {expandedData === `${operation.timestamp}-${index}` ? 'Hide' : 'View'}
+                  <ThemedText style={[styles.cell, styles.timeCell]}>
+                    {formatTimestamp(operation.timestamp)}
                   </ThemedText>
-                </TouchableOpacity>
-              </TouchableOpacity>
-              {expandedData === `${operation.timestamp}-${index}` && (
-                <View style={styles.expandedDataContainer}>
-                  <ScrollView style={styles.dataScrollView} horizontal={true}>
-                    <ThemedText style={styles.dataText}>
-                      {JSON.stringify(operation.data, null, 2)}
+                  <ThemedText 
+                    style={[
+                      styles.cell, 
+                      styles.directionCell, 
+                      operation.direction === 'sent' ? styles.sentText : styles.receivedText
+                    ]}
+                  >
+                    {operation.direction === 'sent' ? '↑' : '↓'} {operation.direction}
+                  </ThemedText>
+                  <ThemedText style={[styles.cell, styles.tableCell]}>
+                    {operation.table}
+                  </ThemedText>
+                  <ThemedText style={[styles.cell, styles.operationCell]}>
+                    {operation.operation}
+                  </ThemedText>
+                  <ThemedText style={[styles.cell, styles.recordsCell]}>
+                    {operation.records}
+                  </ThemedText>
+                  <ThemedText 
+                    style={[
+                      styles.cell, 
+                      styles.statusCell, 
+                      operation.status === 'success' ? styles.successText : styles.errorText
+                    ]}
+                  >
+                    {operation.status}
+                  </ThemedText>
+                  <TouchableOpacity 
+                    style={styles.dataCell}
+                    onPress={() => {
+                      setExpandedData(prev => 
+                        prev === `${operation.timestamp}-${index}` 
+                          ? null 
+                          : `${operation.timestamp}-${index}`
+                      );
+                    }}
+                  >
+                    <ThemedText style={styles.cell}>
+                      {expandedData === `${operation.timestamp}-${index}` ? 'Hide' : 'View'}
                     </ThemedText>
-                  </ScrollView>
-                </View>
-              )}
-            </React.Fragment>
-          ))}
+                  </TouchableOpacity>
+                </TouchableOpacity>
+                {expandedData === `${operation.timestamp}-${index}` && (
+                  <View style={styles.expandedDataContainer}>
+                    <ScrollView style={styles.dataScrollView} horizontal={true}>
+                      <ThemedText style={styles.dataText}>
+                        {JSON.stringify(operation.data, null, 2)}
+                      </ThemedText>
+                    </ScrollView>
+                  </View>
+                )}
+              </React.Fragment>
+            ))}
+            
+            {filteredOperations.length === 0 && (
+              <View style={styles.emptyState}>
+                <ThemedText style={styles.emptyText}>
+                  {tableFilter ? `No records found for table "${tableFilter}"` : 'No database operations logged yet'}
+                </ThemedText>
+              </View>
+            )}
+          </ScrollView>
           
-          {dbOperations.length === 0 && (
-            <View style={styles.emptyState}>
-              <ThemedText style={styles.emptyText}>No database operations logged yet</ThemedText>
+          {/* Load more / Show all buttons */}
+          {filteredOperations.length > visibleDbRecords && !showAllRecords && (
+            <View style={styles.loadMoreContainer}>
+              <TouchableOpacity 
+                style={styles.loadMoreButton}
+                onPress={() => setVisibleDbRecords(prev => prev + 100)}
+              >
+                <ThemedText style={styles.loadMoreText}>Load 100 More</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.showAllButton}
+                onPress={() => setShowAllRecords(true)}
+              >
+                <ThemedText style={styles.showAllText}>Show All ({filteredOperations.length})</ThemedText>
+              </TouchableOpacity>
             </View>
+          )}
+          
+          {/* Show fewer button when showing all records */}
+          {showAllRecords && filteredOperations.length > 100 && (
+            <TouchableOpacity 
+              style={styles.showFewerButton}
+              onPress={() => {
+                setShowAllRecords(false);
+                setVisibleDbRecords(100);
+              }}
+            >
+              <ThemedText style={styles.showFewerText}>Show Fewer (100)</ThemedText>
+            </TouchableOpacity>
           )}
         </ThemedView>
       </ScrollView>
@@ -1731,6 +1855,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 5,
     overflow: 'hidden',
+    maxHeight: 2000, // Remove any height constraint
   },
   tableHeader: {
     flexDirection: 'row',
@@ -2457,5 +2582,105 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     alignSelf: 'center',
     margin: 8,
+  },
+  tableScrollView: {
+    maxHeight: 500, // Allow the table to scroll with a reasonable height 
+  },
+  recordsInfo: {
+    padding: 8,
+    marginBottom: 8,
+    backgroundColor: 'rgba(30, 30, 30, 0.5)',
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  recordsInfoText: {
+    fontSize: 12,
+    textAlign: 'center',
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  loadMoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 8,
+    backgroundColor: 'rgba(30, 30, 30, 0.5)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  loadMoreButton: {
+    padding: 8,
+    backgroundColor: '#0A7EA4',
+    borderRadius: 4,
+    flex: 1,
+    marginRight: 4,
+    alignItems: 'center',
+  },
+  loadMoreText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  showAllButton: {
+    padding: 8,
+    backgroundColor: '#555',
+    borderRadius: 4,
+    flex: 1,
+    marginLeft: 4,
+    alignItems: 'center',
+  },
+  showAllText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  showFewerButton: {
+    padding: 10,
+    backgroundColor: '#555',
+    borderRadius: 4,
+    marginVertical: 8,
+    marginHorizontal: 16,
+    alignItems: 'center',
+  },
+  showFewerText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  selectedTableFilter: {
+    backgroundColor: 'rgba(10, 126, 164, 0.3)',
+    borderRadius: 4,
+    padding: 2,
+  },
+  selectedTableFilterText: {
+    color: '#3498db',
+    fontWeight: 'bold',
+  },
+  clearFilterButton: {
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: 'rgba(255, 87, 87, 0.3)',
+    borderRadius: 4,
+  },
+  clearFilterText: {
+    fontSize: 11,
+    color: '#ff5757',
+  },
+  filterShortcutsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 8,
+  },
+  filterShortcutButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(30, 30, 30, 0.5)',
+    borderRadius: 4,
+  },
+  activeFilterShortcut: {
+    backgroundColor: 'rgba(10, 126, 164, 0.5)',
+  },
+  filterShortcutText: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
 }); 
