@@ -54,9 +54,23 @@ interface FeatherIconProps {
 /**
  * A component for rendering Feather icons from feathericons.com
  * Uses the Feather icon set provided by @expo/vector-icons
+ * 
+ * This component has been optimized to work in both Expo Go and native builds
  */
 export function FeatherIcon({ name, size = 24, color = 'black', style }: FeatherIconProps) {
-  return <Feather name={name} size={size} color={color} style={style} />;
+  // Use a fallback text for when the icon can't be loaded
+  // This helps to debug icon loading issues
+  if (!name) {
+    console.warn('FeatherIcon: No name provided');
+    return null;
+  }
+
+  try {
+    return <Feather name={name} size={size} color={color} style={style} />;
+  } catch (error) {
+    console.error(`Error rendering FeatherIcon: ${error}`);
+    return null;
+  }
 }
 
 export default FeatherIcon;

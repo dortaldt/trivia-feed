@@ -8,6 +8,14 @@ import 'react-native-reanimated';
 import { Provider } from 'react-redux';
 import { View, Text, StyleSheet, Platform, Image } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as Font from 'expo-font';
+
+// Import icons - use default imports instead of named imports
+// This can help resolve some naming conflicts
+import AntDesignIcon from '@expo/vector-icons/AntDesign';
+import FeatherIcon from '@expo/vector-icons/Feather';
+import FontAwesomeIcon from '@expo/vector-icons/FontAwesome';
+import MaterialIconsIcon from '@expo/vector-icons/MaterialIcons';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { store } from '@/src/store';
@@ -85,7 +93,7 @@ export default function RootLayout() {
   
   console.log('Attempting to load fonts...');
   
-  // Load all required fonts including PlayfairDisplay
+  // Use a simpler approach with standard fonts first
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     'Inter-Regular': require('../assets/fonts/inter/Inter-Regular.ttf'),
@@ -93,13 +101,34 @@ export default function RootLayout() {
     'PlayfairDisplay-Regular': require('../assets/fonts/trivia-universe-feed/assets/fonts/playfair/PlayfairDisplay-Regular.ttf'),
   });
 
+  // Load icon fonts separately using a direct approach
+  useEffect(() => {
+    const loadIconFonts = async () => {
+      try {
+        // Use the correct path structure where the font files actually exist
+        await Font.loadAsync({
+          // Use the exact paths found in the node_modules directory
+          'AntDesign': require('../node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.ttf'),
+          'Feather': require('../node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf'),
+          'FontAwesome': require('../node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome.ttf'),
+          'MaterialIcons': require('../node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.ttf'),
+        });
+        console.log('Icon fonts loaded successfully');
+      } catch (e) {
+        console.error('Error loading icon fonts:', e);
+      }
+    };
+
+    loadIconFonts();
+  }, []);
+
   // Combined initialization function - handles both font loading and other preparations
   useEffect(() => {
     async function prepareApp() {
       try {
         // Wait for font loading or error
         if (loaded || error) {
-          console.log(loaded ? 'Fonts loaded successfully' : 'Error loading fonts, proceeding with system fonts');
+          console.log(loaded ? 'Custom fonts loaded successfully' : 'Error loading custom fonts, proceeding with system fonts');
           
           // Simulate additional initialization if needed
           await new Promise(resolve => setTimeout(resolve, 500));
