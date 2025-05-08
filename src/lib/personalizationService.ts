@@ -216,18 +216,56 @@ export function updateUserProfile(
     interactionType = 'incorrect';
   }
   
+  // Check if this question was previously skipped
+  const wasSkippedPreviously = existingInteraction.wasSkipped === true;
+  
+  // Define compensations for previously skipped questions that are now being answered
+  let skipCompensation = {
+    applied: false,
+    topicCompensation: 0,
+    subtopicCompensation: 0,
+    branchCompensation: 0
+  };
+  
   // If question was correct, increase weights
   if (interaction.wasCorrect) {
+    // Standard weight increase for correct answers
     topicNode.weight = Math.min(1.0, topicNode.weight + 0.05);
     subtopicNode.weight = Math.min(1.0, subtopicNode.weight + 0.08);
     branchNode.weight = Math.min(1.0, branchNode.weight + 0.1);
+    
+    // If previously skipped, compensate for the previous skip penalty
+    if (wasSkippedPreviously) {
+      skipCompensation.applied = true;
+      skipCompensation.topicCompensation = 0.05; // Match the skip penalty
+      skipCompensation.subtopicCompensation = 0.07;
+      skipCompensation.branchCompensation = 0.1;
+      
+      // Apply compensations (with upper limit of 1.0)
+      topicNode.weight = Math.min(1.0, topicNode.weight + skipCompensation.topicCompensation);
+      subtopicNode.weight = Math.min(1.0, subtopicNode.weight + skipCompensation.subtopicCompensation);
+      branchNode.weight = Math.min(1.0, branchNode.weight + skipCompensation.branchCompensation);
+    }
   } 
-  // If question was answered incorrectly, slight decrease
+  // If question was answered incorrectly, very slight increase (they still engaged with content)
   else if (interaction.wasCorrect === false) {
-    // Less decrease for incorrect answers since they still show engagement
-    topicNode.weight = Math.max(0.1, topicNode.weight - 0.02);
-    subtopicNode.weight = Math.max(0.1, subtopicNode.weight - 0.03);
-    branchNode.weight = Math.max(0.1, branchNode.weight - 0.05);
+    // Increase weights very moderately for incorrect answers since they still show engagement
+    topicNode.weight = Math.min(1.0, topicNode.weight + 0.01);
+    subtopicNode.weight = Math.min(1.0, subtopicNode.weight + 0.02);
+    branchNode.weight = Math.min(1.0, branchNode.weight + 0.03);
+    
+    // If previously skipped, add a smaller compensation (they engaged but got it wrong)
+    if (wasSkippedPreviously) {
+      skipCompensation.applied = true;
+      skipCompensation.topicCompensation = 0.03; // Smaller compensation for incorrect answers
+      skipCompensation.subtopicCompensation = 0.04;
+      skipCompensation.branchCompensation = 0.05;
+      
+      // Apply compensations (with upper limit of 1.0)
+      topicNode.weight = Math.min(1.0, topicNode.weight + skipCompensation.topicCompensation);
+      subtopicNode.weight = Math.min(1.0, subtopicNode.weight + skipCompensation.subtopicCompensation);
+      branchNode.weight = Math.min(1.0, branchNode.weight + skipCompensation.branchCompensation);
+    }
   }
   // If question was skipped, larger decrease
   else if (interaction.wasSkipped) {
@@ -250,7 +288,9 @@ export function updateUserProfile(
       topicWeight: topicNode.weight,
       subtopicWeight: subtopicNode.weight,
       branchWeight: branchNode.weight
-    }
+    },
+    // Add skip compensation information if applicable
+    skipCompensation: skipCompensation.applied ? skipCompensation : undefined
   };
   
   return { updatedProfile, weightChange };
@@ -324,7 +364,7 @@ export function getPersonalizedFeed(
   // or if coldStartComplete flag is not set to true
   if (totalInteractions < 20 || totalQuestionsAnswered < 20 || !userProfile.coldStartComplete) {
     console.log('Using Cold Start Strategy for feed personalization');
-    const coldStartResult = getColdStartFeed(allItems, userProfile, count);
+    const coldStartResult = getColdStartFeed(allItems, userProfile);
     
     // If we're in the final phase, mark cold start as complete
     if (coldStartResult.state.phase === 4 && coldStartResult.state.questionsShown >= 20) {
