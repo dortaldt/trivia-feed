@@ -1124,4 +1124,51 @@ export async function cleanupFeedChanges(userId: string): Promise<void> {
   } catch (error) {
     console.error('Error in cleanupFeedChanges:', error);
   }
-} 
+}
+
+// Helper function to log question generation events
+export const logGeneratorEvent = (
+  userId: string,
+  primaryTopics: string[],
+  adjacentTopics: string[],
+  questionsGenerated: number,
+  questionsSaved: number,
+  success: boolean,
+  error?: string,
+  status?: string
+) => {
+  // Check if we're in dev mode in a cross-platform way
+  const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : 
+               (process.env.NODE_ENV === 'development');
+  
+  // Skip extensive logging in production
+  // But always log critical errors
+  if (!isDev && !error) return;
+  
+  try {
+    const logData = {
+      timestamp: Date.now(),
+      userId,
+      primaryTopics,
+      adjacentTopics,
+      questionsGenerated,
+      questionsSaved,
+      success,
+      error,
+      status
+    };
+    
+    // Emit the generator event for UI tracking 
+    dbEventEmitter.emit('generatorEvent', logData);
+    
+    // Only log start, completion, or errors to console
+    if (error) {
+      console.error(`[GENERATOR] ERROR: ${error}`);
+    } else if (status?.includes('completed')) {
+      console.log(`[GENERATOR] COMPLETED: Generated ${questionsGenerated}, saved ${questionsSaved} questions`);
+    }
+  } catch (loggingError) {
+    // Only log critical errors
+    console.error(`[GENERATOR] Failed to log event: ${loggingError instanceof Error ? loggingError.message : 'Unknown error'}`);
+  }
+}; 
