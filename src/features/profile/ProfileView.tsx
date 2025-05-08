@@ -19,6 +19,9 @@ import { countries } from '../../data/countries';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import * as ImagePicker from 'expo-image-picker';
+import { MediaTypeOptions } from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 // Add interface for countries
 interface Country {
@@ -135,14 +138,14 @@ const ProfileView: React.FC = () => {
         // Web platform: Create a file input element
         console.log('Web platform detected, using file input picker');
         
-        return new Promise((resolve) => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = 'image/*';
-          input.style.display = 'none';
-          
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.style.display = 'none';
+        
+        const pickerPromise = new Promise<boolean>((resolve) => {
           input.onchange = async (e: any) => {
-            const file = e.target.files[0];
+            const file = e.target.files?.[0];
             if (!file) {
               resolve(false);
               return;
@@ -154,61 +157,70 @@ const ProfileView: React.FC = () => {
               size: file.size
             });
             
-            // Check file size
-            if (file.size > 2 * 1024 * 1024) {
-              Alert.alert(
-                'Image too large', 
-                'Please select an image smaller than 2MB.',
-                [{ text: 'OK' }]
-              );
+            try {
+              await uploadAvatar(file);
+              resolve(true);
+            } catch (error) {
+              console.error('Upload error:', error);
               resolve(false);
-              return;
+            } finally {
+              document.body.removeChild(input);
             }
-            
-            // For web, pass the file directly
-            await uploadAvatar(file);
-            resolve(true);
-            
-            // Remove the input from the DOM
-            document.body.removeChild(input);
           };
-          
-          // Append the input to the body and trigger a click
-          document.body.appendChild(input);
-          input.click();
         });
+        
+        document.body.appendChild(input);
+        input.click();
+        return pickerPromise;
       } else {
-        // Native platforms: Use expo-image-picker
+        // Native platforms: Use standard expo-image-picker
+        console.log('Launching standard image picker');
+        
+        // Request permissions
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission needed', 'Please grant photo library permissions to upload images');
+          return;
+        }
+        
+        // Launch the image picker
         const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          mediaTypes: MediaTypeOptions.Images,
           allowsEditing: true,
           aspect: [1, 1],
-          quality: 0.6, // Reduce quality to ensure smaller file size
-          allowsMultipleSelection: false,
-          exif: false, // Don't include EXIF data to reduce file size
+          quality: 0.7, // Reduced quality to ensure smaller file size
+        });
+        
+        console.log('Image picker result:', {
+          canceled: result.canceled,
+          hasAssets: !!result.assets,
+          assetsCount: result.assets?.length || 0
         });
         
         if (!result.canceled && result.assets && result.assets.length > 0) {
           const selectedImage = result.assets[0];
-          console.log('Selected image:', { 
-            uri: selectedImage.uri,
+          console.log('Selected image:', {
+            uri: selectedImage.uri.substring(0, 50) + '...',
             width: selectedImage.width,
             height: selectedImage.height,
-            fileSize: selectedImage.fileSize,
-            type: selectedImage.type
+            fileSize: selectedImage.fileSize || 'unknown'
           });
           
-          // Check file size before upload (2MB limit)
-          if (selectedImage.fileSize && selectedImage.fileSize > 2 * 1024 * 1024) {
-            Alert.alert(
-              'Image too large', 
-              'Please select an image smaller than 2MB.',
-              [{ text: 'OK' }]
-            );
-            return;
+          // Compress the image if needed
+          try {
+            // Always compress to ensure consistent size and format
+            const compressedImage = await compressImage(selectedImage.uri);
+            console.log('Compressed image:', {
+              uri: compressedImage.uri.substring(0, 50) + '...',
+              width: compressedImage.width,
+              height: compressedImage.height
+            });
+            
+            await uploadAvatar(compressedImage.uri);
+          } catch (error) {
+            console.error('Compression/upload error:', error);
+            Alert.alert('Error', 'Could not process the image. Please try again.');
           }
-          
-          await uploadAvatar(selectedImage.uri);
         }
       }
     } catch (error) {
@@ -216,15 +228,24 @@ const ProfileView: React.FC = () => {
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
-  
+
+  // Compress image for native platforms
+  const compressImage = async (uri: string) => {
+    console.log('Compressing image...');
+    
+    // Use standard image manipulator to resize and compress
+    return await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 800 } }],
+      { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG }
+    );
+  };
+
   // Upload avatar to Supabase Storage
-  const uploadAvatar = async (uriOrFile: string | File, retryCount = 0) => {
+  const uploadAvatar = async (uriOrFile: string | File) => {
     try {
       setUploadingImage(true);
-      console.log('Starting avatar upload:', 
-        typeof uriOrFile === 'string' ? 'from URI' : 'from File object', 
-        'Retry count:', retryCount
-      );
+      console.log('Starting avatar upload...');
       
       // Create a unique file name
       const fileExt = typeof uriOrFile === 'string' 
@@ -234,359 +255,163 @@ const ProfileView: React.FC = () => {
       const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
       const filePath = fileName;
       
-      console.log('Preparing to upload file:', { fileName, fileExt, filePath });
-      console.log('User ID:', user?.id, 'Auth status:', !!user);
+      console.log('Upload details:', { fileName, fileExt });
       
-      // Log Supabase session status
-      try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        console.log('Session check before upload:', {
-          hasSession: !!sessionData?.session,
-          sessionError: sessionError?.message || 'none',
-          expiresAt: sessionData?.session?.expires_at ? new Date(sessionData.session.expires_at*1000).toISOString() : 'unknown'
-        });
-      } catch (sessionCheckError) {
-        console.error('Error checking session:', sessionCheckError);
-      }
-      
-      // For native platforms
-      if (Platform.OS !== 'web' && typeof uriOrFile === 'string') {
-        // Fetch the image data as blob
-        try {
-          console.log('Fetching image data as blob');
-          const response = await fetch(uriOrFile);
-          
-          console.log('Image fetch response status:', response.status, response.statusText);
-          
-          if (!response.ok) {
-            throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-          }
-          
-          const blob = await response.blob();
-          console.log('Blob created successfully:', { 
-            size: blob.size, 
-            type: blob.type || `image/${fileExt}`,
-            emptyBlob: blob.size === 0 ? 'YES-ERROR' : 'no'
+      // Web platform
+      if (Platform.OS === 'web' && typeof uriOrFile !== 'string') {
+        const file = uriOrFile as File;
+        
+        // Upload directly with Supabase client
+        const { data, error } = await supabase
+          .storage
+          .from('userimages')
+          .upload(filePath, file, {
+            contentType: file.type || `image/${fileExt}`,
+            upsert: true
           });
-          
-          // Try direct fetch upload if supabase client has issues
-          try {
-            // Upload to Supabase Storage
-            console.log('Uploading to Supabase storage bucket: userimages');
-            console.log('Supabase instance check:', {
-              hasClient: !!supabase,
-              hasStorage: !!supabase?.storage,
-              hasFrom: !!supabase?.storage?.from
-            });
-            
-            const { data, error } = await supabase
-              .storage
-              .from('userimages')
-              .upload(filePath, blob, {
-                contentType: blob.type || `image/${fileExt}`,
-                upsert: true,
-                cacheControl: '3600'
-              });
-            
-            if (error) {
-              console.error('Supabase storage upload error:', error);
-              console.error('Error details:', {
-                message: error.message,
-                statusCode: error.statusCode,
-                errorType: error.name,
-                details: error.details
-              });
-              
-              // Try alternative direct upload method if the supabase client fails
-              throw error;
-            }
-            
-            console.log('Upload successful, data:', data);
-          } catch (uploadError: any) {
-            console.log('Trying alternative upload method via fetch API');
-            console.log('Upload error details:', {
-              message: uploadError.message,
-              name: uploadError.name,
-              stack: uploadError.stack?.substring(0, 200) // First 200 chars of stack trace
-            });
-            
-            // Get the current session
-            const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-            console.log('Session check for direct upload:', {
-              hasSession: !!sessionData?.session,
-              sessionError: sessionError?.message || 'none',
-              tokenLength: sessionData?.session?.access_token?.length || 0
-            });
-            
-            const session = sessionData?.session;
-            
-            if (!session) {
-              throw new Error('No authenticated session available');
-            }
-            
-            // If the Supabase client upload fails, try a direct fetch request
-            const supabaseUrl = 'https://vdrmtsifivvpioonpqqc.supabase.co';
-            const endpoint = `${supabaseUrl}/storage/v1/object/userimages/${filePath}`;
-            
-            console.log('Making direct API request to:', endpoint);
-            console.log('Request details:', {
-              method: 'POST',
-              contentType: blob.type || `image/${fileExt}`,
-              blobSize: blob.size,
-              headers: {
-                'Authorization': 'Bearer [REDACTED]',
-                'apikey': '[REDACTED]',
-                'x-upsert': 'true'
-              }
-            });
-            
-            try {
-              const uploadResponse = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${session.access_token}`,
-                  'apikey': session.access_token,
-                  'Content-Type': blob.type || `image/${fileExt}`,
-                  'x-upsert': 'true'
-                },
-                body: blob
-              });
-              
-              console.log('Direct fetch response:', {
-                status: uploadResponse.status,
-                statusText: uploadResponse.statusText,
-                ok: uploadResponse.ok,
-                headers: Object.fromEntries([...uploadResponse.headers.entries()].map(([key, value]) => [key, value]))
-              });
-              
-              if (!uploadResponse.ok) {
-                const errorText = await uploadResponse.text();
-                console.error('Direct upload failed with status:', uploadResponse.status);
-                console.error('Response:', errorText);
-                throw new Error(`Direct upload failed: ${uploadResponse.status} - ${errorText}`);
-              }
-              
-              console.log('Direct fetch upload successful');
-            } catch (fetchError: any) {
-              console.error('Fetch API error during direct upload:', fetchError);
-              console.error('Network details:', {
-                online: typeof navigator !== 'undefined' ? navigator.onLine : 'unknown',
-                error: fetchError.message,
-                name: fetchError.name
-              });
-              throw fetchError;
-            }
-          }
-          
-          // Get the public URL
-          const { data: publicUrlData } = supabase
-            .storage
-            .from('userimages')
-            .getPublicUrl(filePath);
-          
-          const newAvatarUrl = publicUrlData.publicUrl;
-          console.log('Public URL generated:', newAvatarUrl);
-          
-          // Update state and profile
-          setAvatarUrl(newAvatarUrl);
-          
-          // Test if the image is accessible by fetching it
-          try {
-            console.log('Verifying image URL accessibility');
-            const testFetch = await fetch(newAvatarUrl, { method: 'HEAD' });
-            console.log('Image accessibility check:', {
-              status: testFetch.status,
-              statusText: testFetch.statusText,
-              ok: testFetch.ok,
-              contentType: testFetch.headers.get('content-type'),
-              contentLength: testFetch.headers.get('content-length')
-            });
-            
-            if (!testFetch.ok) {
-              console.warn('Image URL may not be accessible:', testFetch.status);
-            } else {
-              console.log('Image URL verified as accessible');
-            }
-          } catch (testError: any) {
-            console.warn('Could not verify image URL access:', testError);
-            console.warn('Verification error details:', {
-              message: testError.message,
-              name: testError.name,
-              url: newAvatarUrl
-            });
-          }
-          
-          Alert.alert('Success', 'Avatar uploaded successfully');
-        } catch (fetchError: any) {
-          console.error('Error processing image:', fetchError);
-          console.error('Fetch error details:', {
-            message: fetchError.message,
-            name: fetchError.name,
-            type: typeof fetchError,
-            code: fetchError.code,
-            stack: fetchError.stack?.substring(0, 200) // First 200 chars of stack trace
-          });
-          throw new Error(`Error processing image: ${fetchError.message}`);
+        
+        if (error) {
+          throw error;
         }
-      } else {
-        // Web platform
-        console.log('Web platform upload handling...');
         
-        try {
-          // Get the file object (directly passed for web)
-          const file = uriOrFile as File;
-          
-          // Upload to Supabase using the file object directly
-          console.log('Uploading web file to Supabase storage:', {
-            name: file.name,
-            size: file.size,
-            type: file.type
-          });
-          
-          // Upload the file to Supabase
-          const { data, error } = await supabase
-            .storage
-            .from('userimages')
-            .upload(filePath, file, {
-              contentType: file.type || `image/${fileExt}`,
-              upsert: true,
-              cacheControl: '3600'
-            });
-          
-          if (error) {
-            console.error('Supabase storage web upload error:', error);
-            throw error;
-          }
-          
-          console.log('Web upload successful, data:', data);
-          
-          // Get the public URL
-          const { data: publicUrlData } = supabase
-            .storage
-            .from('userimages')
-            .getPublicUrl(filePath);
-          
-          const newAvatarUrl = publicUrlData.publicUrl;
-          console.log('Web upload - Public URL generated:', newAvatarUrl);
-          
-          // Update state and profile
-          setAvatarUrl(newAvatarUrl);
-          
-          // Test the URL accessibility
-          try {
-            const testFetch = await fetch(newAvatarUrl, { method: 'HEAD' });
-            if (!testFetch.ok) {
-              console.warn('Web upload - Image URL may not be accessible:', testFetch.status);
-            } else {
-              console.log('Web upload - Image URL verified as accessible');
-            }
-          } catch (testError) {
-            console.warn('Web upload - Could not verify image URL access:', testError);
-          }
-          
-          Alert.alert('Success', 'Avatar uploaded successfully');
-        } catch (webError: any) {
-          console.error('Web upload error:', webError);
-          console.error('Web error details:', {
-            message: webError.message || 'Unknown error',
-            name: webError.name,
-            stack: webError.stack?.substring(0, 200)
-          });
-          
-          // Try alternative direct upload method if needed
-          try {
-            console.log('Trying alternative web upload method');
-            
-            // Get current session
-            const { data: sessionData } = await supabase.auth.getSession();
-            const session = sessionData?.session;
-            
-            if (!session) {
-              throw new Error('No authenticated session available for web upload');
-            }
-            
-            const file = uriOrFile as File;
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            // Direct fetch upload
-            const supabaseUrl = 'https://vdrmtsifivvpioonpqqc.supabase.co';
-            const endpoint = `${supabaseUrl}/storage/v1/object/userimages/${filePath}`;
-            
-            const uploadResponse = await fetch(endpoint, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${session.access_token}`,
-                'apikey': session.access_token,
-                // Note: Do not set Content-Type header with FormData
-              },
-              body: file  // Send file directly
-            });
-            
-            if (!uploadResponse.ok) {
-              const errorText = await uploadResponse.text();
-              console.error('Alternative web upload failed:', uploadResponse.status);
-              console.error('Response:', errorText);
-              throw new Error(`Alternative web upload failed: ${uploadResponse.status}`);
-            }
-            
-            console.log('Alternative web upload successful');
-            
-            // Get the public URL
-            const { data: publicUrlData } = supabase
-              .storage
-              .from('userimages')
-              .getPublicUrl(filePath);
-            
-            const newAvatarUrl = publicUrlData.publicUrl;
-            console.log('Alternative web upload - URL generated:', newAvatarUrl);
-            
-            // Update state and profile
-            setAvatarUrl(newAvatarUrl);
-            
-            Alert.alert('Success', 'Avatar uploaded successfully');
-          } catch (altWebError: any) {
-            console.error('Alternative web upload failed:', altWebError);
-            throw altWebError;
-          }
-        }
-      }
-    } catch (error: any) {
-      console.error('Error uploading avatar:', error.message, error);
-      console.error('Full error object:', {
-        message: error.message,
-        name: error.name, 
-        code: error.code,
-        cause: error.cause?.message,
-        stack: error.stack?.substring(0, 200) // First 200 chars of stack trace
-      });
-      
-      // Retry logic - try up to 2 times with a small delay
-      if (retryCount < 2) {
-        console.log(`Retrying upload (attempt ${retryCount + 1})...`);
+        // Get the public URL
+        const { data: publicUrlData } = supabase
+          .storage
+          .from('userimages')
+          .getPublicUrl(filePath);
         
-        // Show retry message
-        Alert.alert(
-          'Upload Failed',
-          'Retrying upload automatically...',
-          [{ text: 'OK' }]
-        );
-        
-        // Wait a bit before retrying
-        setTimeout(() => {
-          uploadAvatar(uriOrFile, retryCount + 1);
-        }, 1000);
+        setAvatarUrl(publicUrlData.publicUrl);
+        Alert.alert('Success', 'Avatar uploaded successfully');
         return;
       }
       
-      Alert.alert('Error uploading avatar', 
-        `Failed to upload image after ${retryCount + 1} attempts. ${error.message || 'Please check your connection and try again.'}`,
-        [{ text: 'OK' }]
-      );
-    } finally {
-      if (retryCount === 0) {
-        setUploadingImage(false);
+      // Native platforms - iOS and Android
+      if (typeof uriOrFile === 'string') {
+        // Get current session for authentication
+        const { data: sessionData } = await supabase.auth.getSession();
+        const session = sessionData?.session;
+        
+        if (!session) {
+          throw new Error('No authenticated session available');
+        }
+        
+        // Get the Supabase URL and endpoints
+        const supabaseUrl = 'https://vdrmtsifivvpioonpqqc.supabase.co';
+        const endpoint = `${supabaseUrl}/storage/v1/object/userimages/${filePath}`;
+        
+        console.log('Using FormData approach for direct upload');
+        
+        // For iOS/Android, use FormData which is more reliable
+        const formData = new FormData();
+        
+        // Format depends on platform
+        if (Platform.OS === 'ios') {
+          // For iOS, we need to ensure we have a proper file:// URL
+          // If we have a ph:// URL from photo library, it might cause issues
+          if (uriOrFile.startsWith('ph://')) {
+            console.log('iOS photo library asset detected, may need special handling');
+          }
+          
+          // iOS typically needs this format
+          const fileInfo = {
+            uri: uriOrFile,
+            type: `image/${fileExt}`,
+            name: fileName
+          };
+          
+          // @ts-ignore - This is the standard approach for React Native
+          formData.append('file', fileInfo);
+          
+          console.log('iOS FormData created with:', {
+            uri: uriOrFile.substring(0, 30) + '...',
+            type: `image/${fileExt}`,
+            name: fileName
+          });
+        } else {
+          // Android format
+          const fileInfo = {
+            uri: uriOrFile,
+            type: `image/${fileExt}`,
+            name: fileName
+          };
+          
+          // @ts-ignore - Type checking doesn't fully support FormData in React Native
+          formData.append('file', fileInfo);
+          
+          console.log('Android FormData created');
+        }
+        
+        // Log before upload attempt
+        console.log('Uploading to:', endpoint);
+        console.log('Using access token length:', session.access_token.length);
+        
+        try {
+          // Make a direct fetch request for reliability
+          const uploadResponse = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'apikey': session.access_token,
+              // Important: Do NOT set Content-Type header when using FormData
+            },
+            body: formData
+          });
+          
+          console.log('Upload response status:', uploadResponse.status);
+          
+          if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            console.error('Upload failed:', errorText);
+            throw new Error(`Upload failed with status ${uploadResponse.status}`);
+          }
+          
+          const responseData = await uploadResponse.json();
+          console.log('Upload success:', responseData);
+          
+          // Generate the public URL
+          const { data: publicUrlData } = supabase
+            .storage
+            .from('userimages')
+            .getPublicUrl(filePath);
+          
+          // Before setting the URL, verify it exists
+          try {
+            const checkResponse = await fetch(publicUrlData.publicUrl, { method: 'HEAD' });
+            
+            if (checkResponse.status === 200 && parseInt(checkResponse.headers.get('content-length') || '0') > 0) {
+              console.log('Image verified:', {
+                size: checkResponse.headers.get('content-length'),
+                type: checkResponse.headers.get('content-type')
+              });
+            } else {
+              console.warn('Image may be empty:', {
+                status: checkResponse.status, 
+                size: checkResponse.headers.get('content-length')
+              });
+              
+              // Wait a moment for eventual consistency
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          } catch (verifyError) {
+            console.warn('Error verifying image:', verifyError);
+          }
+          
+          const newAvatarUrl = publicUrlData.publicUrl;
+          console.log('Setting avatar URL to:', newAvatarUrl);
+          
+          // Set avatar URL and show success message
+          setAvatarUrl(newAvatarUrl);
+          Alert.alert('Success', 'Avatar uploaded successfully');
+        } catch (uploadError: any) {
+          console.error('Upload request failed:', uploadError);
+          throw new Error(`Upload request failed: ${uploadError.message}`);
+        }
       }
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      Alert.alert('Error uploading avatar', error.message);
+    } finally {
+      setUploadingImage(false);
     }
   };
   
@@ -934,6 +759,8 @@ const ProfileView: React.FC = () => {
                 source={{ uri: avatarUrl }} 
                 style={profileStyles.avatarImage} 
                 resizeMode="cover"
+                onLoad={() => console.log('Image loaded successfully')}
+                onError={(e) => console.error('Image loading error:', e.nativeEvent)}
               />
               {!isEditing && (
                 <TouchableOpacity 
