@@ -126,6 +126,79 @@ export const typography = {
   },
 };
 
+// Button variants
+export const buttons = {
+  // Size variants
+  sizes: {
+    xs: {
+      paddingVertical: spacing[1],
+      paddingHorizontal: spacing[2],
+      borderRadius: borderRadius.sm,
+      fontSize: typography.fontSizes.xs,
+    },
+    sm: {
+      paddingVertical: spacing[2],
+      paddingHorizontal: spacing[3],
+      borderRadius: borderRadius.md,
+      fontSize: typography.fontSizes.sm,
+    },
+    md: {
+      paddingVertical: spacing[3],
+      paddingHorizontal: spacing[4],
+      borderRadius: borderRadius.md,
+      fontSize: typography.fontSizes.md,
+    },
+    lg: {
+      paddingVertical: spacing[4],
+      paddingHorizontal: spacing[5],
+      borderRadius: borderRadius.lg,
+      fontSize: typography.fontSizes.lg,
+    },
+  },
+  
+  // Style variants
+  variants: {
+    primary: {
+      backgroundColor: colors.primary,
+      color: colors.primaryForeground,
+    },
+    secondary: {
+      backgroundColor: colors.secondary,
+      color: colors.secondaryForeground,
+    },
+    accent: {
+      backgroundColor: colors.accent,
+      color: colors.accentForeground,
+    },
+    outline: {
+      backgroundColor: 'transparent',
+      color: colors.foreground,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    ghost: {
+      backgroundColor: 'transparent',
+      color: colors.foreground,
+    },
+    destructive: {
+      backgroundColor: colors.destructive,
+      color: colors.destructiveForeground,
+    },
+    success: {
+      backgroundColor: colors.success,
+      color: colors.successForeground,
+    },
+    warning: {
+      backgroundColor: colors.warning,
+      color: colors.warningForeground,
+    },
+    info: {
+      backgroundColor: colors.info,
+      color: colors.infoForeground,
+    },
+  },
+};
+
 export default {
   colors,
   lightTheme,
@@ -133,4 +206,5 @@ export default {
   spacing,
   borderRadius,
   typography,
+  buttons,
 }; 
