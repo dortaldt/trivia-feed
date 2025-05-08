@@ -43,6 +43,32 @@ const initialState: TriviaState = {
   isSyncing: false,
 };
 
+/**
+ * Helper function to safely sync user profile with error handling
+ */
+const safeSyncUserProfile = (userId?: string, profile?: UserProfile): void => {
+  try {
+    if (!userId) {
+      console.log('[SAFE SYNC] No userId provided, skipping sync');
+      return;
+    }
+    
+    if (!profile) {
+      console.log('[SAFE SYNC] No profile provided, skipping sync');
+      return;
+    }
+    
+    // Deep clone the profile to prevent proxy issues
+    const safeProfile = JSON.parse(JSON.stringify(profile));
+    
+    // Now call the actual sync function with safe data
+    void syncUserProfile(userId, safeProfile);
+  } catch (error) {
+    console.warn('[SAFE SYNC] Failed to safely sync user profile:', 
+      error instanceof Error ? error.message : 'Unknown error');
+  }
+};
+
 const triviaSlice = createSlice({
   name: 'trivia',
   initialState,
@@ -61,32 +87,35 @@ const triviaSlice = createSlice({
       state.questions[questionId] = { 
         status: 'answered',
         answerIndex,
-        timeSpent,
-        isCorrect
+        isCorrect,
+        timeSpent
       };
       
-      // Clear interaction start time
-      delete state.interactionStartTimes[questionId];
-      
-      // Record answer to database if user is logged in
-      if (userId) {
-        // We use void to avoid awaiting the promise
-        void recordUserAnswer(userId, questionId, isCorrect, answerIndex);
+      // Update user profile with new weight changes
+      if (state.userProfile) {
+        // Calculate confidence updates
+        if (!state.userProfile.topics) {
+          state.userProfile.topics = {};
+        }
         
-        // Add to synced interactions if user is logged in
-        const newInteraction: InteractionLog = {
-          timestamp: Date.now(),
-          type: isCorrect ? 'correct' : 'incorrect',
+        // Record interaction for sync
+        const now = Date.now();
+        const interaction: InteractionLog = {
           questionId,
+          type: isCorrect ? 'correct' : 'incorrect',
+          timestamp: now,
           timeSpent,
-          questionText: `Question ${questionId}`
+          questionText: 'Question ' + questionId.substring(0, 5) // Just for display, we'll fetch full text later
         };
         
-        state.syncedInteractions.push(newInteraction);
+        // Add to synced interactions
+        state.syncedInteractions.push(interaction);
         
-        // Sync user profile and interactions with server
-        void syncUserProfile(userId, state.userProfile);
-        void syncUserInteractions(userId, [newInteraction]);
+        // If user is logged in, sync the interaction
+        if (userId) {
+          // Always use safer version that handles null checking
+          safeSyncUserProfile(userId, state.userProfile);
+        }
       }
     },
     skipQuestion: (state, action: PayloadAction<{ questionId: string; userId?: string }>) => {
@@ -105,24 +134,23 @@ const triviaSlice = createSlice({
           timeSpent
         };
         
-        // Clear interaction start time
-        delete state.interactionStartTimes[questionId];
+        // Record interaction for sync
+        const now = Date.now();
+        const interaction: InteractionLog = {
+          questionId,
+          type: 'skipped',
+          timestamp: now,
+          timeSpent,
+          questionText: 'Question ' + questionId.substring(0, 5) // Just for display
+        };
         
-        // Add to synced interactions if user is logged in
-        if (userId) {
-          const newInteraction: InteractionLog = {
-            timestamp: Date.now(),
-            type: 'skipped',
-            questionId,
-            timeSpent,
-            questionText: `Question ${questionId}`
-          };
-          
-          state.syncedInteractions.push(newInteraction);
-          
-          // Sync user profile and interactions with server
-          void syncUserProfile(userId, state.userProfile);
-          void syncUserInteractions(userId, [newInteraction]);
+        // Add to synced interactions
+        state.syncedInteractions.push(interaction);
+        
+        // If user is logged in, sync the interaction
+        if (userId && state.userProfile) {
+          // Always use safer version that handles null checking
+          safeSyncUserProfile(userId, state.userProfile);
         }
       } else {
         console.log(`[Redux] Skip ignored for question ${questionId}: already in '${state.questions[questionId].status}' state`);
@@ -142,13 +170,19 @@ const triviaSlice = createSlice({
     }>) => {
       const { items, explanations, userId } = action.payload;
       
+      // Check if items array is valid
+      if (!items || !Array.isArray(items)) {
+        console.warn('Cannot set personalized feed: items is null or not an array');
+        return;
+      }
+      
       // Find new items compared to current feed
       const currentIds = new Set(state.personalizedFeed.map(item => item.id));
       const newItems = items.filter(item => !currentIds.has(item.id));
       
       // Update state
       state.personalizedFeed = items;
-      state.feedExplanations = explanations;
+      state.feedExplanations = explanations || {};
       
       // If user is logged in and there are new items, sync the feed changes
       if (userId && newItems.length > 0) {
@@ -181,6 +215,13 @@ const triviaSlice = createSlice({
     },
     updateUserProfile: (state, action: PayloadAction<{ profile: UserProfile; userId?: string; weightChange?: WeightChange }>) => {
       const { profile, userId, weightChange } = action.payload;
+      
+      // Add null check for profile
+      if (!profile) {
+        console.warn('Cannot update user profile: profile is null or undefined');
+        return;
+      }
+      
       state.userProfile = profile;
       
       // If a weight change was provided, add it to the synced weight changes
@@ -190,7 +231,8 @@ const triviaSlice = createSlice({
       
       // Sync user profile with server if user is logged in
       if (userId) {
-        void syncUserProfile(userId, profile);
+        // Use safer version that handles null checking 
+        safeSyncUserProfile(userId, profile);
         
         // Sync weight change with server if provided
         if (weightChange) {
@@ -214,7 +256,8 @@ const triviaSlice = createSlice({
       
       // Sync reset profile with server if user is logged in
       if (userId) {
-        void syncUserProfile(userId, state.userProfile);
+        // Use safer version that handles null checking
+        safeSyncUserProfile(userId, state.userProfile);
       }
     },
     startSync: (state) => {

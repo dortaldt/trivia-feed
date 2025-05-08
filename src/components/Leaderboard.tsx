@@ -22,9 +22,10 @@ type LeaderboardTabKey = keyof typeof LeaderboardTabs;
 
 interface LeaderboardProps {
   limit?: number;
+  disableScrolling?: boolean;
 }
 
-export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
+export default function Leaderboard({ limit = 10, disableScrolling = false }: LeaderboardProps) {
   const [activeTab, setActiveTab] = useState<LeaderboardTabKey>('Daily');
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -164,6 +165,58 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
     );
   };
 
+  // If scrolling is disabled and we have data, render a plain View with items
+  // This prevents nested VirtualizedLists with the same orientation
+  const renderLeaderboardContent = () => {
+    if (disableScrolling && !isLoading && leaderboardData.length > 0) {
+      return (
+        <View style={[
+          styles.listContent,
+          isTablet && { maxWidth: 800, alignSelf: 'center', width: '100%' }
+        ]}>
+          {leaderboardData.map((item, index) => (
+            <View key={item.id}>
+              {renderItem({ item, index })}
+            </View>
+          ))}
+        </View>
+      );
+    }
+    
+    if (isLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors[colorScheme].tint} />
+        </View>
+      );
+    }
+    
+    if (leaderboardData.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <FeatherIcon 
+            name="award" 
+            size={64} 
+            color={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.2)'} 
+          />
+          <ThemedText style={styles.emptyText}>No data available for this period</ThemedText>
+        </View>
+      );
+    }
+    
+    return (
+      <FlatList
+        data={leaderboardData}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={[
+          styles.listContent, 
+          isTablet && { maxWidth: 800, alignSelf: 'center', width: '100%' }
+        ]}
+      />
+    );
+  };
+
   const content = (
     <ThemedView 
       style={styles.container}
@@ -195,30 +248,7 @@ export default function Leaderboard({ limit = 10 }: LeaderboardProps) {
         </ThemedView>
       )}
       
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors[colorScheme].tint} />
-        </View>
-      ) : leaderboardData.length > 0 ? (
-        <FlatList
-          data={leaderboardData}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={[
-            styles.listContent, 
-            isTablet && { maxWidth: 800, alignSelf: 'center', width: '100%' }
-          ]}
-        />
-      ) : (
-        <View style={styles.emptyContainer}>
-          <FeatherIcon 
-            name="award" 
-            size={64} 
-            color={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.2)'} 
-          />
-          <ThemedText style={styles.emptyText}>No data available for this period</ThemedText>
-        </View>
-      )}
+      {renderLeaderboardContent()}
     </ThemedView>
   );
 

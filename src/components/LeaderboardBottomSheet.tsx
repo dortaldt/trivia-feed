@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { ScrollView, StyleSheet, View, Platform } from 'react-native';
+import { StyleSheet, View, Platform } from 'react-native';
 import BottomSheet from './BottomSheet';
 import Leaderboard from '../components/Leaderboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,13 +36,7 @@ const LeaderboardBottomSheet: React.FC<LeaderboardBottomSheetProps> = ({
       snapPoints={snapPoints}
     >
       <View style={styles.container}>
-        <ScrollView 
-          style={styles.scrollView} 
-          contentContainerStyle={styles.scrollViewContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <Leaderboard limit={limit} />
-        </ScrollView>
+        <Leaderboard limit={limit} disableScrolling={true} />
       </View>
     </BottomSheet>
   );
@@ -51,11 +45,6 @@ const LeaderboardBottomSheet: React.FC<LeaderboardBottomSheetProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewContent: {
     paddingBottom: spacing[5],
   }
 });
