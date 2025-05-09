@@ -63,6 +63,7 @@ import { countries } from '../../data/countries';
 import ProfileBottomSheet from '../../components/ProfileBottomSheet';
 import LeaderboardBottomSheet from '../../components/LeaderboardBottomSheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LoadingBar } from '../../components/ui';
 
 const { width, height } = Dimensions.get('window');
 
@@ -1198,9 +1199,11 @@ const FeedScreen: React.FC = () => {
           <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 10 }} />
         </View>
         
-        <View style={styles.progressContainer}>
-          <Animated.View style={[styles.progressBar, { width: progressWidth }]} />
-        </View>
+        <LoadingBar 
+          duration={3000}
+          height={8}
+          style={{ width: '70%' }}
+        />
       </Surface>
     );
   }
@@ -1620,19 +1623,6 @@ const styles = StyleSheet.create({
   },
   loadingIndicatorContainer: {
     marginBottom: 30,
-  },
-  progressContainer: {
-    width: '70%',
-    height: 8,
-    backgroundColor: 'rgba(150, 150, 150, 0.2)',
-    borderRadius: 4,
-    marginBottom: 20,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 4,
   },
   loadingTip: {
     fontSize: 16,
