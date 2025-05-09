@@ -163,6 +163,7 @@ const FeedScreen: React.FC = () => {
 
   const [loadingProgress] = useState(new Animated.Value(0));
   const [loadingTip, setLoadingTip] = useState('');
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   
   // Array of loading tips
   const loadingTips = [
@@ -173,18 +174,40 @@ const FeedScreen: React.FC = () => {
     "Studies show that regularly testing your knowledge with trivia can help maintain cognitive health as you age."
   ];
   
-  // Select a random tip when component mounts
+  // With this enhanced useEffect for better animations
   useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * loadingTips.length);
-    setLoadingTip(loadingTips[randomIndex]);
-    
-    // Animate loading progress
+    // Progress animation
     Animated.timing(loadingProgress, {
       toValue: 1,
       duration: 3000,
       easing: Easing.bezier(0.25, 0.1, 0.25, 1),
       useNativeDriver: false,
     }).start();
+    
+    // Setup pulsing animation
+    const pulseSequence = Animated.sequence([
+      Animated.timing(pulseAnim, {
+        toValue: 1.08,
+        duration: 1000,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(pulseAnim, {
+        toValue: 1,
+        duration: 1000,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }),
+    ]);
+    
+    // Loop the pulse animation
+    Animated.loop(pulseSequence).start();
+    
+    return () => {
+      // Clean up animations when component unmounts
+      pulseAnim.stopAnimation();
+      loadingProgress.stopAnimation();
+    };
   }, []);
 
   // Fetch trivia questions from Supabase and apply personalization
@@ -1164,19 +1187,20 @@ const FeedScreen: React.FC = () => {
     
     return (
       <Surface style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
-        <Image 
-          source={require('../../../assets/images/app-icon.png')} 
-          style={styles.loadingIcon}
-          resizeMode="contain"
-        />
-        <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 20 }} />
-        <Text style={styles.loadingText}>Loading trivia questions...</Text>
+        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+          <Image 
+            source={require('../../../assets/images/app-icon.png')} 
+            style={styles.loadingIcon}
+            resizeMode="contain"
+          />
+        </Animated.View>
+        <View style={styles.loadingIndicatorContainer}>
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 10 }} />
+        </View>
         
         <View style={styles.progressContainer}>
           <Animated.View style={[styles.progressBar, { width: progressWidth }]} />
         </View>
-        
-        <Text style={styles.loadingTip}>{loadingTip}</Text>
       </Surface>
     );
   }
@@ -1592,20 +1616,23 @@ const styles = StyleSheet.create({
   loadingIcon: {
     width: 120,
     height: 120,
-    marginBottom: 10,
+    marginBottom: 20,
+  },
+  loadingIndicatorContainer: {
+    marginBottom: 30,
   },
   progressContainer: {
-    width: '60%',
-    height: 6,
+    width: '70%',
+    height: 8,
     backgroundColor: 'rgba(150, 150, 150, 0.2)',
-    borderRadius: 3,
+    borderRadius: 4,
     marginBottom: 20,
     overflow: 'hidden',
   },
   progressBar: {
     height: '100%',
     backgroundColor: colors.primary,
-    borderRadius: 3,
+    borderRadius: 4,
   },
   loadingTip: {
     fontSize: 16,
