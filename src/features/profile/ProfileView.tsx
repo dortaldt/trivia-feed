@@ -209,8 +209,10 @@ const ProfileView: React.FC = () => {
     if (username) {
       return username.substring(0, 2).toUpperCase();
     }
-    // Use a default fallback instead of email
-    return 'ZT';
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return '?';
   };
 
   // Image picker function
@@ -1081,8 +1083,6 @@ const ProfileView: React.FC = () => {
             <ThemedText style={profileStyles.addPhotoText}>Add a profile photo</ThemedText>
           </TouchableOpacity>
         )}
-        
-        <ThemedText style={profileStyles.emailText}>{user?.email}</ThemedText>
       </View>
 
       {!isEditing ? (
