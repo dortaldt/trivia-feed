@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Platform, Animated, Easing } from 'react-native';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { Feather } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
@@ -88,6 +88,38 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
     totalTime: 0,
     avgTime: 0,
   });
+  
+  // Add animation for the toggle button
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  
+  // Set up pulse animation for iOS
+  useEffect(() => {
+    if (Platform.OS === 'ios' && !visible) {
+      // Create pulse animation sequence
+      const pulseSequence = Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.2,
+          duration: 800,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease)
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease)
+        })
+      ]);
+      
+      // Start the loop animation
+      Animated.loop(pulseSequence).start();
+      
+      return () => {
+        // Stop animation when component unmounts or becomes visible
+        pulseAnim.stopAnimation();
+      };
+    }
+  }, [pulseAnim, visible]);
   
   // Get auth context
   const { user } = useAuth();
@@ -1741,12 +1773,24 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
       )}
       
       {!visible && (
-        <TouchableOpacity 
-          style={[styles.toggleButton, {backgroundColor: '#FFFFFF'}]} 
-          onPress={() => setVisible(true)}
-        >
-          <Feather name="activity" size={20} color="#333333" />
-        </TouchableOpacity>
+        <Animated.View style={{
+          transform: [{ scale: pulseAnim }]
+        }}>
+          <TouchableOpacity 
+            style={[
+              styles.toggleButton, 
+              Platform.OS === 'ios' ? styles.iosToggleButton : null,
+              {backgroundColor: Platform.OS === 'ios' ? '#FF9500' : '#FFFFFF'}
+            ]} 
+            onPress={() => setVisible(true)}
+          >
+            <Feather 
+              name="activity" 
+              size={24} 
+              color={Platform.OS === 'ios' ? '#FFFFFF' : '#333333'} 
+            />
+          </TouchableOpacity>
+        </Animated.View>
       )}
     </>
   );
@@ -1810,7 +1854,7 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     position: 'absolute',
-    bottom: 10,
+    bottom: Platform.OS === 'ios' ? 60 : 10, // Adjust position for iOS to avoid the home indicator
     right: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 20,
@@ -2759,5 +2803,20 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginTop: 4,
     textAlign: 'center',
+  },
+  iosToggleButton: {
+    backgroundColor: '#FF9500', // iOS orange color
+    borderRadius: 25,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
 }); 
