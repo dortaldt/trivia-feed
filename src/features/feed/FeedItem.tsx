@@ -22,6 +22,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Leaderboard from '../../components/Leaderboard';
 import { useAuth } from '../../context/AuthContext';
+import { MoreQuestionsComponent } from '../../components';
 
 const { width, height } = Dimensions.get('window');
 
@@ -316,6 +317,21 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                 
                 {isAnswered() && (
                   <>
+                    {isSelectedAnswerCorrect() && (
+                      <View style={styles.moreQuestionsContainer}>
+                        <MoreQuestionsComponent
+                          key={`more-questions-${item.id}`}
+                          currentQuestion={item.question}
+                          topic={item.category}
+                          difficulty={item.difficulty}
+                          onSelectQuestion={(question) => {
+                            console.log('Selected question:', question);
+                            // Here you could navigate to a new question or update the UI
+                            // This would be implemented based on how your app handles navigation
+                          }}
+                        />
+                      </View>
+                    )}
                   </>
                 )}
               </>
@@ -592,5 +608,9 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     opacity: 0.5,
+  },
+  moreQuestionsContainer: {
+    marginTop: 20,
+    marginBottom: 10,
   },
 });
