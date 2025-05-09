@@ -1211,16 +1211,40 @@ const FeedScreen: React.FC = () => {
     console.log('Debug panel visibility after initialization:', debugPanelVisible);
   }, []);
   
+  // Add state for debug toast visibility
+  const [showDebugToast, setShowDebugToast] = useState(false);
+  const debugToastOpacity = useRef(new Animated.Value(0)).current;
+  
   // Handle 3-finger tap for iOS
-  const handleTouchEnd = useCallback((event: GestureResponderEvent) => {
-    // Only handle iOS three-finger tap
+  const handleTouchStart = useCallback((event: GestureResponderEvent) => {
+    // Check if it's a 3-finger tap on iOS
     if (Platform.OS === 'ios' && 
         event.nativeEvent.touches && 
         event.nativeEvent.touches.length === 3) {
-      console.log('3-finger tap detected, toggling debug panel');
+      console.log('3-finger tap detected on iOS, toggling debug panel');
+      
+      // Toggle debug panel
       setDebugPanelVisible(prev => !prev);
+      
+      // Show visual feedback toast
+      setShowDebugToast(true);
+      Animated.sequence([
+        Animated.timing(debugToastOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(1500),
+        Animated.timing(debugToastOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowDebugToast(false);
+      });
     }
-  }, []);
+  }, [debugPanelVisible]);
 
   // Loading state
   if (isLoading) {
@@ -1271,9 +1295,9 @@ const FeedScreen: React.FC = () => {
   return (
     <View 
       style={styles.container}
-      onTouchEnd={handleTouchEnd} // Add touch handler for 3-finger detection
+      onTouchStart={handleTouchStart}
     >
-      {/* Profile Button with User Avatar (only appearing once on the feed level) */}
+      {/* Profile Button with User Avatar */}
       <TouchableOpacity 
         style={styles.profileButton} 
         onPress={toggleProfile}
@@ -1303,6 +1327,15 @@ const FeedScreen: React.FC = () => {
             Using sample questions due to network connectivity issues. Please check your connection.
           </Text>
         </Surface>
+      )}
+      
+      {/* Debug toast notification */}
+      {showDebugToast && (
+        <Animated.View style={[styles.debugToast, { opacity: debugToastOpacity }]}>
+          <ThemedText style={styles.debugToastText}>
+            Debug Mode: {debugPanelVisible ? 'ON' : 'OFF'}
+          </ThemedText>
+        </Animated.View>
       )}
       
       <FlatList
@@ -1721,6 +1754,23 @@ const styles = StyleSheet.create({
   debugButtonText: {
     color: 'white',
     fontSize: 12,
+    fontWeight: 'bold',
+  },
+  debugToast: {
+    position: 'absolute',
+    top: '40%',
+    left: '10%',
+    right: '10%',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: 10,
+    padding: 16,
+    zIndex: 9999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  debugToastText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });
