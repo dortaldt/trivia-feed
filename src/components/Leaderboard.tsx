@@ -167,7 +167,7 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
         <View style={styles.userInfo}>
           <View style={styles.usernameRow}>
             <ThemedText style={[styles.username, isCurrentUser && styles.currentUserText]}>
-              {item.full_name || item.username || 'Anonymous'} 
+              {item.username || item.full_name || 'Anonymous'} 
               {isCurrentUser && <ThemedText style={styles.youLabel}>(You)</ThemedText>}
             </ThemedText>
             
