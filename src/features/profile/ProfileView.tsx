@@ -209,10 +209,8 @@ const ProfileView: React.FC = () => {
     if (username) {
       return username.substring(0, 2).toUpperCase();
     }
-    if (user?.email) {
-      return user.email.substring(0, 2).toUpperCase();
-    }
-    return '?';
+    // Use a default fallback instead of email
+    return 'ZT';
   };
 
   // Image picker function

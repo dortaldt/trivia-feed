@@ -128,12 +128,41 @@ const FeedScreen: React.FC = () => {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastScrollPosition = useRef<number>(0);
   
+  // Add state for profile username at component level
+  const [profileUsername, setProfileUsername] = useState<string | null>(null);
+
+  // Fetch username from the database when user changes
+  useEffect(() => {
+    const fetchUsername = async () => {
+      if (user?.id) {
+        try {
+          const { data } = await supabase
+            .from('user_profiles')
+            .select('username')
+            .eq('id', user.id)
+            .single();
+          
+          if (data?.username) {
+            setProfileUsername(data.username);
+          }
+        } catch (error) {
+          console.error('Error fetching username:', error);
+        }
+      }
+    };
+    
+    fetchUsername();
+  }, [user?.id]);
+
   // Get user initials for the profile button
   const getInitials = () => {
-    if (user?.email) {
-      return user.email.substring(0, 2).toUpperCase();
+    // Use the fetched username if available
+    if (profileUsername) {
+      return profileUsername.substring(0, 2).toUpperCase();
     }
-    return '?';
+    
+    // Fallback to default
+    return 'ZT';
   };
 
   // Load user data when component mounts if user is logged in
