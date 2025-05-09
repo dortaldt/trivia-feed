@@ -127,56 +127,71 @@ const ProfileView: React.FC = () => {
 
   const handleSignOut = () => {
     console.log('Sign out button pressed - showing confirmation dialog');
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel', onPress: () => console.log('Sign out canceled by user') },
-        { 
-          text: 'Sign Out', 
-          style: 'destructive', 
-          onPress: async () => {
-            console.log('User confirmed sign out - attempting to sign out');
-            try {
-              // Use the improved signOut function from AuthContext
-              const success = await signOut();
-              console.log('Sign out process completed, success:', success);
-              
-              // If on web, reload the page to ensure clean state
-              if (Platform.OS === 'web') {
-                console.log('Web platform detected, reloading page');
-                window.location.reload();
-                return;
-              }
-              
-              // If signOut was not successful or we're on a native platform,
-              // use more aggressive cleanup
-              if (!success) {
-                console.log('Sign out reported failure or on native platform - performing force cleanup');
+    if (Platform.OS === 'web') {
+      // On web, use direct confirmation instead of Alert.alert which might have issues with bottom sheet
+      if (confirm('Are you sure you want to sign out?')) {
+        console.log('User confirmed sign out - attempting to sign out');
+        signOut()
+          .then(success => {
+            console.log('Sign out process completed, success:', success);
+            // Use a small delay before reload to ensure state is updated
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 100);
+          })
+          .catch(error => {
+            console.error('Sign out failed with error:', error);
+            alert('Sign Out Failed: There was a problem signing out. Please try again or restart the app.');
+          });
+      } else {
+        console.log('Sign out canceled by user');
+      }
+    } else {
+      // Original implementation for native platforms
+      Alert.alert(
+        'Sign Out',
+        'Are you sure you want to sign out?',
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => console.log('Sign out canceled by user') },
+          { 
+            text: 'Sign Out', 
+            style: 'destructive', 
+            onPress: async () => {
+              console.log('User confirmed sign out - attempting to sign out');
+              try {
+                // Use the improved signOut function from AuthContext
+                const success = await signOut();
+                console.log('Sign out process completed, success:', success);
                 
-                // Force reset of auth state
-                await AsyncStorage.clear();
-                console.log('AsyncStorage cleared');
-                
-                // Show a message to restart the app if needed
+                // If signOut was not successful or we're on a native platform,
+                // use more aggressive cleanup
+                if (!success) {
+                  console.log('Sign out reported failure or on native platform - performing force cleanup');
+                  
+                  // Force reset of auth state
+                  await AsyncStorage.clear();
+                  console.log('AsyncStorage cleared');
+                  
+                  // Show a message to restart the app if needed
+                  Alert.alert(
+                    'Sign Out Status',
+                    'You have been signed out, but the app may need to be restarted to complete the process.',
+                    [{ text: 'OK' }]
+                  );
+                }
+              } catch (error) {
+                console.error('Sign out failed with error:', error);
                 Alert.alert(
-                  'Sign Out Status',
-                  'You have been signed out, but the app may need to be restarted to complete the process.',
+                  'Sign Out Failed',
+                  'There was a problem signing out. Please try again or restart the app.',
                   [{ text: 'OK' }]
                 );
               }
-            } catch (error) {
-              console.error('Sign out failed with error:', error);
-              Alert.alert(
-                'Sign Out Failed',
-                'There was a problem signing out. Please try again or restart the app.',
-                [{ text: 'OK' }]
-              );
             }
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   };
 
   // Find country name by code
