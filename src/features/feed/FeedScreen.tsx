@@ -1180,12 +1180,6 @@ const FeedScreen: React.FC = () => {
 
   // Loading state
   if (isLoading) {
-    // Calculate width for the progress bar
-    const progressWidth = loadingProgress.interpolate({
-      inputRange: [0, 1],
-      outputRange: ['0%', '100%']
-    });
-    
     return (
       <Surface style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
@@ -1195,14 +1189,12 @@ const FeedScreen: React.FC = () => {
             resizeMode="contain"
           />
         </Animated.View>
-        <View style={styles.loadingIndicatorContainer}>
-          <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 10 }} />
-        </View>
         
         <LoadingBar 
           duration={3000}
-          height={8}
-          style={{ width: '70%' }}
+          height={10}
+          style={{ width: '70%', marginTop: 30 }}
+          color={colors.accent}
         />
       </Surface>
     );
