@@ -58,11 +58,12 @@ interface DbOperation {
 
 interface InteractionTrackerProps {
   feedData?: FeedItem[];
+  debugEnabled?: boolean;
 }
 
-export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
-  // Don't render the component in production to avoid infinite loops
-  if (!__DEV__) {
+export function InteractionTracker({ feedData = [], debugEnabled = false }: InteractionTrackerProps) {
+  // Only render the component when debug is enabled
+  if (!debugEnabled) {
     return null;
   }
 
