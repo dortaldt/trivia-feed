@@ -62,6 +62,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { countries } from '../../data/countries';
 import ProfileBottomSheet from '../../components/ProfileBottomSheet';
 import LeaderboardBottomSheet from '../../components/LeaderboardBottomSheet';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -160,26 +161,87 @@ const FeedScreen: React.FC = () => {
     }
   }, [user?.id, dispatch, personalizedFeed.length, feedData]); // Include all dependencies
 
+  const [loadingProgress] = useState(new Animated.Value(0));
+  const [loadingTip, setLoadingTip] = useState('');
+  
+  // Array of loading tips
+  const loadingTips = [
+    "Did you know? The average person knows the answer to about 20% of trivia questions on their first attempt!",
+    "The world's first trivia contest was held in 1941 at Columbia University.",
+    "The word 'trivia' comes from Latin, meaning 'three roads' - places where people would meet and share information.",
+    "The longest-running trivia contest in the world has been held annually at the University of Wisconsin since 1969.",
+    "Studies show that regularly testing your knowledge with trivia can help maintain cognitive health as you age."
+  ];
+  
+  // Select a random tip when component mounts
+  useEffect(() => {
+    const randomIndex = Math.floor(Math.random() * loadingTips.length);
+    setLoadingTip(loadingTips[randomIndex]);
+    
+    // Animate loading progress
+    Animated.timing(loadingProgress, {
+      toValue: 1,
+      duration: 3000,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      useNativeDriver: false,
+    }).start();
+  }, []);
+
   // Fetch trivia questions from Supabase and apply personalization
   useEffect(() => {
     const loadTriviaQuestions = async () => {
       setIsLoading(true);
       setLoadError(null);
       try {
-        const allQuestions = await fetchTriviaQuestions(); // Get all available questions
+        // Check cache first
+        const cachedData = await AsyncStorage.getItem('cachedTriviaQuestions');
+        let allQuestions = [];
+        
+        if (cachedData) {
+          // Use cached data while fetching fresh data
+          console.log('Using cached trivia questions');
+          allQuestions = JSON.parse(cachedData);
+          setFeedData(allQuestions);
+          
+          // Apply personalization with cached data
+          if (allQuestions.length > 0) {
+            const { items, explanations } = getPersonalizedFeed(allQuestions, userProfile);
+            const uniqueItems = items.filter((item, index, self) => 
+              index === self.findIndex(t => t.id === item.id)
+            );
+            
+            const uniqueExplanations: Record<string, string[]> = {};
+            uniqueItems.forEach(item => {
+              if (explanations[item.id]) {
+                uniqueExplanations[item.id] = explanations[item.id];
+              }
+            });
+            
+            dispatch(setPersonalizedFeed({ 
+              items: uniqueItems, 
+              explanations: uniqueExplanations 
+            }));
+          }
+        }
+        
+        // Fetch fresh data
+        const freshQuestions = await fetchTriviaQuestions();
         
         // Check if we got mock data due to a connection error
-        if (allQuestions.length === 3 && allQuestions[0].id === '1' && allQuestions[0].question.includes('closest star to Earth')) {
+        if (freshQuestions.length === 3 && freshQuestions[0].id === '1' && freshQuestions[0].question.includes('closest star to Earth')) {
           console.log('Using mock data due to connection error');
           setUsingMockData(true);
+        } else {
+          // Cache the fresh data
+          await AsyncStorage.setItem('cachedTriviaQuestions', JSON.stringify(freshQuestions));
         }
         
         // Filter out duplicates by ID
-        const uniqueQuestions = allQuestions.filter((item, index, self) => 
+        const uniqueQuestions = freshQuestions.filter((item, index, self) => 
           index === self.findIndex(t => t.id === item.id)
         );
         
-        console.log(`Loaded ${allQuestions.length} questions, ${uniqueQuestions.length} unique questions after filtering duplicates`);
+        console.log(`Loaded ${freshQuestions.length} questions, ${uniqueQuestions.length} unique questions after filtering duplicates`);
         setFeedData(uniqueQuestions); // Store unique questions
         
         // Apply personalization if we have questions
@@ -1094,25 +1156,27 @@ const FeedScreen: React.FC = () => {
 
   // Loading state
   if (isLoading) {
+    // Calculate width for the progress bar
+    const progressWidth = loadingProgress.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['0%', '100%']
+    });
+    
     return (
       <Surface style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <Image 
+          source={require('../../../assets/images/app-icon.png')} 
+          style={styles.loadingIcon}
+          resizeMode="contain"
+        />
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 20 }} />
         <Text style={styles.loadingText}>Loading trivia questions...</Text>
         
-        {/* Add debug button for analyzing correct answers */}
-        {__DEV__ && (
-          <PaperButton 
-            mode="contained"
-            style={styles.retryButton}
-            onPress={() => {
-              analyzeCorrectAnswers().then(() => {
-                console.log('Analysis complete. Check console logs for details.');
-              });
-            }}
-          >
-            Analyze Correct Answers
-          </PaperButton>
-        )}
+        <View style={styles.progressContainer}>
+          <Animated.View style={[styles.progressBar, { width: progressWidth }]} />
+        </View>
+        
+        <Text style={styles.loadingTip}>{loadingTip}</Text>
       </Surface>
     );
   }
@@ -1137,21 +1201,6 @@ const FeedScreen: React.FC = () => {
         >
           Retry
         </PaperButton>
-        
-        {/* Add debug button for analyzing correct answers */}
-        {__DEV__ && (
-          <PaperButton 
-            mode="contained"
-            style={[styles.retryButton, { backgroundColor: colors.secondary }]}
-            onPress={() => {
-              analyzeCorrectAnswers().then(() => {
-                console.log('Analysis complete. Check console logs for details.');
-              });
-            }}
-          >
-            Analyze Correct Answers
-          </PaperButton>
-        )}
       </Surface>
     );
   }
@@ -1460,19 +1509,20 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   loadingText: {
-    marginTop: spacing[4],
-    fontSize: 16,
-    color: colors.mutedForeground,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 20,
+    color: colors.foreground,
   },
   errorText: {
-    fontSize: 16,
     color: colors.destructive,
+    fontSize: 16,
+    marginBottom: 20,
     textAlign: 'center',
-    marginHorizontal: spacing[8],
-    marginBottom: spacing[4],
   },
   retryButton: {
-    marginTop: spacing[4],
+    marginTop: 10,
+    backgroundColor: colors.primary,
   },
   explanationModal: {
     margin: spacing[5],
@@ -1538,6 +1588,32 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
+  },
+  loadingIcon: {
+    width: 120,
+    height: 120,
+    marginBottom: 10,
+  },
+  progressContainer: {
+    width: '60%',
+    height: 6,
+    backgroundColor: 'rgba(150, 150, 150, 0.2)',
+    borderRadius: 3,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 3,
+  },
+  loadingTip: {
+    fontSize: 16,
+    textAlign: 'center',
+    paddingHorizontal: 30,
+    color: colors.secondary,
+    maxWidth: 320,
+    fontStyle: 'italic',
   },
 });
 
