@@ -1337,6 +1337,7 @@ const FeedScreen: React.FC = () => {
       {/* InteractionTracker Component */}
       <InteractionTracker 
         feedData={personalizedFeed.length > 0 ? personalizedFeed : feedData} 
+        debugEnabled={debugPanelVisible}
       />
 
       {/* Profile Bottom Sheet */}
