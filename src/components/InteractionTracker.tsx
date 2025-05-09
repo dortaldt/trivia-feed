@@ -94,32 +94,11 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
   
   // Set up pulse animation for iOS
   useEffect(() => {
-    // Only animate on non-iOS platforms
-    if (Platform.OS !== 'ios' && !visible) {
-      // Create pulse animation sequence
-      const pulseSequence = Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.2,
-          duration: 800,
-          useNativeDriver: true,
-          easing: Easing.inOut(Easing.ease)
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-          easing: Easing.inOut(Easing.ease)
-        })
-      ]);
-      
-      // Start the loop animation
-      Animated.loop(pulseSequence).start();
-      
-      return () => {
-        // Stop animation when component unmounts or becomes visible
-        pulseAnim.stopAnimation();
-      };
-    }
+    // Animation has been disabled
+    return () => {
+      // Stop animation when component unmounts
+      pulseAnim.stopAnimation();
+    };
   }, [pulseAnim, visible]);
   
   // Get auth context
@@ -1774,42 +1753,19 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
       )}
       
       {!visible && (
-        Platform.OS === 'ios' ? (
-          // No animation wrapper for iOS
-          <TouchableOpacity 
-            style={[
-              styles.toggleButton, 
-              styles.iosToggleButton,
-              {backgroundColor: '#FF9500'}
-            ]} 
-            onPress={() => setVisible(true)}
-          >
-            <Feather 
-              name="activity" 
-              size={24} 
-              color="#FFFFFF" 
-            />
-          </TouchableOpacity>
-        ) : (
-          // Keep animation for non-iOS platforms
-          <Animated.View style={{
-            transform: [{ scale: pulseAnim }]
-          }}>
-            <TouchableOpacity 
-              style={[
-                styles.toggleButton, 
-                {backgroundColor: '#FFFFFF'}
-              ]} 
-              onPress={() => setVisible(true)}
-            >
-              <Feather 
-                name="activity" 
-                size={24} 
-                color="#333333" 
-              />
-            </TouchableOpacity>
-          </Animated.View>
-        )
+        <TouchableOpacity 
+          style={[
+            styles.toggleButton, 
+            Platform.OS === 'ios' ? styles.iosToggleButton : {backgroundColor: '#FFFFFF'},
+          ]} 
+          onPress={() => setVisible(true)}
+        >
+          <Feather 
+            name="activity" 
+            size={24} 
+            color={Platform.OS === 'ios' ? "#FFFFFF" : "#333333"} 
+          />
+        </TouchableOpacity>
       )}
     </>
   );
