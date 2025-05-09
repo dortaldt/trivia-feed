@@ -758,7 +758,7 @@ const FeedScreen: React.FC = () => {
             }, 50);
             
             // Set current explanation for debugging
-            if (__DEV__ && feedExplanations[currentItemId]) {
+            if (debugPanelVisible && feedExplanations[currentItemId]) {
               setCurrentExplanation(feedExplanations[currentItemId]);
             }
           } else {
@@ -810,7 +810,7 @@ const FeedScreen: React.FC = () => {
         }
       }
     },
-    [markPreviousAsSkipped, personalizedFeed, feedExplanations, dispatch, interactionStartTimes, feedData, userProfile]
+    [markPreviousAsSkipped, personalizedFeed, feedExplanations, dispatch, interactionStartTimes, feedData, userProfile, debugPanelVisible]
   );
 
   useEffect(() => {
@@ -1075,7 +1075,8 @@ const FeedScreen: React.FC = () => {
             handleAnswerQuestion(item.id, answerIndex, isCorrect)
           }
           showExplanation={() => {
-            if (__DEV__ && feedExplanations[item.id]) {
+            // Show explanation only when debug panel is visible
+            if (debugPanelVisible && feedExplanations[item.id]) {
               setCurrentExplanation(feedExplanations[item.id]);
               setShowExplanationModal(true);
             }
@@ -1182,47 +1183,42 @@ const FeedScreen: React.FC = () => {
     fetchUserProfile();
   }, [user]);
 
-  // Check URL parameters for debug mode on component mount
+  // Completely reworked: Check URL parameters for debug mode on component mount
   useEffect(() => {
-    // Only run on web platform
+    // Reset debug panel visibility to false on mount
+    setDebugPanelVisible(false);
+    
+    // Check URL parameters on web platform
     if (Platform.OS === 'web') {
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const debugParam = urlParams.get('debug');
         console.log('URL Params check - debug param:', debugParam);
+        
+        // Only enable if exact parameter match
         if (debugParam === 'trivia-debug-panel') {
           console.log('Debug panel enabled via URL parameter');
           setDebugPanelVisible(true);
         } else {
-          console.log('Debug panel remains hidden (no valid URL param)');
+          console.log('Debug panel hidden (no valid URL param)');
         }
       } catch (error) {
         console.error('Error parsing URL parameters:', error);
       }
-    } else {
-      console.log('Not web platform, debug panel hidden by default');
     }
     
     // Log initial state for verification
-    console.log('Initial debug panel visibility:', debugPanelVisible);
+    console.log('Debug panel visibility after initialization:', debugPanelVisible);
   }, []);
   
   // Handle 3-finger tap for iOS
   const handleTouchEnd = useCallback((event: GestureResponderEvent) => {
-    // Check if it's a 3-finger tap on iOS
-    if (Platform.OS === 'ios' && event.nativeEvent.touches && event.nativeEvent.touches.length === 3) {
+    // Only handle iOS three-finger tap
+    if (Platform.OS === 'ios' && 
+        event.nativeEvent.touches && 
+        event.nativeEvent.touches.length === 3) {
       console.log('3-finger tap detected, toggling debug panel');
       setDebugPanelVisible(prev => !prev);
-    }
-  }, []);
-
-  // Add additional useEffect to ensure debug panel isn't enabled in dev mode by default
-  useEffect(() => {
-    // This is a safeguard to ensure the debug panel doesn't appear in dev mode unless explicitly enabled
-    if (__DEV__) {
-      console.log('Running in development mode - ensuring debug panel is not enabled by default');
-      // Only in development mode, keep debug panel hidden by default
-      setDebugPanelVisible(false);
     }
   }, []);
 
@@ -1349,8 +1345,8 @@ const FeedScreen: React.FC = () => {
       {/* Leaderboard Bottom Sheet */}
       <LeaderboardBottomSheet isVisible={showLeaderboard} onClose={toggleLeaderboard} />
 
-      {/* Debugging Modal for Personalization Explanations - Modified to respect debug panel visibility */}
-      {(debugPanelVisible || __DEV__) && showExplanationModal && (
+      {/* Debugging Modal for Personalization Explanations - Only visible when debug panel is enabled */}
+      {debugPanelVisible && showExplanationModal && (
         <Portal>
           <Modal 
             visible={showExplanationModal} 
@@ -1377,7 +1373,7 @@ const FeedScreen: React.FC = () => {
         </Portal>
       )}
 
-      {/* Debug Panel Button - Shows only when debug panel is enabled */}
+      {/* Debug Panel Button - Only visible when debug panel is explicitly enabled */}
       {debugPanelVisible && (
         <TouchableOpacity 
           style={styles.debugButton}
