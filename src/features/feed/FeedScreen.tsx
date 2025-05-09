@@ -1183,31 +1183,66 @@ const FeedScreen: React.FC = () => {
     fetchUserProfile();
   }, [user]);
 
-  // Completely reworked: Check URL parameters for debug mode on component mount
+  // Check URL parameters for debug mode
   useEffect(() => {
-    // Check URL parameters on web platform
-    if (Platform.OS === 'web') {
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const debugParam = urlParams.get('debug');
-        console.log('URL Params check - debug param:', debugParam);
-        
-        // Only enable if exact parameter match
-        if (debugParam === 'trivia-debug-panel') {
-          console.log('Debug panel enabled via URL parameter');
-          setDebugPanelVisible(true);
-        } else {
-          console.log('Debug panel hidden (no valid URL param)');
-          // Only set to false if not already enabled by URL parameter
-          // This allows the 3-finger gesture to toggle independently
+    // Function to check URL parameters
+    const checkUrlParams = () => {
+      if (Platform.OS === 'web') {
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const debugParam = urlParams.get('debug');
+          console.log('URL Params check - debug param:', debugParam);
+          
+          // Only enable if exact parameter match
+          if (debugParam === 'trivia-debug-panel') {
+            console.log('Debug panel enabled via URL parameter');
+            setDebugPanelVisible(true);
+          } else {
+            console.log('Debug panel hidden (no valid URL param)');
+            // Only reset debug panel visibility if not on iOS (where gesture can toggle it)
+            setDebugPanelVisible(false);
+          }
+        } catch (error) {
+          console.error('Error parsing URL parameters:', error);
         }
-      } catch (error) {
-        console.error('Error parsing URL parameters:', error);
       }
-    }
+    };
     
-    // Log initial state for verification
-    console.log('Debug panel visibility after initialization:', debugPanelVisible);
+    // Check URL parameters immediately
+    checkUrlParams();
+    
+    // Set up listener for URL changes in web platform
+    if (Platform.OS === 'web') {
+      // Use the History API to detect changes
+      const handlePopState = () => {
+        console.log('URL changed, rechecking parameters');
+        checkUrlParams();
+      };
+      
+      // Listen for URL changes
+      window.addEventListener('popstate', handlePopState);
+      window.addEventListener('hashchange', handlePopState);
+      
+      // Also track the current URL to detect any changes
+      let previousUrl = window.location.href;
+      
+      // Set up an interval to check for URL changes (handles programmatic changes)
+      const intervalId = setInterval(() => {
+        const currentUrl = window.location.href;
+        if (previousUrl !== currentUrl) {
+          previousUrl = currentUrl;
+          console.log('URL changed programmatically, rechecking parameters');
+          checkUrlParams();
+        }
+      }, 500); // Check every 500ms
+      
+      // Clean up listeners when component unmounts
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        window.removeEventListener('hashchange', handlePopState);
+        clearInterval(intervalId);
+      };
+    }
   }, []);
   
   // Add state for debug toast visibility
@@ -1222,7 +1257,7 @@ const FeedScreen: React.FC = () => {
         event.nativeEvent.touches.length === 3) {
       console.log('3-finger tap detected on iOS, toggling debug panel');
       
-      // Toggle debug panel - using function form to avoid dependency
+      // Toggle debug panel
       setDebugPanelVisible(prev => !prev);
       
       // Show visual feedback toast
@@ -1243,7 +1278,89 @@ const FeedScreen: React.FC = () => {
         setShowDebugToast(false);
       });
     }
+  }, [debugPanelVisible]);
+
+  // Function to toggle debug mode via URL parameter on web
+  const toggleDebugModeViaUrl = useCallback(() => {
+    if (Platform.OS === 'web') {
+      const currentUrl = new URL(window.location.href);
+      const params = new URLSearchParams(currentUrl.search);
+      
+      if (params.has('debug') && params.get('debug') === 'trivia-debug-panel') {
+        // Remove debug parameter if it exists
+        params.delete('debug');
+        console.log('Removing debug parameter from URL');
+      } else {
+        // Add debug parameter
+        params.set('debug', 'trivia-debug-panel');
+        console.log('Adding debug parameter to URL');
+      }
+      
+      // Update URL without reloading the page
+      currentUrl.search = params.toString();
+      window.history.pushState({}, '', currentUrl.toString());
+      
+      // Manually trigger a check of URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const debugParam = urlParams.get('debug');
+      
+      if (debugParam === 'trivia-debug-panel') {
+        setDebugPanelVisible(true);
+      } else {
+        setDebugPanelVisible(false);
+      }
+      
+      // Show visual feedback
+      setShowDebugToast(true);
+      Animated.sequence([
+        Animated.timing(debugToastOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(1500),
+        Animated.timing(debugToastOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowDebugToast(false);
+      });
+    }
   }, [debugToastOpacity]);
+
+  // Show debug instructions on web after component mounts
+  useEffect(() => {
+    if (Platform.OS === 'web' && __DEV__) {
+      // Wait a moment before showing the tip
+      const timerId = setTimeout(() => {
+        console.log('%cTIP: Use ?debug=trivia-debug-panel in the URL to enable debug mode', 'color: #4CAF50; font-size: 16px; font-weight: bold;');
+        console.log('%cOr use Alt+D keyboard shortcut to toggle debug mode', 'color: #2196F3; font-size: 14px;');
+      }, 2000);
+      
+      return () => clearTimeout(timerId);
+    }
+  }, []);
+
+  // Add keyboard shortcut for toggling debug mode on web
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const handleKeyDown = (event: KeyboardEvent) => {
+        // Alt+D shortcut to toggle debug mode
+        if (event.altKey && event.key === 'd') {
+          event.preventDefault();
+          toggleDebugModeViaUrl();
+        }
+      };
+      
+      window.addEventListener('keydown', handleKeyDown);
+      
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [toggleDebugModeViaUrl]);
 
   // Loading state
   if (isLoading) {
