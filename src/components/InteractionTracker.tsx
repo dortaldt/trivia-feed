@@ -94,7 +94,8 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
   
   // Set up pulse animation for iOS
   useEffect(() => {
-    if (Platform.OS === 'ios' && !visible) {
+    // Only animate on non-iOS platforms
+    if (Platform.OS !== 'ios' && !visible) {
       // Create pulse animation sequence
       const pulseSequence = Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -1773,24 +1774,42 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
       )}
       
       {!visible && (
-        <Animated.View style={{
-          transform: [{ scale: pulseAnim }]
-        }}>
+        Platform.OS === 'ios' ? (
+          // No animation wrapper for iOS
           <TouchableOpacity 
             style={[
               styles.toggleButton, 
-              Platform.OS === 'ios' ? styles.iosToggleButton : null,
-              {backgroundColor: Platform.OS === 'ios' ? '#FF9500' : '#FFFFFF'}
+              styles.iosToggleButton,
+              {backgroundColor: '#FF9500'}
             ]} 
             onPress={() => setVisible(true)}
           >
             <Feather 
               name="activity" 
               size={24} 
-              color={Platform.OS === 'ios' ? '#FFFFFF' : '#333333'} 
+              color="#FFFFFF" 
             />
           </TouchableOpacity>
-        </Animated.View>
+        ) : (
+          // Keep animation for non-iOS platforms
+          <Animated.View style={{
+            transform: [{ scale: pulseAnim }]
+          }}>
+            <TouchableOpacity 
+              style={[
+                styles.toggleButton, 
+                {backgroundColor: '#FFFFFF'}
+              ]} 
+              onPress={() => setVisible(true)}
+            >
+              <Feather 
+                name="activity" 
+                size={24} 
+                color="#333333" 
+              />
+            </TouchableOpacity>
+          </Animated.View>
+        )
       )}
     </>
   );
