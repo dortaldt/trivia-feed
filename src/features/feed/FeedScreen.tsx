@@ -1189,14 +1189,22 @@ const FeedScreen: React.FC = () => {
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const debugParam = urlParams.get('debug');
+        console.log('URL Params check - debug param:', debugParam);
         if (debugParam === 'trivia-debug-panel') {
           console.log('Debug panel enabled via URL parameter');
           setDebugPanelVisible(true);
+        } else {
+          console.log('Debug panel remains hidden (no valid URL param)');
         }
       } catch (error) {
         console.error('Error parsing URL parameters:', error);
       }
+    } else {
+      console.log('Not web platform, debug panel hidden by default');
     }
+    
+    // Log initial state for verification
+    console.log('Initial debug panel visibility:', debugPanelVisible);
   }, []);
   
   // Handle 3-finger tap for iOS
@@ -1205,6 +1213,16 @@ const FeedScreen: React.FC = () => {
     if (Platform.OS === 'ios' && event.nativeEvent.touches && event.nativeEvent.touches.length === 3) {
       console.log('3-finger tap detected, toggling debug panel');
       setDebugPanelVisible(prev => !prev);
+    }
+  }, []);
+
+  // Add additional useEffect to ensure debug panel isn't enabled in dev mode by default
+  useEffect(() => {
+    // This is a safeguard to ensure the debug panel doesn't appear in dev mode unless explicitly enabled
+    if (__DEV__) {
+      console.log('Running in development mode - ensuring debug panel is not enabled by default');
+      // Only in development mode, keep debug panel hidden by default
+      setDebugPanelVisible(false);
     }
   }, []);
 
@@ -1364,6 +1382,7 @@ const FeedScreen: React.FC = () => {
         <TouchableOpacity 
           style={styles.debugButton}
           onPress={() => {
+            console.log('Debug button pressed');
             if (currentIndex < personalizedFeed.length) {
               const currentItemId = personalizedFeed[currentIndex].id;
               setCurrentExplanation(feedExplanations[currentItemId] || ['No explanation available for this question']);
@@ -1683,7 +1702,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 30,
     borderRadius: 15,
-    zIndex: 10,
+    zIndex: 100, // Increase zIndex to ensure it's above all content
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
