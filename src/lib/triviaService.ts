@@ -204,6 +204,8 @@ export async function analyzeCorrectAnswers() {
 
 // Function to fetch trivia questions from Supabase
 export async function fetchTriviaQuestions(limit: number = 20, language: string = 'English'): Promise<FeedItem[]> {
+  // Note: Caching of trivia questions is implemented in the FeedScreen component
+  // using AsyncStorage to improve loading performance and provide offline capability
   try {
     console.log('DEBUG: Starting to fetch data from Supabase - requesting ALL questions');
     
