@@ -18,6 +18,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  GestureResponderEvent,
 } from 'react-native';
 import { 
   Text, 
@@ -84,6 +85,9 @@ const FeedScreen: React.FC = () => {
   // Add a state variable for the leaderboard visibility
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [currentLeaderboardItemId, setCurrentLeaderboardItemId] = useState<string | null>(null);
+  
+  // Add state for debug panel visibility
+  const [debugPanelVisible, setDebugPanelVisible] = useState(false);
   
   // Get user from auth context
   const { user, isGuest } = useAuth();
@@ -1178,6 +1182,32 @@ const FeedScreen: React.FC = () => {
     fetchUserProfile();
   }, [user]);
 
+  // Check URL parameters for debug mode on component mount
+  useEffect(() => {
+    // Only run on web platform
+    if (Platform.OS === 'web') {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const debugParam = urlParams.get('debug');
+        if (debugParam === 'trivia-debug-panel') {
+          console.log('Debug panel enabled via URL parameter');
+          setDebugPanelVisible(true);
+        }
+      } catch (error) {
+        console.error('Error parsing URL parameters:', error);
+      }
+    }
+  }, []);
+  
+  // Handle 3-finger tap for iOS
+  const handleTouchEnd = useCallback((event: GestureResponderEvent) => {
+    // Check if it's a 3-finger tap on iOS
+    if (Platform.OS === 'ios' && event.nativeEvent.touches && event.nativeEvent.touches.length === 3) {
+      console.log('3-finger tap detected, toggling debug panel');
+      setDebugPanelVisible(prev => !prev);
+    }
+  }, []);
+
   // Loading state
   if (isLoading) {
     return (
@@ -1225,7 +1255,10 @@ const FeedScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <View 
+      style={styles.container}
+      onTouchEnd={handleTouchEnd} // Add touch handler for 3-finger detection
+    >
       {/* Profile Button with User Avatar (only appearing once on the feed level) */}
       <TouchableOpacity 
         style={styles.profileButton} 
@@ -1298,8 +1331,8 @@ const FeedScreen: React.FC = () => {
       {/* Leaderboard Bottom Sheet */}
       <LeaderboardBottomSheet isVisible={showLeaderboard} onClose={toggleLeaderboard} />
 
-      {/* Debugging Modal for Personalization Explanations (DEV only) */}
-      {__DEV__ && showExplanationModal && (
+      {/* Debugging Modal for Personalization Explanations - Modified to respect debug panel visibility */}
+      {(debugPanelVisible || __DEV__) && showExplanationModal && (
         <Portal>
           <Modal 
             visible={showExplanationModal} 
@@ -1324,6 +1357,24 @@ const FeedScreen: React.FC = () => {
             </Card>
           </Modal>
         </Portal>
+      )}
+
+      {/* Debug Panel Button - Shows only when debug panel is enabled */}
+      {debugPanelVisible && (
+        <TouchableOpacity 
+          style={styles.debugButton}
+          onPress={() => {
+            if (currentIndex < personalizedFeed.length) {
+              const currentItemId = personalizedFeed[currentIndex].id;
+              setCurrentExplanation(feedExplanations[currentItemId] || ['No explanation available for this question']);
+              setShowExplanationModal(true);
+            }
+          }}
+        >
+          <View style={styles.debugButtonInner}>
+            <ThemedText style={styles.debugButtonText}>DEBUG</ThemedText>
+          </View>
+        </TouchableOpacity>
       )}
 
       {showTooltip && (
@@ -1623,6 +1674,38 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     maxWidth: 320,
     fontStyle: 'italic',
+  },
+  // Add debug button styles
+  debugButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 25,
+    right: 20,
+    width: 60,
+    height: 30,
+    borderRadius: 15,
+    zIndex: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  debugButtonInner: {
+    width: 60,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#ff5722',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  debugButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 
