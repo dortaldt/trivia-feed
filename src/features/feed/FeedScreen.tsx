@@ -1185,9 +1185,6 @@ const FeedScreen: React.FC = () => {
 
   // Completely reworked: Check URL parameters for debug mode on component mount
   useEffect(() => {
-    // Reset debug panel visibility to false on mount
-    setDebugPanelVisible(false);
-    
     // Check URL parameters on web platform
     if (Platform.OS === 'web') {
       try {
@@ -1201,6 +1198,8 @@ const FeedScreen: React.FC = () => {
           setDebugPanelVisible(true);
         } else {
           console.log('Debug panel hidden (no valid URL param)');
+          // Only set to false if not already enabled by URL parameter
+          // This allows the 3-finger gesture to toggle independently
         }
       } catch (error) {
         console.error('Error parsing URL parameters:', error);
@@ -1223,7 +1222,7 @@ const FeedScreen: React.FC = () => {
         event.nativeEvent.touches.length === 3) {
       console.log('3-finger tap detected on iOS, toggling debug panel');
       
-      // Toggle debug panel
+      // Toggle debug panel - using function form to avoid dependency
       setDebugPanelVisible(prev => !prev);
       
       // Show visual feedback toast
@@ -1244,7 +1243,7 @@ const FeedScreen: React.FC = () => {
         setShowDebugToast(false);
       });
     }
-  }, [debugPanelVisible]);
+  }, [debugToastOpacity]);
 
   // Loading state
   if (isLoading) {
