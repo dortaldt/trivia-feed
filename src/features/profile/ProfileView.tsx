@@ -49,7 +49,7 @@ const ProfileView: React.FC = () => {
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
   const [localIsGuest, setLocalIsGuest] = useState(false);
-  
+
   // Add debug log for current auth state
   useEffect(() => {
     console.log('ProfileView - Auth state:', { 
@@ -1110,15 +1110,14 @@ const ProfileView: React.FC = () => {
           </View>
 
           {/* Edit Profile button */}
-          <Button 
-            variant="accent"
-            size="md"
-            fullWidth
-            leftIcon={<FeatherIcon name="edit-2" size={18} color="#000" style={{ marginRight: 8 }} />}
+          <Button
+            variant="outline"
+            size="sm"
+            leftIcon={<FeatherIcon name="edit-2" size={16} color={isDark ? 'white' : 'black'} />}
             onPress={() => setIsEditing(true)}
-            style={{ marginTop: 20 }}
+            style={profileStyles.editButton}
           >
-            Edit Profile
+            Edit
           </Button>
           
           {/* Theme Toggle */}
@@ -1133,7 +1132,14 @@ const ProfileView: React.FC = () => {
               variant="destructive"
               size="md"
               fullWidth
-              leftIcon={<FeatherIcon name="log-out" size={18} color="#fff" style={{ marginRight: 8 }} />}
+              leftIcon={
+                <FeatherIcon 
+                  name="log-out" 
+                  size={18} 
+                  color="#fff" 
+                  style={{ marginRight: 8 }} 
+                />
+              }
               onPress={handleSignOut}
               accessibilityLabel="Sign out from your account"
               accessibilityHint="Double-tap to sign out from your account"
@@ -1236,7 +1242,7 @@ const ProfileView: React.FC = () => {
           
           <View style={profileStyles.buttonRow}>
             <Button 
-              variant="ghost"
+              variant="outline"
               size="md"
               style={{ flex: 1, marginRight: 5 }}
               onPress={() => {
@@ -1316,7 +1322,10 @@ const ProfileView: React.FC = () => {
       
       {isUpdating && (
         <View style={profileStyles.loadingOverlay}>
-          <ActivityIndicator size="large" color={isDark ? 'white' : '#0a7ea4'} />
+          <ActivityIndicator 
+            size="large" 
+            color={isDark ? 'white' : '#0a7ea4'} 
+          />
         </View>
       )}
     </View>

@@ -6,11 +6,12 @@ import {
   ViewStyle, 
   TextStyle, 
   TouchableOpacityProps,
-  Platform
+  Platform,
+  Animated
 } from 'react-native';
-import { buttons, colors } from '../../theme';
-import { useTheme } from '@/src/context/ThemeContext';
 import { NeonColors } from '@/constants/NeonColors';
+import { useTheme } from '@/src/context/ThemeContext';
+import { buttons } from '@/src/theme';
 
 // Supported button sizes
 type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
@@ -28,7 +29,7 @@ type ButtonVariant =
   | 'info';
 
 // Button props
-interface ButtonProps extends TouchableOpacityProps {
+interface NeonButtonProps extends TouchableOpacityProps {
   children: React.ReactNode;
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -37,13 +38,11 @@ interface ButtonProps extends TouchableOpacityProps {
   rightIcon?: React.ReactNode;
   textStyle?: TextStyle;
   disabled?: boolean;
-  // Added for neon support (can be provided to override the default neon color)
-  neonColor?: string;
-  // Flag to opt out of neon styling even when neon theme is active
-  disableNeonStyle?: boolean;
+  color?: string; // Optional custom color for the neon effect
+  animationIntensity?: number; // Optional intensity for animations (1-10)
 }
 
-const Button: React.FC<ButtonProps> = ({
+const NeonButton: React.FC<NeonButtonProps> = ({
   children,
   variant = 'primary',
   size = 'md',
@@ -53,22 +52,16 @@ const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   disabled = false,
-  neonColor,
-  disableNeonStyle = false,
+  color,
+  animationIntensity = 5,
   ...rest
 }) => {
   const { isNeonTheme } = useTheme();
-  
-  // Get variant and size styles from theme
-  const variantStyle = buttons.variants[variant];
   const sizeStyle = buttons.sizes[size];
-  
-  // Determine if we should use neon styling
-  const useNeonStyle = isNeonTheme && !disableNeonStyle;
-  
-  // Get the appropriate neon color based on variant
-  const getNeonColor = (): string => {
-    if (neonColor) return neonColor;
+
+  // Use the provided color or get the color based on variant
+  const getNeonColor = () => {
+    if (color) return color;
     
     switch (variant) {
       case 'primary': return NeonColors.dark.primary;
@@ -82,35 +75,41 @@ const Button: React.FC<ButtonProps> = ({
     }
   };
   
-  const activeNeonColor = getNeonColor();
+  const neonColor = getNeonColor();
   
-  // Add CSS keyframes animation for web platform with neon effects
+  // Add CSS keyframes animation for web platform
   useEffect(() => {
-    if (Platform.OS === 'web' && useNeonStyle) {
-      // Create unique animation names based on the color to prevent conflicts
-      const colorHex = activeNeonColor.replace('#', '');
+    if (Platform.OS === 'web' && isNeonTheme) {
+      // Generate unique animation names based on color to prevent conflicts
+      const colorHex = neonColor.replace('#', '');
       const animationName = `neonButton_${colorHex}`;
-      const textAnimationName = `neonText_${colorHex}`;
+      const textAnimationName = `neonButtonText_${colorHex}`;
+      
+      // Scale the intensity (1-10) to actual CSS values
+      const glowMin = 2 + animationIntensity * 0.3;
+      const glowMax = 5 + animationIntensity * 0.5;
+      const textGlowMin = 1 + animationIntensity * 0.2;
+      const textGlowMax = 3 + animationIntensity * 0.3;
       
       // Create a style element
       const styleEl = document.createElement('style');
-      // Add keyframes animation with reduced intensity compared to NeonButton
+      // Add keyframes animation
       styleEl.innerHTML = `
         @keyframes ${animationName} {
           0% {
-            box-shadow: 0 0 3px ${activeNeonColor}, 0 0 5px ${activeNeonColor}40;
+            box-shadow: 0 0 ${glowMin}px ${neonColor}, 0 0 ${glowMin + 2}px ${neonColor}40;
           }
           100% {
-            box-shadow: 0 0 6px ${activeNeonColor}, 0 0 8px ${activeNeonColor}60;
+            box-shadow: 0 0 ${glowMax}px ${neonColor}, 0 0 ${glowMax + 4}px ${neonColor}60;
           }
         }
         
         @keyframes ${textAnimationName} {
           0% {
-            text-shadow: 0 0 1px ${activeNeonColor}, 0 0 2px ${activeNeonColor};
+            text-shadow: 0 0 ${textGlowMin}px ${neonColor}, 0 0 ${textGlowMin + 1}px ${neonColor};
           }
           100% {
-            text-shadow: 0 0 2px ${activeNeonColor}, 0 0 4px ${activeNeonColor};
+            text-shadow: 0 0 ${textGlowMax}px ${neonColor}, 0 0 ${textGlowMax + 2}px ${neonColor};
           }
         }
       `;
@@ -122,55 +121,56 @@ const Button: React.FC<ButtonProps> = ({
         document.head.removeChild(styleEl);
       };
     }
-  }, [useNeonStyle, activeNeonColor, variant]);
+  }, [isNeonTheme, neonColor, animationIntensity]);
   
   // Build container style
   const containerStyle: ViewStyle = {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    opacity: disabled ? 0.6 : 1,
+    opacity: disabled ? 0.5 : 1,
     width: fullWidth ? '100%' : undefined,
     ...sizeStyle,
   };
   
   // Apply standard or neon styling based on the theme
-  const getButtonStyle = (): ViewStyle => {
-    if (!useNeonStyle) {
-      return variantStyle;
+  const getNeonButtonStyle = (): ViewStyle => {
+    if (!isNeonTheme) {
+      // Fall back to standard styling if not in neon theme
+      return buttons.variants[variant];
     }
     
-    // Build neon style
+    // Otherwise, apply neon styling
     const baseStyle: ViewStyle = {
       backgroundColor: 'rgba(5, 5, 15, 0.8)',
-      borderWidth: 1,
-      borderColor: activeNeonColor,
+      borderWidth: 1.5,
+      borderColor: neonColor,
     };
     
-    // Add platform-specific neon styles
+    // Add platform-specific styles
     if (Platform.OS === 'web') {
-      const colorHex = activeNeonColor.replace('#', '');
+      const colorHex = neonColor.replace('#', '');
       return {
         ...baseStyle,
-        backdropFilter: 'blur(4px)',
-        WebkitBackdropFilter: 'blur(4px)',
-        boxShadow: `0 0 5px ${activeNeonColor}, 0 0 2px ${activeNeonColor}`,
+        backdropFilter: 'blur(5px)',
+        WebkitBackdropFilter: 'blur(5px)',
+        boxShadow: `0 0 8px ${neonColor}, 0 0 4px ${neonColor}`,
         transition: 'all 0.2s ease-in-out',
         animation: `neonButton_${colorHex} 2s infinite alternate`,
       } as any;
     } else if (Platform.OS === 'ios') {
       return {
         ...baseStyle,
-        shadowColor: activeNeonColor,
+        shadowColor: neonColor,
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.7,
-        shadowRadius: 5,
+        shadowOpacity: 0.8,
+        shadowRadius: 8,
       };
     } else {
       // Android
       return {
         ...baseStyle,
-        elevation: 3,
+        elevation: 4,
       };
     }
   };
@@ -179,30 +179,30 @@ const Button: React.FC<ButtonProps> = ({
   const textStyleBase: TextStyle = {
     fontWeight: '600',
     fontSize: sizeStyle.fontSize,
-    color: useNeonStyle ? activeNeonColor : variantStyle.color,
+    color: isNeonTheme ? neonColor : buttons.variants[variant].color,
   };
   
-  // Add neon text effect if needed
+  // Add neon text effect
   const getNeonTextStyle = (): TextStyle => {
-    if (!useNeonStyle) return {};
+    if (!isNeonTheme) return {};
     
     if (Platform.OS === 'web') {
-      const colorHex = activeNeonColor.replace('#', '');
+      const colorHex = neonColor.replace('#', '');
       return {
-        animation: `neonText_${colorHex} 2s infinite alternate`,
+        animation: `neonButtonText_${colorHex} 2s infinite alternate`,
       } as any;
     } else {
       return {
-        textShadowColor: activeNeonColor,
+        textShadowColor: neonColor,
         textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 3,
+        textShadowRadius: 4,
       };
     }
   };
   
   return (
     <TouchableOpacity
-      style={[containerStyle, getButtonStyle(), style]}
+      style={[containerStyle, getNeonButtonStyle(), style]}
       disabled={disabled}
       activeOpacity={0.7}
       {...rest}
@@ -220,4 +220,4 @@ const Button: React.FC<ButtonProps> = ({
   );
 };
 
-export default Button; 
+export default NeonButton; 

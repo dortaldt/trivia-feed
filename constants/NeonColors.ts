@@ -34,6 +34,20 @@ export const NeonCategoryColors: Record<string, { primary: string, secondary: st
   'Mythology': { primary: '#8A00FF', secondary: '#6000FF' },       // Bright Purple
   'Animals': { primary: '#00FF40', secondary: '#80FF00' },         // Green to Lime
   
+  // Additional categories with unique neon colors
+  'Science Fiction': { primary: '#00FFAA', secondary: '#00CCFF' }, // Teal to Bright Blue
+  'Video Games': { primary: '#FF00AA', secondary: '#AA00FF' },     // Hot Pink to Purple
+  'Anime & Manga': { primary: '#FF66EE', secondary: '#EE66FF' },   // Bright Pink
+  'Architecture': { primary: '#FFAA00', secondary: '#FF6600' },    // Gold to Orange
+  'Business & Economics': { primary: '#00FF66', secondary: '#00AA33' }, // Bright Green
+  'Health & Medicine': { primary: '#FF3366', secondary: '#FF0033' }, // Bright Red
+  'Religion': { primary: '#AAAAFF', secondary: '#6666FF' },        // Light Blue to Medium Blue
+  'Fashion': { primary: '#FF66AA', secondary: '#FF3399' },         // Pink to Hot Pink
+  'Transportation': { primary: '#33CCFF', secondary: '#0099FF' },  // Sky Blue
+  'Space & Astronomy': { primary: '#4D00FF', secondary: '#3300AA' }, // Deep Purple to Indigo
+  'Comics & Superheroes': { primary: '#FF3300', secondary: '#CC0000' }, // Bright Red to Dark Red
+  'Board Games': { primary: '#33FF33', secondary: '#00CC00' },     // Bright Green
+  
   // Default fallback color
   'default': { primary: '#00FFFF', secondary: '#FF00FF' }          // Cyan to Magenta
 };
