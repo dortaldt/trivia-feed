@@ -25,6 +25,7 @@ import { useAuth } from '../../context/AuthContext';
 import NeonGradientBackground from '@/src/components/NeonGradientBackground';
 import { useTheme } from '@/src/context/ThemeContext';
 import { NeonColors } from '@/constants/NeonColors';
+import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
@@ -298,6 +299,14 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                         onMouseLeave: handleMouseLeave
                       } : {})}
                     >
+                      {isNeonTheme && Platform.OS === 'ios' && (
+                        <BlurView 
+                          intensity={35}
+                          tint="dark"
+                          style={StyleSheet.absoluteFill}
+                        />
+                      )}
+                      
                       <ThemedText 
                         type="default"
                         style={[
@@ -621,26 +630,30 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   neonAnswerOption: {
-    backgroundColor: 'rgba(10, 10, 20, 0.85)', // Very dark blue-black with transparency
-    borderWidth: 1.5, // Thicker border for more prominent glow
+    backgroundColor: 'rgba(20, 20, 35, 0.5)', // Lighter background for frosted glass effect
+    borderWidth: 1, // Thinner border for more subtle effect
     borderColor: NeonColors.dark.primary,
     shadowColor: NeonColors.dark.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9, // Higher opacity for stronger glow
-    shadowRadius: 8, // Larger radius for more dramatic glow
-    elevation: Platform.OS === 'android' ? 7 : 0,
+    shadowOpacity: 0.5, // Reduced opacity for less glow
+    shadowRadius: 4, // Smaller radius for subtler glow
+    elevation: Platform.OS === 'android' ? 3 : 0,
     ...(Platform.OS === 'web' ? {
-      boxShadow: `0 0 15px ${NeonColors.dark.primary}, 0 0 8px ${NeonColors.dark.primary}`,
+      backdropFilter: 'blur(10px)',
+      WebkitBackdropFilter: 'blur(10px)',
+      boxShadow: `0 0 6px ${NeonColors.dark.primary}`,
     } as any : {}),
   },
   neonAnswerOptionIOS: {
-    backgroundColor: 'rgba(10, 10, 20, 0.85)', // Very dark blue-black with transparency
-    borderWidth: 1.5, // Thicker border for more prominent glow
+    backgroundColor: 'rgba(20, 20, 35, 0.5)', // Lighter background for frosted glass effect
+    borderWidth: 1, // Thinner border for more subtle effect
     borderColor: NeonColors.dark.primary,
     // iOS-optimized shadow properties
     shadowColor: NeonColors.dark.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4, // Increased but still optimized for iOS
+    shadowOpacity: 0.45,
+    shadowRadius: 3,
+    // iOS-specific frosted glass effect
+    overflow: 'hidden', // Required for backdrop filter on iOS
   },
 });
