@@ -20,7 +20,7 @@ const palette = {
     200: '#80ceeb',
     300: '#4dbae3',
     400: '#26abdd',
-    500: '#0a7ea4', // Main brand color
+    500: '#ffc107', // Main brand color (yellow)
     600: '#09719a',
     700: '#07618e',
     800: '#055182',
@@ -120,7 +120,7 @@ export const colors = {
     text: palette.neutral[900],
     textSecondary: palette.neutral[700],
     textTertiary: palette.neutral[500],
-    textInverted: '#ffffff',
+    textInverted: '#000000',
     
     // UI Element colors
     border: palette.neutral[300],
@@ -159,7 +159,7 @@ export const colors = {
     text: palette.neutral[50],
     textSecondary: palette.neutral[300],
     textTertiary: palette.neutral[400],
-    textInverted: palette.neutral[900],
+    textInverted: '#000000',
     
     // UI Element colors
     border: palette.neutral[700],
