@@ -21,7 +21,8 @@ import MaterialIconsIcon from '@expo/vector-icons/MaterialIcons';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { store } from '@/src/store';
 import { AuthProvider, useAuth } from '@/src/context/AuthContext';
-import { ThemeProvider } from '@/src/theme/ThemeProvider';
+import { ThemeProvider as AppThemeProvider } from '@/src/theme/ThemeProvider';
+import { ThemeProvider as CustomThemeProvider } from '@/src/context/ThemeContext';
 import { Colors } from '@/constants/Colors';
 import { SyncManager } from '@/src/components/SyncManager';
 
@@ -358,24 +359,26 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
         <AuthProvider>
-          <ThemeProvider initialTheme="dark">
-            <NavigationThemeProvider value={DarkTheme}>
-              <SyncManager>
-                <AuthWrapper>
-                  <View style={styles.container}>
-                    <Stack>
-                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                      <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-                      <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
-                      <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
-                      <Stack.Screen name="+not-found" />
-                    </Stack>
-                    <StatusBar style="light" />
-                  </View>
-                </AuthWrapper>
-              </SyncManager>
-            </NavigationThemeProvider>
-          </ThemeProvider>
+          <AppThemeProvider initialTheme="dark">
+            <CustomThemeProvider>
+              <NavigationThemeProvider value={DarkTheme}>
+                <SyncManager>
+                  <AuthWrapper>
+                    <View style={styles.container}>
+                      <Stack>
+                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                        <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+                        <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
+                        <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
+                        <Stack.Screen name="+not-found" />
+                      </Stack>
+                      <StatusBar style="light" />
+                    </View>
+                  </AuthWrapper>
+                </SyncManager>
+              </NavigationThemeProvider>
+            </CustomThemeProvider>
+          </AppThemeProvider>
         </AuthProvider>
       </Provider>
     </GestureHandlerRootView>

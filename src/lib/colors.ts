@@ -29,8 +29,33 @@ export const categoryColors: Record<string, string> = {
   'default': '#34495e'          // Dark blue-gray
 };
 
+// Import category colors from NeonColors for consistency
+import { NeonCategoryColors } from '@/constants/NeonColors';
+
 // Function to get a color based on category
-export function getCategoryColor(category: string): string {
+export function getCategoryColor(category: string, isNeonTheme = false): string {
+  // If in neon theme, use the primary color from neon category colors
+  if (isNeonTheme) {
+    // Try to get direct match from neon colors
+    if (NeonCategoryColors[category]) {
+      return NeonCategoryColors[category].primary;
+    }
+    
+    // Try to find a partial match
+    const partialMatch = Object.keys(NeonCategoryColors).find(key => 
+      category.toLowerCase().includes(key.toLowerCase()) || 
+      key.toLowerCase().includes(category.toLowerCase())
+    );
+    
+    if (partialMatch) {
+      return NeonCategoryColors[partialMatch].primary;
+    }
+    
+    // Return default neon color if no match found
+    return NeonCategoryColors.default.primary;
+  }
+  
+  // For standard theme, use the original colors
   // Try to get direct match
   if (categoryColors[category]) {
     return categoryColors[category];

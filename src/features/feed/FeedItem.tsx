@@ -22,6 +22,9 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Leaderboard from '../../components/Leaderboard';
 import { useAuth } from '../../context/AuthContext';
+import NeonGradientBackground from '@/src/components/NeonGradientBackground';
+import { useTheme } from '@/src/context/ThemeContext';
+import { NeonColors } from '@/constants/NeonColors';
 
 const { width, height } = Dimensions.get('window');
 
@@ -62,6 +65,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
   const fadeAnim = useRef(new Animated.Value(0)).current;
   
   const colorScheme = useColorScheme();
+  const { isNeonTheme } = useTheme();
   
   const questionState = useAppSelector(state => 
     state.trivia.questions[item.id] as QuestionState | undefined
@@ -205,24 +209,19 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     setHoveredAction(null);
   };
 
-  const dynamicStyles = StyleSheet.create({
-    backgroundColor: {
-      flex: 1,
-      width: '100%',
-      height: '100%',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: item.backgroundColor
-    }
-  });
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <View style={dynamicStyles.backgroundColor} />
+        {/* Use standard background if not in neon theme */}
+        {!isNeonTheme ? (
+          <View style={[styles.background, { backgroundColor: item.backgroundColor }]} />
+        ) : (
+          // Use neon gradient when in neon theme
+          <View style={styles.background}>
+            <View style={styles.darkBackground} />
+            <NeonGradientBackground category={item.category} />
+          </View>
+        )}
         
         <View style={[styles.overlay, {zIndex: 1}]} />
 
@@ -263,56 +262,63 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
             
             <View style={styles.answersContainer}>
               <>
-                {item.answers.map((answer, index) => (
-                  <TouchableOpacity
-                    key={`${item.id}-answer-${index}`}
-                    style={[
-                      styles.answerOption,
-                      { backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.2)' },
-                      isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerOption,
-                      isAnswered() && 
-                      questionState?.answerIndex === index && 
-                      answer.isCorrect && 
-                      styles.correctAnswerOption,
-                      isAnswered() && 
-                      questionState?.answerIndex === index && 
-                      !answer.isCorrect && 
-                      styles.incorrectAnswerOption,
-                      isAnswered() && 
-                      questionState?.answerIndex !== index && 
-                      answer.isCorrect && 
-                      !isSelectedAnswerCorrect() && 
-                      styles.correctAnswerOption,
-                      Platform.OS === 'web' && hoveredAnswerIndex === index && styles.hoveredAnswerOption,
-                      isSkipped() && styles.skippedAnswerOption,
-                    ]}
-                    onPress={() => selectAnswer(index)}
-                    disabled={isAnswered()}
-                    {...(Platform.OS === 'web' ? {
-                      onMouseEnter: () => handleMouseEnter(index),
-                      onMouseLeave: handleMouseLeave
-                    } : {})}
-                  >
-                    <ThemedText 
-                      type="default"
-                      style={[
-                        styles.answerText, 
-                        isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerText,
-                        isSkipped() && styles.skippedAnswerText
-                      ]}
+                {item.answers.map((answer, index) => {
+                  // Define answer option styles with neon theme support
+                  const answerStyle = [
+                    styles.answerOption,
+                    { backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.2)' },
+                    // Apply neon style when in neon theme
+                    isNeonTheme && styles.neonAnswerOption,
+                    isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerOption,
+                    isAnswered() && 
+                    questionState?.answerIndex === index && 
+                    answer.isCorrect && 
+                    styles.correctAnswerOption,
+                    isAnswered() && 
+                    questionState?.answerIndex === index && 
+                    !answer.isCorrect && 
+                    styles.incorrectAnswerOption,
+                    isAnswered() && 
+                    questionState?.answerIndex !== index && 
+                    answer.isCorrect && 
+                    !isSelectedAnswerCorrect() && 
+                    styles.correctAnswerOption,
+                    Platform.OS === 'web' && hoveredAnswerIndex === index && styles.hoveredAnswerOption,
+                    isSkipped() && styles.skippedAnswerOption,
+                  ];
+
+                  return (
+                    <TouchableOpacity
+                      key={`${item.id}-answer-${index}`}
+                      style={answerStyle}
+                      onPress={() => selectAnswer(index)}
+                      disabled={isAnswered()}
+                      {...(Platform.OS === 'web' ? {
+                        onMouseEnter: () => handleMouseEnter(index),
+                        onMouseLeave: handleMouseLeave
+                      } : {})}
                     >
-                      {answer.text}
-                    </ThemedText>
-                    
-                    {(isAnswered() && questionState?.answerIndex === index && (
-                      answer.isCorrect ? 
-                      <FeatherIcon name="check-square" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} /> : 
-                      <FeatherIcon name="x-circle" size={24} color="#F44336" style={{marginLeft: 8} as TextStyle} />
-                    )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
-                      <FeatherIcon name="square" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} />
-                    ))}
-                  </TouchableOpacity>
-                ))}
+                      <ThemedText 
+                        type="default"
+                        style={[
+                          styles.answerText, 
+                          isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerText,
+                          isSkipped() && styles.skippedAnswerText
+                        ]}
+                      >
+                        {answer.text}
+                      </ThemedText>
+                      
+                      {(isAnswered() && questionState?.answerIndex === index && (
+                        answer.isCorrect ? 
+                        <FeatherIcon name="check-square" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} /> : 
+                        <FeatherIcon name="x-circle" size={24} color="#F44336" style={{marginLeft: 8} as TextStyle} />
+                      )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
+                        <FeatherIcon name="square" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} />
+                      ))}
+                    </TouchableOpacity>
+                  );
+                })}
                 
                 {isAnswered() && (
                   <>
@@ -402,6 +408,21 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     justifyContent: 'flex-end',
   },
+  background: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  darkBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#121212', // Dark background for neon theme
+  },
   overlay: {
     position: 'absolute',
     top: 0,
@@ -476,10 +497,16 @@ const styles = StyleSheet.create({
   correctAnswerOption: {
     backgroundColor: 'rgba(76, 175, 80, 0.3)',
     borderColor: '#4CAF50',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 0 10px #4CAF50, 0 0 5px #4CAF50',
+    } as any : {}),
   },
   incorrectAnswerOption: {
     backgroundColor: 'rgba(244, 67, 54, 0.3)',
     borderColor: '#F44336',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 0 10px #F44336, 0 0 5px #F44336',
+    } as any : {}),
   },
   hoveredAnswerOption: {
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
@@ -592,5 +619,18 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     opacity: 0.5,
+  },
+  neonAnswerOption: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderWidth: 1,
+    borderColor: NeonColors.dark.primary,
+    shadowColor: NeonColors.dark.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 5,
+    elevation: 5,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: `0 0 10px ${NeonColors.dark.primary}, 0 0 5px ${NeonColors.dark.primary}`,
+    } as any : {}),
   },
 });

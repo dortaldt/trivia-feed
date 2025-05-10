@@ -26,6 +26,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { colors } from '../../theme';
 import Button from '../../components/ui/Button';
+import { ThemeToggle } from '@/src/components/ThemeToggle';
 
 // Add interface for countries
 interface Country {
@@ -877,6 +878,9 @@ const ProfileView: React.FC = () => {
     benefitText: {
       fontSize: 16,
     },
+    themeToggleContainer: {
+      marginTop: 20,
+    },
   });
 
   if (isGuest || localIsGuest) {
@@ -1116,6 +1120,9 @@ const ProfileView: React.FC = () => {
           >
             Edit Profile
           </Button>
+          
+          {/* Theme Toggle */}
+          <ThemeToggle containerStyle={profileStyles.themeToggleContainer} />
 
           {/* Account section */}
           <View style={profileStyles.accountSection}>
