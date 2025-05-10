@@ -65,6 +65,9 @@ import ProfileBottomSheet from '../../components/ProfileBottomSheet';
 import LeaderboardBottomSheet from '../../components/LeaderboardBottomSheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LoadingBar } from '../../components/ui';
+import NeonLoadingScreen from '@/src/components/NeonLoadingScreen';
+import { useTheme } from '@/src/context/ThemeContext';
+import { NeonColors } from '@/constants/NeonColors';
 
 const { width, height } = Dimensions.get('window');
 
@@ -1391,11 +1394,29 @@ const FeedScreen: React.FC = () => {
     }
   }, [toggleDebugModeViaUrl]);
 
-  // Loading state
+  // Add useTheme hook in the component
+  const { isNeonTheme } = useTheme();
+
+  // Update the loading screen section to use NeonLoadingScreen when neon theme is active
   if (isLoading) {
+    // If neon theme is active, show the neon loading screen
+    if (isNeonTheme) {
+      return <NeonLoadingScreen message="Preparing your trivia feed..." />;
+    }
+    
+    // Otherwise, show the original loading screen
     return (
       <Surface style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
-        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+        <Animated.View 
+          style={[
+            styles.loadingIndicatorContainer,
+            {
+              transform: [
+                { scale: pulseAnim }
+              ]
+            }
+          ]}
+        >
           <Image 
             source={require('../../../assets/images/app-icon.png')} 
             style={styles.loadingIcon}
@@ -1415,6 +1436,30 @@ const FeedScreen: React.FC = () => {
 
   // Error state
   if (loadError) {
+    // If neon theme is active, show a neon-styled error screen
+    if (isNeonTheme) {
+      return (
+        <View style={styles.container}>
+          <NeonLoadingScreen message={loadError || "Error loading questions"} />
+          <TouchableOpacity 
+            style={styles.neonRetryButton}
+            onPress={() => {
+              fetchTriviaQuestions().then((questions: FeedItemType[]) => {
+                setFeedData(questions);
+                setLoadError(null);
+              }).catch((err: Error) => {
+                console.error('Retry failed:', err);
+                setLoadError('Failed to load questions. Please try again later.');
+              });
+            }}
+          >
+            <ThemedText style={styles.neonRetryText}>Retry</ThemedText>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    
+    // Otherwise, show the original error screen
     return (
       <Surface style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={styles.errorText}>{loadError}</Text>
@@ -1917,6 +1962,31 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  neonRetryButton: {
+    marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderWidth: 2,
+    borderColor: NeonColors.dark.primary,
+    shadowColor: NeonColors.dark.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 10,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: `0 0 10px ${NeonColors.dark.primary}, 0 0 5px ${NeonColors.dark.primary}`,
+    } as any : {}),
+  },
+  neonRetryText: {
+    color: NeonColors.dark.primary,
+    fontSize: 18,
+    fontWeight: 'bold',
+    textShadowColor: NeonColors.dark.primary,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 5,
   },
 });
 
