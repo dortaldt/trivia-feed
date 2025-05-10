@@ -268,7 +268,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                     styles.answerOption,
                     { backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.2)' },
                     // Apply neon style when in neon theme
-                    isNeonTheme && styles.neonAnswerOption,
+                    isNeonTheme && (Platform.OS === 'ios' ? styles.neonAnswerOptionIOS : styles.neonAnswerOption),
                     isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerOption,
                     isAnswered() && 
                     questionState?.answerIndex === index && 
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#121212', // Dark background for neon theme
+    backgroundColor: '#0A0A14', // Very dark blue-black instead of pure black
   },
   overlay: {
     position: 'absolute',
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: 'rgba(0, 0, 0, 0.25)', // Slightly lighter overlay for better neon contrast
   },
   content: {
     paddingHorizontal: 20,
@@ -621,16 +621,26 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   neonAnswerOption: {
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderWidth: 1,
+    backgroundColor: 'rgba(10, 10, 20, 0.85)', // Very dark blue-black with transparency
+    borderWidth: 1.5, // Thicker border for more prominent glow
     borderColor: NeonColors.dark.primary,
     shadowColor: NeonColors.dark.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowOpacity: 0.9, // Higher opacity for stronger glow
+    shadowRadius: 8, // Larger radius for more dramatic glow
+    elevation: Platform.OS === 'android' ? 7 : 0,
     ...(Platform.OS === 'web' ? {
-      boxShadow: `0 0 10px ${NeonColors.dark.primary}, 0 0 5px ${NeonColors.dark.primary}`,
+      boxShadow: `0 0 15px ${NeonColors.dark.primary}, 0 0 8px ${NeonColors.dark.primary}`,
     } as any : {}),
+  },
+  neonAnswerOptionIOS: {
+    backgroundColor: 'rgba(10, 10, 20, 0.85)', // Very dark blue-black with transparency
+    borderWidth: 1.5, // Thicker border for more prominent glow
+    borderColor: NeonColors.dark.primary,
+    // iOS-optimized shadow properties
+    shadowColor: NeonColors.dark.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4, // Increased but still optimized for iOS
   },
 });

@@ -18,30 +18,36 @@ export const NeonLoadingScreen: React.FC<NeonLoadingScreenProps> = ({
   const glowAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(0.95)).current;
 
+  // Store animation references for proper cleanup
+  const glowAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const scaleAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+
   // Animate the glow and scale
   useEffect(() => {
     // Only run animation if neon theme is active
     if (isNeonTheme) {
       // Create pulsing glow animation
-      Animated.loop(
+      glowAnimationRef.current = Animated.loop(
         Animated.sequence([
           Animated.timing(glowAnimation, {
             toValue: 1,
             duration: 1500,
             easing: Easing.inOut(Easing.cubic),
-            useNativeDriver: false,
+            useNativeDriver: Platform.OS === 'web' ? false : true,
           }),
           Animated.timing(glowAnimation, {
             toValue: 0,
             duration: 1500,
             easing: Easing.inOut(Easing.cubic),
-            useNativeDriver: false,
+            useNativeDriver: Platform.OS === 'web' ? false : true,
           })
         ])
-      ).start();
+      );
+      
+      glowAnimationRef.current.start();
 
       // Create subtle scaling animation
-      Animated.loop(
+      scaleAnimationRef.current = Animated.loop(
         Animated.sequence([
           Animated.timing(scaleAnimation, {
             toValue: 1.05,
@@ -56,14 +62,24 @@ export const NeonLoadingScreen: React.FC<NeonLoadingScreenProps> = ({
             useNativeDriver: true,
           })
         ])
-      ).start();
+      );
+      
+      scaleAnimationRef.current.start();
     }
 
     return () => {
-      glowAnimation.stopAnimation();
-      scaleAnimation.stopAnimation();
+      // Proper cleanup of animations
+      if (glowAnimationRef.current) {
+        glowAnimationRef.current.stop();
+        glowAnimationRef.current = null;
+      }
+      
+      if (scaleAnimationRef.current) {
+        scaleAnimationRef.current.stop();
+        scaleAnimationRef.current = null;
+      }
     };
-  }, [isNeonTheme]);
+  }, [isNeonTheme, glowAnimation, scaleAnimation]);
 
   // Determine colors based on the neon theme
   const primaryColor = NeonColors.dark.primary;
@@ -80,10 +96,18 @@ export const NeonLoadingScreen: React.FC<NeonLoadingScreenProps> = ({
     outputRange: [0.5, 0.9] // Shadow/glow opacity range
   });
 
-  // If not using neon theme, render the default loading screen
+  // If not using neon theme, return null
   if (!isNeonTheme) {
     return null;
   }
+
+  // iOS-optimized shadow properties
+  const iosShadowStyle = Platform.OS === 'ios' ? {
+    shadowColor: primaryColor,
+    shadowRadius: 10,
+    shadowOpacity: 0.8,
+    shadowOffset: { width: 0, height: 0 },
+  } : {};
 
   return (
     <View style={styles.container}>
@@ -101,10 +125,13 @@ export const NeonLoadingScreen: React.FC<NeonLoadingScreenProps> = ({
                       outputRange: ['3px', '15px']
                     })} ${primaryColor}`,
                   } as any
-                : {
+                : Platform.OS === 'ios'
+                  ? iosShadowStyle
+                  : {
                     shadowColor: primaryColor,
                     shadowRadius: glowIntensity,
                     shadowOpacity: glowOpacity,
+                    shadowOffset: { width: 0, height: 0 },
                   }
               )
             }
@@ -148,7 +175,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#121212', // Dark background for neon theme
+    backgroundColor: '#0A0A14', // Very dark blue-black instead of pure black
   },
   contentContainer: {
     alignItems: 'center',
@@ -158,15 +185,16 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#121212',
+    backgroundColor: '#0A0A14', // Very dark blue-black background
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 30,
-    borderWidth: Platform.OS === 'web' ? 2 : 0,
+    borderWidth: Platform.OS === 'web' ? 2.5 : 0, // Thicker border on web
     borderColor: NeonColors.dark.primary,
-    elevation: 10,
+    elevation: Platform.OS === 'android' ? 10 : 0,
     shadowOffset: { width: 0, height: 0 },
     position: 'relative',
+    overflow: 'hidden', // Fix for iOS gradient border overflow
   },
   gradientBorder: {
     position: 'absolute',
@@ -175,8 +203,9 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderRadius: 60,
-    borderWidth: 2,
-    opacity: 0.7,
+    borderWidth: 2.5, // Thicker border for more intense glow
+    opacity: 0.85, // Slightly increased opacity for more vibrancy
+    zIndex: -1, // Ensure gradient is behind content on iOS
   },
   questionMark: {
     fontSize: 80,
@@ -184,7 +213,8 @@ const styles = StyleSheet.create({
     color: NeonColors.dark.primary,
     textShadowColor: NeonColors.dark.primary,
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+    textShadowRadius: 15, // Increased glow radius
+    zIndex: 1, // Ensure text is above gradient on iOS
   },
   loadingText: {
     fontSize: 24,
@@ -193,7 +223,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textShadowColor: NeonColors.dark.primary,
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 5,
+    textShadowRadius: 8, // Increased text glow
   },
   progressBarContainer: {
     width: '80%',
@@ -202,7 +232,7 @@ const styles = StyleSheet.create({
   progressBarBackground: {
     width: '100%',
     height: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)', // Dimmer background
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -214,6 +244,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: '#FFFFFF',
+    textShadowColor: NeonColors.dark.primary, // Add glow to progress text
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
   },
 });
 

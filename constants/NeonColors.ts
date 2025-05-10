@@ -2,39 +2,40 @@
  * Neon theme colors for the app
  */
 
-const neonPrimary = '#00FFFF'; // Cyan/Aqua
-const neonSecondary = '#FF10F0'; // Magenta
-const neonAccent = '#FFFF00'; // Yellow
+// Base neon colors with increased vibrance for night club feel
+const neonPrimary = '#00FFFF'; // Vibrant Cyan/Aqua
+const neonSecondary = '#FF00FF'; // Vibrant Magenta (slightly adjusted for more pop)
+const neonAccent = '#FFFF00'; // Vibrant Yellow
 
 // Neon category colors for gradients
 export const NeonCategoryColors: Record<string, { primary: string, secondary: string }> = {
-  // Main categories with vibrant neon gradients
+  // Main categories with more vibrant neon gradients
   'Science': { primary: '#00FFFF', secondary: '#0080FF' },         // Cyan to Blue
-  'Technology': { primary: '#0080FF', secondary: '#0040FF' },      // Blue to Deep Blue  
-  'History': { primary: '#FF10F0', secondary: '#8000FF' },         // Pink to Purple
+  'Technology': { primary: '#00CDFF', secondary: '#0050FF' },      // Bright Cyan to Deep Blue  
+  'History': { primary: '#FF00FF', secondary: '#8A00FF' },         // Magenta to Purple
   'Geography': { primary: '#00FF80', secondary: '#00FF00' },       // Teal to Green
-  'Sports': { primary: '#FF8000', secondary: '#FF4000' },          // Orange
-  'Movies': { primary: '#FF10F0', secondary: '#C000FF' },          // Pink to Purple
-  'Music': { primary: '#C000FF', secondary: '#8000FF' },           // Purple
+  'Sports': { primary: '#FF8000', secondary: '#FF2000' },          // Orange
+  'Movies': { primary: '#FF00FF', secondary: '#C000FF' },          // Magenta to Purple
+  'Music': { primary: '#BF00FF', secondary: '#7000FF' },           // Purple
   'Television': { primary: '#0040FF', secondary: '#6000FF' },      // Blue to Purple
   'Literature': { primary: '#FF0040', secondary: '#FF0080' },      // Red to Pink
-  'Art': { primary: '#FF0080', secondary: '#FF10F0' },             // Pink
+  'Art': { primary: '#FF0080', secondary: '#FF00FF' },             // Pink
   'Pop Culture': { primary: '#FFFF00', secondary: '#FF8000' },     // Yellow to Orange
   'Food & Drink': { primary: '#FF4000', secondary: '#FF0000' },    // Orange to Red
   'General Knowledge': { primary: '#00FFFF', secondary: '#00FF80' }, // Cyan to Teal
   'Nature': { primary: '#00FF80', secondary: '#80FF00' },          // Teal to Lime
-  'Politics': { primary: '#C0C0FF', secondary: '#8080FF' },        // Light Purple
+  'Politics': { primary: '#C000FF', secondary: '#8000FF' },        // More vibrant purple
   'Celebrities': { primary: '#FFFF00', secondary: '#FFFF80' },     // Yellow
   
   // Special categories
-  'Modern Cinema': { primary: '#FF10F0', secondary: '#FF0080' },   // Pink
+  'Modern Cinema': { primary: '#FF00FF', secondary: '#FF0080' },   // Magenta to Pink
   'Mathematics': { primary: '#00FFFF', secondary: '#00FF80' },     // Cyan to Teal
   'Language': { primary: '#0080FF', secondary: '#0040FF' },        // Blue
-  'Mythology': { primary: '#8000FF', secondary: '#6000FF' },       // Purple
+  'Mythology': { primary: '#8A00FF', secondary: '#6000FF' },       // Bright Purple
   'Animals': { primary: '#00FF40', secondary: '#80FF00' },         // Green to Lime
   
   // Default fallback color
-  'default': { primary: '#00FFFF', secondary: '#FF10F0' }          // Cyan to Pink
+  'default': { primary: '#00FFFF', secondary: '#FF00FF' }          // Cyan to Magenta
 };
 
 export const NeonColors = {
@@ -55,7 +56,7 @@ export const NeonColors = {
   },
   dark: {
     text: '#FFFFFF',
-    background: '#121212',
+    background: '#000000', // Darker background for more contrast
     tint: neonPrimary,
     icon: neonSecondary,
     tabIconDefault: '#9BA1A6',
@@ -65,7 +66,7 @@ export const NeonColors = {
     secondary: neonSecondary,
     accent: neonAccent,
     border: neonPrimary,
-    card: '#1E1E1E',
+    card: '#0D0D0D', // Darker card background
     notification: neonSecondary,
   },
 }; 

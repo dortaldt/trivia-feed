@@ -214,12 +214,12 @@ const FeedScreen: React.FC = () => {
   // With this enhanced useEffect for better animations
   useEffect(() => {
     // Progress animation
-    Animated.timing(loadingProgress, {
+    const progressAnimation = Animated.timing(loadingProgress, {
       toValue: 1,
       duration: 3000,
       easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      useNativeDriver: false,
-    }).start();
+      useNativeDriver: Platform.OS !== 'web', // Use native driver on iOS/Android
+    });
     
     // Setup pulsing animation
     const pulseSequence = Animated.sequence([
@@ -238,12 +238,16 @@ const FeedScreen: React.FC = () => {
     ]);
     
     // Loop the pulse animation
-    Animated.loop(pulseSequence).start();
+    const pulseAnimation = Animated.loop(pulseSequence);
+    
+    // Start animations
+    progressAnimation.start();
+    pulseAnimation.start();
     
     return () => {
       // Clean up animations when component unmounts
-      pulseAnim.stopAnimation();
-      loadingProgress.stopAnimation();
+      progressAnimation.stop();
+      pulseAnimation.stop();
     };
   }, []);
 
@@ -464,62 +468,64 @@ const FeedScreen: React.FC = () => {
 
   const createTikTokAnimation = () => {
     try {
-      return Animated.loop(
-        Animated.sequence([
-          Animated.parallel([
-            Animated.timing(mockContent1, {
-              toValue: 0,
-              duration: 100,
-              useNativeDriver: true,
-            }),
-            Animated.timing(mockContent2, {
-              toValue: 100,
-              duration: 100,
-              useNativeDriver: true,
-            }),
-            Animated.timing(fingerPosition, {
-              toValue: 0,
-              duration: 100,
-              useNativeDriver: true,
-            }),
-          ]),
+      // Create the animation sequence
+      const sequence = Animated.sequence([
+        Animated.parallel([
+          Animated.timing(mockContent1, {
+            toValue: 0,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(mockContent2, {
+            toValue: 100,
+            duration: 100,
+            useNativeDriver: true,
+          }),
           Animated.timing(fingerPosition, {
-            toValue: -5,
-            duration: 200,
+            toValue: 0,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(fingerPosition, {
+          toValue: -5,
+          duration: 200,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.delay(100),
+        Animated.parallel([
+          Animated.timing(fingerPosition, {
+            toValue: -35,
+            duration: 600,
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
-          Animated.delay(100),
-          Animated.parallel([
-            Animated.timing(fingerPosition, {
-              toValue: -35,
-              duration: 600,
-              easing: Easing.out(Easing.cubic),
-              useNativeDriver: true,
-            }),
-            Animated.timing(mockContent1, {
-              toValue: -80,
-              duration: 600,
-              easing: Easing.out(Easing.cubic),
-              useNativeDriver: true,
-            }),
-            Animated.timing(mockContent2, {
-              toValue: 0,
-              duration: 600,
-              easing: Easing.out(Easing.cubic),
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.delay(350),
-          Animated.timing(fingerPosition, {
-            toValue: 40,
-            duration: 400,
-            easing: Easing.in(Easing.cubic),
+          Animated.timing(mockContent1, {
+            toValue: -80,
+            duration: 600,
+            easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
-          Animated.delay(600),
-        ])
-      );
+          Animated.timing(mockContent2, {
+            toValue: 0,
+            duration: 600,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.delay(350),
+        Animated.timing(fingerPosition, {
+          toValue: 40,
+          duration: 400,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.delay(600),
+      ]);
+      
+      // Return the looped animation
+      return Animated.loop(sequence);
     } catch (error) {
       console.error('Error creating animation:', error);
       setIsAnimationError(true);
@@ -551,14 +557,23 @@ const FeedScreen: React.FC = () => {
       }, 1500);
 
       return () => {
+        // Clean up timer and animation
         clearTimeout(timer);
+        if (tikTokAnimation.current) {
+          tikTokAnimation.current.stop();
+          tikTokAnimation.current = null;
+        }
       };
     }
   }, [hasViewedTooltip, isAnimationError]);
 
   const hideTooltip = () => {
     try {
-      tikTokAnimation.current?.stop();
+      // Stop animation and clean up
+      if (tikTokAnimation.current) {
+        tikTokAnimation.current.stop();
+        tikTokAnimation.current = null;
+      }
 
       // First set state updates before animation
       dispatch(markTooltipAsViewed());
@@ -575,6 +590,10 @@ const FeedScreen: React.FC = () => {
       animateOut(handleAnimationComplete);
     } catch (error) {
       console.error('Error hiding tooltip:', error);
+      // Fall back to direct state update if animation fails
+      setShowTooltip(false);
+      dispatch(markTooltipAsViewed());
+      resetAnimations();
     }
   };
 
@@ -1442,7 +1461,10 @@ const FeedScreen: React.FC = () => {
         <View style={styles.container}>
           <NeonLoadingScreen message={loadError || "Error loading questions"} />
           <TouchableOpacity 
-            style={styles.neonRetryButton}
+            style={[
+              styles.neonRetryButton,
+              Platform.OS === 'ios' ? styles.neonRetryButtonIOS : null
+            ]}
             onPress={() => {
               fetchTriviaQuestions().then((questions: FeedItemType[]) => {
                 setFeedData(questions);
@@ -1968,25 +1990,32 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderWidth: 2,
+    backgroundColor: 'rgba(10, 10, 20, 0.9)', // Very dark blue-black with transparency
+    borderWidth: 2.5, // Thicker border for more intense effect
     borderColor: NeonColors.dark.primary,
     shadowColor: NeonColors.dark.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowOpacity: 0.9, // Higher opacity for stronger glow
+    shadowRadius: 12, // Larger radius for more dramatic effect
+    elevation: Platform.OS === 'android' ? 10 : 0,
     ...(Platform.OS === 'web' ? {
-      boxShadow: `0 0 10px ${NeonColors.dark.primary}, 0 0 5px ${NeonColors.dark.primary}`,
+      boxShadow: `0 0 15px ${NeonColors.dark.primary}, 0 0 8px ${NeonColors.dark.primary}`,
     } as any : {}),
+  },
+  neonRetryButtonIOS: {
+    // iOS-specific shadow properties for better performance
+    shadowColor: NeonColors.dark.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.85,
+    shadowRadius: 8,
   },
   neonRetryText: {
     color: NeonColors.dark.primary,
-    fontSize: 18,
+    fontSize: 20, // Larger text
     fontWeight: 'bold',
     textShadowColor: NeonColors.dark.primary,
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 5,
+    textShadowRadius: 8, // More intense text glow
   },
 });
 
