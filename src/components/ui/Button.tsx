@@ -6,7 +6,8 @@ import {
   ViewStyle, 
   TextStyle, 
   TouchableOpacityProps,
-  Platform
+  Platform,
+  View
 } from 'react-native';
 import { buttons, colors } from '../../theme';
 import { useTheme } from '@/src/context/ThemeContext';
@@ -207,7 +208,12 @@ const Button: React.FC<ButtonProps> = ({
       activeOpacity={0.7}
       {...rest}
     >
-      {leftIcon && <React.Fragment>{leftIcon}</React.Fragment>}
+      {leftIcon && (
+        <React.Fragment>
+          {leftIcon}
+          <View style={{ width: sizeStyle.iconSpacing }} />
+        </React.Fragment>
+      )}
       
       {typeof children === 'string' ? (
         <Text style={[textStyleBase, getNeonTextStyle(), textStyle]}>{children}</Text>
@@ -215,7 +221,12 @@ const Button: React.FC<ButtonProps> = ({
         children
       )}
       
-      {rightIcon && <React.Fragment>{rightIcon}</React.Fragment>}
+      {rightIcon && (
+        <React.Fragment>
+          <View style={{ width: sizeStyle.iconSpacing }} />
+          {rightIcon}
+        </React.Fragment>
+      )}
     </TouchableOpacity>
   );
 };

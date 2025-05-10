@@ -632,12 +632,8 @@ const ProfileView: React.FC = () => {
       fontWeight: '600',
     },
     editButton: {
-      backgroundColor: '#0a7ea4',
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 8,
-      alignSelf: 'center',
       marginTop: 20,
+      marginBottom: 20,
     },
     editButtonText: {
       color: 'white',
@@ -775,15 +771,15 @@ const ProfileView: React.FC = () => {
       alignItems: 'center',
       marginBottom: 12,
       padding: 10,
-      backgroundColor: 'rgba(10, 126, 164, 0.1)',
+      backgroundColor: 'rgba(255, 193, 7, 0.1)',
       borderRadius: 8,
       borderLeftWidth: 3,
-      borderLeftColor: '#0a7ea4',
+      borderLeftColor: '#ffc107',
     },
     avatarTip: {
       marginLeft: 10,
       fontSize: 14,
-      color: '#0a7ea4',
+      color: '#ffc107',
       flex: 1,
     },
     avatarButtonsContainer: {
@@ -817,13 +813,13 @@ const ProfileView: React.FC = () => {
       flexDirection: 'row',
       alignItems: 'center',
       marginBottom: 10,
-      backgroundColor: 'rgba(10, 126, 164, 0.1)',
+      backgroundColor: 'rgba(255, 193, 7, 0.1)',
       paddingVertical: 6,
       paddingHorizontal: 12,
       borderRadius: 20,
     },
     addPhotoText: {
-      color: '#0a7ea4',
+      color: '#ffc107',
       fontSize: 14,
       marginLeft: 6,
     },
@@ -831,7 +827,7 @@ const ProfileView: React.FC = () => {
       position: 'absolute',
       right: 0,
       bottom: 0,
-      backgroundColor: '#0a7ea4',
+      backgroundColor: '#ffc107',
       width: 36,
       height: 36,
       borderRadius: 18,
@@ -1041,7 +1037,7 @@ const ProfileView: React.FC = () => {
         <View style={profileStyles.avatarContainer}>
           {uploadingImage ? (
             <View style={profileStyles.avatarPlaceholder}>
-              <ActivityIndicator size="large" color="#0a7ea4" />
+              <ActivityIndicator size="large" color="#ffc107" />
             </View>
           ) : avatarUrl ? (
             <View>
@@ -1083,7 +1079,7 @@ const ProfileView: React.FC = () => {
             onPress={() => setIsEditing(true)}
             style={profileStyles.addPhotoHint}
           >
-            <FeatherIcon name="camera" size={14} color="#0a7ea4" />
+            <FeatherIcon name="camera" size={14} color="#ffc107" />
             <ThemedText style={profileStyles.addPhotoText}>Add a profile photo</ThemedText>
           </TouchableOpacity>
         )}
@@ -1111,9 +1107,10 @@ const ProfileView: React.FC = () => {
 
           {/* Edit Profile button */}
           <Button
-            variant="outline"
-            size="sm"
-            leftIcon={<FeatherIcon name="edit-2" size={16} color={isDark ? 'white' : 'black'} />}
+            variant="primary"
+            size="md"
+            fullWidth
+            leftIcon={<FeatherIcon name="edit-2" size={18} color="#000" />}
             onPress={() => setIsEditing(true)}
             style={profileStyles.editButton}
           >
@@ -1324,7 +1321,7 @@ const ProfileView: React.FC = () => {
         <View style={profileStyles.loadingOverlay}>
           <ActivityIndicator 
             size="large" 
-            color={isDark ? 'white' : '#0a7ea4'} 
+            color={isDark ? 'white' : '#ffc107'} 
           />
         </View>
       )}

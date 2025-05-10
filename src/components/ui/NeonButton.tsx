@@ -7,7 +7,8 @@ import {
   TextStyle, 
   TouchableOpacityProps,
   Platform,
-  Animated
+  Animated,
+  View
 } from 'react-native';
 import { NeonColors } from '@/constants/NeonColors';
 import { useTheme } from '@/src/context/ThemeContext';
@@ -207,7 +208,12 @@ const NeonButton: React.FC<NeonButtonProps> = ({
       activeOpacity={0.7}
       {...rest}
     >
-      {leftIcon && <React.Fragment>{leftIcon}</React.Fragment>}
+      {leftIcon && (
+        <React.Fragment>
+          {leftIcon}
+          <View style={{ width: sizeStyle.iconSpacing }} />
+        </React.Fragment>
+      )}
       
       {typeof children === 'string' ? (
         <Text style={[textStyleBase, getNeonTextStyle(), textStyle]}>{children}</Text>
@@ -215,7 +221,12 @@ const NeonButton: React.FC<NeonButtonProps> = ({
         children
       )}
       
-      {rightIcon && <React.Fragment>{rightIcon}</React.Fragment>}
+      {rightIcon && (
+        <React.Fragment>
+          <View style={{ width: sizeStyle.iconSpacing }} />
+          {rightIcon}
+        </React.Fragment>
+      )}
     </TouchableOpacity>
   );
 };

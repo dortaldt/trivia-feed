@@ -11,8 +11,8 @@ export const colors = {
   mutedForeground: '#a1a1aa',
   
   // Primary colors
-  primary: '#0a7ea4', // Match existing app's primary color
-  primaryForeground: '#fafafa',
+  primary: '#ffc107', // Primary color (yellow)
+  primaryForeground: '#000000',
   
   // Secondary colors
   secondary: '#2c3e50',
@@ -131,28 +131,36 @@ export const buttons = {
   // Size variants
   sizes: {
     xs: {
-      paddingVertical: spacing[1],
-      paddingHorizontal: spacing[2],
+      paddingVertical: spacing[2],
+      paddingHorizontal: spacing[5],
       borderRadius: borderRadius.sm,
-      fontSize: typography.fontSizes.xs,
+      fontSize: typography.fontSizes.sm,
+      iconSpacing: spacing[2],
+      minHeight: 40,
     },
     sm: {
-      paddingVertical: spacing[2],
-      paddingHorizontal: spacing[3],
-      borderRadius: borderRadius.md,
-      fontSize: typography.fontSizes.sm,
-    },
-    md: {
       paddingVertical: spacing[3],
-      paddingHorizontal: spacing[4],
+      paddingHorizontal: spacing[6],
       borderRadius: borderRadius.md,
       fontSize: typography.fontSizes.md,
+      iconSpacing: spacing[3],
+      minHeight: 44,
+    },
+    md: {
+      paddingVertical: spacing[4],
+      paddingHorizontal: spacing[7],
+      borderRadius: borderRadius.md,
+      fontSize: typography.fontSizes.lg,
+      iconSpacing: spacing[3],
+      minHeight: 52,
     },
     lg: {
-      paddingVertical: spacing[4],
-      paddingHorizontal: spacing[5],
+      paddingVertical: spacing[5],
+      paddingHorizontal: spacing[8],
       borderRadius: borderRadius.lg,
-      fontSize: typography.fontSizes.lg,
+      fontSize: typography.fontSizes.xl,
+      iconSpacing: spacing[4],
+      minHeight: 60,
     },
   },
   
@@ -160,7 +168,7 @@ export const buttons = {
   variants: {
     primary: {
       backgroundColor: colors.primary,
-      color: colors.primaryForeground,
+      color: '#000000',
     },
     secondary: {
       backgroundColor: colors.secondary,
