@@ -11,6 +11,7 @@ import {
   Platform,
   Modal,
   Animated,
+  ViewStyle,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -655,8 +656,21 @@ const ProfileView: React.FC = () => {
   };
 
   /* Add style helper for web buttons */
-  const getWebButtonStyle = () => {
-    return Platform.OS === 'web' ? { maxWidth: 400, alignSelf: 'center' as const } : {};
+  const getWebButtonStyle = (): ViewStyle => {
+    // Centralized styling for all buttons on web platform
+    // This creates a consistent max width for all buttons
+    return Platform.OS === 'web' ? { 
+      maxWidth: 400, 
+      alignSelf: 'center' as const, 
+      width: '100%' 
+    } : {};
+  };
+
+  // Add helper to apply web button style via array to avoid type issues
+  const applyWebButtonStyle = (existingStyle?: any) => {
+    if (Platform.OS !== 'web') return existingStyle || null;
+    
+    return existingStyle ? [existingStyle, getWebButtonStyle()] : getWebButtonStyle();
   };
 
   // Modify the button size based on platform for iOS
@@ -1099,6 +1113,7 @@ const ProfileView: React.FC = () => {
                 });
               }
             }}
+            style={applyWebButtonStyle()}
           >
             Sign In
           </Button>
@@ -1176,6 +1191,7 @@ const ProfileView: React.FC = () => {
                   });
                 }
               }}
+              style={applyWebButtonStyle()}
             >
               Sign In
             </Button>
@@ -1322,7 +1338,7 @@ const ProfileView: React.FC = () => {
             fullWidth
             leftIcon={<FeatherIcon name="edit-2" size={18} color={currentTheme === 'neon' ? '#FFFF00' : "#000"} />}
             onPress={() => setIsEditing(true)}
-            style={[profileStyles.editButton, getWebButtonStyle()]}
+            style={applyWebButtonStyle(profileStyles.editButton)}
           >
             Edit
           </Button>
@@ -1352,7 +1368,7 @@ const ProfileView: React.FC = () => {
               onPress={handleSignOut}
               accessibilityLabel="Sign out from your account"
               accessibilityHint="Double-tap to sign out from your account"
-              style={getWebButtonStyle()}
+              style={applyWebButtonStyle()}
             >
               Sign Out
             </Button>
@@ -1403,10 +1419,9 @@ const ProfileView: React.FC = () => {
               <Button
                 variant="primary"
                 size={getButtonSize()}
-                style={[
-                  { marginBottom: Platform.OS !== 'web' ? 10 : 0 },
-                  Platform.OS === 'web' && avatarUrl ? { marginRight: 10 } : null
-                ]}
+                style={applyWebButtonStyle(
+                  { marginBottom: Platform.OS !== 'web' ? 10 : 0 }
+                )}
                 leftIcon={<FeatherIcon name="upload" size={16} color="#fff" />}
                 onPress={pickImage}
                 disabled={uploadingImage}
@@ -1418,7 +1433,9 @@ const ProfileView: React.FC = () => {
                 <Button
                   variant="destructive"
                   size={getButtonSize()}
-                  style={Platform.OS === 'web' ? { marginLeft: 5 } : null}
+                  style={applyWebButtonStyle(
+                    Platform.OS === 'web' ? { marginLeft: 5 } : null
+                  )}
                   leftIcon={<FeatherIcon name="trash-2" size={16} color="#fff" />}
                   onPress={removeAvatar}
                   disabled={uploadingImage}
@@ -1464,14 +1481,12 @@ const ProfileView: React.FC = () => {
           <View style={[
             profileStyles.buttonRow,
             Platform.OS !== 'web' && { flexDirection: 'column' as const },
-            Platform.OS === 'web' && { maxWidth: 400, alignSelf: 'center' as const }
+            Platform.OS === 'web' && { maxWidth: 400, alignSelf: 'center' as const, width: '100%' }
           ]}>
             <Button 
               variant={!formChanged ? "primary" : "outline"}
               size={getButtonSize()}
-              style={[
-                Platform.OS !== 'web' ? { marginBottom: 10 } : { flex: 1, marginRight: 5 }
-              ]}
+              style={Platform.OS !== 'web' ? { marginBottom: 10 } : { flex: 1, marginRight: 5 }}
               onPress={() => {
                 setIsEditing(false);
                 // Reset to original values
@@ -1489,7 +1504,7 @@ const ProfileView: React.FC = () => {
             <Button 
               variant={formChanged ? "primary" : "secondary"}
               size={getButtonSize()}
-              style={Platform.OS !== 'web' ? null : { flex: 1, marginLeft: 5 }}
+              style={applyWebButtonStyle(Platform.OS !== 'web' ? null : { flex: 1, marginLeft: 5 })}
               onPress={handleUpdateProfile}
               disabled={!formChanged}
             >
