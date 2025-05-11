@@ -35,6 +35,7 @@ import FeedItem from './FeedItem';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { 
   markTooltipAsViewed, 
+  permanentlyDismissTooltip,
   skipQuestion, 
   startInteraction,
   setPersonalizedFeed,
@@ -123,9 +124,6 @@ const styles = StyleSheet.create({
       shadowRadius: 5,
       elevation: 6,
     }),
-    borderRadius: borderRadius.xl,
-    padding: spacing[4],
-    borderWidth: 1,
   },
   tooltipArrow: {
     position: 'absolute',
@@ -454,6 +452,7 @@ const FeedScreen: React.FC = () => {
 
   const dispatch = useAppDispatch();
   const hasViewedTooltip = useAppSelector(state => state.trivia.hasViewedTooltip);
+  const tooltipPermanentlyDismissed = useAppSelector(state => state.trivia.tooltipPermanentlyDismissed);
   const questions = useAppSelector(state => state.trivia.questions);
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   const personalizedFeed = useAppSelector(state => state.trivia.personalizedFeed);
@@ -909,8 +908,8 @@ const FeedScreen: React.FC = () => {
     }
 
     // Only show tooltip if user has already seen it once, they've answered a question,
-    // and they haven't scrolled in the last 15 seconds
-    if (lastAnswerTime && hasViewedTooltip && !isActivelyScrolling && !showTooltip) {
+    // they haven't scrolled in the last 15 seconds, AND they haven't permanently dismissed it
+    if (lastAnswerTime && hasViewedTooltip && !isActivelyScrolling && !showTooltip && !tooltipPermanentlyDismissed) {
       tooltipTimeoutRef.current = setTimeout(() => {
         setShouldShowTooltip(true);
       }, 15000); // 15 seconds
@@ -921,7 +920,7 @@ const FeedScreen: React.FC = () => {
         clearTimeout(tooltipTimeoutRef.current);
       }
     };
-  }, [lastAnswerTime, isActivelyScrolling, hasViewedTooltip, showTooltip]);
+  }, [lastAnswerTime, isActivelyScrolling, hasViewedTooltip, showTooltip, tooltipPermanentlyDismissed]);
 
   // When scrolling past a question, mark it as skipped if it wasn't answered and update profile
   const markPreviousAsSkipped = useCallback((prevIndex: number, newIndex: number) => {
@@ -1855,7 +1854,11 @@ const FeedScreen: React.FC = () => {
 
       // First set state updates before animation
       if (!hasViewedTooltip) {
-        dispatch(markTooltipAsViewed());
+        // Use permanentlyDismissTooltip instead of markTooltipAsViewed to prevent reappearance
+        dispatch(permanentlyDismissTooltip());
+      } else {
+        // If they've seen it before but now explicitly dismiss it, mark as permanently dismissed
+        dispatch(permanentlyDismissTooltip());
       }
       
       // Create a separate function to handle animation completion
@@ -1874,9 +1877,7 @@ const FeedScreen: React.FC = () => {
       // Fall back to direct state update if animation fails
       setShowTooltip(false);
       setShouldShowTooltip(false);
-      if (!hasViewedTooltip) {
-        dispatch(markTooltipAsViewed());
-      }
+      dispatch(permanentlyDismissTooltip());
       resetAnimations();
     }
   };

@@ -18,6 +18,7 @@ interface TriviaState {
     [questionId: string]: QuestionState;
   };
   hasViewedTooltip: boolean;
+  tooltipPermanentlyDismissed: boolean; // New flag to track permanent dismissal
   userProfile: UserProfile;
   feedExplanations: { [questionId: string]: string[] }; // For explaining personalization logic
   personalizedFeed: FeedItem[]; // Ordered list of personalized feed items
@@ -32,6 +33,7 @@ interface TriviaState {
 const initialState: TriviaState = {
   questions: {},
   hasViewedTooltip: false,
+  tooltipPermanentlyDismissed: false, // Initialize to false
   userProfile: createInitialUserProfile(),
   feedExplanations: {},
   personalizedFeed: [],
@@ -265,9 +267,14 @@ const triviaSlice = createSlice({
     markTooltipAsViewed: (state) => {
       state.hasViewedTooltip = true;
     },
+    permanentlyDismissTooltip: (state) => {
+      state.hasViewedTooltip = true;
+      state.tooltipPermanentlyDismissed = true;
+    },
     resetAllQuestions: (state) => {
       state.questions = {};
       state.hasViewedTooltip = false; // Reset tooltip state when questions are reset
+      // Don't reset tooltipPermanentlyDismissed - user's preference should persist
       state.interactionStartTimes = {};
     },
     resetPersonalization: (state, action: PayloadAction<{ userId?: string }>) => {
@@ -370,7 +377,8 @@ const triviaSlice = createSlice({
 export const { 
   answerQuestion, 
   skipQuestion, 
-  markTooltipAsViewed, 
+  markTooltipAsViewed,
+  permanentlyDismissTooltip, 
   resetAllQuestions,
   startInteraction,
   setPersonalizedFeed,

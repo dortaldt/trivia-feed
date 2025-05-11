@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState, createContext, useContext } from 'react';
 import 'react-native-reanimated';
 import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
 import { View, Text, StyleSheet, Platform, Image } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Font from 'expo-font';
@@ -19,13 +20,14 @@ import FontAwesomeIcon from '@expo/vector-icons/FontAwesome';
 import MaterialIconsIcon from '@expo/vector-icons/MaterialIcons';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { store } from '@/src/store';
+import { store, persistor } from '@/src/store';
 import { AuthProvider, useAuth } from '@/src/context/AuthContext';
 import { ThemeProvider as AppThemeProvider } from '@/src/theme/ThemeProvider';
 import { ThemeProvider as CustomThemeProvider } from '@/src/context/ThemeContext';
 import { Colors } from '@/constants/Colors';
 import { SyncManager } from '@/src/components/SyncManager';
 import ThemedLoadingScreen from '@/src/components/ThemedLoadingScreen';
+import BasicLoadingScreen from '@/src/components/BasicLoadingScreen';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -368,11 +370,15 @@ export default function RootLayout() {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Provider store={store}>
-          <AppThemeProvider initialTheme="dark">
-            <CustomThemeProvider>
-              <ThemedLoadingScreen message="Starting up..." />
-            </CustomThemeProvider>
-          </AppThemeProvider>
+          <PersistGate loading={<BasicLoadingScreen message="Loading saved data..." />} persistor={persistor}>
+            <AuthProvider>
+              <AppThemeProvider initialTheme="dark">
+                <CustomThemeProvider>
+                  <ThemedLoadingScreen message="Starting up..." />
+                </CustomThemeProvider>
+              </AppThemeProvider>
+            </AuthProvider>
+          </PersistGate>
         </Provider>
       </GestureHandlerRootView>
     );
@@ -381,39 +387,33 @@ export default function RootLayout() {
   // Proceed with the app whether fonts loaded or not
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Provider store={store}>
-        <AuthProvider>
-          <AppThemeProvider initialTheme="dark">
-            <CustomThemeProvider>
-              <AppLoadingContext.Provider value={{ isAppLoading, setIsAppLoading }}>
-                <NavigationThemeProvider value={DarkTheme}>
-                  <SyncManager>
+      <AppLoadingContext.Provider value={{ isAppLoading, setIsAppLoading }}>
+        <Provider store={store}>
+          <PersistGate loading={<BasicLoadingScreen message="Loading saved data..." />} persistor={persistor}>
+            <AuthProvider>
+              <AppThemeProvider initialTheme="dark">
+                <CustomThemeProvider>
+                  <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                    <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
                     <AuthWrapper>
-                      <View style={styles.container}>
-                        <Stack>
-                          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                          <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-                          <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
-                          <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
-                          <Stack.Screen name="+not-found" />
-                        </Stack>
-                        <StatusBar style="light" />
-                      </View>
+                      <SyncManager>
+                        <Stack screenOptions={{ headerShown: false }} />
+                      </SyncManager>
                     </AuthWrapper>
-                  </SyncManager>
-                </NavigationThemeProvider>
-                
-                {/* Overlay the loading screen instead of conditionally rendering */}
-                {isAppLoading && (
-                  <View style={styles.loadingOverlay}>
-                    <ThemedLoadingScreen message="Preparing your trivia feed..." />
-                  </View>
-                )}
-              </AppLoadingContext.Provider>
-            </CustomThemeProvider>
-          </AppThemeProvider>
-        </AuthProvider>
-      </Provider>
+                    
+                    {/* Overlay the custom loading screen when app is loading */}
+                    {isAppLoading && (
+                      <View style={styles.loadingOverlay}>
+                        <ThemedLoadingScreen message="Preparing your trivia feed..." />
+                      </View>
+                    )}
+                  </NavigationThemeProvider>
+                </CustomThemeProvider>
+              </AppThemeProvider>
+            </AuthProvider>
+          </PersistGate>
+        </Provider>
+      </AppLoadingContext.Provider>
     </GestureHandlerRootView>
   );
 }
