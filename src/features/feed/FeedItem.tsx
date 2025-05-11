@@ -163,8 +163,8 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
         }
         
         .neon-bg-enhancer {
-          background: radial-gradient(circle at center, transparent 0%, transparent 40%, ${glowColor}10 70%, ${glowColor}25 100%), 
-                      linear-gradient(45deg, transparent 0%, ${glowColor}08 50%, transparent 100%);
+          background: radial-gradient(circle at center, transparent 0%, transparent 40%, ${glowColor + '10'} 70%, ${glowColor + '25'} 100%), 
+                      linear-gradient(45deg, transparent 0%, ${glowColor + '08'} 50%, transparent 100%);
           background-size: 200% 200%;
           animation: bgGlow 15s ease infinite;
         }
