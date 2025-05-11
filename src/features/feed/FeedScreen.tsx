@@ -792,7 +792,7 @@ const FeedScreen: React.FC = () => {
   }, [currentIndex, handleFastScroll]);
 
   // Add this hook to handle question generation
-  const { triggerQuestionGeneration } = useQuestionGenerator();
+  const { triggerQuestionGeneration, trackQuestionInteraction } = useQuestionGenerator();
 
   // Find the function that handles answering questions (might be called handleAnswerQuestion)
   // Add the question generation trigger at the end of that function
@@ -910,13 +910,51 @@ const FeedScreen: React.FC = () => {
       questionItem.tags || 'None'
     );
 
+    // Track this question interaction in client-side storage for better topic generation
     if (user?.id) {
-      // Try to generate new questions if needed
-      triggerQuestionGeneration(user.id).catch(error => {
-        console.error('Error triggering question generation:', error);
+      // Debug: log the full question item to see what properties are available
+      console.log('\n\n====================== ANSWER TRACKING LOGS ======================');
+      console.log('[FEED] Question properties available:');
+      Object.keys(questionItem).forEach(key => {
+        console.log(`  - ${key}: ${JSON.stringify((questionItem as any)[key])}`);
       });
+      
+      // Track client-side interaction data for personalized topic generation
+      trackQuestionInteraction(
+        user.id, 
+        questionId, 
+        questionItem.category || 'Unknown',
+        // Handle optional properties safely
+        (questionItem as any).subtopic || undefined,
+        (questionItem as any).branch || undefined,
+        questionItem.tags || [],
+        questionItem.question // Pass the question text
+      );
+      
+      // Log the client-side data being tracked
+      console.log('[FEED] Tracked client-side interaction data:', {
+        questionId,
+        topic: questionItem.category || 'Unknown',
+        subtopic: (questionItem as any).subtopic || undefined,
+        branch: (questionItem as any).branch || undefined,
+        tags: questionItem.tags || [],
+        questionText: questionItem.question
+      });
+      console.log('====================== END ANSWER TRACKING LOGS ======================\n\n');
     }
-  }, [dispatch, personalizedFeed, userProfile, interactionStartTimes, feedData, feedExplanations, user, triggerQuestionGeneration]);
+
+    // Use a short timeout to prevent multiple rapid calls
+    console.log('[FEED] Attempting to trigger question generation for user:', user?.id);
+    // Only call once, with a slight delay to ensure Redux state is updated
+    setTimeout(() => {
+      // This will now use our client-side counter to determine if generation is needed
+      if (user?.id) {
+        triggerQuestionGeneration(user?.id).catch(error => {
+          console.error('Error triggering question generation:', error);
+        });
+      }
+    }, 300); // Reduced timeout for better responsiveness
+  }, [dispatch, personalizedFeed, userProfile, interactionStartTimes, feedData, feedExplanations, user, triggerQuestionGeneration, trackQuestionInteraction]);
 
   // Modify handleNextQuestion to be more controlled and prevent unexpected scrolling
   const handleNextQuestion = useCallback(() => {
