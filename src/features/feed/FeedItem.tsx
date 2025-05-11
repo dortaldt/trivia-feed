@@ -89,36 +89,36 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
       styleEl.innerHTML = `
         @keyframes neonPulse {
           0% {
-            box-shadow: 0 0 3px currentColor, 0 0 5px rgba(255, 255, 255, 0.1);
-            text-shadow: 0 0 1px currentColor;
+            box-shadow: 0 0 4px currentColor, 0 0 8px rgba(255, 255, 255, 0.2);
+            text-shadow: 0 0 2px currentColor;
           }
           100% {
-            box-shadow: 0 0 5px currentColor, 0 0 8px rgba(255, 255, 255, 0.1);
-            text-shadow: 0 0 2px currentColor;
+            box-shadow: 0 0 8px currentColor, 0 0 12px rgba(255, 255, 255, 0.2);
+            text-shadow: 0 0 3px currentColor;
           }
         }
         
         @keyframes neonTextGlow {
           0% {
-            text-shadow: 0 0 1px currentColor, 0 0 2px currentColor, 0 0 3px rgba(255, 255, 255, 0.3);
+            text-shadow: none;
           }
           50% {
-            text-shadow: 0 0 2px currentColor, 0 0 3px currentColor, 0 0 5px rgba(255, 255, 255, 0.3);
+            text-shadow: none;
           }
           100% {
-            text-shadow: 0 0 1px currentColor, 0 0 2px currentColor, 0 0 4px rgba(255, 255, 255, 0.3);
+            text-shadow: none;
           }
         }
         
         @keyframes categoryNeonGlow {
           0% {
-            text-shadow: 0 0 1px currentColor, 0 0 2px currentColor, 0 0 3px currentColor;
+            text-shadow: none;
           }
           50% {
-            text-shadow: 0 0 2px currentColor, 0 0 3px currentColor, 0 0 5px currentColor;
+            text-shadow: none;
           }
           100% {
-            text-shadow: 0 0 1px currentColor, 0 0 2px currentColor, 0 0 3px currentColor;
+            text-shadow: none;
           }
         }
       `;
@@ -572,7 +572,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                       { 
                         position: 'absolute',
                         color: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
-                        opacity: 0.6,
+                        opacity: 0.1,
                         top: 0,
                         left: 0,
                         letterSpacing: 1.2,
@@ -589,7 +589,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                       { 
                         position: 'absolute',
                         color: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
-                        opacity: 0.8,
+                        opacity: 0.2,
                         top: 0,
                         left: 0,
                         letterSpacing: 1.2,
@@ -1045,6 +1045,7 @@ const styles = StyleSheet.create({
     fontSize: 18, // Slightly larger
     ...(Platform.OS === 'web' ? {
       animation: 'categoryNeonGlow 2s infinite alternate',
+      textShadow: 'none'
     } as any : Platform.OS === 'ios' ? {
       // Enhanced iOS-specific styling for more gentle, realistic neon glow
       // iOS handles text shadows differently, so we need to be more subtle
@@ -1111,35 +1112,33 @@ const styles = StyleSheet.create({
     } as any : {}),
   },
   correctAnswerOption: {
-    backgroundColor: 'rgba(0, 50, 0, 0.6)',
+    backgroundColor: 'rgba(0, 100, 0, 0.7)',
     borderWidth: 2,
-    borderColor: '#00FF00',
-    shadowColor: '#00FF00',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
-    elevation: Platform.OS === 'android' ? 5 : 0,
+    borderColor: '#4CAF50',
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: Platform.OS === 'android' ? 4 : 0,
     ...(Platform.OS === 'web' ? {
-      backgroundColor: 'rgba(0, 30, 0, 0.8)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
-      boxShadow: '0 0 4px #00FF00', // More subtle glow
+      backgroundColor: 'rgba(0, 100, 0, 0.7)',
+      transform: [{scale: 1.02}],
+      transition: 'all 0.2s ease',
     } as any : {}),
   },
   incorrectAnswerOption: {
-    backgroundColor: 'rgba(50, 0, 0, 0.6)',
+    backgroundColor: 'rgba(100, 0, 0, 0.7)',
     borderWidth: 2,
-    borderColor: '#FF0000',
-    shadowColor: '#FF0000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
-    elevation: Platform.OS === 'android' ? 5 : 0,
+    borderColor: '#F44336',
+    shadowColor: '#F44336',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: Platform.OS === 'android' ? 4 : 0,
     ...(Platform.OS === 'web' ? {
-      backgroundColor: 'rgba(30, 0, 0, 0.8)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
-      boxShadow: '0 0 4px #FF0000', // More subtle glow
+      backgroundColor: 'rgba(100, 0, 0, 0.7)',
+      transform: [{scale: 1.02}],
+      transition: 'all 0.2s ease',
     } as any : {}),
   },
   hoveredAnswerOption: {
@@ -1147,7 +1146,7 @@ const styles = StyleSheet.create({
     transform: [{scale: 1.01}],
     ...(Platform.OS === 'web' ? {
       transition: 'all 0.2s ease',
-      boxShadow: `0 0 4px ${NeonColors.dark.primary}`, // Reduced glow effect on hover
+      boxShadow: `0 0 8px ${NeonColors.dark.primary}, 0 0 4px ${NeonColors.dark.primary}`, // Added neon glow effect on hover
     } as any : {}),
   },
   skippedAnswerOption: {
@@ -1264,15 +1263,15 @@ const styles = StyleSheet.create({
     borderColor: NeonColors.dark.primary,
     shadowColor: NeonColors.dark.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: Platform.OS === 'android' ? 3 : 0,
+    shadowOpacity: 0.7, // Increased from 0.5
+    shadowRadius: 6, // Increased from 4
+    elevation: Platform.OS === 'android' ? 4 : 0, // Increased from 3
     ...(Platform.OS === 'web' ? {
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
       backgroundColor: 'rgba(10, 10, 20, 0.75)',
       transition: 'all 0.25s cubic-bezier(0.2, 0, 0.15, 1)',
-      boxShadow: `0 0 2px ${NeonColors.dark.primary}`, // Subtle glow
+      // Removed boxShadow for default state
     } as any : {}),
   },
   neonAnswerOptionIOS: {
@@ -1291,14 +1290,14 @@ const styles = StyleSheet.create({
     borderColor: '#00FF00',
     shadowColor: '#00FF00',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
+    shadowOpacity: 0.8, // Increased from 0.6
+    shadowRadius: 8, // Increased from 6
     elevation: Platform.OS === 'android' ? 5 : 0,
     ...(Platform.OS === 'web' ? {
+      animation: 'neonPulse 2.5s infinite alternate',
       backgroundColor: 'rgba(0, 30, 0, 0.8)',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
-      boxShadow: '0 0 4px #00FF00', // More subtle glow
     } as any : {}),
   },
   neonIncorrectAnswerOption: {
@@ -1307,34 +1306,34 @@ const styles = StyleSheet.create({
     borderColor: '#FF0000',
     shadowColor: '#FF0000',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
+    shadowOpacity: 0.8, // Increased from 0.6
+    shadowRadius: 8, // Increased from 6
     elevation: Platform.OS === 'android' ? 5 : 0,
     ...(Platform.OS === 'web' ? {
+      animation: 'neonPulse 2.5s infinite alternate',
       backgroundColor: 'rgba(30, 0, 0, 0.8)',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
-      boxShadow: '0 0 4px #FF0000', // More subtle glow
     } as any : {}),
   },
   neonCorrectAnswerOptionIOS: {
     backgroundColor: 'rgba(0, 40, 0, 0.7)', // Darker green for iOS
-    borderWidth: 2,
+    borderWidth: 2.5,
     borderColor: '#00FF00',
     shadowColor: '#00FF00',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
     overflow: 'hidden',
   },
   neonIncorrectAnswerOptionIOS: {
     backgroundColor: 'rgba(40, 0, 0, 0.7)', // Darker red for iOS
-    borderWidth: 2,
+    borderWidth: 2.5,
     borderColor: '#FF0000',
     shadowColor: '#FF0000',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
     overflow: 'hidden',
   },
   // Add style for animated text in neon theme
@@ -1342,21 +1341,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
     ...(Platform.OS === 'web' ? {
-      textShadow: '0 0 2px currentColor',
+      animation: 'neonTextGlow 2s infinite alternate',
+      textShadow: 'none'
     } as any : {}),
   },
   neonCorrectAnswerText: {
     fontWeight: 'bold',
     color: '#00FF00',
     ...(Platform.OS === 'web' ? {
-      textShadow: '0 0 2px #00FF00',
+      animation: 'neonTextGlow 2s infinite alternate',
+      textShadow: 'none'
     } as any : {}),
   },
   neonIncorrectAnswerText: {
     fontWeight: 'bold',
     color: '#FF0000',
     ...(Platform.OS === 'web' ? {
-      textShadow: '0 0 2px #FF0000',
+      animation: 'neonTextGlow 2s infinite alternate',
+      textShadow: 'none'
     } as any : {}),
   },
   touchableContainer: {
