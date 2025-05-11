@@ -9,44 +9,44 @@ const neonAccent = '#FFFF00'; // Vibrant Yellow
 
 // Neon category colors for gradients
 export const NeonCategoryColors: Record<string, { primary: string, secondary: string }> = {
-  // Main categories with more vibrant neon gradients
-  'Science': { primary: '#00FFFF', secondary: '#0080FF' },         // Cyan to Blue
-  'Technology': { primary: '#00CDFF', secondary: '#0050FF' },      // Bright Cyan to Deep Blue  
-  'History': { primary: '#FF00FF', secondary: '#8A00FF' },         // Magenta to Purple
-  'Geography': { primary: '#00FF80', secondary: '#00FF00' },       // Teal to Green
-  'Sports': { primary: '#FF8000', secondary: '#FF2000' },          // Orange
-  'Movies': { primary: '#FF00FF', secondary: '#C000FF' },          // Magenta to Purple
-  'Music': { primary: '#BF00FF', secondary: '#7000FF' },           // Purple
-  'Television': { primary: '#0040FF', secondary: '#6000FF' },      // Blue to Purple
-  'Literature': { primary: '#FF0040', secondary: '#FF0080' },      // Red to Pink
-  'Art': { primary: '#FF0080', secondary: '#FF00FF' },             // Pink
-  'Pop Culture': { primary: '#FFFF00', secondary: '#FF8000' },     // Yellow to Orange
-  'Food & Drink': { primary: '#FF4000', secondary: '#FF0000' },    // Orange to Red
-  'General Knowledge': { primary: '#00FFFF', secondary: '#00FF80' }, // Cyan to Teal
-  'Nature': { primary: '#00FF80', secondary: '#80FF00' },          // Teal to Lime
-  'Politics': { primary: '#C000FF', secondary: '#8000FF' },        // More vibrant purple
-  'Celebrities': { primary: '#FFFF00', secondary: '#FFFF80' },     // Yellow
+  // Main categories with more vibrant and distinct neon gradients across the full spectrum
+  'Science': { primary: '#00FFFF', secondary: '#00CCFF' },         // Cyan
+  'Technology': { primary: '#3300FF', secondary: '#6600FF' },      // Deep Blue
+  'History': { primary: '#FF00FF', secondary: '#CC00FF' },         // Magenta
+  'Geography': { primary: '#00FF00', secondary: '#33FF66' },       // Green
+  'Sports': { primary: '#FF8000', secondary: '#FF6600' },          // Orange
+  'Movies': { primary: '#FF0066', secondary: '#FF0033' },          // Hot Pink
+  'Music': { primary: '#9900FF', secondary: '#6600CC' },           // Purple
+  'Television': { primary: '#00CCFF', secondary: '#0099FF' },      // Light Blue
+  'Literature': { primary: '#FF0000', secondary: '#CC0000' },      // Red
+  'Art': { primary: '#FF66FF', secondary: '#FF33CC' },             // Pink
+  'Pop Culture': { primary: '#FFFF00', secondary: '#FFCC00' },     // Yellow
+  'Food & Drink': { primary: '#FF3300', secondary: '#CC3300' },    // Red-Orange
+  'General Knowledge': { primary: '#00FFCC', secondary: '#00CCAA' }, // Turquoise
+  'Nature': { primary: '#66FF00', secondary: '#99FF33' },          // Lime
+  'Politics': { primary: '#6600FF', secondary: '#3300CC' },        // Indigo
+  'Celebrities': { primary: '#FFDD00', secondary: '#FFBB00' },     // Gold
   
   // Special categories
-  'Modern Cinema': { primary: '#FF00FF', secondary: '#FF0080' },   // Magenta to Pink
-  'Mathematics': { primary: '#00FFFF', secondary: '#00FF80' },     // Cyan to Teal
-  'Language': { primary: '#0080FF', secondary: '#0040FF' },        // Blue
-  'Mythology': { primary: '#8A00FF', secondary: '#6000FF' },       // Bright Purple
-  'Animals': { primary: '#00FF40', secondary: '#80FF00' },         // Green to Lime
+  'Modern Cinema': { primary: '#FF0099', secondary: '#CC0066' },   // Bright Pink
+  'Mathematics': { primary: '#00FFAA', secondary: '#00CC88' },     // Sea Green
+  'Language': { primary: '#0066FF', secondary: '#0044CC' },        // Royal Blue
+  'Mythology': { primary: '#AA00FF', secondary: '#8800CC' },       // Violet
+  'Animals': { primary: '#88FF00', secondary: '#66CC00' },         // Yellow-Green
   
   // Additional categories with unique neon colors
-  'Science Fiction': { primary: '#00FFAA', secondary: '#00CCFF' }, // Teal to Bright Blue
-  'Video Games': { primary: '#FF00AA', secondary: '#AA00FF' },     // Hot Pink to Purple
-  'Anime & Manga': { primary: '#FF66EE', secondary: '#EE66FF' },   // Bright Pink
-  'Architecture': { primary: '#FFAA00', secondary: '#FF6600' },    // Gold to Orange
-  'Business & Economics': { primary: '#00FF66', secondary: '#00AA33' }, // Bright Green
-  'Health & Medicine': { primary: '#FF3366', secondary: '#FF0033' }, // Bright Red
-  'Religion': { primary: '#AAAAFF', secondary: '#6666FF' },        // Light Blue to Medium Blue
-  'Fashion': { primary: '#FF66AA', secondary: '#FF3399' },         // Pink to Hot Pink
-  'Transportation': { primary: '#33CCFF', secondary: '#0099FF' },  // Sky Blue
-  'Space & Astronomy': { primary: '#4D00FF', secondary: '#3300AA' }, // Deep Purple to Indigo
-  'Comics & Superheroes': { primary: '#FF3300', secondary: '#CC0000' }, // Bright Red to Dark Red
-  'Board Games': { primary: '#33FF33', secondary: '#00CC00' },     // Bright Green
+  'Science Fiction': { primary: '#00DDAA', secondary: '#00AA88' }, // Teal
+  'Video Games': { primary: '#CC00FF', secondary: '#9900CC' },     // Bright Purple
+  'Anime & Manga': { primary: '#FF99FF', secondary: '#FF66CC' },   // Pastel Pink
+  'Architecture': { primary: '#FFAA00', secondary: '#FF8800' },    // Amber
+  'Business & Economics': { primary: '#00DD66', secondary: '#00AA44' }, // Emerald
+  'Health & Medicine': { primary: '#FF3366', secondary: '#CC0033' }, // Crimson
+  'Religion': { primary: '#8888FF', secondary: '#6666CC' },        // Lavender
+  'Fashion': { primary: '#FF33AA', secondary: '#CC0088' },         // Fuchsia
+  'Transportation': { primary: '#33AAFF', secondary: '#0088DD' },  // Azure
+  'Space & Astronomy': { primary: '#4400FF', secondary: '#2200CC' }, // Deep Indigo
+  'Comics & Superheroes': { primary: '#FF2200', secondary: '#CC1100' }, // Scarlet
+  'Board Games': { primary: '#00FF44', secondary: '#00CC33' },     // Spring Green
   
   // Default fallback color
   'default': { primary: '#00FFFF', secondary: '#FF00FF' }          // Cyan to Magenta

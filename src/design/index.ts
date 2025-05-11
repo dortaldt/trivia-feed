@@ -190,28 +190,28 @@ export const colors = {
 
 // Category-specific colors for your trivia app
 export const categoryColors = {
-  'Science': '#3498db',         // Blue
-  'Technology': '#2980b9',      // Darker blue
-  'History': '#8e44ad',         // Purple
-  'Geography': '#27ae60',       // Green
-  'Sports': '#e67e22',          // Orange
-  'Movies': '#7f8c8d',          // Gray
-  'Music': '#9b59b6',           // Light purple
-  'Television': '#34495e',      // Dark blue-gray
-  'Literature': '#c0392b',      // Dark red
-  'Art': '#e74c3c',             // Red
-  'Pop Culture': '#f39c12',     // Yellow-orange
-  'Food & Drink': '#d35400',    // Dark orange
-  'General Knowledge': '#16a085', // Teal
-  'Nature': '#2ecc71',          // Light green
-  'Politics': '#95a5a6',        // Light gray
-  'Celebrities': '#f1c40f',     // Yellow
-  'Modern Cinema': '#2c3e50',   // Navy
-  'Mathematics': '#1abc9c',     // Turquoise
-  'Language': '#3498db',        // Blue
-  'Mythology': '#8e44ad',       // Purple
-  'Animals': '#27ae60',         // Green
-  'default': '#34495e',         // Default fallback
+  'Science': '#00B8D4',         // Cyan
+  'Technology': '#304FFE',      // Indigo
+  'History': '#D500F9',         // Purple
+  'Geography': '#00C853',       // Green
+  'Sports': '#FF6D00',          // Orange
+  'Movies': '#FF1744',          // Red-Pink
+  'Music': '#6200EA',           // Deep Purple
+  'Television': '#0091EA',      // Light Blue
+  'Literature': '#D50000',      // Red
+  'Art': '#F50057',             // Pink
+  'Pop Culture': '#FFD600',     // Yellow
+  'Food & Drink': '#FF3D00',    // Deep Orange
+  'General Knowledge': '#00BFA5', // Teal
+  'Nature': '#64DD17',          // Light Green
+  'Politics': '#651FFF',        // Deep Purple
+  'Celebrities': '#FFC400',     // Amber
+  'Modern Cinema': '#C51162',   // Pink
+  'Mathematics': '#00BFA5',     // Teal
+  'Language': '#2962FF',        // Blue
+  'Mythology': '#AA00FF',       // Purple
+  'Animals': '#76FF03',         // Light Green
+  'default': '#455A64',         // Blue Grey
 };
 
 /* -------------------------------------------- */

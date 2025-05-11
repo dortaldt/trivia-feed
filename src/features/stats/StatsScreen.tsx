@@ -385,17 +385,27 @@ const StatsScreen: React.FC = () => {
   }, [stats.categories]);
   
   const categoryColors: Record<string, string> = {
-    'Science': '#4285F4',
-    'History': '#DB4437',
-    'Geography': '#0F9D58',
-    'Technology': '#9C27B0',
-    'Pop Culture': '#FF6D00',
-    'Literature': '#795548',
-    'Sports': '#00ACC1',
-    'Food & Drink': '#FF5722',
-    'Art': '#673AB7',
-    'Music': '#F44336',
-    'Movies': '#FFC107'
+    'Science': '#00B8D4',         // Cyan
+    'Technology': '#304FFE',      // Indigo
+    'History': '#D500F9',         // Purple
+    'Geography': '#00C853',       // Green
+    'Sports': '#FF6D00',          // Orange
+    'Movies': '#FF1744',          // Red-Pink
+    'Music': '#6200EA',           // Deep Purple
+    'Television': '#0091EA',      // Light Blue
+    'Literature': '#D50000',      // Red
+    'Art': '#F50057',             // Pink
+    'Pop Culture': '#FFD600',     // Yellow
+    'Food & Drink': '#FF3D00',    // Deep Orange
+    'General Knowledge': '#00BFA5', // Teal
+    'Nature': '#64DD17',          // Light Green
+    'Politics': '#651FFF',        // Deep Purple
+    'Celebrities': '#FFC400',     // Amber
+    'Modern Cinema': '#C51162',   // Pink
+    'Mathematics': '#00BFA5',     // Teal
+    'Language': '#2962FF',        // Blue
+    'Mythology': '#AA00FF',       // Purple
+    'Animals': '#76FF03',         // Light Green
   };
 
   if (isLoading) {
