@@ -87,7 +87,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
         @keyframes neonPulse {
           0% {
             box-shadow: 0 0 4px currentColor, 0 0 8px rgba(255, 255, 255, 0.2);
-            text-shadow: none;
+            text-shadow: 0 0 2px currentColor;
           }
           100% {
             box-shadow: 0 0 8px currentColor, 0 0 12px rgba(255, 255, 255, 0.2);
@@ -97,25 +97,25 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
         
         @keyframes neonTextGlow {
           0% {
-            text-shadow: none;
+            text-shadow: 0 0 2px currentColor, 0 0 3px currentColor, 0 0 5px rgba(255, 255, 255, 0.5);
           }
           50% {
             text-shadow: 0 0 3px currentColor, 0 0 6px currentColor, 0 0 9px rgba(255, 255, 255, 0.5);
           }
           100% {
-            text-shadow: 0 0 4px currentColor, 0 0 8px currentColor, 0 0 12px rgba(255, 255, 255, 0.5);
+            text-shadow: 0 0 2px currentColor, 0 0 4px currentColor, 0 0 7px rgba(255, 255, 255, 0.5);
           }
         }
         
         @keyframes categoryNeonGlow {
           0% {
-            text-shadow: none;
+            text-shadow: 0 0 2px currentColor, 0 0 4px currentColor, 0 0 6px currentColor, 0 0 10px rgba(255, 255, 255, 0.4);
           }
           50% {
             text-shadow: 0 0 3px currentColor, 0 0 6px currentColor, 0 0 9px currentColor, 0 0 15px rgba(255, 255, 255, 0.6);
           }
           100% {
-            text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px rgba(255, 255, 255, 0.6);
+            text-shadow: 0 0 2px currentColor, 0 0 4px currentColor, 0 0 6px currentColor, 0 0 10px rgba(255, 255, 255, 0.4);
           }
         }
       `;
@@ -644,10 +644,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                             isAnswered() && questionState?.answerIndex !== index && 
                               answer.isCorrect && !isSelectedAnswerCorrect() && 
                               (isNeonTheme ? styles.neonCorrectAnswerText : {}),
-                            isSkipped() && styles.skippedAnswerText,
-                            // Apply hover text shadow only on web when hovered
-                            Platform.OS === 'web' && hoveredAnswerIndex === index && 
-                              (isNeonTheme ? styles.hoveredNeonAnswerText : styles.hoveredAnswerText)
+                            isSkipped() && styles.skippedAnswerText
                           ]}
                         >
                           {answer.text}
@@ -911,21 +908,33 @@ const styles = StyleSheet.create({
     } as any : {}),
   },
   correctAnswerOption: {
-    backgroundColor: 'rgba(76, 175, 80, 0.3)',
-    borderColor: '#4CAF50',
+    backgroundColor: 'rgba(0, 50, 0, 0.6)',
+    borderWidth: 2,
+    borderColor: '#00FF00',
+    shadowColor: '#00FF00',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8, // Increased from 0.6
+    shadowRadius: 8, // Increased from 6
+    elevation: Platform.OS === 'android' ? 5 : 0,
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0 0 10px #4CAF50, 0 0 5px #4CAF50',
-      backgroundColor: 'rgba(10, 60, 10, 0.7)',
+      animation: 'neonPulse 2.5s infinite alternate',
+      backgroundColor: 'rgba(0, 30, 0, 0.8)',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
     } as any : {}),
   },
   incorrectAnswerOption: {
-    backgroundColor: 'rgba(244, 67, 54, 0.3)',
-    borderColor: '#F44336',
+    backgroundColor: 'rgba(50, 0, 0, 0.6)',
+    borderWidth: 2,
+    borderColor: '#FF0000',
+    shadowColor: '#FF0000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8, // Increased from 0.6
+    shadowRadius: 8, // Increased from 6
+    elevation: Platform.OS === 'android' ? 5 : 0,
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0 0 10px #F44336, 0 0 5px #F44336',
-      backgroundColor: 'rgba(60, 10, 10, 0.7)',
+      animation: 'neonPulse 2.5s infinite alternate',
+      backgroundColor: 'rgba(30, 0, 0, 0.8)',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
     } as any : {}),
@@ -935,13 +944,7 @@ const styles = StyleSheet.create({
     transform: [{scale: 1.01}],
     ...(Platform.OS === 'web' ? {
       transition: 'all 0.2s ease',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
-    } as any : {}),
-  },
-  // Add style for hovered answer text
-  hoveredAnswerText: {
-    ...(Platform.OS === 'web' ? {
-      textShadow: '0 0 2px currentColor, 0 0 4px rgba(255, 255, 255, 0.5)'
+      boxShadow: `0 0 8px ${NeonColors.dark.primary}, 0 0 4px ${NeonColors.dark.primary}`, // Added neon glow effect on hover
     } as any : {}),
   },
   skippedAnswerOption: {
@@ -1064,9 +1067,9 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? {
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
-      boxShadow: `0 0 8px ${NeonColors.dark.primary}, 0 0 4px ${NeonColors.dark.primary}`, // Brighter glow
       backgroundColor: 'rgba(10, 10, 20, 0.75)',
       transition: 'all 0.25s cubic-bezier(0.2, 0, 0.15, 1)',
+      // Removed boxShadow for default state
     } as any : {}),
   },
   neonAnswerOptionIOS: {
@@ -1089,7 +1092,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8, // Increased from 6
     elevation: Platform.OS === 'android' ? 5 : 0,
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0 0 8px #00FF00, 0 0 15px rgba(0, 255, 0, 0.5)', // Brighter glow
       animation: 'neonPulse 2.5s infinite alternate',
       backgroundColor: 'rgba(0, 30, 0, 0.8)',
       backdropFilter: 'blur(12px)',
@@ -1106,7 +1108,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8, // Increased from 6
     elevation: Platform.OS === 'android' ? 5 : 0,
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0 0 8px #FF0000, 0 0 15px rgba(255, 0, 0, 0.5)', // Brighter glow
       animation: 'neonPulse 2.5s infinite alternate',
       backgroundColor: 'rgba(30, 0, 0, 0.8)',
       backdropFilter: 'blur(12px)',
@@ -1137,23 +1138,22 @@ const styles = StyleSheet.create({
   neonSelectedAnswerText: {
     fontWeight: 'bold',
     color: '#FFFFFF',
-    // Animation only on hover now via hoveredAnswerText
+    ...(Platform.OS === 'web' ? {
+      animation: 'neonTextGlow 2s infinite alternate',
+    } as any : {}),
   },
   neonCorrectAnswerText: {
     fontWeight: 'bold',
     color: '#00FF00',
-    // Animation only on hover now via hoveredAnswerText
+    ...(Platform.OS === 'web' ? {
+      animation: 'neonTextGlow 2s infinite alternate',
+    } as any : {}),
   },
   neonIncorrectAnswerText: {
     fontWeight: 'bold',
     color: '#FF0000',
-    // Animation only on hover now via hoveredAnswerText
-  },
-  // Create neon hover effect styles
-  hoveredNeonAnswerText: {
     ...(Platform.OS === 'web' ? {
       animation: 'neonTextGlow 2s infinite alternate',
-      textShadow: '0 0 4px currentColor, 0 0 8px currentColor, 0 0 12px rgba(255, 255, 255, 0.5)'
     } as any : {}),
   },
   touchableContainer: {
