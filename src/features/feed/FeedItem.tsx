@@ -13,6 +13,7 @@ import {
   ScrollView,
   Image,
   Easing,
+  Pressable,
 } from 'react-native';
 // Try-catch import to handle missing package gracefully
 let ExpoAudio: any;
@@ -22,6 +23,8 @@ try {
   console.log('expo-av not available, sound effects will be disabled');
   ExpoAudio = { Sound: null };
 }
+// Import Haptics directly
+import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { QuestionState } from '../../store/triviaSlice';
 import { FeatherIcon } from '@/components/FeatherIcon';
@@ -323,6 +326,84 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     });
   };
 
+  // Add animations for button press states
+  const answerPressAnimations = useRef<Animated.Value[]>([]).current;
+  const answerScaleAnimations = useRef<Animated.Value[]>([]).current;
+  
+  // Initialize animations for each answer
+  useEffect(() => {
+    // Reset animations when item changes
+    answerPressAnimations.length = 0;
+    answerScaleAnimations.length = 0;
+    
+    // Create animation values for each answer
+    if (item?.answers) {
+      item.answers.forEach((_, index) => {
+        answerPressAnimations.push(new Animated.Value(0));
+        answerScaleAnimations.push(new Animated.Value(1));
+      });
+    }
+  }, [item?.id]);
+  
+  // Handle button press states with animations and haptics
+  const handlePressIn = (index: number) => {
+    if (isAnswered() || !answerPressAnimations[index]) return;
+    
+    // Visual feedback
+    Animated.parallel([
+      Animated.timing(answerPressAnimations[index], {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+        easing: Easing.inOut(Easing.quad),
+      }),
+      Animated.timing(answerScaleAnimations[index], {
+        toValue: 0.98,
+        duration: 100,
+        useNativeDriver: true,
+        easing: Easing.inOut(Easing.quad),
+      })
+    ]).start();
+    
+    // Stronger haptic feedback on press - use medium impact for better feel
+    if (isIOS) {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch (error) {
+        console.log('Error triggering haptic feedback:', error);
+      }
+    }
+  };
+  
+  const handlePressOut = (index: number) => {
+    if (isAnswered() || !answerPressAnimations[index] || !answerScaleAnimations[index]) return;
+    
+    // Return to normal state with spring animation for natural feel
+    Animated.parallel([
+      Animated.spring(answerPressAnimations[index], {
+        toValue: 0,
+        friction: 4,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.spring(answerScaleAnimations[index], {
+        toValue: 1,
+        friction: 4,
+        tension: 40,
+        useNativeDriver: true,
+      })
+    ]).start();
+
+    // Light haptic feedback on release for complete tactile experience
+    if (isIOS) {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch (error) {
+        console.log('Error triggering haptic feedback:', error);
+      }
+    }
+  };
+  
   const selectAnswer = (index: number) => {
     if (isIOS) {
       springAnimation();
@@ -342,6 +423,35 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
           }
         } catch (error) {
           console.log('Error playing sound:', error);
+        }
+      }
+      
+      // Enhanced haptic feedback for answer selection with double-pattern for more noticeable feedback
+      if (isIOS) {
+        try {
+          if (item.answers[index].isCorrect) {
+            // Immediate medium impact for instant feedback
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            
+            // Success notification after a short delay for a two-stage feedback
+            setTimeout(() => {
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success
+              );
+            }, 150);
+          } else {
+            // Immediate heavy impact for wrong answers
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            
+            // Error notification after a short delay
+            setTimeout(() => {
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Error
+              );
+            }, 150);
+          }
+        } catch (error) {
+          console.log('Error triggering haptic feedback:', error);
         }
       }
       
@@ -593,71 +703,158 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                     <Animated.View 
                       key={`${item.id}-answer-container-${index}`}
                       style={{
-                        transform: [{ 
-                          scale: animatingAnswerIndex === index ? answerScaleAnim : 1
-                        }],
+                        transform: [
+                          { scale: animatingAnswerIndex === index ? 
+                            answerScaleAnim : 
+                            (isIOS && answerScaleAnimations[index]) ? answerScaleAnimations[index] : 1 
+                          }
+                        ],
                         marginBottom: 12,
                       }}
                     >
-                      <TouchableOpacity
-                        key={`${item.id}-answer-${index}`}
-                        style={[answerStyle, styles.touchableContainer]}
-                        onPress={() => selectAnswer(index)}
-                        disabled={isAnswered()}
-                        {...(Platform.OS === 'web' ? {
-                          onMouseEnter: () => handleMouseEnter(index),
-                          onMouseLeave: handleMouseLeave
-                        } : {})}
-                      >
-                        {isNeonTheme && Platform.OS === 'ios' && !isAnswered() && (
-                          <BlurView 
-                            intensity={35}
-                            tint="dark"
-                            style={StyleSheet.absoluteFill}
-                          />
-                        )}
-                        
-                        {/* Add overlay for fade-in effect */}
-                        {animatingAnswerIndex === index && (
-                          <Animated.View 
-                            style={[
-                              StyleSheet.absoluteFill, 
-                              styles.selectionOverlay,
-                              { 
-                                opacity: answerOpacityAnim,
-                                backgroundColor: answer.isCorrect 
-                                  ? 'rgba(0, 255, 0, 0.1)' 
-                                  : 'rgba(255, 0, 0, 0.1)' 
-                              }
-                            ]} 
-                          />
-                        )}
-                        
-                        <ThemedText 
-                          type="default"
-                          style={[
-                            styles.answerText, 
-                            isAnswered() && questionState?.answerIndex === index && 
-                              (isNeonTheme ? 
-                                (answer.isCorrect ? styles.neonCorrectAnswerText : styles.neonIncorrectAnswerText) :
-                                styles.selectedAnswerText),
-                            isAnswered() && questionState?.answerIndex !== index && 
-                              answer.isCorrect && !isSelectedAnswerCorrect() && 
-                              (isNeonTheme ? styles.neonCorrectAnswerText : {}),
-                            isSkipped() && styles.skippedAnswerText
+                      {isIOS ? (
+                        <Pressable
+                          key={`${item.id}-answer-${index}`}
+                          style={({pressed}) => [
+                            answerStyle, 
+                            styles.touchableContainer,
+                            !isAnswered() && styles.iosPressableContainer,
                           ]}
+                          onPress={() => selectAnswer(index)}
+                          onPressIn={() => handlePressIn(index)}
+                          onPressOut={() => handlePressOut(index)}
+                          disabled={isAnswered()}
                         >
-                          {answer.text}
-                        </ThemedText>
-                        
-                        {(isAnswered() && questionState?.answerIndex === index && (
-                          answer.isCorrect ? 
-                          <FeatherIcon name="check-square" size={24} color={isNeonTheme ? "#00FF00" : "#4CAF50"} style={{marginLeft: 8} as TextStyle} /> : 
-                          <FeatherIcon name="x-circle" size={24} color={isNeonTheme ? "#FF0000" : "#F44336"} style={{marginLeft: 8} as TextStyle} />
-                        )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
-                          <FeatherIcon name="square" size={24} color={isNeonTheme ? "#00FF00" : "#4CAF50"} style={{marginLeft: 8} as TextStyle} />
-                        ))}
-                      </TouchableOpacity>
+                          {({pressed}) => (
+                            <>
+                              {isNeonTheme && isIOS && !isAnswered() && (
+                                <BlurView 
+                                  intensity={35}
+                                  tint="dark"
+                                  style={StyleSheet.absoluteFill}
+                                />
+                              )}
+                              
+                              {/* Dynamic press effect overlay */}
+                              {isIOS && !isAnswered() && answerPressAnimations[index] && (
+                                <Animated.View 
+                                  style={[
+                                    StyleSheet.absoluteFill,
+                                    styles.pressOverlay,
+                                    { 
+                                      opacity: answerPressAnimations[index],
+                                      backgroundColor: isNeonTheme ? 
+                                        `${NeonColors.dark.primary}30` : 
+                                        'rgba(255, 255, 255, 0.15)'
+                                    }
+                                  ]}
+                                />
+                              )}
+                              
+                              {/* Add overlay for fade-in effect */}
+                              {animatingAnswerIndex === index && (
+                                <Animated.View 
+                                  style={[
+                                    StyleSheet.absoluteFill, 
+                                    styles.selectionOverlay,
+                                    { 
+                                      opacity: answerOpacityAnim,
+                                      backgroundColor: answer.isCorrect 
+                                        ? 'rgba(0, 255, 0, 0.1)' 
+                                        : 'rgba(255, 0, 0, 0.1)' 
+                                    }
+                                  ]} 
+                                />
+                              )}
+                              
+                              <ThemedText 
+                                type="default"
+                                style={[
+                                  styles.answerText, 
+                                  isAnswered() && questionState?.answerIndex === index && 
+                                    (isNeonTheme ? 
+                                      (answer.isCorrect ? styles.neonCorrectAnswerText : styles.neonIncorrectAnswerText) :
+                                      styles.selectedAnswerText),
+                                  isAnswered() && questionState?.answerIndex !== index && 
+                                    answer.isCorrect && !isSelectedAnswerCorrect() && 
+                                    (isNeonTheme ? styles.neonCorrectAnswerText : {}),
+                                  isSkipped() && styles.skippedAnswerText
+                                ]}
+                              >
+                                {answer.text}
+                              </ThemedText>
+                              
+                              {(isAnswered() && questionState?.answerIndex === index && (
+                                answer.isCorrect ? 
+                                <FeatherIcon name="check-square" size={24} color={isNeonTheme ? "#00FF00" : "#4CAF50"} style={{marginLeft: 8} as TextStyle} /> : 
+                                <FeatherIcon name="x-circle" size={24} color={isNeonTheme ? "#FF0000" : "#F44336"} style={{marginLeft: 8} as TextStyle} />
+                              )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
+                                <FeatherIcon name="square" size={24} color={isNeonTheme ? "#00FF00" : "#4CAF50"} style={{marginLeft: 8} as TextStyle} />
+                              ))}
+                            </>
+                          )}
+                        </Pressable>
+                      ) : (
+                        <TouchableOpacity
+                          key={`${item.id}-answer-${index}`}
+                          style={[answerStyle, styles.touchableContainer]}
+                          onPress={() => selectAnswer(index)}
+                          disabled={isAnswered()}
+                          {...(Platform.OS === 'web' ? {
+                            onMouseEnter: () => handleMouseEnter(index),
+                            onMouseLeave: handleMouseLeave
+                          } : {})}
+                        >
+                          {isNeonTheme && isIOS && !isAnswered() && (
+                            <BlurView 
+                              intensity={35}
+                              tint="dark"
+                              style={StyleSheet.absoluteFill}
+                            />
+                          )}
+                          
+                          {/* Add overlay for fade-in effect */}
+                          {animatingAnswerIndex === index && (
+                            <Animated.View 
+                              style={[
+                                StyleSheet.absoluteFill, 
+                                styles.selectionOverlay,
+                                { 
+                                  opacity: answerOpacityAnim,
+                                  backgroundColor: answer.isCorrect 
+                                    ? 'rgba(0, 255, 0, 0.1)' 
+                                    : 'rgba(255, 0, 0, 0.1)' 
+                                }
+                              ]} 
+                            />
+                          )}
+                          
+                          <ThemedText 
+                            type="default"
+                            style={[
+                              styles.answerText, 
+                              isAnswered() && questionState?.answerIndex === index && 
+                                (isNeonTheme ? 
+                                  (answer.isCorrect ? styles.neonCorrectAnswerText : styles.neonIncorrectAnswerText) :
+                                  styles.selectedAnswerText),
+                              isAnswered() && questionState?.answerIndex !== index && 
+                                answer.isCorrect && !isSelectedAnswerCorrect() && 
+                                (isNeonTheme ? styles.neonCorrectAnswerText : {}),
+                              isSkipped() && styles.skippedAnswerText
+                            ]}
+                          >
+                            {answer.text}
+                          </ThemedText>
+                          
+                          {(isAnswered() && questionState?.answerIndex === index && (
+                            answer.isCorrect ? 
+                            <FeatherIcon name="check-square" size={24} color={isNeonTheme ? "#00FF00" : "#4CAF50"} style={{marginLeft: 8} as TextStyle} /> : 
+                            <FeatherIcon name="x-circle" size={24} color={isNeonTheme ? "#FF0000" : "#F44336"} style={{marginLeft: 8} as TextStyle} />
+                          )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
+                            <FeatherIcon name="square" size={24} color={isNeonTheme ? "#00FF00" : "#4CAF50"} style={{marginLeft: 8} as TextStyle} />
+                          ))}
+                        </TouchableOpacity>
+                      )}
                     </Animated.View>
                   );
                 })}
@@ -1198,5 +1395,13 @@ const styles = StyleSheet.create({
   neonLearningCapsuleText: {
     color: '#ffffff',
     lineHeight: 22,
+  },
+  iosPressableContainer: {
+    overflow: 'hidden',
+    transform: [{perspective: 1000}],
+  },
+  pressOverlay: {
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)'
   },
 });
