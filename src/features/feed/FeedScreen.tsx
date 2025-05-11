@@ -52,7 +52,7 @@ import {
 } from '../../lib/personalizationService';
 import { InteractionTracker } from '../../components/InteractionTracker';
 import { useAuth } from '../../context/AuthContext';
-import { colors, spacing, borderRadius } from '../../theme';
+import { colors as themeColors, spacing, borderRadius, zIndex } from '../../design';
 import { syncWeightChanges } from '../../lib/syncService';
 import { loadUserDataThunk } from '../../store/thunks';
 import { FeatherIcon } from '@/components/FeatherIcon';
@@ -71,8 +71,338 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { NeonColors } from '@/constants/NeonColors';
 import ThemedLoadingScreen from '@/src/components/ThemedLoadingScreen';
 import { useAppLoading } from '@/app/_layout';
+import { Colors } from '@/constants/Colors';
 
 const { width, height } = Dimensions.get('window');
+
+// Move StyleSheet outside of component
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+    width: '100%', // Ensure full width
+    height: '100%', // Ensure full height
+  },
+  flatList: {
+    width: '100%', // Full width for web and mobile
+    height: '100%', // Full height
+    flex: 1,
+  },
+  flatListContent: {
+    // No additional padding or spacing that would cause items to overflow
+    flexGrow: 1,
+  },
+  itemContainer: {
+    width: '100%',
+    // Height is dynamically set in renderItem using viewportHeight
+    // This ensures each item takes exactly one screen
+  },
+  tooltipWrapper: {
+    position: 'absolute',
+    bottom: 80,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: zIndex.tooltip - 10, // Make sure it's below bottomsheets
+    width: '100%',
+  },
+  tooltip: {
+    width: 220,
+    alignItems: 'center',
+    borderRadius: borderRadius.xl,
+    padding: spacing[4],
+    borderWidth: 1,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 3px 10px rgba(0, 0, 0, 0.35)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.2,
+      shadowRadius: 5,
+      elevation: 6,
+    }),
+    borderRadius: borderRadius.xl,
+    padding: spacing[4],
+    borderWidth: 1,
+  },
+  tooltipArrow: {
+    position: 'absolute',
+    bottom: -8,
+    left: '50%',
+    marginLeft: -8, // Half of the arrow width
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+  },
+  tooltipText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: spacing[2],
+    fontWeight: '500',
+  },
+  tiktokAnimationContainer: {
+    height: 85,
+    width: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing[2],
+  },
+  phoneFrame: {
+    width: 45,
+    height: 80,
+    borderRadius: borderRadius.xl,
+    borderWidth: 2,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  phoneContent: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  mockScreen: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: borderRadius.sm,
+  },
+  mockScreen1: {
+    backgroundColor: 'rgba(255, 100, 100, 0.6)',
+  },
+  mockScreen2: {
+    backgroundColor: 'rgba(100, 100, 255, 0.6)',
+  },
+  finger: {
+    position: 'absolute',
+    right: -10,
+    width: 20,
+    height: 30,
+    alignItems: 'center',
+    zIndex: 3,
+  },
+  fingerElement: {
+    width: 15,
+    height: 22,
+    borderRadius: 12,
+    backgroundColor: 'white',
+    transform: [{ rotate: '-20deg' }],
+  },
+  fingerTip: {
+    position: 'absolute',
+    bottom: -2,
+    right: 3,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'white',
+  },
+  fingerShadow: {
+    position: 'absolute',
+    top: 2,
+    width: 18,
+    height: 25,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    zIndex: -1,
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 20,
+  },
+  errorText: {
+    color: '#ff3b30', // Use hardcoded color value for error
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 10,
+    backgroundColor: '#007aff', // Use hardcoded color for primary
+  },
+  explanationModal: {
+    margin: spacing[5],
+  },
+  explanationText: {
+    marginBottom: spacing[2],
+    fontSize: 14,
+  },
+  mockDataBanner: {
+    position: 'absolute',
+    top: spacing[5],
+    left: spacing[5],
+    right: spacing[5],
+    backgroundColor: 'rgba(244, 67, 54, 0.9)',
+    padding: spacing[3],
+    borderRadius: borderRadius.md,
+    zIndex: 100,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  mockDataText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  // Update profile button styles
+  profileButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 25,
+    left: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    zIndex: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  avatarCircle: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#ffc107',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  avatarText: {
+    color: 'black',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  loadingIcon: {
+    width: 120,
+    height: 120,
+    marginBottom: 20,
+  },
+  loadingIndicatorContainer: {
+    marginBottom: 30,
+  },
+  loadingTip: {
+    fontSize: 16,
+    textAlign: 'center',
+    paddingHorizontal: 30,
+    color: '#007aff', // Use hardcoded color for secondary
+    maxWidth: 320,
+    fontStyle: 'italic',
+  },
+  // Add debug button styles
+  debugButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 25,
+    right: 20,
+    width: 60,
+    height: 30,
+    borderRadius: 15,
+    zIndex: 100, // Increase zIndex to ensure it's above all content
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  debugButtonInner: {
+    width: 60,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#ff5722',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  debugButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  debugToast: {
+    position: 'absolute',
+    top: '40%',
+    left: '10%',
+    right: '10%',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: 10,
+    padding: 16,
+    zIndex: 9999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  debugToastText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  neonRetryButton: {
+    marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    backgroundColor: 'rgba(10, 10, 20, 0.9)', // Very dark blue-black with transparency
+    borderWidth: 2.5, // Thicker border for more intense effect
+    borderColor: NeonColors.dark.primary,
+    shadowColor: NeonColors.dark.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9, // Higher opacity for stronger glow
+    shadowRadius: 12, // Larger radius for more dramatic effect
+    elevation: Platform.OS === 'android' ? 10 : 0,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: `0 0 15px ${NeonColors.dark.primary}, 0 0 8px ${NeonColors.dark.primary}`,
+    } as any : {}),
+  },
+  neonRetryButtonIOS: {
+    // iOS-specific shadow properties for better performance
+    shadowColor: NeonColors.dark.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.85,
+    shadowRadius: 8,
+  },
+  neonRetryText: {
+    color: NeonColors.dark.primary,
+    fontSize: 20, // Larger text
+    fontWeight: 'bold',
+    textShadowColor: NeonColors.dark.primary,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8, // More intense text glow
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  tooltipButton: {
+    marginTop: spacing[2],
+  },
+  tooltipButtonLabel: {
+    fontWeight: '600',
+  },
+});
 
 const FeedScreen: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -108,8 +438,11 @@ const FeedScreen: React.FC = () => {
   // Add ref to track previous userProfile for cold start updates
   const previousUserProfileRef = useRef<typeof userProfile | null>(null);
 
-  // Get a background color for the loading state
+  // Get all theme colors at the top level
   const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const borderColor = useThemeColor({}, 'border');
+  const primaryColor = useThemeColor({}, 'primary');
 
   // State to track viewport height on web for proper sizing
   const [viewportHeight, setViewportHeight] = useState(
@@ -139,6 +472,11 @@ const FeedScreen: React.FC = () => {
 
   // Get app loading context
   const { isAppLoading, setIsAppLoading } = useAppLoading();
+
+  // Add state to track last question answered time
+  const [lastAnswerTime, setLastAnswerTime] = useState<number | null>(null);
+  const [shouldShowTooltip, setShouldShowTooltip] = useState(false);
+  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch username from the database when user changes
   useEffect(() => {
@@ -525,67 +863,65 @@ const FeedScreen: React.FC = () => {
 
   const tikTokAnimation = useRef<Animated.CompositeAnimation | null>(null);
 
+  // Update useEffect for tooltip display logic
   useEffect(() => {
-    if (!hasViewedTooltip && !showTooltip) {
+    // Initial tooltip show logic - first time user only
+    if (!hasViewedTooltip && !showTooltip && !shouldShowTooltip) {
       // Set up timer to show tooltip after 1.5 seconds of inactivity
       const timer = setTimeout(() => {
-        setShowTooltip(true);
-        
-        // Start the TikTok-style animation
-        try {
-          tikTokAnimation.current = createTikTokAnimation();
-          if (tikTokAnimation.current) {
-            tikTokAnimation.current.start();
-          }
-        } catch (error) {
-          console.error('Error starting animation:', error);
-          setIsAnimationError(true);
-        }
-        
-        // Add spring animation for the tooltip
-        animateIn();
+        setShouldShowTooltip(true);
       }, 1500);
 
       return () => {
-        // Clean up timer and animation
+        // Clean up timer
         clearTimeout(timer);
+      };
+    }
+  }, [hasViewedTooltip, showTooltip, shouldShowTooltip]);
+
+  // Effect to actually show the tooltip when shouldShowTooltip becomes true
+  useEffect(() => {
+    if (shouldShowTooltip && !showTooltip) {
+      setShowTooltip(true);
+      
+      // Start the TikTok-style animation
+      try {
+        tikTokAnimation.current = createTikTokAnimation();
         if (tikTokAnimation.current) {
-          tikTokAnimation.current.stop();
-          tikTokAnimation.current = null;
+          tikTokAnimation.current.start();
         }
-      };
-    }
-  }, [hasViewedTooltip, isAnimationError]);
-
-  const hideTooltip = () => {
-    try {
-      // Stop animation and clean up
-      if (tikTokAnimation.current) {
-        tikTokAnimation.current.stop();
-        tikTokAnimation.current = null;
+      } catch (error) {
+        console.error('Error starting animation:', error);
+        setIsAnimationError(true);
       }
-
-      // First set state updates before animation
-      dispatch(markTooltipAsViewed());
       
-      // Create a separate function to handle animation completion
-      const handleAnimationComplete = () => {
-        resetAnimations();
-      };
-      
-      // Set the state directly first
-      setShowTooltip(false);
-      
-      // Then run animation, state is already updated
-      animateOut(handleAnimationComplete);
-    } catch (error) {
-      console.error('Error hiding tooltip:', error);
-      // Fall back to direct state update if animation fails
-      setShowTooltip(false);
-      dispatch(markTooltipAsViewed());
-      resetAnimations();
+      // Add spring animation for the tooltip
+      animateIn();
     }
-  };
+  }, [shouldShowTooltip, showTooltip]);
+
+  // Add effect to handle post-answer tooltip display
+  useEffect(() => {
+    // Clear any existing timeout
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+      tooltipTimeoutRef.current = null;
+    }
+
+    // Only show tooltip if user has already seen it once, they've answered a question,
+    // and they haven't scrolled in the last 15 seconds
+    if (lastAnswerTime && hasViewedTooltip && !isActivelyScrolling && !showTooltip) {
+      tooltipTimeoutRef.current = setTimeout(() => {
+        setShouldShowTooltip(true);
+      }, 15000); // 15 seconds
+    }
+
+    return () => {
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+    };
+  }, [lastAnswerTime, isActivelyScrolling, hasViewedTooltip, showTooltip]);
 
   // When scrolling past a question, mark it as skipped if it wasn't answered and update profile
   const markPreviousAsSkipped = useCallback((prevIndex: number, newIndex: number) => {
@@ -729,6 +1065,12 @@ const FeedScreen: React.FC = () => {
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (event.nativeEvent.contentOffset.y !== 0 && showTooltip) {
       hideTooltip();
+    }
+    
+    // Clear any pending tooltip timeout when user scrolls
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+      tooltipTimeoutRef.current = null;
     }
     
     // Mark as actively scrolling
@@ -923,11 +1265,15 @@ const FeedScreen: React.FC = () => {
   // Add this hook to handle question generation
   const { triggerQuestionGeneration, trackQuestionInteraction } = useQuestionGenerator();
 
-  // Find the function that handles answering questions (might be called handleAnswerQuestion)
-  // Add the question generation trigger at the end of that function
-  
-  // For example:
-  const handleAnswer = useCallback(async (questionId: string, answerIndex: number, isCorrect: boolean) => {
+  // Update handleAnswer to track last answer time
+  const handleAnswer = useCallback(async (
+    questionId: string, 
+    selectedOption: number,
+    selectedAnswer: string,
+    isCorrect: boolean,
+    timestamp: number = Date.now(),
+    duration: number = 0
+  ) => {
     const questionItem = personalizedFeed.find(item => item.id === questionId);
     if (!questionItem) return;
     
@@ -964,7 +1310,7 @@ const FeedScreen: React.FC = () => {
     // Dispatch answer action to mark question as answered
     dispatch(answerQuestion({ 
       questionId, 
-      answerIndex, 
+      answerIndex: selectedOption, 
       isCorrect,
       userId: user?.id // Pass user ID if available
     }));
@@ -1083,6 +1429,9 @@ const FeedScreen: React.FC = () => {
         });
       }
     }, 300); // Reduced timeout for better responsiveness
+
+    // Track when the user last answered a question
+    setLastAnswerTime(Date.now());
   }, [dispatch, personalizedFeed, userProfile, interactionStartTimes, feedData, feedExplanations, user, triggerQuestionGeneration, trackQuestionInteraction]);
 
   // Modify handleNextQuestion to be more controlled and prevent unexpected scrolling
@@ -1167,7 +1516,7 @@ const FeedScreen: React.FC = () => {
         <FeedItem 
           item={item} 
           onAnswer={(answerIndex, isCorrect) => 
-            handleAnswer(item.id, answerIndex, isCorrect)
+            handleAnswer(item.id, answerIndex, item.question, isCorrect)
           }
           showExplanation={() => {
             // Show explanation only when debug panel is visible
@@ -1495,9 +1844,46 @@ const FeedScreen: React.FC = () => {
     );
   }
 
+  // Add the hideTooltip function that was removed
+  const hideTooltip = () => {
+    try {
+      // Stop animation and clean up
+      if (tikTokAnimation.current) {
+        tikTokAnimation.current.stop();
+        tikTokAnimation.current = null;
+      }
+
+      // First set state updates before animation
+      if (!hasViewedTooltip) {
+        dispatch(markTooltipAsViewed());
+      }
+      
+      // Create a separate function to handle animation completion
+      const handleAnimationComplete = () => {
+        resetAnimations();
+      };
+      
+      // Set the state directly first
+      setShowTooltip(false);
+      setShouldShowTooltip(false);
+      
+      // Then run animation, state is already updated
+      animateOut(handleAnimationComplete);
+    } catch (error) {
+      console.error('Error hiding tooltip:', error);
+      // Fall back to direct state update if animation fails
+      setShowTooltip(false);
+      setShouldShowTooltip(false);
+      if (!hasViewedTooltip) {
+        dispatch(markTooltipAsViewed());
+      }
+      resetAnimations();
+    }
+  };
+
   return (
     <View 
-      style={styles.container}
+      style={[styles.container, { backgroundColor }]}
       onTouchStart={handleTouchStart}
     >
       {/* Profile Button with User Avatar */}
@@ -1594,7 +1980,9 @@ const FeedScreen: React.FC = () => {
               <Card.Header title="Question Selection Logic" />
               <Card.Content>
                 {currentExplanation.map((explanation, i) => (
-                  <Text key={i} style={styles.explanationText}>{explanation}</Text>
+                  <Text key={i} style={[styles.explanationText, { color: textColor }]}>
+                    {explanation}
+                  </Text>
                 ))}
               </Card.Content>
               <Card.Footer>
@@ -1630,389 +2018,94 @@ const FeedScreen: React.FC = () => {
       )}
 
       {showTooltip && (
-        <Animated.View
-          style={[
-            styles.tooltip,
-            {
-              opacity,
-              transform: [{ scale }],
-            },
-          ]}
-        >
-          <View style={styles.tooltipArrow} />
-          <Text style={styles.tooltipText}>
-            {Platform.OS === 'web' 
-              ? 'Use arrow keys to navigate' 
-              : 'Swipe up for next question!'}
-          </Text>
-
-          <View style={styles.tiktokAnimationContainer}>
-            <View style={styles.phoneFrame}>
-              <View style={styles.phoneContent}>
-                <Animated.View
-                  style={[
-                    styles.mockScreen,
-                    styles.mockScreen1,
-                    { transform: [{ translateY: mockContent1 }] },
-                  ]}
-                />
-                <Animated.View
-                  style={[
-                    styles.mockScreen,
-                    styles.mockScreen2,
-                    { transform: [{ translateY: mockContent2 }] },
-                  ]}
-                />
-              </View>
-
-              <Animated.View
-                style={[
-                  styles.finger,
-                  {
-                    transform: [
-                      { translateY: fingerPosition },
-                      { translateX: 22 },
-                    ],
-                  },
-                ]}
-              >
-                <View style={styles.fingerElement}>
-                  <View style={styles.fingerTip} />
-                </View>
-                <View style={styles.fingerShadow} />
-              </Animated.View>
-            </View>
-          </View>
-
-          <PaperButton
-            mode="contained"
-            onPress={hideTooltip}
+        <View style={{
+          position: 'absolute',
+          bottom: 80,
+          left: 0,
+          right: 0,
+          width: '100%',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: zIndex.tooltip - 10,
+        }}>
+          <Animated.View
+            style={[
+              styles.tooltip,
+              {
+                opacity,
+                transform: [{ scale }],
+                backgroundColor: backgroundColor,
+                borderColor: borderColor,
+              },
+            ]}
           >
-            Got it
-          </PaperButton>
-        </Animated.View>
+            <View style={[
+              styles.tooltipArrow,
+              { borderTopColor: backgroundColor }
+            ]} />
+            <Text style={[
+              styles.tooltipText,
+              { color: textColor }
+            ]}>
+              {Platform.OS === 'web' 
+                ? 'Use arrow keys to navigate' 
+                : 'Swipe up for next question!'}
+            </Text>
+
+            <View style={styles.tiktokAnimationContainer}>
+              <View style={[
+                styles.phoneFrame,
+                { borderColor: borderColor }
+              ]}>
+                <View style={styles.phoneContent}>
+                  <Animated.View
+                    style={[
+                      styles.mockScreen,
+                      styles.mockScreen1,
+                      { transform: [{ translateY: mockContent1 }] },
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.mockScreen,
+                      styles.mockScreen2,
+                      { transform: [{ translateY: mockContent2 }] },
+                    ]}
+                  />
+                </View>
+
+                <Animated.View
+                  style={[
+                    styles.finger,
+                    {
+                      transform: [
+                        { translateY: fingerPosition },
+                        { translateX: 22 },
+                      ],
+                    },
+                  ]}
+                >
+                  <View style={styles.fingerElement}>
+                    <View style={styles.fingerTip} />
+                  </View>
+                  <View style={styles.fingerShadow} />
+                </Animated.View>
+              </View>
+            </View>
+
+            <PaperButton
+              mode="contained"
+              onPress={hideTooltip}
+              style={[styles.tooltipButton, { backgroundColor: primaryColor }]}
+              labelStyle={[styles.tooltipButtonLabel, { color: '#000000' }]}
+            >
+              Got it
+            </PaperButton>
+          </Animated.View>
+        </View>
       )}
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    position: 'relative',
-    overflow: 'hidden',
-    width: '100%', // Ensure full width
-    height: '100%', // Ensure full height
-  },
-  flatList: {
-    width: '100%', // Full width for web and mobile
-    height: '100%', // Full height
-    flex: 1,
-  },
-  flatListContent: {
-    // No additional padding or spacing that would cause items to overflow
-    flexGrow: 1,
-  },
-  itemContainer: {
-    width: '100%',
-    // Height is dynamically set in renderItem using viewportHeight
-    // This ensures each item takes exactly one screen
-  },
-  tooltip: {
-    position: 'absolute',
-    bottom: 80,
-    right: Platform.OS === 'web' ? '50%' : 20,
-    transform: Platform.OS === 'web' ? [{ translateX: 110 }] : [],
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.xl,
-    padding: spacing[4],
-    width: Platform.OS === 'web' ? 220 : 155,
-    alignItems: 'center',
-    zIndex: 100,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 3px 10px rgba(0, 0, 0, 0.35)'
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.2,
-      shadowRadius: 5,
-      elevation: 6,
-    }),
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tooltipArrow: {
-    position: 'absolute',
-    bottom: -8,
-    width: 0,
-    height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderTopWidth: 8,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: colors.card,
-  },
-  tooltipText: {
-    color: colors.foreground,
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: spacing[2],
-  },
-  tiktokAnimationContainer: {
-    height: 85,
-    width: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing[2],
-  },
-  phoneFrame: {
-    width: 45,
-    height: 80,
-    borderRadius: borderRadius.md,
-    borderWidth: 2,
-    borderColor: colors.border,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-  },
-  phoneContent: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  mockScreen: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    borderRadius: borderRadius.sm,
-  },
-  mockScreen1: {
-    backgroundColor: 'rgba(255, 100, 100, 0.6)',
-  },
-  mockScreen2: {
-    backgroundColor: 'rgba(100, 100, 255, 0.6)',
-  },
-  finger: {
-    position: 'absolute',
-    right: -10,
-    width: 20,
-    height: 30,
-    alignItems: 'center',
-    zIndex: 3,
-  },
-  fingerElement: {
-    width: 15,
-    height: 22,
-    borderRadius: 12,
-    backgroundColor: 'white',
-    transform: [{ rotate: '-20deg' }],
-  },
-  fingerTip: {
-    position: 'absolute',
-    bottom: -2,
-    right: 3,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: 'white',
-  },
-  fingerShadow: {
-    position: 'absolute',
-    top: 2,
-    width: 18,
-    height: 25,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    zIndex: -1,
-  },
-  loadingText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 20,
-    color: colors.foreground,
-  },
-  errorText: {
-    color: colors.destructive,
-    fontSize: 16,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: 10,
-    backgroundColor: colors.primary,
-  },
-  explanationModal: {
-    margin: spacing[5],
-  },
-  explanationText: {
-    color: colors.foreground,
-    marginBottom: spacing[2],
-    fontSize: 14,
-  },
-  mockDataBanner: {
-    position: 'absolute',
-    top: spacing[5],
-    left: spacing[5],
-    right: spacing[5],
-    backgroundColor: 'rgba(244, 67, 54, 0.9)',
-    padding: spacing[3],
-    borderRadius: borderRadius.md,
-    zIndex: 100,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-  },
-  mockDataText: {
-    color: 'white',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  // Update profile button styles
-  profileButton: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 25,
-    left: 20,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    zIndex: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
-  },
-  avatarCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#ffc107',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  avatarText: {
-    color: 'black',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-  },
-  loadingIcon: {
-    width: 120,
-    height: 120,
-    marginBottom: 20,
-  },
-  loadingIndicatorContainer: {
-    marginBottom: 30,
-  },
-  loadingTip: {
-    fontSize: 16,
-    textAlign: 'center',
-    paddingHorizontal: 30,
-    color: colors.secondary,
-    maxWidth: 320,
-    fontStyle: 'italic',
-  },
-  // Add debug button styles
-  debugButton: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 25,
-    right: 20,
-    width: 60,
-    height: 30,
-    borderRadius: 15,
-    zIndex: 100, // Increase zIndex to ensure it's above all content
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
-  },
-  debugButtonInner: {
-    width: 60,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#ff5722',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  debugButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  debugToast: {
-    position: 'absolute',
-    top: '40%',
-    left: '10%',
-    right: '10%',
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    borderRadius: 10,
-    padding: 16,
-    zIndex: 9999,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  debugToastText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  neonRetryButton: {
-    marginTop: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 10,
-    backgroundColor: 'rgba(10, 10, 20, 0.9)', // Very dark blue-black with transparency
-    borderWidth: 2.5, // Thicker border for more intense effect
-    borderColor: NeonColors.dark.primary,
-    shadowColor: NeonColors.dark.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9, // Higher opacity for stronger glow
-    shadowRadius: 12, // Larger radius for more dramatic effect
-    elevation: Platform.OS === 'android' ? 10 : 0,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: `0 0 15px ${NeonColors.dark.primary}, 0 0 8px ${NeonColors.dark.primary}`,
-    } as any : {}),
-  },
-  neonRetryButtonIOS: {
-    // iOS-specific shadow properties for better performance
-    shadowColor: NeonColors.dark.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.85,
-    shadowRadius: 8,
-  },
-  neonRetryText: {
-    color: NeonColors.dark.primary,
-    fontSize: 20, // Larger text
-    fontWeight: 'bold',
-    textShadowColor: NeonColors.dark.primary,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8, // More intense text glow
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
 
 export default FeedScreen;
