@@ -10,6 +10,9 @@ import { Colors } from '@/constants/Colors';
 import { FeatherIcon } from '@/components/FeatherIcon';
 import { WebContainer } from '@/components/WebContainer';
 import { colors, spacing, borderRadius } from '@/src/theme';
+import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Button from './ui/Button';
 
 const LeaderboardTabs = {
   Daily: 'day',
@@ -30,7 +33,7 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
   const { width } = useWindowDimensions();
@@ -39,6 +42,27 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
   // Use theme colors instead of hardcoded values
   const ACCENT_COLOR = colors.accent;
   const ACCENT_FOREGROUND = colors.accentForeground;
+
+  // Add debug log for auth state
+  useEffect(() => {
+    console.log('Leaderboard - Auth state:', { 
+      hasUser: !!user, 
+      isGuest, 
+      activeTab 
+    });
+    
+    // Check AsyncStorage directly for debugging
+    const checkGuestMode = async () => {
+      try {
+        const guestMode = await AsyncStorage.getItem('guestMode');
+        console.log('Leaderboard - Guest mode in AsyncStorage:', guestMode);
+      } catch (e) {
+        console.error('Error checking guest mode in Leaderboard:', e);
+      }
+    };
+    
+    checkGuestMode();
+  }, [user, isGuest, activeTab]);
 
   useEffect(() => {
     loadLeaderboardData();
@@ -126,10 +150,12 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
             // If the user has an avatar image - show it
             <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
           ) : !user ? (
-            // If no user is logged in (app user, not leaderboard item) - show a user icon 
-            <View style={[styles.avatarPlaceholder, isCurrentUser && styles.currentUserAvatar]}>
-              <FeatherIcon name="user" size={36} color="#fff" />
-            </View>
+            // If no user is logged in (app user, not leaderboard item) - show the guest avatar
+            <Image 
+              source={require('../../assets/images/guest-avatar.png')}
+              style={styles.avatar}
+              resizeMode="cover"
+            />
           ) : (
             // If user is logged in but the leaderboard item has no avatar - show initials
             <View style={[styles.avatarPlaceholder, isCurrentUser && styles.currentUserAvatar]}>
@@ -141,7 +167,7 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
         <View style={styles.userInfo}>
           <View style={styles.usernameRow}>
             <ThemedText style={[styles.username, isCurrentUser && styles.currentUserText]}>
-              {item.full_name || item.username || 'Anonymous'} 
+              {item.username || item.full_name || 'Anonymous'} 
               {isCurrentUser && <ThemedText style={styles.youLabel}>(You)</ThemedText>}
             </ThemedText>
             
@@ -217,6 +243,70 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
     );
   };
 
+  // Render a sign-in prompt banner for guest users
+  const renderGuestPrompt = () => {
+    // Always check AsyncStorage directly to be doubly sure
+    const [localIsGuest, setLocalIsGuest] = useState(isGuest);
+    
+    useEffect(() => {
+      const checkLocalGuestMode = async () => {
+        try {
+          const guestMode = await AsyncStorage.getItem('guestMode');
+          const isGuestMode = guestMode === 'true';
+          console.log('Leaderboard banner - Guest mode check:', isGuestMode);
+          setLocalIsGuest(isGuestMode || isGuest);
+        } catch (e) {
+          console.error('Error in local guest mode check:', e);
+        }
+      };
+      
+      checkLocalGuestMode();
+    }, [isGuest]);
+    
+    if (!localIsGuest && !!user) return null;
+    
+    // If we're in guest mode or don't have a user, show the banner
+    return (
+      <View style={[
+        styles.guestPromptContainer,
+        { backgroundColor: isDark ? 'rgba(255, 193, 7, 0.15)' : 'rgba(255, 193, 7, 0.2)' }
+      ]}>
+        <Image 
+          source={require('../../assets/images/guest-avatar.png')}
+          style={{ width: 42, height: 42, borderRadius: 21, marginRight: 12 }}
+          resizeMode="cover"
+        />
+        <View style={{ flex: 1 }}>
+          <ThemedText style={styles.guestPromptTitle}>
+            Want to join the leaderboard?
+          </ThemedText>
+          <ThemedText style={styles.guestPromptText}>
+            Sign in to track your progress and compete with others!
+          </ThemedText>
+        </View>
+        <Button
+          variant="accent"
+          size="sm"
+          leftIcon={<FeatherIcon name="log-in" size={16} color="#000" />}
+          onPress={() => {
+            // Navigate to login page
+            if (Platform.OS === 'web') {
+              window.location.href = '/auth/login?direct=true';
+            } else {
+              // Use Expo Router for iOS/Android navigation
+              router.push({
+                pathname: '/auth/login',
+                params: { direct: 'true' }
+              });
+            }
+          }}
+        >
+          Sign In
+        </Button>
+      </View>
+    );
+  };
+
   const content = (
     <ThemedView 
       style={styles.container}
@@ -247,6 +337,8 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
           </ThemedText>
         </ThemedView>
       )}
+      
+      {renderGuestPrompt()}
       
       {renderLeaderboardContent()}
     </ThemedView>
@@ -446,5 +538,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     opacity: 0.7,
     textAlign: 'center',
+  },
+  guestPromptContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#ffc107',
+  },
+  guestPromptTitle: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  guestPromptText: {
+    fontSize: 14,
+    opacity: 0.8,
   },
 }); 

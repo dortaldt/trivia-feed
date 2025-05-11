@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, TextInput, Text, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');
@@ -11,7 +12,35 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { signUp, signInWithGoogle, signInWithApple, isLoading } = useAuth();
+  const { signUp, isLoading } = useAuth();
+  
+  // Get search params to check if we deliberately navigated here
+  const params = useLocalSearchParams();
+  const isDirectNavigation = params.direct === 'true';
+  
+  // Prevent auto-redirection when directly navigating to this screen
+  useEffect(() => {
+    console.log('📱 SignUp screen mounted, direct navigation:', isDirectNavigation);
+
+    // Track this view to prevent unwanted redirects in _layout.tsx
+    const trackAuthScreenView = async () => {
+      try {
+        await AsyncStorage.setItem('currentlyViewingAuthScreen', 'true');
+        console.log('📱 Marked user as currently viewing auth screen');
+      } catch (e) {
+        console.error('Error setting auth screen marker:', e);
+      }
+    };
+    
+    trackAuthScreenView();
+    
+    // Cleanup function to remove the marker when leaving the screen
+    return () => {
+      AsyncStorage.removeItem('currentlyViewingAuthScreen')
+        .then(() => console.log('📱 Cleared auth screen viewing marker'))
+        .catch(e => console.error('Error clearing auth screen marker:', e));
+    };
+  }, [isDirectNavigation]);
 
   const handleSignUp = async () => {
     if (!email || !password || !confirmPassword) {
@@ -32,16 +61,11 @@ export default function SignUpScreen() {
     await signUp(email, password);
   };
 
-  const handleGoogleSignIn = async () => {
-    await signInWithGoogle();
-  };
-
-  const handleAppleSignIn = async () => {
-    await signInWithApple();
-  };
-
   const navigateToLogin = () => {
-    router.push('/auth/login');
+    router.push({
+      pathname: '/auth/login',
+      params: { direct: 'true' }
+    });
   };
 
   if (isLoading) {
@@ -135,24 +159,6 @@ export default function SignUpScreen() {
           <TouchableOpacity onPress={handleSignUp} style={styles.signUpButton}>
             <Text style={styles.signUpButtonText}>Sign Up</Text>
           </TouchableOpacity>
-
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <View style={styles.socialButtonsContainer}>
-            <TouchableOpacity onPress={handleGoogleSignIn} style={styles.socialButton}>
-              <Ionicons name="logo-google" size={22} color="#DB4437" />
-              <Text style={styles.socialButtonText}>Google</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity onPress={handleAppleSignIn} style={styles.socialButton}>
-              <Ionicons name="logo-apple" size={22} color="#000" />
-              <Text style={styles.socialButtonText}>Apple</Text>
-            </TouchableOpacity>
-          </View>
         </View>
 
         <View style={styles.loginContainer}>
@@ -254,42 +260,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#ddd',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#999',
-    fontSize: 14,
-  },
-  socialButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    flex: 0.48,
-  },
-  socialButtonText: {
-    marginLeft: 10,
-    color: '#333',
-    fontSize: 14,
-    fontWeight: '500',
   },
   loginContainer: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Platform, Animated, Easing } from 'react-native';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { Feather } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
@@ -71,11 +71,12 @@ interface GeneratorEvent {
 
 interface InteractionTrackerProps {
   feedData?: FeedItem[];
+  debugEnabled?: boolean;
 }
 
-export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
-  // Don't render the component in production to avoid infinite loops
-  if (!__DEV__) {
+export function InteractionTracker({ feedData = [], debugEnabled = false }: InteractionTrackerProps) {
+  // Only render the component when debug is enabled
+  if (!debugEnabled) {
     return null;
   }
 
@@ -102,6 +103,18 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
     totalTime: 0,
     avgTime: 0,
   });
+  
+  // Add animation for the toggle button
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  
+  // Set up pulse animation for iOS
+  useEffect(() => {
+    // Animation has been disabled
+    return () => {
+      // Stop animation when component unmounts
+      pulseAnim.stopAnimation();
+    };
+  }, [pulseAnim, visible]);
   
   // Get auth context
   const { user } = useAuth();
@@ -1914,10 +1927,17 @@ export function InteractionTracker({ feedData = [] }: InteractionTrackerProps) {
       
       {!visible && (
         <TouchableOpacity 
-          style={[styles.toggleButton, {backgroundColor: '#FFFFFF'}]} 
+          style={[
+            styles.toggleButton, 
+            Platform.OS === 'ios' ? styles.iosToggleButton : {backgroundColor: '#FFFFFF'},
+          ]} 
           onPress={() => setVisible(true)}
         >
-          <Feather name="activity" size={20} color="#333333" />
+          <Feather 
+            name="activity" 
+            size={24} 
+            color={Platform.OS === 'ios' ? "#FFFFFF" : "#333333"} 
+          />
         </TouchableOpacity>
       )}
     </>
@@ -1982,7 +2002,7 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     position: 'absolute',
-    bottom: 10,
+    bottom: Platform.OS === 'ios' ? 60 : 10, // Adjust position for iOS to avoid the home indicator
     right: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 20,
@@ -2931,5 +2951,20 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginTop: 4,
     textAlign: 'center',
+  },
+  iosToggleButton: {
+    backgroundColor: '#FF9500', // iOS orange color
+    borderRadius: 25,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
 }); 

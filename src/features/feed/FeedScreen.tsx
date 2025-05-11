@@ -18,6 +18,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  GestureResponderEvent,
 } from 'react-native';
 import { 
   Text, 
@@ -64,6 +65,8 @@ import ProfileBottomSheet from '../../components/ProfileBottomSheet';
 import LeaderboardBottomSheet from '../../components/LeaderboardBottomSheet';
 import { runQuestionGeneration } from '../../lib/questionGeneratorService';
 import { useQuestionGenerator } from '../../hooks/useQuestionGenerator';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LoadingBar } from '../../components/ui';
 
 const { width, height } = Dimensions.get('window');
 
@@ -85,8 +88,11 @@ const FeedScreen: React.FC = () => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [currentLeaderboardItemId, setCurrentLeaderboardItemId] = useState<string | null>(null);
   
+  // Add state for debug panel visibility
+  const [debugPanelVisible, setDebugPanelVisible] = useState(false);
+  
   // Get user from auth context
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   
   // Add a new state for the avatar URL
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -124,12 +130,41 @@ const FeedScreen: React.FC = () => {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastScrollPosition = useRef<number>(0);
   
+  // Add state for profile username at component level
+  const [profileUsername, setProfileUsername] = useState<string | null>(null);
+
+  // Fetch username from the database when user changes
+  useEffect(() => {
+    const fetchUsername = async () => {
+      if (user?.id) {
+        try {
+          const { data } = await supabase
+            .from('user_profiles')
+            .select('username')
+            .eq('id', user.id)
+            .single();
+          
+          if (data?.username) {
+            setProfileUsername(data.username);
+          }
+        } catch (error) {
+          console.error('Error fetching username:', error);
+        }
+      }
+    };
+    
+    fetchUsername();
+  }, [user?.id]);
+
   // Get user initials for the profile button
   const getInitials = () => {
-    if (user?.email) {
-      return user.email.substring(0, 2).toUpperCase();
+    // Use the fetched username if available
+    if (profileUsername) {
+      return profileUsername.substring(0, 2).toUpperCase();
     }
-    return '?';
+    
+    // Fallback to default
+    return 'ZT';
   };
 
   // Load user data when component mounts if user is logged in
@@ -162,26 +197,110 @@ const FeedScreen: React.FC = () => {
     }
   }, [user?.id, dispatch, personalizedFeed.length, feedData]); // Include all dependencies
 
+  const [loadingProgress] = useState(new Animated.Value(0));
+  const [loadingTip, setLoadingTip] = useState('');
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  
+  // Array of loading tips
+  const loadingTips = [
+    "Did you know? The average person knows the answer to about 20% of trivia questions on their first attempt!",
+    "The world's first trivia contest was held in 1941 at Columbia University.",
+    "The word 'trivia' comes from Latin, meaning 'three roads' - places where people would meet and share information.",
+    "The longest-running trivia contest in the world has been held annually at the University of Wisconsin since 1969.",
+    "Studies show that regularly testing your knowledge with trivia can help maintain cognitive health as you age."
+  ];
+  
+  // With this enhanced useEffect for better animations
+  useEffect(() => {
+    // Progress animation
+    Animated.timing(loadingProgress, {
+      toValue: 1,
+      duration: 3000,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      useNativeDriver: false,
+    }).start();
+    
+    // Setup pulsing animation
+    const pulseSequence = Animated.sequence([
+      Animated.timing(pulseAnim, {
+        toValue: 1.08,
+        duration: 1000,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(pulseAnim, {
+        toValue: 1,
+        duration: 1000,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }),
+    ]);
+    
+    // Loop the pulse animation
+    Animated.loop(pulseSequence).start();
+    
+    return () => {
+      // Clean up animations when component unmounts
+      pulseAnim.stopAnimation();
+      loadingProgress.stopAnimation();
+    };
+  }, []);
+
   // Fetch trivia questions from Supabase and apply personalization
   useEffect(() => {
     const loadTriviaQuestions = async () => {
       setIsLoading(true);
       setLoadError(null);
       try {
-        const allQuestions = await fetchTriviaQuestions(); // Get all available questions
+        // Check cache first
+        const cachedData = await AsyncStorage.getItem('cachedTriviaQuestions');
+        let allQuestions = [];
+        
+        if (cachedData) {
+          // Use cached data while fetching fresh data
+          console.log('Using cached trivia questions');
+          allQuestions = JSON.parse(cachedData);
+          setFeedData(allQuestions);
+          
+          // Apply personalization with cached data
+          if (allQuestions.length > 0) {
+            const { items, explanations } = getPersonalizedFeed(allQuestions, userProfile);
+            const uniqueItems = items.filter((item, index, self) => 
+              index === self.findIndex(t => t.id === item.id)
+            );
+            
+            const uniqueExplanations: Record<string, string[]> = {};
+            uniqueItems.forEach(item => {
+              if (explanations[item.id]) {
+                uniqueExplanations[item.id] = explanations[item.id];
+              }
+            });
+            
+            dispatch(setPersonalizedFeed({ 
+              items: uniqueItems, 
+              explanations: uniqueExplanations 
+            }));
+          }
+        }
+        
+        // Fetch fresh data
+        const freshQuestions = await fetchTriviaQuestions();
         
         // Check if we got mock data due to a connection error
-        if (allQuestions.length === 3 && allQuestions[0].id === '1' && allQuestions[0].question.includes('closest star to Earth')) {
+        if (freshQuestions.length === 3 && freshQuestions[0].id === '1' && freshQuestions[0].question.includes('closest star to Earth')) {
           console.log('Using mock data due to connection error');
           setUsingMockData(true);
+        } else {
+          // Cache the fresh data
+          await AsyncStorage.setItem('cachedTriviaQuestions', JSON.stringify(freshQuestions));
         }
         
         // Filter out duplicates by ID
-        const uniqueQuestions = allQuestions.filter((item, index, self) => 
+        const uniqueQuestions = freshQuestions.filter((item, index, self) => 
           index === self.findIndex(t => t.id === item.id)
         );
         
-        console.log(`Loaded ${allQuestions.length} questions, ${uniqueQuestions.length} unique questions after filtering duplicates`);
+        console.log(`Loaded ${freshQuestions.length} questions, ${uniqueQuestions.length} unique questions after filtering duplicates`);
         setFeedData(uniqueQuestions); // Store unique questions
         
         // Apply personalization if we have questions
@@ -670,7 +789,7 @@ const FeedScreen: React.FC = () => {
             }, 50);
             
             // Set current explanation for debugging
-            if (__DEV__ && feedExplanations[currentItemId]) {
+            if (debugPanelVisible && feedExplanations[currentItemId]) {
               setCurrentExplanation(feedExplanations[currentItemId]);
             }
           } else {
@@ -722,7 +841,7 @@ const FeedScreen: React.FC = () => {
         }
       }
     },
-    [markPreviousAsSkipped, personalizedFeed, feedExplanations, dispatch, interactionStartTimes, feedData, userProfile]
+    [markPreviousAsSkipped, personalizedFeed, feedExplanations, dispatch, interactionStartTimes, feedData, userProfile, debugPanelVisible]
   );
 
   useEffect(() => {
@@ -1041,7 +1160,8 @@ const FeedScreen: React.FC = () => {
             handleAnswer(item.id, answerIndex, isCorrect)
           }
           showExplanation={() => {
-            if (__DEV__ && feedExplanations[item.id]) {
+            // Show explanation only when debug panel is visible
+            if (debugPanelVisible && feedExplanations[item.id]) {
               setCurrentExplanation(feedExplanations[item.id]);
               setShowExplanationModal(true);
             }
@@ -1148,27 +1268,203 @@ const FeedScreen: React.FC = () => {
     fetchUserProfile();
   }, [user]);
 
+  // Check URL parameters for debug mode
+  useEffect(() => {
+    // Function to check URL parameters
+    const checkUrlParams = () => {
+      if (Platform.OS === 'web') {
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const debugParam = urlParams.get('debug');
+          console.log('URL Params check - debug param:', debugParam);
+          
+          // Only enable if exact parameter match
+          if (debugParam === 'trivia-debug-panel') {
+            console.log('Debug panel enabled via URL parameter');
+            setDebugPanelVisible(true);
+          } else {
+            console.log('Debug panel hidden (no valid URL param)');
+            // Only reset debug panel visibility if not on iOS (where gesture can toggle it)
+            setDebugPanelVisible(false);
+          }
+        } catch (error) {
+          console.error('Error parsing URL parameters:', error);
+        }
+      }
+    };
+    
+    // Check URL parameters immediately
+    checkUrlParams();
+    
+    // Set up listener for URL changes in web platform
+    if (Platform.OS === 'web') {
+      // Use the History API to detect changes
+      const handlePopState = () => {
+        console.log('URL changed, rechecking parameters');
+        checkUrlParams();
+      };
+      
+      // Listen for URL changes
+      window.addEventListener('popstate', handlePopState);
+      window.addEventListener('hashchange', handlePopState);
+      
+      // Also track the current URL to detect any changes
+      let previousUrl = window.location.href;
+      
+      // Set up an interval to check for URL changes (handles programmatic changes)
+      const intervalId = setInterval(() => {
+        const currentUrl = window.location.href;
+        if (previousUrl !== currentUrl) {
+          previousUrl = currentUrl;
+          console.log('URL changed programmatically, rechecking parameters');
+          checkUrlParams();
+        }
+      }, 500); // Check every 500ms
+      
+      // Clean up listeners when component unmounts
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        window.removeEventListener('hashchange', handlePopState);
+        clearInterval(intervalId);
+      };
+    }
+  }, []);
+  
+  // Add state for debug toast visibility
+  const [showDebugToast, setShowDebugToast] = useState(false);
+  const debugToastOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Handle 3-finger tap for iOS
+  const handleTouchStart = useCallback((event: GestureResponderEvent) => {
+    // Check if it's a 3-finger tap on iOS
+    if (Platform.OS === 'ios' && 
+        event.nativeEvent.touches && 
+        event.nativeEvent.touches.length === 3) {
+      console.log('3-finger tap detected on iOS, toggling debug panel');
+      
+      // Toggle debug panel
+      setDebugPanelVisible(prev => !prev);
+      
+      // Show visual feedback toast
+      setShowDebugToast(true);
+      Animated.sequence([
+        Animated.timing(debugToastOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(1500),
+        Animated.timing(debugToastOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowDebugToast(false);
+      });
+    }
+  }, [debugPanelVisible]);
+
+  // Function to toggle debug mode via URL parameter on web
+  const toggleDebugModeViaUrl = useCallback(() => {
+    if (Platform.OS === 'web') {
+      const currentUrl = new URL(window.location.href);
+      const params = new URLSearchParams(currentUrl.search);
+      
+      if (params.has('debug') && params.get('debug') === 'trivia-debug-panel') {
+        // Remove debug parameter if it exists
+        params.delete('debug');
+        console.log('Removing debug parameter from URL');
+      } else {
+        // Add debug parameter
+        params.set('debug', 'trivia-debug-panel');
+        console.log('Adding debug parameter to URL');
+      }
+      
+      // Update URL without reloading the page
+      currentUrl.search = params.toString();
+      window.history.pushState({}, '', currentUrl.toString());
+      
+      // Manually trigger a check of URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const debugParam = urlParams.get('debug');
+      
+      if (debugParam === 'trivia-debug-panel') {
+        setDebugPanelVisible(true);
+      } else {
+        setDebugPanelVisible(false);
+      }
+      
+      // Show visual feedback
+      setShowDebugToast(true);
+      Animated.sequence([
+        Animated.timing(debugToastOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(1500),
+        Animated.timing(debugToastOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowDebugToast(false);
+      });
+    }
+  }, [debugToastOpacity]);
+
+  // Show debug instructions on web after component mounts
+  useEffect(() => {
+    if (Platform.OS === 'web' && __DEV__) {
+      // Wait a moment before showing the tip
+      const timerId = setTimeout(() => {
+        console.log('%cTIP: Use ?debug=trivia-debug-panel in the URL to enable debug mode', 'color: #4CAF50; font-size: 16px; font-weight: bold;');
+        console.log('%cOr use Alt+D keyboard shortcut to toggle debug mode', 'color: #2196F3; font-size: 14px;');
+      }, 2000);
+      
+      return () => clearTimeout(timerId);
+    }
+  }, []);
+
+  // Add keyboard shortcut for toggling debug mode on web
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const handleKeyDown = (event: KeyboardEvent) => {
+        // Alt+D shortcut to toggle debug mode
+        if (event.altKey && event.key === 'd') {
+          event.preventDefault();
+          toggleDebugModeViaUrl();
+        }
+      };
+      
+      window.addEventListener('keydown', handleKeyDown);
+      
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [toggleDebugModeViaUrl]);
+
   // Loading state
   if (isLoading) {
     return (
       <Surface style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading trivia questions...</Text>
+        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+          <Image 
+            source={require('../../../assets/images/app-icon.png')} 
+            style={styles.loadingIcon}
+            resizeMode="contain"
+          />
+        </Animated.View>
         
-        {/* Add debug button for analyzing correct answers */}
-        {__DEV__ && (
-          <PaperButton 
-            mode="contained"
-            style={styles.retryButton}
-            onPress={() => {
-              analyzeCorrectAnswers().then(() => {
-                console.log('Analysis complete. Check console logs for details.');
-              });
-            }}
-          >
-            Analyze Correct Answers
-          </PaperButton>
-        )}
+        <LoadingBar 
+          duration={3000}
+          height={10}
+          style={{ width: '70%', marginTop: 30 }}
+          color={colors.accent}
+        />
       </Surface>
     );
   }
@@ -1193,36 +1489,33 @@ const FeedScreen: React.FC = () => {
         >
           Retry
         </PaperButton>
-        
-        {/* Add debug button for analyzing correct answers */}
-        {__DEV__ && (
-          <PaperButton 
-            mode="contained"
-            style={[styles.retryButton, { backgroundColor: colors.secondary }]}
-            onPress={() => {
-              analyzeCorrectAnswers().then(() => {
-                console.log('Analysis complete. Check console logs for details.');
-              });
-            }}
-          >
-            Analyze Correct Answers
-          </PaperButton>
-        )}
       </Surface>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Profile Button with User Avatar (only appearing once on the feed level) */}
+    <View 
+      style={styles.container}
+      onTouchStart={handleTouchStart}
+    >
+      {/* Profile Button with User Avatar */}
       <TouchableOpacity 
         style={styles.profileButton} 
         onPress={toggleProfile}
       >
         <View style={styles.avatarCircle}>
-          {avatarUrl ? (
+          {isGuest ? (
+            // If in guest mode, use the guest avatar image
+            <Image 
+              source={require('../../../assets/images/guest-avatar.png')} 
+              style={styles.avatar}
+              resizeMode="cover"
+            />
+          ) : avatarUrl ? (
+            // If user has an avatar, use it
             <Image source={{ uri: avatarUrl }} style={styles.avatar} />
           ) : (
+            // Otherwise show initials
             <ThemedText style={styles.avatarText}>{getInitials()}</ThemedText>
           )}
         </View>
@@ -1235,6 +1528,15 @@ const FeedScreen: React.FC = () => {
             Using sample questions due to network connectivity issues. Please check your connection.
           </Text>
         </Surface>
+      )}
+      
+      {/* Debug toast notification */}
+      {showDebugToast && (
+        <Animated.View style={[styles.debugToast, { opacity: debugToastOpacity }]}>
+          <ThemedText style={styles.debugToastText}>
+            Debug Mode: {debugPanelVisible ? 'ON' : 'OFF'}
+          </ThemedText>
+        </Animated.View>
       )}
       
       <FlatList
@@ -1269,6 +1571,7 @@ const FeedScreen: React.FC = () => {
       {/* InteractionTracker Component */}
       <InteractionTracker 
         feedData={personalizedFeed.length > 0 ? personalizedFeed : feedData} 
+        debugEnabled={debugPanelVisible}
       />
 
       {/* Profile Bottom Sheet */}
@@ -1277,8 +1580,8 @@ const FeedScreen: React.FC = () => {
       {/* Leaderboard Bottom Sheet */}
       <LeaderboardBottomSheet isVisible={showLeaderboard} onClose={toggleLeaderboard} />
 
-      {/* Debugging Modal for Personalization Explanations (DEV only) */}
-      {__DEV__ && showExplanationModal && (
+      {/* Debugging Modal for Personalization Explanations - Only visible when debug panel is enabled */}
+      {debugPanelVisible && showExplanationModal && (
         <Portal>
           <Modal 
             visible={showExplanationModal} 
@@ -1303,6 +1606,25 @@ const FeedScreen: React.FC = () => {
             </Card>
           </Modal>
         </Portal>
+      )}
+
+      {/* Debug Panel Button - Only visible when debug panel is explicitly enabled */}
+      {debugPanelVisible && (
+        <TouchableOpacity 
+          style={styles.debugButton}
+          onPress={() => {
+            console.log('Debug button pressed');
+            if (currentIndex < personalizedFeed.length) {
+              const currentItemId = personalizedFeed[currentIndex].id;
+              setCurrentExplanation(feedExplanations[currentItemId] || ['No explanation available for this question']);
+              setShowExplanationModal(true);
+            }
+          }}
+        >
+          <View style={styles.debugButtonInner}>
+            <ThemedText style={styles.debugButtonText}>DEBUG</ThemedText>
+          </View>
+        </TouchableOpacity>
       )}
 
       {showTooltip && (
@@ -1507,19 +1829,20 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   loadingText: {
-    marginTop: spacing[4],
-    fontSize: 16,
-    color: colors.mutedForeground,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 20,
+    color: colors.foreground,
   },
   errorText: {
-    fontSize: 16,
     color: colors.destructive,
+    fontSize: 16,
+    marginBottom: 20,
     textAlign: 'center',
-    marginHorizontal: spacing[8],
-    marginBottom: spacing[4],
   },
   retryButton: {
-    marginTop: spacing[4],
+    marginTop: 10,
+    backgroundColor: colors.primary,
   },
   explanationModal: {
     margin: spacing[5],
@@ -1554,9 +1877,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Platform.OS === 'ios' ? 50 : 25,
     left: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     zIndex: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1567,9 +1890,9 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   avatarCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#ffc107',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1578,13 +1901,78 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: 'black',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  loadingIcon: {
+    width: 120,
+    height: 120,
+    marginBottom: 20,
+  },
+  loadingIndicatorContainer: {
+    marginBottom: 30,
+  },
+  loadingTip: {
+    fontSize: 16,
+    textAlign: 'center',
+    paddingHorizontal: 30,
+    color: colors.secondary,
+    maxWidth: 320,
+    fontStyle: 'italic',
+  },
+  // Add debug button styles
+  debugButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 25,
+    right: 20,
+    width: 60,
+    height: 30,
+    borderRadius: 15,
+    zIndex: 100, // Increase zIndex to ensure it's above all content
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  debugButtonInner: {
+    width: 60,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#ff5722',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  debugButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  debugToast: {
+    position: 'absolute',
+    top: '40%',
+    left: '10%',
+    right: '10%',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: 10,
+    padding: 16,
+    zIndex: 9999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  debugToastText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
