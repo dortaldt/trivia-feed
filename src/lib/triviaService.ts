@@ -12,6 +12,7 @@ export interface TriviaQuestion {
   difficulty?: string;
   topic?: string;
   subtopic?: string;
+  branch?: string;
   category?: string;
   image_url?: string;
   learning_capsule?: string;
@@ -35,6 +36,21 @@ export interface FeedItem {
   backgroundColor: string;
   learningCapsule: string;
   tags?: string[];
+  subtopic?: string;
+  branch?: string;
+}
+
+// Add a new interface to track question generation events
+export interface GeneratorEvent {
+  timestamp: number;
+  userId: string;
+  primaryTopics: string[];
+  adjacentTopics: string[];
+  questionsGenerated: number;
+  questionsSaved: number;
+  success: boolean;
+  error?: string;
+  status?: string; // Add status field for 'starting', etc.
 }
 
 // Mock data to use if Supabase fails
@@ -369,6 +385,13 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
         // Get category/topic
         const category = question.topic || question.category || 'General';
         
+        // Get subtopic and branch (if available)
+        const subtopic = question.subtopic || undefined;
+        const branch = question.branch || undefined;
+        
+        // Get tags (if available)
+        const tags = question.tags || [];
+        
         // Get difficulty
         const difficulty = question.difficulty || 'Medium';
         
@@ -387,7 +410,10 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
           likes: Math.floor(Math.random() * 2000),  // Placeholder values
           views: Math.floor(Math.random() * 10000), // Placeholder values
           backgroundColor,
-          learningCapsule
+          learningCapsule,
+          subtopic,
+          branch,
+          tags
         };
       });
     } catch (error) {

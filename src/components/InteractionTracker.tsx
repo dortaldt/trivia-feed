@@ -56,6 +56,19 @@ interface DbOperation {
   error?: string;
 }
 
+// Add a new interface to track question generation events
+interface GeneratorEvent {
+  timestamp: number;
+  userId: string;
+  primaryTopics: string[];
+  adjacentTopics: string[];
+  questionsGenerated: number;
+  questionsSaved: number;
+  success: boolean;
+  error?: string;
+  status?: string; // Add status field for 'starting', etc.
+}
+
 interface InteractionTrackerProps {
   feedData?: FeedItem[];
   debugEnabled?: boolean;
@@ -73,7 +86,9 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
   const [feedChanges, setFeedChanges] = useState<FeedChange[]>([]);
   const [dbOperations, setDbOperations] = useState<DbOperation[]>([]);
   const [weightChanges, setWeightChanges] = useState<WeightChange[]>([]);
-  const [activeTab, setActiveTab] = useState<'interactions' | 'feed' | 'feedList' | 'dbLog' | 'weights'>('interactions');
+  // Add state for generator events
+  const [generatorEvents, setGeneratorEvents] = useState<GeneratorEvent[]>([]);
+  const [activeTab, setActiveTab] = useState<'interactions' | 'feed' | 'feedList' | 'dbLog' | 'weights' | 'generator'>('interactions');
   const [expandedExplanations, setExpandedExplanations] = useState<{[id: string]: boolean}>({});
   const [expandedData, setExpandedData] = useState<string | null>(null);
   const [lastWeightUpdateTime, setLastWeightUpdateTime] = useState<number>(0);
@@ -1685,6 +1700,155 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
     return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}.${date.getMilliseconds()}`;
   };
   
+  // Listen for question generation events
+  useEffect(() => {
+    // Create a function to handle generator events
+    const handleGeneratorEvent = (event: GeneratorEvent) => {
+      setGeneratorEvents(prev => [event, ...prev]);
+    };
+
+    // Subscribe to generator events
+    dbEventEmitter.addListener('generatorEvent', handleGeneratorEvent);
+
+    // Clean up
+    return () => {
+      dbEventEmitter.removeListener('generatorEvent', handleGeneratorEvent);
+    };
+  }, []);
+  
+  // Add a new function to render the generator tab
+  const renderGeneratorTab = () => {
+    // Filter out events with 'checking' status for a cleaner UI display
+    const filteredEvents = generatorEvents.filter(event => event.status !== 'checking')
+      // Sort by timestamp descending (newest first)
+      .sort((a, b) => b.timestamp - a.timestamp);
+    
+    // Helper function to extract and format the generation reason from status
+    const extractGenerationReason = (event: GeneratorEvent): string | null => {
+      if (!event.status) return null;
+      
+      const statusParts = event.status.split(' - ');
+      if (statusParts.length < 2) return null;
+      
+      return statusParts[1]; // The part after " - " is the reason
+    };
+    
+    // Helper to get event type from status 
+    const getEventStage = (event: GeneratorEvent): string => {
+      if (!event.status) return event.success ? 'Completed' : 'Failed';
+      
+      if (event.status.startsWith('starting')) return 'Started';
+      if (event.status.startsWith('completed')) return 'Completed';
+      return event.success ? 'Completed' : 'Failed';
+    };
+    
+    return (
+      <ScrollView style={styles.scrollView}>
+        <ThemedView style={{ padding: 10 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+            <ThemedText style={{ fontWeight: 'bold', fontSize: 16, color: '#333333' }}>
+              Question Generation Events
+            </ThemedText>
+            <ThemedText style={{ fontSize: 12, color: '#666666' }}>
+              {filteredEvents.length} events
+            </ThemedText>
+          </View>
+
+          {filteredEvents.length === 0 ? (
+            <ThemedText style={{ color: '#666666', fontSize: 14, fontStyle: 'italic', textAlign: 'center', marginTop: 20 }}>
+              No question generation events recorded yet
+            </ThemedText>
+          ) : (
+            filteredEvents.map((event, index) => (
+              <View key={index} style={{
+                padding: 12,
+                marginBottom: 10,
+                borderRadius: 8,
+                backgroundColor: 'rgba(240, 240, 240, 0.5)',
+                borderWidth: 1,
+                borderColor: event.success ? '#4CAF50' : 
+                  event.status?.startsWith('starting') ? '#2196F3' : '#F44336',
+                borderLeftWidth: 3,
+              }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <ThemedText style={{ 
+                    fontWeight: 'bold', 
+                    fontSize: 14, 
+                    color: event.success ? '#4CAF50' : 
+                      event.status?.startsWith('starting') ? '#2196F3' : '#F44336'
+                  }}>
+                    {getEventStage(event)}
+                    {event.success && event.questionsSaved > 0 && `: ${event.questionsSaved} questions`}
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 12, color: '#666666' }}>
+                    {formatTimestamp(event.timestamp)}
+                  </ThemedText>
+                </View>
+                
+                {/* Add reason info if available */}
+                {extractGenerationReason(event) && (
+                  <View style={{ marginBottom: 8, backgroundColor: 'rgba(25, 118, 210, 0.1)', padding: 8, borderRadius: 4 }}>
+                    <ThemedText style={{ fontSize: 13, color: '#1976D2', fontWeight: '500' }}>
+                      Reason: {extractGenerationReason(event)}
+                    </ThemedText>
+                  </View>
+                )}
+
+                {(event.primaryTopics.length > 0 || event.adjacentTopics.length > 0) && (
+                  <View style={{ marginBottom: 8 }}>
+                    {event.primaryTopics.length > 0 && (
+                      <ThemedText style={{ fontSize: 13, color: '#333333', marginBottom: 4 }}>
+                        <ThemedText style={{ fontWeight: 'bold' }}>Topics:</ThemedText>{' '}
+                        {event.primaryTopics.join(', ')}
+                      </ThemedText>
+                    )}
+                    
+                    {event.adjacentTopics.length > 0 && (
+                      <ThemedText style={{ fontSize: 13, color: '#333333' }}>
+                        <ThemedText style={{ fontWeight: 'bold' }}>Adjacent:</ThemedText>{' '}
+                        {event.adjacentTopics.join(', ')}
+                      </ThemedText>
+                    )}
+                  </View>
+                )}
+
+                {/* Only show counts if they're more than 0 */}
+                {(event.questionsGenerated > 0 || event.questionsSaved > 0) && (
+                  <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+                    {event.questionsGenerated > 0 && (
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={{ fontSize: 13, color: '#333333' }}>
+                          <ThemedText style={{ fontWeight: 'bold' }}>Generated:</ThemedText>{' '}
+                          {event.questionsGenerated}
+                        </ThemedText>
+                      </View>
+                    )}
+                    {event.questionsSaved > 0 && (
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={{ fontSize: 13, color: '#333333' }}>
+                          <ThemedText style={{ fontWeight: 'bold' }}>Saved:</ThemedText>{' '}
+                          {event.questionsSaved}
+                        </ThemedText>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {event.error && (
+                  <View style={{ marginTop: 5, padding: 8, backgroundColor: 'rgba(244, 67, 54, 0.1)', borderRadius: 4 }}>
+                    <ThemedText style={{ fontSize: 12, color: '#F44336' }}>
+                      {event.error}
+                    </ThemedText>
+                  </View>
+                )}
+              </View>
+            ))
+          )}
+        </ThemedView>
+      </ScrollView>
+    );
+  };
+  
   // Return a modified rendering for a light mode UI
   return (
     <>
@@ -1742,12 +1906,21 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
                 Weights
               </ThemedText>
             </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'generator' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
+              onPress={() => setActiveTab('generator')}
+            >
+              <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'generator' && {color: '#3498db'}]}>
+                Generator
+              </ThemedText>
+            </TouchableOpacity>
           </View>
           
           {activeTab === 'interactions' ? renderInteractionsTab() : 
            activeTab === 'feed' ? renderFeedStatusTab() : 
            activeTab === 'feedList' ? renderFeedListTab() : 
            activeTab === 'dbLog' ? renderDbLogTab() :
+           activeTab === 'generator' ? renderGeneratorTab() :
            renderWeightsTab()}
         </ThemedView>
       )}

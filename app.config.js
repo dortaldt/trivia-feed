@@ -41,6 +41,15 @@ if (INVALID_URLS.includes(finalUrl)) {
 // Log which URL we're going to use
 console.log("Building app with Supabase URL:", finalUrl);
 
+// Check for OpenAI API key
+const openaiApiKey = process.env.OPENAI_API_KEY || process.env.EXPO_PUBLIC_OPENAI_API_KEY || "";
+if (!openaiApiKey) {
+  console.warn("WARNING: No OpenAI API key found. Question generation will not work.");
+  console.warn("Add OPENAI_API_KEY to your .env file to enable this feature.");
+} else {
+  console.log("OpenAI API key configured. Question generation feature enabled.");
+}
+
 module.exports = {
   name: "Zest",
   slug: "trivia-feed",
@@ -53,6 +62,9 @@ module.exports = {
     supabaseAnonKey: process.env.SUPABASE_KEY ||
                     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
                     WORKING_SUPABASE_KEY,
+    
+    // Add OpenAI API key to expo config extras
+    openaiApiKey: openaiApiKey,
     
     eas: {
       projectId: "dab32358-550f-4ac2-861e-ccda6a8cef14"

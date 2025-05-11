@@ -63,6 +63,8 @@ import { supabase } from '../../lib/supabaseClient';
 import { countries } from '../../data/countries';
 import ProfileBottomSheet from '../../components/ProfileBottomSheet';
 import LeaderboardBottomSheet from '../../components/LeaderboardBottomSheet';
+import { runQuestionGeneration } from '../../lib/questionGeneratorService';
+import { useQuestionGenerator } from '../../hooks/useQuestionGenerator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LoadingBar } from '../../components/ui';
 import NeonLoadingScreen from '@/src/components/NeonLoadingScreen';
@@ -930,12 +932,18 @@ const FeedScreen: React.FC = () => {
     previousIndex.current = currentIndex;
   }, [currentIndex, handleFastScroll]);
 
-  // Add function to handle answering questions
-  const handleAnswerQuestion = useCallback((questionId: string, answerIndex: number, isCorrect: boolean) => {
+  // Add this hook to handle question generation
+  const { triggerQuestionGeneration, trackQuestionInteraction } = useQuestionGenerator();
+
+  // Find the function that handles answering questions (might be called handleAnswerQuestion)
+  // Add the question generation trigger at the end of that function
+  
+  // For example:
+  const handleAnswer = useCallback(async (questionId: string, answerIndex: number, isCorrect: boolean) => {
     const questionItem = personalizedFeed.find(item => item.id === questionId);
     if (!questionItem) return;
     
-    // Calculate time spent
+    // Get interaction start time if it exists
     const startTime = interactionStartTimes[questionId];
     let timeSpent = 0;
     
@@ -966,9 +974,12 @@ const FeedScreen: React.FC = () => {
     const currentFeed = [...personalizedFeed];
     
     // Dispatch answer action to mark question as answered
-    // IMPORTANT: Do this AFTER we've calculated the updated profile but BEFORE we update it in Redux
-    // This ensures the Redux middleware has the correct sequence of actions
-    dispatch(answerQuestion({ questionId, answerIndex, isCorrect, userId }));
+    dispatch(answerQuestion({ 
+      questionId, 
+      answerIndex, 
+      isCorrect,
+      userId: user?.id // Pass user ID if available
+    }));
     
     // Save updated profile to Redux
     // Let the Redux action handle the syncing with Supabase
@@ -1039,7 +1050,52 @@ const FeedScreen: React.FC = () => {
       'Tags:',
       questionItem.tags || 'None'
     );
-  }, [dispatch, personalizedFeed, userProfile, interactionStartTimes, feedData, feedExplanations, user]);
+
+    // Track this question interaction in client-side storage for better topic generation
+    if (user?.id) {
+      // Debug: log the full question item to see what properties are available
+      console.log('\n\n====================== ANSWER TRACKING LOGS ======================');
+      console.log('[FEED] Question properties available:');
+      Object.keys(questionItem).forEach(key => {
+        console.log(`  - ${key}: ${JSON.stringify((questionItem as any)[key])}`);
+      });
+      
+      // Track client-side interaction data for personalized topic generation
+      trackQuestionInteraction(
+        user.id, 
+        questionId, 
+        questionItem.category || 'Unknown',
+        // Handle optional properties safely
+        (questionItem as any).subtopic || undefined,
+        (questionItem as any).branch || undefined,
+        questionItem.tags || [],
+        questionItem.question // Pass the question text
+      );
+      
+      // Log the client-side data being tracked
+      console.log('[FEED] Tracked client-side interaction data:', {
+        questionId,
+        topic: questionItem.category || 'Unknown',
+        subtopic: (questionItem as any).subtopic || undefined,
+        branch: (questionItem as any).branch || undefined,
+        tags: questionItem.tags || [],
+        questionText: questionItem.question
+      });
+      console.log('====================== END ANSWER TRACKING LOGS ======================\n\n');
+    }
+
+    // Use a short timeout to prevent multiple rapid calls
+    console.log('[FEED] Attempting to trigger question generation for user:', user?.id);
+    // Only call once, with a slight delay to ensure Redux state is updated
+    setTimeout(() => {
+      // This will now use our client-side counter to determine if generation is needed
+      if (user?.id) {
+        triggerQuestionGeneration(user?.id).catch(error => {
+          console.error('Error triggering question generation:', error);
+        });
+      }
+    }, 300); // Reduced timeout for better responsiveness
+  }, [dispatch, personalizedFeed, userProfile, interactionStartTimes, feedData, feedExplanations, user, triggerQuestionGeneration, trackQuestionInteraction]);
 
   // Modify handleNextQuestion to be more controlled and prevent unexpected scrolling
   const handleNextQuestion = useCallback(() => {
@@ -1119,11 +1175,11 @@ const FeedScreen: React.FC = () => {
       questions[item.id] ? `(Question status: ${questions[item.id].status})` : '(No status yet)');
     
     return (
-      <View style={[styles.feedItemContainer, { height: viewportHeight }]}>
+      <View style={[styles.itemContainer, { width, height: viewportHeight }]}>
         <FeedItem 
           item={item} 
           onAnswer={(answerIndex, isCorrect) => 
-            handleAnswerQuestion(item.id, answerIndex, isCorrect)
+            handleAnswer(item.id, answerIndex, isCorrect)
           }
           showExplanation={() => {
             // Show explanation only when debug panel is visible
@@ -1723,7 +1779,7 @@ const styles = StyleSheet.create({
     // No additional padding or spacing that would cause items to overflow
     flexGrow: 1,
   },
-  feedItemContainer: {
+  itemContainer: {
     width: '100%',
     // Height is dynamically set in renderItem using viewportHeight
     // This ensures each item takes exactly one screen
