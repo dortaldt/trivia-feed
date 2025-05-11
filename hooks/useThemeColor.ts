@@ -1,18 +1,29 @@
 /**
- * Theme color hook that supports both system theme (light/dark) and custom themes (default/neon)
+ * Theme color hook that supports multi-theme system
  */
 
-import { Colors } from '@/constants/Colors';
-import { NeonColors } from '@/constants/NeonColors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { ColorPalette } from '@/src/design/themes';
 
+type ColorOverrides = {
+  light?: string;
+  dark?: string;
+};
+
+/**
+ * Hook to get a theme color with support for overrides
+ * 
+ * @param props Optional overrides for light and dark mode
+ * @param colorName Color key to use from the current theme
+ * @returns The resolved color value
+ */
 export function useThemeColor(
-  props: { light?: string; dark?: string },
-  colorName: keyof typeof Colors.light & keyof typeof Colors.dark
-) {
+  props: ColorOverrides = {},
+  colorName: keyof ColorPalette
+): string {
   const systemColorScheme = useColorScheme() ?? 'light';
-  const { theme, colorScheme } = useTheme();
+  const { colorScheme, themeDefinition } = useTheme();
   
   // First check if props override exists for current color scheme
   const colorFromProps = props[colorScheme];
@@ -21,9 +32,6 @@ export function useThemeColor(
   }
   
   // Then get color from appropriate theme
-  if (theme === 'neon') {
-    return NeonColors[colorScheme][colorName];
-  } else {
-    return Colors[colorScheme][colorName];
-  }
+  const colors = themeDefinition.colors[colorScheme];
+  return colors[colorName] || '';
 }
