@@ -49,6 +49,7 @@ const ProfileView: React.FC = () => {
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
   const [localIsGuest, setLocalIsGuest] = useState(false);
+  const [formChanged, setFormChanged] = useState(false);
 
   // Add debug log for current auth state
   useEffect(() => {
@@ -74,6 +75,19 @@ const ProfileView: React.FC = () => {
   useEffect(() => {
     fetchUserProfile();
   }, [user]);
+
+  useEffect(() => {
+    // Check if form values have changed from original data
+    if (profileData) {
+      const hasChanged = 
+        username !== (profileData.username || '') ||
+        fullName !== (profileData.full_name || '') ||
+        avatarUrl !== (profileData.avatar_url || '') ||
+        country !== (profileData.country || '');
+      
+      setFormChanged(hasChanged);
+    }
+  }, [username, fullName, avatarUrl, country, profileData]);
 
   const fetchUserProfile = async () => {
     if (!user) return;
@@ -570,6 +584,11 @@ const ProfileView: React.FC = () => {
     }
   };
 
+  // Modify the button size based on platform for iOS
+  const getButtonSize = (): 'sm' | 'md' | 'lg' => {
+    return Platform.OS === 'ios' ? 'lg' : 'md';
+  };
+
   const profileStyles = StyleSheet.create({
     container: {
       flex: 1,
@@ -914,6 +933,7 @@ const ProfileView: React.FC = () => {
           
           <Button
             variant="accent"
+            size={getButtonSize()}
             fullWidth
             leftIcon={<FeatherIcon name="log-in" size={18} color="#000" style={{ marginRight: 8 }} />}
             onPress={() => {
@@ -990,6 +1010,7 @@ const ProfileView: React.FC = () => {
             
             <Button
               variant="accent"
+              size={getButtonSize()}
               fullWidth
               leftIcon={<FeatherIcon name="log-in" size={18} color="#000" style={{ marginRight: 8 }} />}
               onPress={() => {
@@ -1108,7 +1129,7 @@ const ProfileView: React.FC = () => {
           {/* Edit Profile button */}
           <Button
             variant="primary"
-            size="md"
+            size={getButtonSize()}
             fullWidth
             leftIcon={<FeatherIcon name="edit-2" size={18} color="#000" />}
             onPress={() => setIsEditing(true)}
@@ -1129,7 +1150,7 @@ const ProfileView: React.FC = () => {
             {/* Sign Out button - Using proper Button component for web and native */}
             <Button 
               variant="destructive"
-              size="md"
+              size={getButtonSize()}
               fullWidth
               leftIcon={
                 <FeatherIcon 
@@ -1180,12 +1201,18 @@ const ProfileView: React.FC = () => {
                 Upload a profile picture to personalize your account
               </ThemedText>
             </View>
-            <View style={profileStyles.avatarButtonsContainer}>
+            <View style={[
+              profileStyles.avatarButtonsContainer, 
+              Platform.OS !== 'web' && { flexDirection: 'column' }
+            ]}>
               <Button
-                variant="accent"
-                size="sm"
-                style={{ flex: 1, marginRight: avatarUrl ? 5 : 0 }}
-                leftIcon={<FeatherIcon name="upload" size={16} color="#000" />}
+                variant="primary"
+                size={getButtonSize()}
+                style={[
+                  { marginBottom: Platform.OS !== 'web' ? 10 : 0 },
+                  Platform.OS === 'web' && avatarUrl ? { marginRight: 10 } : null
+                ]}
+                leftIcon={<FeatherIcon name="upload" size={16} color="#fff" />}
                 onPress={pickImage}
                 disabled={uploadingImage}
               >
@@ -1195,8 +1222,8 @@ const ProfileView: React.FC = () => {
               {avatarUrl ? (
                 <Button
                   variant="destructive"
-                  size="sm"
-                  style={{ flex: 1, marginLeft: 5 }}
+                  size={getButtonSize()}
+                  style={Platform.OS === 'web' ? { marginLeft: 5 } : null}
                   leftIcon={<FeatherIcon name="trash-2" size={16} color="#fff" />}
                   onPress={removeAvatar}
                   disabled={uploadingImage}
@@ -1239,11 +1266,16 @@ const ProfileView: React.FC = () => {
             )}
           </View>
           
-          <View style={profileStyles.buttonRow}>
+          <View style={[
+            profileStyles.buttonRow,
+            Platform.OS !== 'web' && { flexDirection: 'column' }
+          ]}>
             <Button 
-              variant="outline"
-              size="md"
-              style={{ flex: 1, marginRight: 5 }}
+              variant={!formChanged ? "primary" : "outline"}
+              size={getButtonSize()}
+              style={[
+                Platform.OS !== 'web' ? { marginBottom: 10 } : { flex: 1, marginRight: 5 }
+              ]}
               onPress={() => {
                 setIsEditing(false);
                 // Reset to original values
@@ -1259,10 +1291,11 @@ const ProfileView: React.FC = () => {
             </Button>
             
             <Button 
-              variant="accent"
-              size="md"
-              style={{ flex: 1, marginLeft: 5 }}
+              variant={formChanged ? "primary" : "secondary"}
+              size={getButtonSize()}
+              style={Platform.OS !== 'web' ? null : { flex: 1, marginLeft: 5 }}
               onPress={handleUpdateProfile}
+              disabled={!formChanged}
             >
               Save Changes
             </Button>

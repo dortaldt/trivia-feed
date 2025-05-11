@@ -435,7 +435,7 @@ export const neonTheme: ThemeDefinition = {
       surfaceVariant: '#F0F0F0',
       card: '#FFFFFF',
       
-      // Text colors
+      // Text colors - keeping these readable
       text: '#121212',
       textSecondary: '#333333',
       textTertiary: '#757575',
@@ -448,7 +448,7 @@ export const neonTheme: ThemeDefinition = {
       
       // Component-specific colors
       icon: '#FF00FF',
-      shadow: 'rgba(0, 255, 255, 0.4)',
+      shadow: 'rgba(0, 255, 255, 0.6)',
       overlay: 'rgba(0, 0, 15, 0.7)',
       
       // Tab navigation colors
@@ -481,7 +481,7 @@ export const neonTheme: ThemeDefinition = {
       surfaceVariant: '#1A1A1A',
       card: '#0D0D0D',
       
-      // Text colors
+      // Text colors - keeping these readable
       text: '#FFFFFF',
       textSecondary: '#B0B0B0',
       textTertiary: '#757575',
@@ -505,7 +505,61 @@ export const neonTheme: ThemeDefinition = {
   typography: baseTypography,
   spacing: baseSpacing,
   borderRadius: baseBorderRadius,
-  shadows: baseShadows,
+  // Enhanced shadows for neon theme
+  shadows: {
+    none: {},
+    sm: Platform.select({
+      ios: {
+        shadowColor: '#00FFFF',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+      default: {
+        shadowColor: '#00FFFF',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5,
+        shadowRadius: 4,
+      },
+    }) || {},
+    md: Platform.select({
+      ios: {
+        shadowColor: '#00FFFF',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.65,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 5,
+      },
+      default: {
+        shadowColor: '#00FFFF',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.65,
+        shadowRadius: 8,
+      },
+    }) || {},
+    lg: Platform.select({
+      ios: {
+        shadowColor: '#00FFFF',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+      default: {
+        shadowColor: '#00FFFF',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
+        shadowRadius: 12,
+      },
+    }) || {},
+  },
   animations: {
     ...baseAnimations,
     duration: {

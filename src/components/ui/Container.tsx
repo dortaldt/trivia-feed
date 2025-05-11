@@ -116,6 +116,9 @@ const Container = withThemedStyles<ContainerProps>(
       fullHeight = false,
     } = props;
     
+    // Add currentTheme from useTheme hook
+    const { currentTheme } = useTheme();
+    
     // Get base styles for the container
     const baseStyle: ViewStyle = {
       width: fullWidth ? '100%' : undefined,
@@ -151,6 +154,18 @@ const Container = withThemedStyles<ContainerProps>(
     // Apply variant-specific styles
     switch (variant) {
       case 'card':
+        if (theme.colorScheme === 'dark' && currentTheme === 'neon') {
+          return {
+            ...baseStyle,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            borderWidth: 1,
+            borderColor: theme.colors.primary,
+            ...createShadow(theme, elevation),
+            borderRadius: rounded !== false ? baseStyle.borderRadius : theme.borderRadius.md,
+            overflow: 'hidden', // Ensure the glow doesn't leak outside
+          };
+        }
+        
         return {
           ...baseStyle,
           backgroundColor: theme.colors.card,
@@ -159,6 +174,20 @@ const Container = withThemedStyles<ContainerProps>(
         };
         
       case 'glass':
+        if (Platform.OS === 'web' && currentTheme === 'neon') {
+          return {
+            ...baseStyle,
+            backgroundColor: 'rgba(10, 10, 20, 0.5)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            borderWidth: 1,
+            borderColor: `${theme.colors.primary}60`,
+            boxShadow: `0 0 10px ${theme.colors.primary}, 0 0 20px rgba(0, 255, 255, 0.3)`,
+            borderRadius: rounded !== false ? baseStyle.borderRadius : theme.borderRadius.md,
+            overflow: 'hidden',
+          } as any;
+        }
+        
         return {
           ...baseStyle,
           backgroundColor: 'transparent',
@@ -167,6 +196,17 @@ const Container = withThemedStyles<ContainerProps>(
         };
         
       case 'outlined':
+        if (currentTheme === 'neon') {
+          return {
+            ...baseStyle,
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            borderWidth: 1.5,
+            borderColor: theme.colors.primary,
+            ...createShadow(theme, 'sm'),
+            borderRadius: rounded !== false ? baseStyle.borderRadius : theme.borderRadius.md,
+          };
+        }
+        
         return {
           ...baseStyle,
           backgroundColor: theme.colors.surface,
@@ -176,6 +216,15 @@ const Container = withThemedStyles<ContainerProps>(
         };
         
       case 'surface':
+        if (currentTheme === 'neon') {
+          return {
+            ...baseStyle,
+            backgroundColor: 'rgba(10, 10, 20, 0.6)',
+            ...createShadow(theme, 'sm'),
+            borderRadius: rounded !== false ? baseStyle.borderRadius : theme.borderRadius.sm,
+          };
+        }
+        
         return {
           ...baseStyle,
           backgroundColor: theme.colors.surfaceVariant,
@@ -183,6 +232,17 @@ const Container = withThemedStyles<ContainerProps>(
         };
         
       case 'elevated':
+        if (currentTheme === 'neon') {
+          return {
+            ...baseStyle,
+            backgroundColor: 'rgba(10, 10, 20, 0.7)',
+            borderWidth: 1,
+            borderColor: `${theme.colors.primary}50`,
+            ...createShadow(theme, elevation),
+            borderRadius: rounded !== false ? baseStyle.borderRadius : theme.borderRadius.md,
+          };
+        }
+        
         return {
           ...baseStyle,
           backgroundColor: theme.colors.surface,
