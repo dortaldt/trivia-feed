@@ -87,7 +87,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
         @keyframes neonPulse {
           0% {
             box-shadow: 0 0 4px currentColor, 0 0 8px rgba(255, 255, 255, 0.2);
-            text-shadow: 0 0 2px currentColor;
+            text-shadow: none;
           }
           100% {
             box-shadow: 0 0 8px currentColor, 0 0 12px rgba(255, 255, 255, 0.2);
@@ -97,25 +97,25 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
         
         @keyframes neonTextGlow {
           0% {
-            text-shadow: 0 0 2px currentColor, 0 0 3px currentColor, 0 0 5px rgba(255, 255, 255, 0.5);
+            text-shadow: none;
           }
           50% {
             text-shadow: 0 0 3px currentColor, 0 0 6px currentColor, 0 0 9px rgba(255, 255, 255, 0.5);
           }
           100% {
-            text-shadow: 0 0 2px currentColor, 0 0 4px currentColor, 0 0 7px rgba(255, 255, 255, 0.5);
+            text-shadow: 0 0 4px currentColor, 0 0 8px currentColor, 0 0 12px rgba(255, 255, 255, 0.5);
           }
         }
         
         @keyframes categoryNeonGlow {
           0% {
-            text-shadow: 0 0 2px currentColor, 0 0 4px currentColor, 0 0 6px currentColor, 0 0 10px rgba(255, 255, 255, 0.4);
+            text-shadow: none;
           }
           50% {
             text-shadow: 0 0 3px currentColor, 0 0 6px currentColor, 0 0 9px currentColor, 0 0 15px rgba(255, 255, 255, 0.6);
           }
           100% {
-            text-shadow: 0 0 2px currentColor, 0 0 4px currentColor, 0 0 6px currentColor, 0 0 10px rgba(255, 255, 255, 0.4);
+            text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px rgba(255, 255, 255, 0.6);
           }
         }
       `;
@@ -644,7 +644,10 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                             isAnswered() && questionState?.answerIndex !== index && 
                               answer.isCorrect && !isSelectedAnswerCorrect() && 
                               (isNeonTheme ? styles.neonCorrectAnswerText : {}),
-                            isSkipped() && styles.skippedAnswerText
+                            isSkipped() && styles.skippedAnswerText,
+                            // Apply hover text shadow only on web when hovered
+                            Platform.OS === 'web' && hoveredAnswerIndex === index && 
+                              (isNeonTheme ? styles.hoveredNeonAnswerText : styles.hoveredAnswerText)
                           ]}
                         >
                           {answer.text}
@@ -935,6 +938,12 @@ const styles = StyleSheet.create({
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
     } as any : {}),
   },
+  // Add style for hovered answer text
+  hoveredAnswerText: {
+    ...(Platform.OS === 'web' ? {
+      textShadow: '0 0 2px currentColor, 0 0 4px rgba(255, 255, 255, 0.5)'
+    } as any : {}),
+  },
   skippedAnswerOption: {
     opacity: 0.7,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
@@ -1128,22 +1137,23 @@ const styles = StyleSheet.create({
   neonSelectedAnswerText: {
     fontWeight: 'bold',
     color: '#FFFFFF',
-    ...(Platform.OS === 'web' ? {
-      animation: 'neonTextGlow 2s infinite alternate',
-    } as any : {}),
+    // Animation only on hover now via hoveredAnswerText
   },
   neonCorrectAnswerText: {
     fontWeight: 'bold',
     color: '#00FF00',
-    ...(Platform.OS === 'web' ? {
-      animation: 'neonTextGlow 2s infinite alternate',
-    } as any : {}),
+    // Animation only on hover now via hoveredAnswerText
   },
   neonIncorrectAnswerText: {
     fontWeight: 'bold',
     color: '#FF0000',
+    // Animation only on hover now via hoveredAnswerText
+  },
+  // Create neon hover effect styles
+  hoveredNeonAnswerText: {
     ...(Platform.OS === 'web' ? {
       animation: 'neonTextGlow 2s infinite alternate',
+      textShadow: '0 0 4px currentColor, 0 0 8px currentColor, 0 0 12px rgba(255, 255, 255, 0.5)'
     } as any : {}),
   },
   touchableContainer: {
