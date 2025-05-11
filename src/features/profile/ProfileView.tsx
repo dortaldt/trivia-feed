@@ -654,6 +654,11 @@ const ProfileView: React.FC = () => {
     }
   };
 
+  /* Add style helper for web buttons */
+  const getWebButtonStyle = () => {
+    return Platform.OS === 'web' ? { maxWidth: 400, alignSelf: 'center' as const } : {};
+  };
+
   // Modify the button size based on platform for iOS
   const getButtonSize = (): 'sm' | 'md' | 'lg' => {
     return Platform.OS === 'ios' ? 'lg' : 'md';
@@ -1315,20 +1320,20 @@ const ProfileView: React.FC = () => {
             variant="primary"
             size={getButtonSize()}
             fullWidth
-            leftIcon={<FeatherIcon name="edit-2" size={18} color="#000" />}
+            leftIcon={<FeatherIcon name="edit-2" size={18} color={currentTheme === 'neon' ? '#FFFF00' : "#000"} />}
             onPress={() => setIsEditing(true)}
-            style={profileStyles.editButton}
+            style={[profileStyles.editButton, getWebButtonStyle()]}
           >
             Edit
           </Button>
           
           {/* Theme Toggle */}
-          <View style={profileStyles.themeToggleContainer}>
+          <View style={[profileStyles.themeToggleContainer, Platform.OS === 'web' ? { maxWidth: 400, alignSelf: 'center' as const } : {}]}>
             <ThemeToggle />
           </View>
 
           {/* Account section */}
-          <View style={profileStyles.accountSection}>
+          <View style={[profileStyles.accountSection, Platform.OS === 'web' ? { maxWidth: 400, alignSelf: 'center' as const } : {}]}>
             <ThemedText style={profileStyles.accountSectionTitle}>Account</ThemedText>
             
             {/* Sign Out button - Using proper Button component for web and native */}
@@ -1347,6 +1352,7 @@ const ProfileView: React.FC = () => {
               onPress={handleSignOut}
               accessibilityLabel="Sign out from your account"
               accessibilityHint="Double-tap to sign out from your account"
+              style={getWebButtonStyle()}
             >
               Sign Out
             </Button>
@@ -1391,7 +1397,8 @@ const ProfileView: React.FC = () => {
             </View>
             <View style={[
               profileStyles.avatarButtonsContainer, 
-              Platform.OS !== 'web' && { flexDirection: 'column' }
+              Platform.OS !== 'web' && { flexDirection: 'column' as const },
+              Platform.OS === 'web' && { maxWidth: 400, alignSelf: 'center' as const }
             ]}>
               <Button
                 variant="primary"
@@ -1456,7 +1463,8 @@ const ProfileView: React.FC = () => {
           
           <View style={[
             profileStyles.buttonRow,
-            Platform.OS !== 'web' && { flexDirection: 'column' }
+            Platform.OS !== 'web' && { flexDirection: 'column' as const },
+            Platform.OS === 'web' && { maxWidth: 400, alignSelf: 'center' as const }
           ]}>
             <Button 
               variant={!formChanged ? "primary" : "outline"}
