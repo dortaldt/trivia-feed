@@ -9,7 +9,7 @@ let OPENAI_API_KEY = '';
 // TEMPORARY DEVELOPMENT KEY FOR TESTING
 // Replace with your actual key for dev testing only
 // REMOVE BEFORE PRODUCTION!
-const DEV_KEY = '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'; 
+const DEV_KEY = 'YOUR_API_KEY_HERE'; 
 
 // Access environment variables based on the platform
 try {
