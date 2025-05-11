@@ -695,6 +695,12 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                       (isNeonTheme ? 
                         (Platform.OS === 'ios' ? styles.neonCorrectAnswerOptionIOS : styles.neonCorrectAnswerOption) : 
                         styles.correctAnswerOption),
+                    // Apply inactive style for non-selected, non-correct answers
+                    isAnswered() && 
+                    questionState?.answerIndex !== index && 
+                    !answer.isCorrect && 
+                    !(questionState?.answerIndex !== undefined && !item.answers[questionState.answerIndex].isCorrect && answer.isCorrect) && 
+                    styles.inactiveAnswerOption,
                     Platform.OS === 'web' && hoveredAnswerIndex === index && styles.hoveredAnswerOption,
                     isSkipped() && styles.skippedAnswerOption,
                   ];
@@ -1423,5 +1429,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
     fontWeight: 'bold',
+  },
+  inactiveAnswerOption: {
+    opacity: 0.5,  // Make the inactive answers half-transparent
   },
 });
