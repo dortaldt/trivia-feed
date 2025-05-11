@@ -463,9 +463,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                         position: 'absolute',
                         color: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
                         opacity: 0.6,
-                        textShadowColor: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
-                        textShadowOffset: { width: 0, height: 0 },
-                        textShadowRadius: 8,
                         top: 0,
                         left: 0,
                         letterSpacing: 1.2,
@@ -483,9 +480,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                         position: 'absolute',
                         color: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
                         opacity: 0.8,
-                        textShadowColor: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
-                        textShadowOffset: { width: 0, height: 0 },
-                        textShadowRadius: 4,
                         top: 0,
                         left: 0,
                         letterSpacing: 1.2,
@@ -501,9 +495,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                       styles.category, 
                       { 
                         color: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
-                        textShadowColor: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
-                        textShadowOffset: { width: 0, height: 0 },
-                        textShadowRadius: 2,
                         letterSpacing: 1.2,
                       }
                     ]}
@@ -518,7 +509,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                     styles.neonCategoryText, 
                     { 
                       color: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
-                      textShadowColor: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
                       letterSpacing: 1.2,
                     }
                   ]}
@@ -856,22 +846,15 @@ const styles = StyleSheet.create({
   neonCategoryText: {
     fontWeight: 'bold',
     fontSize: 18, // Slightly larger
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10, // Increased from 8
     ...(Platform.OS === 'web' ? {
       animation: 'categoryNeonGlow 2s infinite alternate',
-      textShadow: '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px rgba(255, 255, 255, 0.6)'
     } as any : Platform.OS === 'ios' ? {
       // Enhanced iOS-specific styling for more gentle, realistic neon glow
       // iOS handles text shadows differently, so we need to be more subtle
-      textShadowRadius: 4,
-      textShadowOpacity: 0.8,
       opacity: 0.95, // Slight transparency for better glow effect
       // We'll use the component to create multiple text instances for layered glow
     } : {
       // Android and other platforms
-      textShadowRadius: 12,
-      textShadowColor: 'currentColor',
     }),
   },
   difficulty: {
@@ -891,7 +874,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     marginBottom: 20,
-    ...(Platform.OS === 'web' ? { textShadow: '0px 2px 4px rgba(0, 0, 0, 0.5)' } as any : {}),
   },
   answersContainer: {
     marginTop: 10,
@@ -963,9 +945,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
     marginRight: 8,
-    ...(Platform.OS === 'web' ? {
-      textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-    } as any : {}),
   },
   selectedAnswerText: {
     fontWeight: 'bold',
@@ -1149,9 +1128,6 @@ const styles = StyleSheet.create({
   neonSelectedAnswerText: {
     fontWeight: 'bold',
     color: '#FFFFFF',
-    textShadowColor: '#00FFFF',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
     ...(Platform.OS === 'web' ? {
       animation: 'neonTextGlow 2s infinite alternate',
     } as any : {}),
@@ -1159,9 +1135,6 @@ const styles = StyleSheet.create({
   neonCorrectAnswerText: {
     fontWeight: 'bold',
     color: '#00FF00',
-    textShadowColor: '#00FF00',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
     ...(Platform.OS === 'web' ? {
       animation: 'neonTextGlow 2s infinite alternate',
     } as any : {}),
@@ -1169,9 +1142,6 @@ const styles = StyleSheet.create({
   neonIncorrectAnswerText: {
     fontWeight: 'bold',
     color: '#FF0000',
-    textShadowColor: '#FF0000',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
     ...(Platform.OS === 'web' ? {
       animation: 'neonTextGlow 2s infinite alternate',
     } as any : {}),
@@ -1209,12 +1179,6 @@ const styles = StyleSheet.create({
   },
   neonLearningCapsuleTitle: {
     color: NeonColors.dark.primary,
-    textShadowColor: NeonColors.dark.primary,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
-    ...(Platform.OS === 'web' ? {
-      textShadow: `0 0 5px ${NeonColors.dark.primary}`
-    } as any : {}),
   },
   neonCloseButton: {
     padding: 8,
@@ -1224,8 +1188,5 @@ const styles = StyleSheet.create({
   neonLearningCapsuleText: {
     color: '#ffffff',
     lineHeight: 22,
-    ...(Platform.OS === 'web' ? {
-      textShadow: '0 0 2px rgba(255, 255, 255, 0.5)'
-    } as any : {}),
   },
 });
