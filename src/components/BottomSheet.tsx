@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { FeatherIcon } from '@/components/FeatherIcon';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
+import { useTheme } from '@/src/context/ThemeContext';
 
 type BottomSheetProps = {
   isVisible: boolean;
@@ -31,10 +32,73 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
+  const { currentTheme, themeDefinition } = useTheme();
   
   // Add refs to track state
   const isClosingRef = useRef(false);
   const isManualClose = useRef(false);
+  
+  // Get theme colors
+  const getThemeColor = (colorName: string = 'primary') => {
+    if (themeDefinition && themeDefinition.colors && themeDefinition.colors[isDark ? 'dark' : 'light']) {
+      // Get the color palette for current theme and color scheme
+      const colorPalette = themeDefinition.colors[isDark ? 'dark' : 'light'];
+      
+      // Check if the color exists in the palette and return it
+      if (colorName in colorPalette) {
+        return colorPalette[colorName as keyof typeof colorPalette];
+      }
+      
+      // Return fallback colors
+      return colorName === 'primary' ? '#ffc107' : 
+        colorName === 'error' ? '#e74c3c' : 
+        colorName === 'info' ? '#0a7ea4' : 
+        '#ffc107';
+    }
+    
+    // Default fallback colors
+    return colorName === 'primary' ? '#ffc107' : 
+      colorName === 'error' ? '#e74c3c' : 
+      colorName === 'info' ? '#0a7ea4' : 
+      '#ffc107';
+  };
+  
+  // Render a theme-aware close button
+  const renderCloseButton = (onPress: () => void, size: number = 20) => {
+    // Get the appropriate icon color based on theme
+    const iconColor = currentTheme === 'neon' 
+      ? '#FFFFFF' // White for neon theme
+      : (isDark ? '#000000' : '#000000'); // Black for other themes
+    
+    // Determine if we should use a background (no background for neon theme)
+    const useBackground = currentTheme !== 'neon';
+    
+    // Get the background color based on theme
+    const backgroundColor = currentTheme === 'neon' 
+      ? 'transparent'
+      : getThemeColor('primary');
+    
+    return (
+      <TouchableOpacity 
+        onPress={onPress}
+        style={styles.closeButton}
+        accessibilityLabel="Close"
+        accessibilityRole="button"
+        activeOpacity={0.7}
+      >
+        {useBackground ? (
+          <View style={[
+            styles.closeButtonCircle,
+            { backgroundColor }
+          ]}>
+            <FeatherIcon name="x" size={size} color={iconColor} />
+          </View>
+        ) : (
+          <FeatherIcon name="x" size={size + 4} color={iconColor} />
+        )}
+      </TouchableOpacity>
+    );
+  };
   
   const snapPoints = useMemo(() => 
     customSnapPoints || ['50%', '80%', '100%'], 
@@ -135,15 +199,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
         {title && (
           <View style={styles.header}>
             <ThemedText style={styles.title}>{title}</ThemedText>
-            <TouchableOpacity 
-              onPress={handleManualClose} 
-              style={styles.closeButton}
-              activeOpacity={0.7}
-            >
-              <View style={styles.closeButtonCircle}>
-                <FeatherIcon name="x" size={20} color="black" />
-              </View>
-            </TouchableOpacity>
+            {renderCloseButton(handleManualClose)}
           </View>
         )}
         <View style={[styles.bodyContainer, { paddingBottom: insets.bottom }]}>

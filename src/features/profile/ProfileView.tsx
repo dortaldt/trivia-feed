@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   ScrollView,
   Platform,
+  Modal,
+  Animated,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -27,6 +29,7 @@ import { router } from 'expo-router';
 import { colors } from '../../theme';
 import Button from '../../components/ui/Button';
 import ThemeToggle from '@/src/components/ThemeToggle';
+import { useTheme } from '@/src/context/ThemeContext';
 
 // Add interface for countries
 interface Country {
@@ -50,6 +53,72 @@ const ProfileView: React.FC = () => {
   const isDark = colorScheme === 'dark';
   const [localIsGuest, setLocalIsGuest] = useState(false);
   const [formChanged, setFormChanged] = useState(false);
+  const { currentTheme, themeDefinition } = useTheme();
+  
+  // Tooltip state
+  const [showScrollTooltip, setShowScrollTooltip] = useState(false);
+  const tooltipAnimation = useRef(new Animated.Value(0)).current;
+
+  // Get theme colors
+  const getThemeColor = (colorName: string = 'primary') => {
+    // For neon theme, override primary color to yellow
+    if (currentTheme === 'neon' && colorName === 'primary') {
+      return '#FFFF00'; // Bright yellow for neon theme
+    }
+    
+    if (themeDefinition && themeDefinition.colors && themeDefinition.colors[isDark ? 'dark' : 'light']) {
+      // Get the color palette for current theme and color scheme
+      const colorPalette = themeDefinition.colors[isDark ? 'dark' : 'light'];
+      
+      // Check if the color exists in the palette and return it
+      if (colorName in colorPalette) {
+        return colorPalette[colorName as keyof typeof colorPalette];
+      }
+      
+      // Return fallback colors
+      return colorName === 'primary' ? '#ffc107' : 
+        colorName === 'error' ? '#e74c3c' : 
+        colorName === 'info' ? '#0a7ea4' : 
+        '#ffc107';
+    }
+    
+    // Default fallback colors
+    return colorName === 'primary' ? '#ffc107' : 
+      colorName === 'error' ? '#e74c3c' : 
+      colorName === 'info' ? '#0a7ea4' : 
+      '#ffc107';
+  };
+
+  // Reusable themed close button renderer
+  const renderCloseButton = (onPress: () => void, size: number = 24) => {
+    // Get the appropriate icon color based on theme
+    const iconColor = currentTheme === 'neon' 
+      ? '#FFFF00' // Yellow for neon theme
+      : getThemeColor('primary');
+    
+    // Determine if we should use a background (no background for neon theme)
+    const useBackground = currentTheme !== 'neon';
+    
+    return (
+      <TouchableOpacity 
+        onPress={onPress}
+        style={profileStyles.closeButton}
+        accessibilityLabel="Close"
+        accessibilityRole="button"
+      >
+        {useBackground ? (
+          <View style={[
+            profileStyles.closeButtonInner, 
+            {backgroundColor: isDark ? 'rgba(60, 60, 60, 0.8)' : 'rgba(240, 240, 240, 0.8)'}
+          ]}>
+            <FeatherIcon name="x" size={size} color={iconColor} />
+          </View>
+        ) : (
+          <FeatherIcon name="x" size={size} color={iconColor} />
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   // Add debug log for current auth state
   useEffect(() => {
@@ -74,6 +143,7 @@ const ProfileView: React.FC = () => {
 
   useEffect(() => {
     fetchUserProfile();
+    checkTooltipStatus();
   }, [user]);
 
   useEffect(() => {
@@ -589,6 +659,23 @@ const ProfileView: React.FC = () => {
     return Platform.OS === 'ios' ? 'lg' : 'md';
   };
 
+  // Function to check if tooltip has been shown before
+  const checkTooltipStatus = async () => {
+    // Tooltip disabled as per user request
+    setShowScrollTooltip(false);
+  };
+
+  // Animate tooltip entrance
+  const animateTooltip = () => {
+    // Animation disabled as per user request
+  };
+
+  // Handle tooltip dismissal
+  const dismissTooltip = async () => {
+    // Tooltip dismissal disabled as per user request
+    setShowScrollTooltip(false);
+  };
+
   const profileStyles = StyleSheet.create({
     container: {
       flex: 1,
@@ -772,7 +859,7 @@ const ProfileView: React.FC = () => {
       fontSize: 16,
     },
     saveButton: {
-      backgroundColor: '#ffc107',
+      backgroundColor: currentTheme === 'neon' ? '#FFFF00' : '#ffc107',
     },
     saveButtonText: {
       color: 'black',
@@ -781,7 +868,7 @@ const ProfileView: React.FC = () => {
     },
     loadingOverlay: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      backgroundColor: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -790,15 +877,17 @@ const ProfileView: React.FC = () => {
       alignItems: 'center',
       marginBottom: 12,
       padding: 10,
-      backgroundColor: 'rgba(255, 193, 7, 0.1)',
+      backgroundColor: currentTheme === 'neon' 
+        ? 'rgba(255, 255, 0, 0.15)' // Yellow with opacity for neon theme
+        : `${getThemeColor('primary')}15`, // 15% opacity
       borderRadius: 8,
       borderLeftWidth: 3,
-      borderLeftColor: '#ffc107',
+      borderLeftColor: getThemeColor('primary'),
     },
     avatarTip: {
       marginLeft: 10,
       fontSize: 14,
-      color: '#ffc107',
+      color: getThemeColor('primary'),
       flex: 1,
     },
     avatarButtonsContainer: {
@@ -832,13 +921,15 @@ const ProfileView: React.FC = () => {
       flexDirection: 'row',
       alignItems: 'center',
       marginBottom: 10,
-      backgroundColor: 'rgba(255, 193, 7, 0.1)',
+      backgroundColor: currentTheme === 'neon' 
+        ? 'rgba(255, 255, 0, 0.15)' // Yellow with opacity for neon theme
+        : `${getThemeColor('primary')}15`, // 15% opacity
       paddingVertical: 6,
       paddingHorizontal: 12,
       borderRadius: 20,
     },
     addPhotoText: {
-      color: '#ffc107',
+      color: currentTheme === 'neon' ? '#FFFF00' : getThemeColor('primary'),
       fontSize: 14,
       marginLeft: 6,
     },
@@ -846,14 +937,14 @@ const ProfileView: React.FC = () => {
       position: 'absolute',
       right: 0,
       bottom: 0,
-      backgroundColor: '#ffc107',
+      backgroundColor: currentTheme === 'neon' ? '#FFFF00' : getThemeColor('primary'),
       width: 36,
       height: 36,
       borderRadius: 18,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 3,
-      borderColor: '#fff',
+      borderColor: isDark ? '#1c1c1c' : '#ffffff',
     },
     avatarImage: {
       width: 100,
@@ -874,7 +965,7 @@ const ProfileView: React.FC = () => {
       fontSize: 24,
       fontWeight: 'bold',
       marginBottom: 12,
-      color: '#ffc107',
+      color: currentTheme === 'neon' ? '#FFFF00' : '#ffc107',
     },
     guestModeMessage: {
       fontSize: 16,
@@ -895,6 +986,61 @@ const ProfileView: React.FC = () => {
     },
     themeToggleContainer: {
       marginTop: 20,
+    },
+    pickerModalContainer: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+    },
+    pickerCloseButton: {
+      position: 'absolute',
+      top: 20,
+      right: 20,
+    },
+    closeButton: {
+      zIndex: 10,
+    },
+    closeButtonInner: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.2,
+      shadowRadius: 1.5,
+      elevation: 2,
+    },
+    tooltipContainer: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 130,
+      alignItems: 'center',
+      zIndex: 100,
+    },
+    tooltipContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: currentTheme === 'neon'
+        ? 'rgba(255, 255, 0, 0.2)'
+        : 'rgba(255, 193, 7, 0.2)',
+      padding: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: currentTheme === 'neon'
+        ? 'rgba(255, 255, 0, 0.5)'
+        : 'rgba(255, 193, 7, 0.5)',
+      maxWidth: '90%',
+    },
+    tooltipText: {
+      marginHorizontal: 10,
+      fontSize: 14,
+      flex: 1,
+    },
+    tooltipCloseButton: {
+      padding: 5,
     },
   });
 
@@ -1046,7 +1192,7 @@ const ProfileView: React.FC = () => {
   if (authLoading || loadingProfile) {
     return (
       <View style={[profileStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#ffc107" />
+        <ActivityIndicator size="large" color={getThemeColor('primary')} />
       </View>
     );
   }
@@ -1058,7 +1204,7 @@ const ProfileView: React.FC = () => {
         <View style={profileStyles.avatarContainer}>
           {uploadingImage ? (
             <View style={profileStyles.avatarPlaceholder}>
-              <ActivityIndicator size="large" color="#ffc107" />
+              <ActivityIndicator size="large" color={getThemeColor('primary')} />
             </View>
           ) : avatarUrl ? (
             <View>
@@ -1074,7 +1220,7 @@ const ProfileView: React.FC = () => {
                   style={profileStyles.editAvatarButton}
                   onPress={() => setIsEditing(true)}
                 >
-                  <FeatherIcon name="camera" size={18} color="#fff" />
+                  <FeatherIcon name="camera" size={18} color={isDark ? "#000" : "#fff"} />
                 </TouchableOpacity>
               )}
             </View>
@@ -1088,7 +1234,7 @@ const ProfileView: React.FC = () => {
                   style={profileStyles.editAvatarButton}
                   onPress={() => setIsEditing(true)}
                 >
-                  <FeatherIcon name="camera" size={18} color="#fff" />
+                  <FeatherIcon name="camera" size={18} color={isDark ? "#000" : "#fff"} />
                 </TouchableOpacity>
               )}
             </View>
@@ -1100,7 +1246,11 @@ const ProfileView: React.FC = () => {
             onPress={() => setIsEditing(true)}
             style={profileStyles.addPhotoHint}
           >
-            <FeatherIcon name="camera" size={14} color="#ffc107" />
+            <FeatherIcon 
+              name="camera" 
+              size={14} 
+              color={currentTheme === 'neon' ? '#FFFF00' : getThemeColor('primary')} 
+            />
             <ThemedText style={profileStyles.addPhotoText}>Add a profile photo</ThemedText>
           </TouchableOpacity>
         )}
@@ -1108,6 +1258,40 @@ const ProfileView: React.FC = () => {
 
       {!isEditing ? (
         <View>
+          {/* Scrolling Tooltip */}
+          {showScrollTooltip && (
+            <Animated.View 
+              style={[
+                profileStyles.tooltipContainer,
+                {
+                  opacity: tooltipAnimation,
+                  transform: [
+                    {
+                      translateY: tooltipAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [20, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <View style={profileStyles.tooltipContent}>
+                <FeatherIcon 
+                  name="chevrons-down" 
+                  size={20} 
+                  color={currentTheme === 'neon' ? '#FFFF00' : getThemeColor('primary')} 
+                />
+                <ThemedText style={profileStyles.tooltipText}>
+                  Scroll down to see all your profile options
+                </ThemedText>
+                <TouchableOpacity onPress={dismissTooltip} style={profileStyles.tooltipCloseButton}>
+                  <FeatherIcon name="x" size={16} color={isDark ? "#fff" : "#000"} />
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          )}
+
           {/* User details section */}
           <View style={profileStyles.detailsSection}>
             <View style={profileStyles.detailRow}>
@@ -1196,7 +1380,11 @@ const ProfileView: React.FC = () => {
           <View style={profileStyles.inputContainer}>
             <ThemedText style={profileStyles.inputLabel}>Profile Picture</ThemedText>
             <View style={profileStyles.avatarTipContainer}>
-              <FeatherIcon name="info" size={16} color="#0a7ea4" />
+              <FeatherIcon 
+                name="info" 
+                size={16} 
+                color={currentTheme === 'neon' ? '#FFFF00' : getThemeColor('info')} 
+              />
               <ThemedText style={profileStyles.avatarTip}>
                 Upload a profile picture to personalize your account
               </ThemedText>
@@ -1304,59 +1492,49 @@ const ProfileView: React.FC = () => {
       )}
       
       {/* Country Picker Modal for iOS */}
-      {Platform.OS === 'ios' && showCountryPicker && (
-        <View style={[
-          profileStyles.modalContainer,
-          { zIndex: 9999 } // Ensure picker appears above bottom sheet
-        ]}>
-          <TouchableOpacity 
-            style={{ flex: 1 }}
-            activeOpacity={1} 
-            onPress={() => setShowCountryPicker(false)}
-          >
+      {Platform.OS === 'ios' && (
+        <Modal
+          visible={showCountryPicker}
+          animationType="slide"
+          transparent={true}
+        >
+          <View style={profileStyles.pickerModalContainer}>
             <View style={[
-              profileStyles.pickerModalContent, 
-              { 
-                backgroundColor: isDark ? Colors.dark.background : Colors.light.background,
-                maxHeight: 300 // Constrain height to fit within bottom sheet
-              }
+              profileStyles.pickerModalContent,
+              { backgroundColor: isDark ? '#1c1c1c' : '#fff' }
             ]}>
               <View style={profileStyles.pickerHeader}>
-                <TouchableOpacity onPress={() => setShowCountryPicker(false)}>
-                  <ThemedText style={profileStyles.pickerCancel}>Cancel</ThemedText>
-                </TouchableOpacity>
                 <ThemedText style={profileStyles.pickerTitle}>Select Country</ThemedText>
-                <TouchableOpacity onPress={() => setShowCountryPicker(false)}>
-                  <ThemedText style={profileStyles.pickerDone}>Done</ThemedText>
-                </TouchableOpacity>
+                {renderCloseButton(() => setShowCountryPicker(false))}
               </View>
+              
               <Picker
                 selectedValue={country}
-                onValueChange={(itemValue) => setCountry(itemValue as string)}
-                itemStyle={{ 
-                  color: isDark ? 'white' : 'black',
-                  height: 44
+                onValueChange={(itemValue) => {
+                  setCountry(itemValue);
+                  setShowCountryPicker(false);
                 }}
-                style={[
-                  profileStyles.pickerIOS,
-                  { height: 180 } // Reduced height for picker
-                ]}
+                itemStyle={{ color: isDark ? '#fff' : '#000' }}
               >
-                <Picker.Item label="Select country" value="" />
-                {countries.map((c) => (
-                  <Picker.Item key={c.code} label={c.name} value={c.code} />
+                <Picker.Item label="Select a country" value="" />
+                {countries.map((country) => (
+                  <Picker.Item 
+                    key={country.code} 
+                    label={country.name} 
+                    value={country.code} 
+                  />
                 ))}
               </Picker>
             </View>
-          </TouchableOpacity>
-        </View>
+          </View>
+        </Modal>
       )}
       
       {isUpdating && (
         <View style={profileStyles.loadingOverlay}>
           <ActivityIndicator 
             size="large" 
-            color={isDark ? 'white' : '#ffc107'} 
+            color={getThemeColor('primary')} 
           />
         </View>
       )}
