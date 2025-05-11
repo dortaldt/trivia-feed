@@ -36,7 +36,7 @@ import Leaderboard from '../../components/Leaderboard';
 import { useAuth } from '../../context/AuthContext';
 import NeonGradientBackground from '@/src/components/NeonGradientBackground';
 import { useTheme } from '@/src/context/ThemeContext';
-import { NeonColors, NeonCategoryColors } from '@/constants/NeonColors';
+import { NeonColors, NeonCategoryColors, getCategoryColor } from '@/constants/NeonColors';
 import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
@@ -139,9 +139,9 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
       // Get the category colors for the current item
       let glowColor = NeonColors.dark.primary; // Default cyan
       
-      if (item.category && NeonCategoryColors[item.category]) {
-        // Use the primary color from the category colors
-        glowColor = NeonCategoryColors[item.category].primary;
+      if (item.category) {
+        // Use the hex color from the category colors
+        glowColor = getCategoryColor(item.category).hex;
       }
       
       // Create a style element for the glowing background effect
@@ -571,7 +571,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                       styles.category,
                       { 
                         position: 'absolute',
-                        color: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
+                        color: getCategoryColor(item.category).hex || NeonColors.dark.primary,
                         opacity: 0.1,
                         top: 0,
                         left: 0,
@@ -588,7 +588,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                       styles.category, 
                       { 
                         position: 'absolute',
-                        color: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
+                        color: getCategoryColor(item.category).hex || NeonColors.dark.primary,
                         opacity: 0.2,
                         top: 0,
                         left: 0,
@@ -604,7 +604,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                     style={[
                       styles.category, 
                       { 
-                        color: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
+                        color: getCategoryColor(item.category).hex || NeonColors.dark.primary,
                         letterSpacing: 1.2,
                       }
                     ]}
@@ -618,7 +618,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                     styles.category, 
                     styles.neonCategoryText, 
                     { 
-                      color: NeonCategoryColors[item.category]?.primary || NeonColors.dark.primary,
+                      color: getCategoryColor(item.category).hex || NeonColors.dark.primary,
                       letterSpacing: 1.2,
                     }
                   ]}
@@ -1411,5 +1411,17 @@ const styles = StyleSheet.create({
   pressOverlay: {
     borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.15)'
+  },
+  categoryTag: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    marginRight: 5,
+    marginBottom: 5,
+  },
+  categoryText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });

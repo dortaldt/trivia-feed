@@ -67,9 +67,10 @@ import { runQuestionGeneration } from '../../lib/questionGeneratorService';
 import { useQuestionGenerator } from '../../hooks/useQuestionGenerator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LoadingBar } from '../../components/ui';
-import NeonLoadingScreen from '@/src/components/NeonLoadingScreen';
 import { useTheme } from '@/src/context/ThemeContext';
 import { NeonColors } from '@/constants/NeonColors';
+import ThemedLoadingScreen from '@/src/components/ThemedLoadingScreen';
+import { useAppLoading } from '@/app/_layout';
 
 const { width, height } = Dimensions.get('window');
 
@@ -79,7 +80,7 @@ const FeedScreen: React.FC = () => {
   const [isAnimationError, setIsAnimationError] = useState(false);
   // Add state for feed data
   const [feedData, setFeedData] = useState<FeedItemType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLocalLoading, setIsLocalLoading] = useState(true); // Renamed to avoid confusion
   const [loadError, setLoadError] = useState<string | null>(null);
   const [usingMockData, setUsingMockData] = useState(false);
   // Add state for selection explanations 
@@ -136,6 +137,9 @@ const FeedScreen: React.FC = () => {
   // Add state for profile username at component level
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
 
+  // Get app loading context
+  const { isAppLoading, setIsAppLoading } = useAppLoading();
+
   // Fetch username from the database when user changes
   useEffect(() => {
     const fetchUsername = async () => {
@@ -159,6 +163,19 @@ const FeedScreen: React.FC = () => {
     fetchUsername();
   }, [user?.id]);
 
+  // Add debugging for loading state
+  useEffect(() => {
+    console.log('FeedScreen - AppLoading state:', isAppLoading);
+    
+    // Clean up loading state when component unmounts
+    return () => {
+      if (isAppLoading) {
+        console.log('FeedScreen unmounting while still loading, cleaning up loading state');
+        setIsAppLoading(false);
+      }
+    };
+  }, [isAppLoading]);
+
   // Get user initials for the profile button
   const getInitials = () => {
     // Use the fetched username if available
@@ -169,7 +186,7 @@ const FeedScreen: React.FC = () => {
     // Fallback to default
     return 'ZT';
   };
-
+  
   // Load user data when component mounts if user is logged in
   useEffect(() => {
     if (user?.id) {
@@ -200,65 +217,19 @@ const FeedScreen: React.FC = () => {
     }
   }, [user?.id, dispatch, personalizedFeed.length, feedData]); // Include all dependencies
 
-  const [loadingProgress] = useState(new Animated.Value(0));
-  const [loadingTip, setLoadingTip] = useState('');
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  
-  // Array of loading tips
-  const loadingTips = [
-    "Did you know? The average person knows the answer to about 20% of trivia questions on their first attempt!",
-    "The world's first trivia contest was held in 1941 at Columbia University.",
-    "The word 'trivia' comes from Latin, meaning 'three roads' - places where people would meet and share information.",
-    "The longest-running trivia contest in the world has been held annually at the University of Wisconsin since 1969.",
-    "Studies show that regularly testing your knowledge with trivia can help maintain cognitive health as you age."
-  ];
-  
-  // With this enhanced useEffect for better animations
-  useEffect(() => {
-    // Progress animation
-    const progressAnimation = Animated.timing(loadingProgress, {
-      toValue: 1,
-      duration: 3000,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      useNativeDriver: Platform.OS !== 'web', // Use native driver on iOS/Android
-    });
-    
-    // Setup pulsing animation
-    const pulseSequence = Animated.sequence([
-      Animated.timing(pulseAnim, {
-        toValue: 1.08,
-        duration: 1000,
-        easing: Easing.bezier(0.4, 0, 0.2, 1),
-        useNativeDriver: true,
-      }),
-      Animated.timing(pulseAnim, {
-        toValue: 1,
-        duration: 1000,
-        easing: Easing.bezier(0.4, 0, 0.2, 1),
-        useNativeDriver: true,
-      }),
-    ]);
-    
-    // Loop the pulse animation
-    const pulseAnimation = Animated.loop(pulseSequence);
-    
-    // Start animations
-    progressAnimation.start();
-    pulseAnimation.start();
-    
-    return () => {
-      // Clean up animations when component unmounts
-      progressAnimation.stop();
-      pulseAnimation.stop();
-    };
-  }, []);
 
   // Fetch trivia questions from Supabase and apply personalization
   useEffect(() => {
+    console.log('Starting to load trivia questions');
+    
     const loadTriviaQuestions = async () => {
-      setIsLoading(true);
+      setIsLocalLoading(true);
       setLoadError(null);
+      
       try {
+        console.log('Fetching trivia questions...');
+        
         // Check cache first
         const cachedData = await AsyncStorage.getItem('cachedTriviaQuestions');
         let allQuestions = [];
@@ -266,32 +237,39 @@ const FeedScreen: React.FC = () => {
         if (cachedData) {
           // Use cached data while fetching fresh data
           console.log('Using cached trivia questions');
-          allQuestions = JSON.parse(cachedData);
-          setFeedData(allQuestions);
-          
-          // Apply personalization with cached data
-          if (allQuestions.length > 0) {
-            const { items, explanations } = getPersonalizedFeed(allQuestions, userProfile);
-            const uniqueItems = items.filter((item, index, self) => 
-              index === self.findIndex(t => t.id === item.id)
-            );
+          try {
+            allQuestions = JSON.parse(cachedData);
+            setFeedData(allQuestions);
             
-            const uniqueExplanations: Record<string, string[]> = {};
-            uniqueItems.forEach(item => {
-              if (explanations[item.id]) {
-                uniqueExplanations[item.id] = explanations[item.id];
-              }
-            });
-            
-            dispatch(setPersonalizedFeed({ 
-              items: uniqueItems, 
-              explanations: uniqueExplanations 
-            }));
+            // Apply personalization with cached data
+            if (allQuestions.length > 0) {
+              const { items, explanations } = getPersonalizedFeed(allQuestions, userProfile);
+              const uniqueItems = items.filter((item, index, self) => 
+                index === self.findIndex(t => t.id === item.id)
+              );
+              
+              const uniqueExplanations: Record<string, string[]> = {};
+              uniqueItems.forEach(item => {
+                if (explanations[item.id]) {
+                  uniqueExplanations[item.id] = explanations[item.id];
+                }
+              });
+              
+              dispatch(setPersonalizedFeed({ 
+                items: uniqueItems, 
+                explanations: uniqueExplanations 
+              }));
+            }
+          } catch (cacheError) {
+            console.error('Error parsing cached data:', cacheError);
+            // Continue with empty questions, will load fresh data
           }
         }
         
         // Fetch fresh data
+        console.log('Fetching fresh trivia questions...');
         const freshQuestions = await fetchTriviaQuestions();
+        console.log('Fresh questions loaded:', freshQuestions.length);
         
         // Check if we got mock data due to a connection error
         if (freshQuestions.length === 3 && freshQuestions[0].id === '1' && freshQuestions[0].question.includes('closest star to Earth')) {
@@ -333,14 +311,24 @@ const FeedScreen: React.FC = () => {
             explanations: uniqueExplanations 
           }));
         }
+        
+        console.log('Data loading complete, setting loading state to false');
       } catch (error) {
         console.error('Failed to load trivia questions:', error);
         setLoadError('Failed to load questions. Please try again later.');
       } finally {
-        setIsLoading(false);
+        // Ensure we always update loading states
+        setIsLocalLoading(false);
+        // Signal to the app that we're done loading
+        console.log('Finalizing loading process, setting app loading to false');
+        // Use setTimeout to ensure this runs after render cycle
+        setTimeout(() => {
+          setIsAppLoading(false);
+        }, 0);
       }
     };
 
+    // Start loading data
     loadTriviaQuestions();
   }, []); // Only run on mount
 
@@ -1472,91 +1460,38 @@ const FeedScreen: React.FC = () => {
   // Add useTheme hook in the component
   const { isNeonTheme } = useTheme();
 
-  // Update the loading screen section to use NeonLoadingScreen when neon theme is active
-  if (isLoading) {
-    // If neon theme is active, show the neon loading screen
-    if (isNeonTheme) {
-      return <NeonLoadingScreen message="Preparing your trivia feed..." />;
-    }
-    
-    // Otherwise, show the original loading screen
-    return (
-      <Surface style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
-        <Animated.View 
-          style={[
-            styles.loadingIndicatorContainer,
-            {
-              transform: [
-                { scale: pulseAnim }
-              ]
-            }
-          ]}
-        >
-          <Image 
-            source={require('../../../assets/images/app-icon.png')} 
-            style={styles.loadingIcon}
-            resizeMode="contain"
-          />
-        </Animated.View>
-        
-        <LoadingBar 
-          duration={3000}
-          height={10}
-          style={{ width: '70%', marginTop: 30 }}
-          color={colors.accent}
-        />
-      </Surface>
-    );
-  }
-
-  // Error state
+  // Update error handling to use AppLoadingContext
   if (loadError) {
-    // If neon theme is active, show a neon-styled error screen
-    if (isNeonTheme) {
-      return (
-        <View style={styles.container}>
-          <NeonLoadingScreen message={loadError || "Error loading questions"} />
-          <TouchableOpacity 
-            style={[
-              styles.neonRetryButton,
-              Platform.OS === 'ios' ? styles.neonRetryButtonIOS : null
-            ]}
-            onPress={() => {
-              fetchTriviaQuestions().then((questions: FeedItemType[]) => {
-                setFeedData(questions);
-                setLoadError(null);
-              }).catch((err: Error) => {
-                console.error('Retry failed:', err);
-                setLoadError('Failed to load questions. Please try again later.');
-              });
-            }}
-          >
-            <ThemedText style={styles.neonRetryText}>Retry</ThemedText>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-    
-    // Otherwise, show the original error screen
+    // Make sure to signal that app loading is complete
+    useEffect(() => {
+      setIsAppLoading(false);
+    }, []);
+
     return (
-      <Surface style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={styles.errorText}>{loadError}</Text>
-        <PaperButton 
-          mode="contained"
-          style={styles.retryButton}
+      <View style={styles.container}>
+        <ThemedLoadingScreen message={loadError || "Error loading questions"} />
+        <TouchableOpacity 
+          style={[
+            isNeonTheme ? styles.neonRetryButton : styles.retryButton,
+            Platform.OS === 'ios' && isNeonTheme ? styles.neonRetryButtonIOS : null
+          ]}
           onPress={() => {
+            // Set loading back to true when retrying
+            setIsAppLoading(true);
             fetchTriviaQuestions().then((questions: FeedItemType[]) => {
               setFeedData(questions);
               setLoadError(null);
+              setIsAppLoading(false);
             }).catch((err: Error) => {
               console.error('Retry failed:', err);
               setLoadError('Failed to load questions. Please try again later.');
+              setIsAppLoading(false);
             });
           }}
         >
-          Retry
-        </PaperButton>
-      </Surface>
+          <ThemedText style={isNeonTheme ? styles.neonRetryText : styles.retryButtonText}>Retry</ThemedText>
+        </TouchableOpacity>
+      </View>
     );
   }
 
@@ -2072,6 +2007,11 @@ const styles = StyleSheet.create({
     textShadowColor: NeonColors.dark.primary,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8, // More intense text glow
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

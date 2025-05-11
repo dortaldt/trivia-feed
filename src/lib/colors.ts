@@ -44,29 +44,14 @@ export const categoryColors: Record<string, string> = {
 };
 
 // Import category colors from NeonColors for consistency
-import { NeonCategoryColors } from '@/constants/NeonColors';
+import { NeonCategoryColors, getCategoryColor as getNeonColor } from '@/constants/NeonColors';
 
 // Function to get a color based on category
 export function getCategoryColor(category: string, isNeonTheme = false): string {
-  // If in neon theme, use the primary color from neon category colors
+  // If in neon theme, use the hex color from neon category colors
   if (isNeonTheme) {
-    // Try to get direct match from neon colors
-    if (NeonCategoryColors[category]) {
-      return NeonCategoryColors[category].primary;
-    }
-    
-    // Try to find a partial match
-    const partialMatch = Object.keys(NeonCategoryColors).find(key => 
-      category.toLowerCase().includes(key.toLowerCase()) || 
-      key.toLowerCase().includes(category.toLowerCase())
-    );
-    
-    if (partialMatch) {
-      return NeonCategoryColors[partialMatch].primary;
-    }
-    
-    // Return default neon color if no match found
-    return NeonCategoryColors.default.primary;
+    // Use the helper function from NeonColors
+    return getNeonColor(category).hex;
   }
   
   // For standard theme, use the original colors

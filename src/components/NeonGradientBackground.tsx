@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { NeonCategoryColors } from '@/constants/NeonColors';
+import { NeonCategoryColors, getCategoryColor } from '@/constants/NeonColors';
 import { useTheme } from '@/src/context/ThemeContext';
 
 interface NeonGradientBackgroundProps {
@@ -20,23 +20,14 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
     // If not in neon theme, return empty colors (will be transparent)
     if (!isNeonTheme) return { primary: 'transparent', secondary: 'transparent' };
     
-    // Try to get direct match
-    if (NeonCategoryColors[category]) {
-      return NeonCategoryColors[category];
-    }
+    // Use the helper function to get category color
+    const colorInfo = getCategoryColor(category);
     
-    // Try to find a partial match
-    const partialMatch = Object.keys(NeonCategoryColors).find(key => 
-      category.toLowerCase().includes(key.toLowerCase()) || 
-      key.toLowerCase().includes(category.toLowerCase())
-    );
-    
-    if (partialMatch) {
-      return NeonCategoryColors[partialMatch];
-    }
-    
-    // Return default color if no match found
-    return NeonCategoryColors.default || { primary: '#00FFFF', secondary: '#FF00FF' };
+    // Convert to the format expected by this component
+    return { 
+      primary: colorInfo.hex,
+      secondary: adjustHexBrightness(colorInfo.hex, -15) // Create a slightly darker secondary color
+    };
   };
   
   const { primary, secondary } = getCategoryColors();
@@ -133,6 +124,25 @@ const addAlphaToColor = (hexColor: string, alpha: number): string => {
   
   // Return rgba color
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+// Helper function to adjust hex color brightness
+const adjustHexBrightness = (hex: string, percent: number): string => {
+  hex = hex.replace('#', '');
+  
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  const adjustBrightness = (value: number) => {
+    return Math.max(0, Math.min(255, value + (value * percent / 100)));
+  };
+  
+  const newR = Math.round(adjustBrightness(r)).toString(16).padStart(2, '0');
+  const newG = Math.round(adjustBrightness(g)).toString(16).padStart(2, '0');
+  const newB = Math.round(adjustBrightness(b)).toString(16).padStart(2, '0');
+  
+  return `#${newR}${newG}${newB}`;
 };
 
 const styles = StyleSheet.create({
