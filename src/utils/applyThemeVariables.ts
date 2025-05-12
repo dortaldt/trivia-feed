@@ -5,7 +5,8 @@
 
 import { Platform } from 'react-native';
 import { ThemeDefinition } from '../design/themes';
-import { ColorSchemeType } from '../context/ThemeContext';
+import { ColorSchemeType, ThemeName } from '../context/ThemeContext';
+import { updateFavicon, updateSocialMetaTags } from './themeIcons';
 
 /**
  * Applies theme colors as CSS variables on the document root
@@ -69,7 +70,7 @@ export function applyThemeVariables(theme: ThemeDefinition, colorScheme: ColorSc
  * @param themeId The current theme ID
  */
 function applyThemeAnimations(themeId: string): void {
-  // Remove any existing theme animation style tags
+  // Remove any existing theme animation style tag
   const existingStyleTag = document.getElementById('theme-animations');
   if (existingStyleTag) {
     document.head.removeChild(existingStyleTag);
@@ -228,6 +229,7 @@ function applyThemeAnimations(themeId: string): void {
 /**
  * Adds a meta theme-color tag for mobile browsers
  * Adjusts the browser UI color based on the theme
+ * Also updates social sharing metadata and favicons
  * 
  * @param theme Current theme definition
  * @param colorScheme Current color scheme (light or dark)
@@ -255,4 +257,13 @@ export function setMetaThemeColor(theme: ThemeDefinition, colorScheme: ColorSche
   
   // Set the theme color
   metaThemeTag.setAttribute('content', themeColor);
+  
+  // Update favicon and social media metadata
+  updateFavicon(theme.id as ThemeName);
+  
+  // Update app title for social sharing
+  updateSocialMetaTags('TriviaFeed', 'Test your knowledge with TriviaFeed - The ultimate trivia experience');
+  
+  // Set the document title
+  document.title = 'TriviaFeed';
 } 

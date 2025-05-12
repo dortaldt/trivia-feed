@@ -5,11 +5,14 @@
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     
-    <!-- Favicon -->
-    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
+    <!-- Favicon - these will be dynamically updated based on theme by the ThemeContext -->
+    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png">
     
     <!-- Title -->
-    <title>%WEB_TITLE%</title>
+    <title>TriviaFeed</title>
     
     <!-- Vector icon font CSS -->
     <style>
@@ -80,8 +83,51 @@
     </style>
     
     <!-- Meta tags for PWA -->
-    <meta name="description" content="%WEB_DESCRIPTION%" />
+    <meta name="description" content="TriviaFeed - The ultimate trivia app to test your knowledge and challenge your friends" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Open Graph / Facebook - these will be dynamically updated based on theme by the ThemeContext -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://triviafeed.app/" />
+    <meta property="og:title" content="TriviaFeed" />
+    <meta property="og:description" content="Test your knowledge with TriviaFeed - The ultimate trivia experience" />
+    <meta property="og:image" content="%PUBLIC_URL%/social-preview.png" />
+    <meta property="og:image:alt" content="TriviaFeed logo" />
+    
+    <!-- Twitter - these will be dynamically updated based on theme by the ThemeContext -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://triviafeed.app/" />
+    <meta name="twitter:title" content="TriviaFeed" />
+    <meta name="twitter:description" content="Test your knowledge with TriviaFeed - The ultimate trivia experience" />
+    <meta name="twitter:image" content="%PUBLIC_URL%/social-preview.png" />
+    
+    <!-- Theme color for browser UI - this will be dynamically updated based on theme -->
+    <meta name="theme-color" content="#151718" id="theme-color-meta" />
+    
+    <!-- Favicon switcher utility for testing -->
+    <script src="%PUBLIC_URL%/favicon-switcher.js"></script>
+    
+    <!-- Force favicon reload to avoid caching issues -->
+    <script>
+      // This script ensures favicons are properly reloaded when the page loads
+      window.addEventListener('load', function() {
+        // Add timestamp to force favicon reload
+        var favicons = document.querySelectorAll('link[rel*="icon"]');
+        favicons.forEach(function(favicon) {
+          var originalHref = favicon.getAttribute('href');
+          if (originalHref && !originalHref.includes('?v=')) {
+            favicon.setAttribute('href', originalHref + '?v=' + new Date().getTime());
+            console.log('Updated favicon: ' + originalHref);
+          }
+        });
+        
+        console.log('Favicons updated with cache-busting parameters');
+        
+        // Add global helpers for testing directly in the browser
+        window.switchToNeonFavicon = switchToNeonFavicon;
+        window.switchToDefaultFavicon = switchToDefaultFavicon;
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

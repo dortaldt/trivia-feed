@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme as useDeviceColorScheme, Platform } from 'react-native';
 import { ThemeDefinition, defaultTheme, neonTheme, retroTheme, modernTheme } from '../design/themes';
 import { applyThemeVariables, setMetaThemeColor } from '../utils/applyThemeVariables';
+import { updateFavicon, updateSocialMetaTags } from '../utils/themeIcons';
 
 // Define available themes
 export type ThemeName = 'default' | 'neon' | 'retro' | 'modern';
@@ -16,6 +17,7 @@ interface ThemeContextType {
   setTheme: (themeName: ThemeName) => void;
   toggleColorScheme: () => void;
   toggleTheme: () => void; // Cycles through themes
+  getThemeAppIcon: () => string; // Get the theme-appropriate app icon path
 }
 
 // Map theme names to their definitions
@@ -28,6 +30,14 @@ const themeMap: Record<ThemeName, ThemeDefinition> = {
 
 // Default theme cycling order
 const themeCycleOrder: ThemeName[] = ['default', 'neon', 'retro', 'modern'];
+
+// App icon mapping based on theme
+const themeAppIconMap: Record<ThemeName, string> = {
+  default: '/assets/images/app-icon.png',
+  neon: '/assets/images/app-icon-neon.png',
+  retro: '/assets/images/app-icon.png',
+  modern: '/assets/images/app-icon.png'
+};
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
@@ -80,19 +90,37 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Apply theme CSS variables for web when theme or colorScheme changes
   useEffect(() => {
     if (Platform.OS === 'web') {
+      console.log('Theme or colorScheme changed. Updating theme variables...', { 
+        theme: currentTheme, 
+        colorScheme
+      });
+      
       // Apply CSS variables to document
       applyThemeVariables(themeDefinition, colorScheme);
       
       // Set theme color meta tag for mobile browsers
       setMetaThemeColor(themeDefinition, colorScheme);
+      
+      // Update favicon and social media tags based on theme
+      console.log('Calling updateFavicon from ThemeContext useEffect');
+      updateFavicon(currentTheme);
+      updateSocialMetaTags('TriviaFeed');
     }
-  }, [themeDefinition, colorScheme]);
+  }, [themeDefinition, colorScheme, currentTheme]);
 
   // Set theme by name
   const setTheme = async (themeName: ThemeName) => {
+    console.log(`Setting theme to: ${themeName}`);
+    
     if (themeMap[themeName]) {
       setCurrentTheme(themeName);
       setThemeDefinition(themeMap[themeName]);
+      
+      // Immediately update favicon for web platform
+      if (Platform.OS === 'web') {
+        console.log('Calling updateFavicon directly from setTheme');
+        updateFavicon(themeName);
+      }
       
       try {
         await AsyncStorage.setItem('app-theme', themeName);
@@ -121,14 +149,27 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const nextIndex = (currentIndex + 1) % themeCycleOrder.length;
     const nextTheme = themeCycleOrder[nextIndex];
     
+    console.log(`Cycling theme from ${currentTheme} to ${nextTheme}`);
+    
     setCurrentTheme(nextTheme);
     setThemeDefinition(themeMap[nextTheme]);
+    
+    // Immediately update favicon for web platform
+    if (Platform.OS === 'web') {
+      console.log('Calling updateFavicon directly from toggleTheme');
+      updateFavicon(nextTheme);
+    }
     
     try {
       await AsyncStorage.setItem('app-theme', nextTheme);
     } catch (error) {
       console.error('Failed to save theme to storage:', error);
     }
+  };
+  
+  // Get the appropriate app icon based on theme
+  const getThemeAppIcon = () => {
+    return themeAppIconMap[currentTheme] || themeAppIconMap.default;
   };
 
   return (
@@ -141,6 +182,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setTheme,
         toggleColorScheme,
         toggleTheme,
+        getThemeAppIcon,
       }}
     >
       {children}
