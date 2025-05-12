@@ -3,5 +3,25 @@
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "buildCommand": "npm run web:build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/(favicon\\.png|favicon-\\d+x\\d+\\.png|apple-touch-icon\\.png|favicon-neon\\.png|favicon-neon-\\d+x\\d+\\.png|apple-touch-icon-neon\\.png)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
 } 

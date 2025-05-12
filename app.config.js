@@ -104,7 +104,9 @@ module.exports = {
     package: "com.triviafeed"
   },
   web: {
-    favicon: "./assets/images/favicon.png"
+    favicon: "./assets/images/favicon.png",
+    templatePath: "./web-build-template.html",
+    bundler: "metro"
   },
   plugins: [
     "expo-router",

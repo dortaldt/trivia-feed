@@ -59,7 +59,8 @@ export const updateFavicon = (theme: ThemeName): void => {
     // Update main favicon (shortcut icon)
     const mainFavicon = document.querySelector('link[rel="shortcut icon"]');
     if (mainFavicon) {
-      const newPath = `${faviconPath}${cacheBuster}`;
+      // Use absolute path without %PUBLIC_URL%
+      const newPath = `${faviconPath.replace('%PUBLIC_URL%', '')}${cacheBuster}`;
       console.log(`Setting main favicon to: ${newPath}`);
       mainFavicon.setAttribute('href', newPath);
     } else {
@@ -69,21 +70,21 @@ export const updateFavicon = (theme: ThemeName): void => {
     // Update 16x16 favicon
     const favicon16 = document.querySelector('link[sizes="16x16"]');
     if (favicon16) {
-      const path16 = theme === 'neon' ? 'favicon-neon-16x16.png' : 'favicon-16x16.png';
+      const path16 = theme === 'neon' ? '/favicon-neon-16x16.png' : '/favicon-16x16.png';
       favicon16.setAttribute('href', `${path16}${cacheBuster}`);
     }
     
     // Update 32x32 favicon
     const favicon32 = document.querySelector('link[sizes="32x32"]');
     if (favicon32) {
-      const path32 = theme === 'neon' ? 'favicon-neon-32x32.png' : 'favicon-32x32.png';
+      const path32 = theme === 'neon' ? '/favicon-neon-32x32.png' : '/favicon-32x32.png';
       favicon32.setAttribute('href', `${path32}${cacheBuster}`);
     }
     
     // Update apple-touch-icon
     const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
     if (appleIcon) {
-      const appleIconPath = theme === 'neon' ? 'apple-touch-icon-neon.png' : 'apple-touch-icon.png';
+      const appleIconPath = theme === 'neon' ? '/apple-touch-icon-neon.png' : '/apple-touch-icon.png';
       appleIcon.setAttribute('href', `${appleIconPath}${cacheBuster}`);
     }
     
@@ -92,17 +93,19 @@ export const updateFavicon = (theme: ThemeName): void => {
     const twitterImage = document.querySelector('meta[name="twitter:image"]');
     
     if (ogImage) {
-      ogImage.setAttribute('content', `${getSocialPreviewImage(theme)}${cacheBuster}`);
+      const socialPath = theme === 'neon' ? '/social-preview-neon.png' : '/social-preview.png';
+      ogImage.setAttribute('content', `${socialPath}${cacheBuster}`);
     }
     
     if (twitterImage) {
-      twitterImage.setAttribute('content', `${getSocialPreviewImage(theme)}${cacheBuster}`);
+      const socialPath = theme === 'neon' ? '/social-preview-neon.png' : '/social-preview.png';
+      twitterImage.setAttribute('content', `${socialPath}${cacheBuster}`);
     }
     
     // Create a test element to force favicon reload
     const testLink = document.createElement('link');
     testLink.rel = 'icon';
-    testLink.href = `${faviconPath}${cacheBuster}`;
+    testLink.href = `${faviconPath.replace('%PUBLIC_URL%', '')}${cacheBuster}`;
     document.head.appendChild(testLink);
     setTimeout(() => {
       document.head.removeChild(testLink);
