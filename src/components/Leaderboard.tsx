@@ -364,16 +364,10 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
           size="sm"
           leftIcon={<FeatherIcon name="log-in" size={16} color="#000" />}
           onPress={() => {
-            // Navigate to login page
-            if (Platform.OS === 'web') {
-              window.location.href = '/auth/login?direct=true';
-            } else {
-              // Use Expo Router for iOS/Android navigation
-              router.push({
-                pathname: '/auth/login',
-                params: { direct: 'true' }
-              });
-            }
+            router.push({
+              pathname: '/auth/login',
+              params: { direct: 'true' }
+            });
           }}
         >
           Sign In

@@ -1102,16 +1102,10 @@ const ProfileView: React.FC = () => {
             fullWidth
             leftIcon={<FeatherIcon name="log-in" size={18} color="#000" style={{ marginRight: 8 }} />}
             onPress={() => {
-              // Navigate to login screen
-              if (Platform.OS === 'web') {
-                window.location.href = '/auth/login?direct=true';
-              } else {
-                // Use Expo Router for iOS/Android navigation
-                router.push({
-                  pathname: '/auth/login',
-                  params: { direct: 'true' }
-                });
-              }
+              router.push({
+                pathname: '/auth/login',
+                params: { direct: 'true' }
+              });
             }}
             style={applyWebButtonStyle()}
           >
@@ -1180,16 +1174,10 @@ const ProfileView: React.FC = () => {
               fullWidth
               leftIcon={<FeatherIcon name="log-in" size={18} color="#000" style={{ marginRight: 8 }} />}
               onPress={() => {
-                // Navigate to login screen
-                if (Platform.OS === 'web') {
-                  window.location.href = '/auth/login?direct=true';
-                } else {
-                  // Use Expo Router for iOS/Android navigation
-                  router.push({
-                    pathname: '/auth/login',
-                    params: { direct: 'true' }
-                  });
-                }
+                router.push({
+                  pathname: '/auth/login',
+                  params: { direct: 'true' }
+                });
               }}
               style={applyWebButtonStyle()}
             >
