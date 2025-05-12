@@ -1,3 +1,4 @@
+import { categoryColors } from '../lib/colors';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeDefinition } from '../design/themes';
 
@@ -36,38 +37,44 @@ export function useThemeColor(colorName: keyof ReturnType<typeof useDesignSystem
  * Helper to get category-specific colors
  */
 export function getCategoryColor(category: string, theme?: ThemeDefinition): string {
-  // Default category colors
+  // Use the imported colors or fall back to hard-coded values
+  if (categoryColors && typeof categoryColors === 'object') {
+    // Try to get direct match
+    if (categoryColors[category]) {
+      return categoryColors[category];
+    }
+    
+    // Try to find a partial match
+    const partialMatch = Object.keys(categoryColors).find(key => 
+      category.toLowerCase().includes(key.toLowerCase()) || 
+      key.toLowerCase().includes(category.toLowerCase())
+    );
+    
+    if (partialMatch) {
+      return categoryColors[partialMatch];
+    }
+    
+    // Return default color if no match found
+    return categoryColors.default || '#455A64';
+  }
+  
+  // Fall back to hard-coded values if import fails
   const defaultCategoryColors: Record<string, string> = {
-    'Science': '#00B8D4',         // Cyan
-    'Technology': '#304FFE',      // Indigo
-    'History': '#D500F9',         // Purple
-    'Geography': '#00C853',       // Green
-    'Sports': '#FF6D00',          // Orange
-    'Movies': '#FF1744',          // Red-Pink
     'Music': '#6200EA',           // Deep Purple
-    'Television': '#0091EA',      // Light Blue
-    'Literature': '#D50000',      // Red
-    'Art': '#F50057',             // Pink
+    'Entertainment': '#FF4081',   // Pink
+    'Science': '#00B8D4',         // Cyan  
+    'History': '#D500F9',         // Purple
     'Pop Culture': '#FFD600',     // Yellow
-    'Food & Drink': '#FF3D00',    // Deep Orange
-    'General Knowledge': '#00BFA5', // Teal
-    'Nature': '#64DD17',          // Light Green
-    'Politics': '#651FFF',        // Deep Purple
-    'Celebrities': '#FFC400',     // Amber
-    'Modern Cinema': '#C51162',   // Pink
-    'Mathematics': '#00BFA5',     // Teal
-    'Language': '#2962FF',        // Blue
-    'Mythology': '#AA00FF',       // Purple
-    'Animals': '#76FF03',         // Light Green
+    'Miscellaneous': '#FF9800',   // Orange
     'default': '#455A64',         // Blue Grey
   };
   
-  // Try to get direct match
+  // Try to get direct match from fallback
   if (defaultCategoryColors[category]) {
     return defaultCategoryColors[category];
   }
   
-  // Try to find a partial match
+  // Try to find a partial match in fallback
   const partialMatch = Object.keys(defaultCategoryColors).find(key => 
     category.toLowerCase().includes(key.toLowerCase()) || 
     key.toLowerCase().includes(category.toLowerCase())
