@@ -144,15 +144,15 @@ const FeedScreen: React.FC = () => {
         try {
           const { data } = await supabase
             .from('user_profiles')
-            .select('username')
+            .select('full_name')
             .eq('id', user?.id)
             .single();
           
-          if (data?.username) {
-            setProfileUsername(data.username);
+          if (data?.full_name) {
+            setProfileUsername(data.full_name);
           }
         } catch (error) {
-          console.error('Error fetching username:', error);
+          console.error('Error fetching user profile:', error);
         }
       }
     };
@@ -162,12 +162,17 @@ const FeedScreen: React.FC = () => {
 
   // Get user initials for the profile button
   const getInitials = () => {
-    // Use the fetched username if available
+    // Use the fetched full_name if available
     if (profileUsername) {
       return profileUsername.substring(0, 2).toUpperCase();
     }
     
-    // Fallback to default
+    // Fallback to email if available
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    
+    // Ultimate fallback
     return 'ZT';
   };
 
