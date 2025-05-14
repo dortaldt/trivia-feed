@@ -51,7 +51,7 @@ if (!openaiApiKey) {
 }
 
 module.exports = {
-  name: "Zest",
+  name: "Trivia Feed",
   slug: "trivia-feed",
   scheme: "trivia-feed",
   version: "1.0.0",
