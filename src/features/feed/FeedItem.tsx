@@ -29,7 +29,6 @@ const { width, height } = Dimensions.get('window');
 type FeedItemProps = {
   item: {
     id: string;
-    category: string;
     question: string;
     answers: {
       text: string;
@@ -41,6 +40,9 @@ type FeedItemProps = {
     backgroundColor: string; // Changed from backgroundImage to backgroundColor
     learningCapsule: string;
     tags?: string[];
+    topic: string;
+    // category is now optional since we've migrated to using topic
+    category?: string;
   };
   onAnswer?: (answerIndex: number, isCorrect: boolean) => void;
   showExplanation?: () => void;
@@ -228,7 +230,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
 
         <View style={[styles.content, {zIndex: 2}]}>
           <View style={styles.header}>
-            <Text style={styles.category}>{item.category}</Text>
+            <Text style={styles.topicLabel}>{item.topic}</Text>
             <View style={[styles.difficulty, { 
               backgroundColor: 
                 item.difficulty?.toLowerCase() === 'easy' ? '#8BC34A' :
@@ -426,7 +428,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  category: {
+  topicLabel: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',

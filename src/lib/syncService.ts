@@ -672,7 +672,7 @@ export async function syncFeedChanges(
       explanations: change.explanations?.slice(0, 1).map(e => e.substring(0, 100)) || [],
       // Minimal weight factors
       weight_factors: change.weightFactors ? {
-        category: change.weightFactors.category
+        topic: change.weightFactors.topic
       } : null,
       synced_from_device: deviceId
     }));
@@ -824,7 +824,7 @@ export async function syncWeightChanges(
       question_id: change.questionId,
       interaction_type: change.interactionType,
       question_text: change.questionText,
-      category: change.category,
+      topic: change.topic,
       subtopic: change.subtopic,
       branch: change.branch,
       old_topic_weight: change.oldWeights.topicWeight,
@@ -941,7 +941,7 @@ export async function fetchWeightChanges(
       questionId: item.question_id,
       interactionType: item.interaction_type as 'correct' | 'incorrect' | 'skipped',
       questionText: item.question_text,
-      category: item.category,
+      topic: item.topic,
       subtopic: item.subtopic,
       branch: item.branch,
       oldWeights: {

@@ -5,9 +5,8 @@ import { Feather } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { FeedItem } from '../lib/triviaService';
-import { dbEventEmitter } from '../lib/syncService';
+import { dbEventEmitter , fetchWeightChanges } from '../lib/syncService';
 import { WeightChange } from '../types/trackerTypes';
-import { fetchWeightChanges } from '../lib/syncService';
 import { loadUserDataThunk } from '../store/thunks';
 import { useAuth } from '../context/AuthContext';
 import { getDatabaseInfo, attemptDatabaseFix } from '../lib/databaseDebugger';
@@ -35,7 +34,7 @@ interface FeedChange {
   questionText: string;
   explanations: string[];
   weightFactors?: {
-    category: string;
+    topic: string;
     topicWeight?: number;
     subtopicWeight?: number;
     preferenceReason?: string;
@@ -103,6 +102,26 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
     totalTime: 0,
     avgTime: 0,
   });
+  
+  // Helper to check if a weight value is the default (0.5)
+  const isDefaultWeight = (value: number): boolean => {
+    // Be more forgiving with the default check - anything close to 0.5 should be considered default
+    // This helps with float precision issues and makes the display more consistent
+    return Math.abs(value - 0.5) < 0.05;
+  };
+
+  // Helper to format weight display with indicator for default values
+  const formatWeight = (value: number): string => {
+    // Always use 2 decimal places for consistency
+    const formatted = value.toFixed(2);
+    
+    // If it's very close to 0.5, explicitly show it as 0.50 (default)
+    if (isDefaultWeight(value)) {
+      return `0.50 (default)`;
+    }
+    
+    return formatted;
+  };
   
   // Add animation for the toggle button
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -254,17 +273,17 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
           
           // Extract weight-based selection info
           const weightFactors: FeedChange['weightFactors'] = {
-            category: item.category,
+            topic: item.topic,
           };
           
           // Check if there's a topic weight in user profile for this category
-          if (userProfile.topics && userProfile.topics[item.category]) {
-            weightFactors.topicWeight = userProfile.topics[item.category].weight;
+          if (userProfile.topics && userProfile.topics[item.topic]) {
+            weightFactors.topicWeight = userProfile.topics[item.topic].weight;
             
             // Check if there's a subtopic weight
             const subtopic = item.tags?.[0] || 'General';
-            if (userProfile.topics[item.category].subtopics?.[subtopic]) {
-              weightFactors.subtopicWeight = userProfile.topics[item.category].subtopics[subtopic].weight;
+            if (userProfile.topics[item.topic].subtopics?.[subtopic]) {
+              weightFactors.subtopicWeight = userProfile.topics[item.topic].subtopics[subtopic].weight;
             }
           }
           
@@ -586,26 +605,23 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
     parentTopic?: string, 
     parentSubtopic?: string
   ): number => {
-    // Look at the most recent weight changes (last 5)
-    const recentChanges = weightChanges
-      .filter(change => {
-        if (type === 'topic') {
-          return change.category === name;
-        } else if (type === 'subtopic') {
-          return change.category === parentTopic && change.subtopic === name;
-        } else {
-          return change.category === parentTopic && 
-                change.subtopic === parentSubtopic && 
-                change.branch === name;
-        }
-      })
-      .slice(-5); // Get the most recent 5 changes
+    // Filter to relevant weight changes
+    const relevantChanges = weightChanges.filter(change => {
+      if (type === 'topic') {
+        return change.topic === name;
+      } else if (type === 'subtopic') {
+        return change.topic === parentTopic && change.subtopic === name;
+      } else {
+        return change.topic === parentTopic &&
+          change.subtopic === parentSubtopic;
+      }
+    });
     
-    if (recentChanges.length === 0) return 0;
+    if (relevantChanges.length === 0) return 0;
     
     // Calculate the trend as the sum of recent changes
     let trend = 0;
-    recentChanges.forEach(change => {
+    relevantChanges.forEach(change => {
       if (type === 'topic') {
         trend += change.newWeights.topicWeight - change.oldWeights.topicWeight;
       } else if (type === 'subtopic' && change.newWeights.subtopicWeight !== undefined && 
@@ -822,7 +838,7 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
                     <View style={styles.weightFactorsContainer}>
                       <ThemedText style={styles.explanationHeader}>Selection Factors:</ThemedText>
                       <ThemedText style={styles.weightFactorText}>
-                        • Category: <ThemedText style={styles.weightValue}>{change.weightFactors.category}</ThemedText>
+                        • Category: <ThemedText style={styles.weightValue}>{change.weightFactors.topic}</ThemedText>
                       </ThemedText>
                       
                       {change.weightFactors.topicWeight !== undefined && (
@@ -874,7 +890,7 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
                 <View key={index} style={styles.feedItem}>
                   <View style={styles.feedItemHeader}>
                     <ThemedText style={styles.feedItemNumber}>#{index + 1}</ThemedText>
-                    <ThemedText style={styles.feedItemCategory}>{item.category || 'Unknown'}</ThemedText>
+                    <ThemedText style={styles.feedItemTopic}>{item.topic || 'Unknown'}</ThemedText>
                   </View>
                   <ThemedText style={styles.feedItemText}>{item.question || `Question ${item.id.substring(0, 5)}...`}</ThemedText>
                   {item.tags && item.tags.length > 0 && (
@@ -906,22 +922,38 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
                           ))}
                           
                           {/* Add weight-based info for each feed item */}
-                          {userProfile.topics && userProfile.topics[item.category] && (
+                          {userProfile.topics && userProfile.topics[item.topic] && (
                             <>
                               <ThemedText style={[styles.explanationHeader, {marginTop: 8}]}>
                                 Weight Factors:
                               </ThemedText>
                               <ThemedText style={styles.explanationText}>
-                                • Topic weight: {userProfile.topics[item.category].weight.toFixed(2)}
+                                • Topic: <ThemedText style={styles.weightValue}>{userProfile.topics[item.topic].weight.toFixed(2)}</ThemedText>
                               </ThemedText>
                               
                               {item.tags && item.tags[0] && 
-                               userProfile.topics[item.category].subtopics && 
-                               userProfile.topics[item.category].subtopics[item.tags[0]] && (
+                               userProfile.topics[item.topic].subtopics && 
+                               userProfile.topics[item.topic].subtopics[item.tags[0]] && (
                                 <ThemedText style={styles.explanationText}>
                                   • Subtopic weight: {
-                                    userProfile.topics[item.category].subtopics[item.tags[0]].weight.toFixed(2)
+                                    userProfile.topics[item.topic].subtopics[item.tags[0]].weight.toFixed(2)
                                   }
+                                </ThemedText>
+                              )}
+                              
+                              {/* Add the question type (preference vs exploration) */}
+                              <ThemedText style={styles.explanationText}>
+                                • Question type: {
+                                  feedExplanations[item.id]?.some(exp => exp.includes('Exploration question')) 
+                                    ? 'Exploration' 
+                                    : 'Preferred'
+                                }
+                              </ThemedText>
+                                
+                              {/* Add the selection mechanism */}
+                              {feedExplanations[item.id]?.find(exp => exp.includes('Selection mechanism:')) && (
+                                <ThemedText style={styles.explanationText}>
+                                  • {feedExplanations[item.id].find(exp => exp.includes('Selection mechanism:'))?.replace('Selection mechanism: ', '')}
                                 </ThemedText>
                               )}
                             </>
@@ -1269,6 +1301,13 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
   
   // Render the weights tab
   const renderWeightsTab = () => {
+    // Get all topic weights for debugging
+    const allTopicWeights = Object.entries(userProfile.topics).map(([topic, data]) => ({
+      topic,
+      weight: data.weight,
+      isDefault: Math.abs(data.weight - 0.5) < 0.001 // Check if it's the default weight (with small epsilon for floating point comparison)
+    }));
+    
     return (
       <ScrollView style={styles.tabScrollView}>
         <ThemedView style={styles.statsCard}>
@@ -1278,306 +1317,123 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
           </ThemedText>
         </ThemedView>
 
-        {/* Add Current Weights section */}
+        {/* Debug section to show raw weight values */}
         <ThemedView style={styles.currentWeightsContainer}>
-          <View style={styles.currentWeightsHeader}>
-            <ThemedText style={styles.sectionTitle}>Current Weights from Database</ThemedText>
-            <View style={{flexDirection: 'row'}}>
-              <TouchableOpacity 
-                style={[styles.refreshButton, {marginRight: 8, backgroundColor: 'rgba(10, 126, 164, 0.3)'}]}
-                onPress={async () => {
-                  if (!isLoadingWeights && user?.id) {
-                    await loadWeightsFromDB();
-                  }
-                }}
-                disabled={isLoadingWeights || !user?.id}
-              >
-                {isLoadingWeights ? (
-                  <ThemedText style={[styles.refreshingText, {color: '#555'}]}>Loading...</ThemedText>
-                ) : (
-                  <>
-                    <Feather name="refresh-cw" size={16} color="#0A7EA4" />
-                    <ThemedText style={[styles.refreshText, {color: '#0A7EA4'}]}>Refresh</ThemedText>
-                  </>
-                )}
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.refreshButton, {backgroundColor: 'rgba(91, 106, 232, 0.3)'}]}
-                onPress={debugDatabase}
-                disabled={!user?.id}
-              >
-                <Feather name="database" size={16} color="#5b6ae8" />
-                <ThemedText style={[styles.refreshText, {color: '#5b6ae8'}]}>Debug DB</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <ThemedText style={styles.sectionTitle}>Debug Raw Weights</ThemedText>
           
-          {dbDebugResults && (
-            <ThemedView style={styles.debugResultsContainer}>
-              <View style={styles.debugResultsHeader}>
-                <ThemedText style={styles.debugResultsTitle}>Database Debug Results</ThemedText>
-                <TouchableOpacity
-                  style={[styles.refreshButton, {backgroundColor: 'rgba(232, 91, 91, 0.2)'}]}
-                  onPress={() => setDbDebugResults(null)}
-                >
-                  <Feather name="x" size={16} color="#e85b5b" />
-                  <ThemedText style={[styles.refreshText, {color: '#e85b5b'}]}>Close</ThemedText>
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.tableExistsContainer}>
-                <ThemedText style={styles.debugSectionTitle}>Tables Exist:</ThemedText>
-                {Object.entries(dbDebugResults.tablesExist || {}).map(([tableName, exists]) => (
-                  <View key={tableName} style={styles.tableExistsRow}>
-                    <ThemedText style={styles.tableNameText}>{tableName}:</ThemedText>
+          {/* Add this debug weights summary component */}
+          <ThemedView style={styles.debugWeightsSummary}>
+            <ThemedText style={styles.debugWeightsHeader}>Topic Weights Summary</ThemedText>
+            
+            <ThemedText style={styles.debugWeightsInfo}>
+              Default Weight: <ThemedText style={{fontWeight: 'bold', color: '#FFD700'}}>0.50</ThemedText>
+            </ThemedText>
+            
+            <ThemedText style={styles.debugWeightsInfo}>
+              Total Topics: {Object.keys(userProfile.topics || {}).length}
+            </ThemedText>
+            
+            <ThemedText style={styles.debugWeightsInfo}>
+              Weights Distribution: {
+                Object.entries(userProfile.topics || {}).reduce((counts, [_, data]) => {
+                  if (Math.abs(data.weight - 0.5) < 0.001) counts.default++;
+                  else if (data.weight > 0.5) counts.increased++;
+                  else counts.decreased++;
+                  return counts;
+                }, {default: 0, increased: 0, decreased: 0}).default
+              } default / {
+                Object.entries(userProfile.topics || {}).reduce((counts, [_, data]) => {
+                  if (Math.abs(data.weight - 0.5) < 0.001) counts.default++;
+                  else if (data.weight > 0.5) counts.increased++;
+                  else counts.decreased++;
+                  return counts;
+                }, {default: 0, increased: 0, decreased: 0}).increased
+              } increased / {
+                Object.entries(userProfile.topics || {}).reduce((counts, [_, data]) => {
+                  if (Math.abs(data.weight - 0.5) < 0.001) counts.default++;
+                  else if (data.weight > 0.5) counts.increased++;
+                  else counts.decreased++;
+                  return counts;
+                }, {default: 0, increased: 0, decreased: 0}).decreased
+              } decreased
+            </ThemedText>
+          </ThemedView>
+          
+          {allTopicWeights.map(({ topic, weight, isDefault }) => (
+            <View key={`debug-${topic}`} style={styles.weightItem}>
+              <ThemedText style={styles.weightLabel}>{topic}</ThemedText>
                     <ThemedText style={[
-                      styles.tableExistsText, 
-                      (exists ? styles.tableExistsTrue : styles.tableExistsFalse)
-                    ]}>
-                      {exists ? 'YES' : 'NO'}
+                styles.weightValue, 
+                isDefault ? { color: '#FFD700' } : // Gold for default
+                weight > 0.5 ? { color: '#4CAF50' } : // Green for increased
+                { color: '#FF5252' } // Red for decreased
+              ]}>
+                {weight.toFixed(2)} 
+                <ThemedText style={{fontSize: 12, opacity: 0.8}}>
+                  {isDefault ? " [DEFAULT]" : 
+                   weight > 0.5 ? " [INCREASED]" : 
+                   " [DECREASED]"}
+                </ThemedText>
                     </ThemedText>
                   </View>
                 ))}
+          <ThemedText style={[styles.lastUpdatedText, {textAlign: 'center', marginTop: 10}]}>
+            <ThemedText style={{color: '#FFD700'}}>● Gold = Default (0.50)</ThemedText> | 
+            <ThemedText style={{color: '#4CAF50'}}> ● Green = Increased</ThemedText> | 
+            <ThemedText style={{color: '#FF5252'}}> ● Red = Decreased</ThemedText>
+          </ThemedText>
+        </ThemedView>
+
+        {/* Current Weights section - Client-side only */}
+        <ThemedView style={styles.currentWeightsContainer}>
+          <View style={styles.currentWeightsHeader}>
+            <ThemedText style={styles.sectionTitle}>Current Client-Side Weights</ThemedText>
               </View>
               
-              {dbDebugResults.error && (
-                <View style={styles.debugDetailRow}>
-                  <ThemedText style={styles.debugErrorText}>
-                    Error: {dbDebugResults.error}
+          <View style={styles.lastUpdatedContainer}>
+            <ThemedText style={styles.lastUpdatedText}>
+              Last Updated: {new Date(userProfile.lastRefreshed).toLocaleTimeString()}
                   </ThemedText>
                 </View>
-              )}
-              
-              {/* Show column information for each table that exists */}
-              {dbDebugResults.tableColumns && Object.keys(dbDebugResults.tableColumns).length > 0 && (
-                <View>
-                  <ThemedText style={styles.debugSectionTitle}>Table Structure:</ThemedText>
-                  {Object.entries(dbDebugResults.tableColumns).map(([tableName, columns]) => (
-                    <View key={`columns-${tableName}`} style={styles.columnInfoContainer}>
-                      <ThemedText style={styles.columnInfoTitle}>{tableName}</ThemedText>
-                      {Array.isArray(columns) && columns.map((column: any, index: number) => (
-                        <View key={`column-${tableName}-${index}`} style={styles.columnRow}>
-                          <ThemedText style={styles.columnName}>{column.column_name}</ThemedText>
-                          <ThemedText style={styles.columnType}>
-                            {column.data_type}{column.is_nullable === 'YES' ? ' (nullable)' : ''}
+                  
+          {/* Rest of the existing weights display */}
+          {Object.entries(userProfile.topics || {}).length > 0 ? (
+            <ScrollView style={{maxHeight: 100}} nestedScrollEnabled={true}>
+              {Object.entries(userProfile.topics).map(([topicName, topic]) => (
+                <ThemedText key={topicName} style={{fontSize: 12, color: '#333333', marginBottom: 4}}>
+                  {topicName}: {topic.weight.toFixed(4)}, 
+                  Subtopics: {Object.entries(topic.subtopics).map(([subName, sub]) => 
+                    `${subName}=${sub.weight.toFixed(4)}`).join(', ')}
                           </ThemedText>
-                        </View>
-                      ))}
-                    </View>
-                  ))}
-                </View>
-              )}
-              
-              {!Object.values(dbDebugResults.tablesExist || {}).some(Boolean) && (
-                <TouchableOpacity
-                  style={[
-                    styles.refreshButton, 
-                    {backgroundColor: 'rgba(76, 175, 80, 0.2)', alignSelf: 'center', marginTop: 12}
-                  ]}
-                  onPress={fixDatabase}
-                  disabled={isFixingDb}
-                >
-                  {isFixingDb ? (
-                    <ThemedText style={[styles.refreshingText, {color: '#4CAF50'}]}>Fixing...</ThemedText>
-                  ) : (
-                    <>
-                      <Feather name="tool" size={16} color="#4CAF50" />
-                      <ThemedText style={[styles.refreshText, {color: '#4CAF50'}]}>Fix Missing Tables</ThemedText>
-                    </>
-                  )}
-                </TouchableOpacity>
-              )}
-              
-              {isFixingDb && (
-                <ThemedText style={styles.refreshProgressText}>
-                  Creating missing tables and initializing data...
+              ))}
+            </ScrollView>
+          ) : (
+            <ThemedText style={{fontSize: 12, color: '#666666'}}>
+              No topics found
                 </ThemedText>
               )}
-              
-              {/* Add additional debug information button */}
-              <TouchableOpacity
-                style={[
-                  styles.refreshButton, 
-                  {backgroundColor: 'rgba(91, 106, 232, 0.2)', alignSelf: 'center', marginTop: 12}
-                ]}
-                onPress={debugDatabase}
-                disabled={isFixingDb}
-              >
-                <Feather name="refresh-cw" size={16} color="#5b6ae8" />
-                <ThemedText style={[styles.refreshText, {color: '#5b6ae8'}]}>Refresh Debug Info</ThemedText>
-              </TouchableOpacity>
-              
-              {/* Add specific fix button for topics data */}
-              {(dbDebugResults.tablesExist?.user_profile_data && 
-                (!Object.keys(userProfile.topics || {}).length || userProfile.topics === null)) && (
-                <TouchableOpacity
-                  style={[
-                    styles.refreshButton, 
-                    {backgroundColor: 'rgba(243, 156, 18, 0.2)', alignSelf: 'center', marginTop: 12}
-                  ]}
-                  onPress={() => fixDatabase()}
-                  disabled={isFixingDb}
-                >
-                  {isFixingDb ? (
-                    <ThemedText style={[styles.refreshingText, {color: '#f39c12'}]}>Initializing...</ThemedText>
-                  ) : (
-                    <>
-                      <Feather name="database" size={16} color="#f39c12" />
-                      <ThemedText style={[styles.refreshText, {color: '#f39c12'}]}>Initialize Topics Data</ThemedText>
-                    </>
-                  )}
-                </TouchableOpacity>
-              )}
             </ThemedView>
-          )}
+        
+        {/* Rest of the existing weights display */}
+        <ThemedView style={styles.weightChangesContainer}>
+          <ThemedText style={styles.sectionTitle}>Recent Weight Changes</ThemedText>
           
-          {Object.keys(userProfile.topics || {}).length === 0 ? (
-            <View style={styles.emptyState}>
-              <ThemedText style={styles.emptyText}>No topic weights in user profile yet</ThemedText>
-            </View>
-          ) : (
-            // Sort topics by weight descending
-            Object.entries(userProfile.topics)
-              .sort(([, topicA], [, topicB]) => topicB.weight - topicA.weight)
-              .map(([topicName, topic]) => {
-                // Calculate trend by looking at recent weight changes
-                const topicTrend = getWeightTrend(topicName, 'topic');
-                const topicPercentage = Math.round(topic.weight * 100);
-                
-                return (
-                <View key={topicName} style={styles.topicWeightItem}>
-                  <View style={styles.weightHeaderRow}>
-                    <ThemedText style={styles.topicName}>{topicName}</ThemedText>
-                    <View style={styles.weightValueContainer}>
-                      <ThemedText style={styles.weightValue}>{topic.weight.toFixed(2)}</ThemedText>
-                      {topicTrend !== 0 && (
-                        <View style={styles.trendContainer}>
-                          <Feather 
-                            name={topicTrend > 0 ? "trending-up" : "trending-down"} 
-                            size={16} 
-                            color={topicTrend > 0 ? '#4CAF50' : '#F44336'} 
-                          />
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                  
-                  <View style={styles.weightInfoRow}>
-                    <View style={styles.percentageContainer}>
-                      <ThemedText style={styles.percentageText}>{topicPercentage}%</ThemedText>
-                    </View>
-                    <ThemedText style={styles.trendsText}>
-                      {topicTrend > 0 ? `+${topicTrend.toFixed(2)} recently` : 
-                       topicTrend < 0 ? `${topicTrend.toFixed(2)} recently` : 
-                       'No recent changes'}
+          {/* Debug info for weight changes */}
+          <ThemedView style={{backgroundColor: 'rgba(255, 215, 0, 0.1)', padding: 10, borderRadius: 5, marginBottom: 10}}>
+            <ThemedText style={{fontSize: 12, color: '#333333', fontWeight: 'bold'}}>
+              Debug Info
                     </ThemedText>
-                  </View>
-                  
-                  {/* Sort subtopics by weight descending */}
-                  {Object.entries(topic.subtopics)
-                    .sort(([, subtopicA], [, subtopicB]) => subtopicB.weight - subtopicA.weight)
-                    .map(([subtopicName, subtopic]) => {
-                      // Calculate trend for subtopic
-                      const subtopicTrend = getWeightTrend(subtopicName, 'subtopic', topicName);
-                      const subtopicPercentage = Math.round(subtopic.weight * 100);
-                      
-                      return (
-                      <View key={`${topicName}-${subtopicName}`} style={styles.subtopicWeightItem}>
-                        <View style={styles.weightHeaderRow}>
-                          <ThemedText style={styles.subtopicName}>{subtopicName}</ThemedText>
-                          <View style={styles.weightValueContainer}>
-                            <ThemedText style={styles.weightValue}>{subtopic.weight.toFixed(2)}</ThemedText>
-                            {subtopicTrend !== 0 && (
-                              <View style={styles.trendContainer}>
-                                <Feather 
-                                  name={subtopicTrend > 0 ? "trending-up" : "trending-down"} 
-                                  size={14} 
-                                  color={subtopicTrend > 0 ? '#4CAF50' : '#F44336'} 
-                                />
-                              </View>
-                            )}
-                          </View>
-                        </View>
-                        
-                        <View style={styles.weightInfoRow}>
-                          <View style={[styles.percentageContainer, styles.subtopicPercentage]}>
-                            <ThemedText style={styles.percentageText}>{subtopicPercentage}%</ThemedText>
-                          </View>
-                          <ThemedText style={styles.trendsText}>
-                            {subtopicTrend > 0 ? `+${subtopicTrend.toFixed(2)} recently` : 
-                             subtopicTrend < 0 ? `${subtopicTrend.toFixed(2)} recently` : 
-                             'No recent changes'}
+            <ThemedText style={{fontSize: 11, color: '#666666'}}>
+              Default weight value: 0.50
                           </ThemedText>
-                        </View>
-                        
-                        {/* Only show branches if there are more than just the default "General" branch */}
-                        {Object.keys(subtopic.branches).length > 1 && 
-                          // Sort branches by weight descending
-                          Object.entries(subtopic.branches)
-                            .sort(([, branchA], [, branchB]) => branchB.weight - branchA.weight)
-                            .map(([branchName, branch]) => {
-                              // Calculate trend for branch
-                              const branchTrend = getWeightTrend(branchName, 'branch', topicName, subtopicName);
-                              const branchPercentage = Math.round(branch.weight * 100);
-                              
-                              return (
-                              <View key={`${topicName}-${subtopicName}-${branchName}`} style={styles.branchWeightItem}>
-                                <View style={styles.weightHeaderRow}>
-                                  <ThemedText style={styles.branchName}>{branchName}</ThemedText>
-                                  <View style={styles.weightValueContainer}>
-                                    <ThemedText style={styles.weightValue}>{branch.weight.toFixed(2)}</ThemedText>
-                                    {branchTrend !== 0 && (
-                                      <View style={styles.trendContainer}>
-                                        <Feather 
-                                          name={branchTrend > 0 ? "trending-up" : "trending-down"} 
-                                          size={12} 
-                                          color={branchTrend > 0 ? '#4CAF50' : '#F44336'} 
-                                        />
-                                      </View>
-                                    )}
-                                  </View>
-                                </View>
-                                
-                                <View style={styles.weightInfoRow}>
-                                  <View style={[styles.percentageContainer, styles.branchPercentage]}>
-                                    <ThemedText style={styles.percentageText}>{branchPercentage}%</ThemedText>
-                                  </View>
-                                  <ThemedText style={styles.trendsText}>
-                                    {branchTrend > 0 ? `+${branchTrend.toFixed(2)} recently` : 
-                                     branchTrend < 0 ? `${branchTrend.toFixed(2)} recently` : 
-                                     'No recent changes'}
+            <ThemedText style={{fontSize: 11, color: '#666666'}}>
+              Displayed weights might not match actual values due to display formatting
                                   </ThemedText>
-                                </View>
-                              </View>
-                            );
-                          })
-                        }
-                      </View>
-                    );
-                  })}
-                </View>
-              );
-            })
-          )}
-          
-          <ThemedText style={styles.lastUpdatedText}>
-            {lastWeightUpdateTime > 0 ? (
-              <>
-                <Feather name="database" size={12} color="rgba(255, 255, 255, 0.5)" style={{marginRight: 4}} />
-                Last pulled from DB: {new Date(lastWeightUpdateTime).toLocaleString()}
-              </>
-            ) : user?.id ? (
-              "Weights not yet synced with database"
-            ) : (
-              "Sign in to sync weights with database"
-            )}
+            <ThemedText style={{fontSize: 11, color: '#666666'}}>
+              The 'Debug Raw Weights' panel above shows the actual current weights
           </ThemedText>
         </ThemedView>
         
-        <ThemedText style={styles.sectionTitle}>Weight Change History</ThemedText>
-        
-        <ThemedView style={styles.weightChangesContainer}>
           {weightChanges.length === 0 ? (
             <View style={styles.emptyState}>
               <ThemedText style={styles.emptyText}>No weight changes recorded yet</ThemedText>
@@ -1587,7 +1443,7 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
               <View key={index} style={styles.weightChangeItem}>
                 <View style={styles.weightChangeHeader}>
                   <ThemedText style={styles.weightChangeCategory}>
-                    {change.category} {change.subtopic ? `> ${change.subtopic}` : ''}
+                    {change.topic} {change.subtopic ? `> ${change.subtopic}` : ''}
                     {change.branch ? `> ${change.branch}` : ''}
                   </ThemedText>
                   <View style={styles.weightChangeInfo}>
@@ -1595,6 +1451,7 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
                       styles.weightChangeType, 
                       change.interactionType === 'correct' ? styles.correctText : 
                       change.interactionType === 'incorrect' ? styles.incorrectText : 
+                      change.interactionType === 'skipped' ? styles.skippedText : 
                       styles.skippedText
                     ]}>
                       {change.interactionType.toUpperCase()}
@@ -1619,11 +1476,17 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
                   
                   <View style={styles.weightTableRow}>
                     <ThemedText style={styles.weightTableCell}>Topic</ThemedText>
-                    <ThemedText style={styles.weightTableCell}>
-                      {change.oldWeights.topicWeight.toFixed(2)}
+                    <ThemedText style={[
+                      styles.weightTableCell,
+                      isDefaultWeight(change.oldWeights.topicWeight) ? {fontStyle: 'italic'} : {}
+                    ]}>
+                      {formatWeight(change.oldWeights.topicWeight)}
                     </ThemedText>
-                    <ThemedText style={styles.weightTableCell}>
-                      {change.newWeights.topicWeight.toFixed(2)}
+                    <ThemedText style={[
+                      styles.weightTableCell,
+                      isDefaultWeight(change.newWeights.topicWeight) ? {fontStyle: 'italic'} : {}
+                    ]}>
+                      {formatWeight(change.newWeights.topicWeight)}
                     </ThemedText>
                     <ThemedText 
                       style={[
@@ -1642,11 +1505,17 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
                    change.newWeights.subtopicWeight !== undefined && (
                     <View style={styles.weightTableRow}>
                       <ThemedText style={styles.weightTableCell}>Subtopic</ThemedText>
-                      <ThemedText style={styles.weightTableCell}>
-                        {change.oldWeights.subtopicWeight.toFixed(2)}
+                      <ThemedText style={[
+                        styles.weightTableCell,
+                        isDefaultWeight(change.oldWeights.subtopicWeight) ? {fontStyle: 'italic'} : {}
+                      ]}>
+                        {formatWeight(change.oldWeights.subtopicWeight)}
                       </ThemedText>
-                      <ThemedText style={styles.weightTableCell}>
-                        {change.newWeights.subtopicWeight.toFixed(2)}
+                      <ThemedText style={[
+                        styles.weightTableCell,
+                        isDefaultWeight(change.newWeights.subtopicWeight) ? {fontStyle: 'italic'} : {}
+                      ]}>
+                        {formatWeight(change.newWeights.subtopicWeight)}
                       </ThemedText>
                       <ThemedText 
                         style={[
@@ -1666,11 +1535,17 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
                    change.newWeights.branchWeight !== undefined && (
                     <View style={styles.weightTableRow}>
                       <ThemedText style={styles.weightTableCell}>Branch</ThemedText>
-                      <ThemedText style={styles.weightTableCell}>
-                        {change.oldWeights.branchWeight.toFixed(2)}
+                      <ThemedText style={[
+                        styles.weightTableCell,
+                        isDefaultWeight(change.oldWeights.branchWeight) ? {fontStyle: 'italic'} : {}
+                      ]}>
+                        {formatWeight(change.oldWeights.branchWeight)}
                       </ThemedText>
-                      <ThemedText style={styles.weightTableCell}>
-                        {change.newWeights.branchWeight.toFixed(2)}
+                      <ThemedText style={[
+                        styles.weightTableCell,
+                        isDefaultWeight(change.newWeights.branchWeight) ? {fontStyle: 'italic'} : {}
+                      ]}>
+                        {formatWeight(change.newWeights.branchWeight)}
                       </ThemedText>
                       <ThemedText 
                         style={[
@@ -2311,7 +2186,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#333333',
   },
-  feedItemCategory: {
+  feedItemTopic: {
     fontSize: 12,
     color: '#666666',
   },
@@ -2668,12 +2543,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333333',
   },
+  lastUpdatedContainer: {
+    marginTop: 4,
+  },
   lastUpdatedText: {
     fontSize: 12,
-    color: '#666666',
-    marginTop: 10,
-    textAlign: 'right',
-    fontStyle: 'italic',
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: 4,
+    textAlign: 'center',
   },
   weightHeaderRow: {
     flexDirection: 'row',
@@ -2966,5 +2843,33 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
+  },
+  weightItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  weightLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  debugWeightsSummary: {
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  
+  debugWeightsHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  
+  debugWeightsInfo: {
+    fontSize: 14,
+    marginBottom: 4,
   },
 }); 
