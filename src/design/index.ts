@@ -188,8 +188,8 @@ export const colors = {
   },
 };
 
-// Category-specific colors for your trivia app
-export const categoryColors = {
+// Topic-specific colors for your trivia app
+export const topicColors = {
   'Science': '#3498db',         // Blue
   'Technology': '#2980b9',      // Darker blue
   'History': '#8e44ad',         // Purple
@@ -213,6 +213,9 @@ export const categoryColors = {
   'Animals': '#27ae60',         // Green
   'default': '#34495e',         // Default fallback
 };
+
+// For backward compatibility
+export const categoryColors = topicColors;
 
 /* -------------------------------------------- */
 /* TYPOGRAPHY                                    */

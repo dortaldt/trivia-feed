@@ -1,6 +1,5 @@
 import { useColorScheme } from 'react-native';
-import designSystem from '../design';
-import { colors } from '../design';
+import designSystem, { colors } from '../design';
 
 /**
  * Hook for accessing the design system with current theme awareness
@@ -21,26 +20,29 @@ export function useDesignSystem() {
 }
 
 /**
- * Helper to get category-specific colors
+ * Helper to get topic-specific colors
  */
-export function getCategoryColor(category: string): string {
-  const categoryColors = designSystem.categoryColors as Record<string, string>;
+export function getTopicColor(category: string): string {
+  const topicColors = designSystem.topicColors as Record<string, string>;
   
   // Try to get direct match
-  if (categoryColors[category]) {
-    return categoryColors[category];
+  if (topicColors[category]) {
+    return topicColors[category];
   }
   
   // Try to find a partial match
-  const partialMatch = Object.keys(categoryColors).find(key => 
+  const partialMatch = Object.keys(topicColors).find(key => 
     category.toLowerCase().includes(key.toLowerCase()) || 
     key.toLowerCase().includes(category.toLowerCase())
   );
   
   if (partialMatch) {
-    return categoryColors[partialMatch];
+    return topicColors[partialMatch];
   }
   
   // Return default color if no match found
-  return categoryColors.default;
-} 
+  return topicColors.default;
+}
+
+// For backward compatibility
+export const getCategoryColor = getTopicColor; 
