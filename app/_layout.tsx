@@ -23,7 +23,7 @@ import { store } from '@/src/store';
 import { AuthProvider, useAuth } from '@/src/context/AuthContext';
 import { ThemeProvider } from '@/src/theme/ThemeProvider';
 import { Colors } from '@/constants/Colors';
-import { SyncManager } from '@/src/components/SyncManager';
+import { SimplifiedSyncManager } from '@/src/components/SimplifiedSyncManager';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -194,7 +194,13 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <SimplifiedSyncManager>
+        {children}
+      </SimplifiedSyncManager>
+    </>
+  );
 }
 
 export default function RootLayout() {
@@ -360,20 +366,18 @@ export default function RootLayout() {
         <AuthProvider>
           <ThemeProvider initialTheme="dark">
             <NavigationThemeProvider value={DarkTheme}>
-              <SyncManager>
-                <AuthWrapper>
-                  <View style={styles.container}>
-                    <Stack>
-                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                      <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-                      <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
-                      <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
-                      <Stack.Screen name="+not-found" />
-                    </Stack>
-                    <StatusBar style="light" />
-                  </View>
-                </AuthWrapper>
-              </SyncManager>
+              <AuthWrapper>
+                <View style={styles.container}>
+                  <Stack>
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+                    <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
+                    <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
+                    <Stack.Screen name="+not-found" />
+                  </Stack>
+                  <StatusBar style="light" />
+                </View>
+              </AuthWrapper>
             </NavigationThemeProvider>
           </ThemeProvider>
         </AuthProvider>
