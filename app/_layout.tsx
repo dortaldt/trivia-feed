@@ -3,9 +3,10 @@ import { useFonts } from 'expo-font';
 import { Stack, useSegments, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, createContext, useContext } from 'react';
 import 'react-native-reanimated';
 import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
 import { View, Text, StyleSheet, Platform, Image } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Font from 'expo-font';
@@ -19,14 +20,28 @@ import FontAwesomeIcon from '@expo/vector-icons/FontAwesome';
 import MaterialIconsIcon from '@expo/vector-icons/MaterialIcons';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { store } from '@/src/store';
+import { store, persistor } from '@/src/store';
 import { AuthProvider, useAuth } from '@/src/context/AuthContext';
-import { ThemeProvider } from '@/src/theme/ThemeProvider';
+import { ThemeProvider as AppThemeProvider } from '@/src/theme/ThemeProvider';
+import { ThemeProvider as CustomThemeProvider } from '@/src/context/ThemeContext';
 import { Colors } from '@/constants/Colors';
 import { SyncManager } from '@/src/components/SyncManager';
+import ThemedLoadingScreen from '@/src/components/ThemedLoadingScreen';
+import BasicLoadingScreen from '@/src/components/BasicLoadingScreen';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
+
+// Create a context to share loading state across components
+export const AppLoadingContext = createContext<{
+  isAppLoading: boolean;
+  setIsAppLoading: React.Dispatch<React.SetStateAction<boolean>>;
+}>({
+  isAppLoading: true,
+  setIsAppLoading: () => {},
+});
+
+export const useAppLoading = () => useContext(AppLoadingContext);
 
 // Auth protection component to redirect users based on auth state
 function AuthWrapper({ children }: { children: React.ReactNode }) {
@@ -200,6 +215,7 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [appIsReady, setAppIsReady] = useState(false);
+  const [isAppLoading, setIsAppLoading] = useState(true);
   
   console.log('Attempting to load fonts...');
   
@@ -245,6 +261,7 @@ export default function RootLayout() {
           
           // App is ready - can hide splash screen
           setAppIsReady(true);
+          // Don't set isAppLoading to false here, it will be set by the feed component when data is loaded
         }
       } catch (e) {
         console.warn('Error preparing app:', e);
@@ -350,34 +367,53 @@ export default function RootLayout() {
 
   // Show loading indicator if app isn't ready yet
   if (!appIsReady) {
-    return null; // Return null while splash screen is still showing
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Provider store={store}>
+          <PersistGate loading={<BasicLoadingScreen message="Loading saved data..." />} persistor={persistor}>
+            <AuthProvider>
+              <AppThemeProvider initialTheme="dark">
+                <CustomThemeProvider>
+                  <ThemedLoadingScreen message="Starting up..." />
+                </CustomThemeProvider>
+              </AppThemeProvider>
+            </AuthProvider>
+          </PersistGate>
+        </Provider>
+      </GestureHandlerRootView>
+    );
   }
 
   // Proceed with the app whether fonts loaded or not
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Provider store={store}>
-        <AuthProvider>
-          <ThemeProvider initialTheme="dark">
-            <NavigationThemeProvider value={DarkTheme}>
-              <SyncManager>
-                <AuthWrapper>
-                  <View style={styles.container}>
-                    <Stack>
-                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                      <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-                      <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
-                      <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
-                      <Stack.Screen name="+not-found" />
-                    </Stack>
-                    <StatusBar style="light" />
-                  </View>
-                </AuthWrapper>
-              </SyncManager>
-            </NavigationThemeProvider>
-          </ThemeProvider>
-        </AuthProvider>
-      </Provider>
+      <AppLoadingContext.Provider value={{ isAppLoading, setIsAppLoading }}>
+        <Provider store={store}>
+          <PersistGate loading={<BasicLoadingScreen message="Loading saved data..." />} persistor={persistor}>
+            <AuthProvider>
+              <AppThemeProvider initialTheme="dark">
+                <CustomThemeProvider>
+                  <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                    <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+                    <AuthWrapper>
+                      <SyncManager>
+                        <Stack screenOptions={{ headerShown: false }} />
+                      </SyncManager>
+                    </AuthWrapper>
+                    
+                    {/* Overlay the custom loading screen when app is loading */}
+                    {isAppLoading && (
+                      <View style={styles.loadingOverlay}>
+                        <ThemedLoadingScreen message="Preparing your trivia feed..." />
+                      </View>
+                    )}
+                  </NavigationThemeProvider>
+                </CustomThemeProvider>
+              </AppThemeProvider>
+            </AuthProvider>
+          </PersistGate>
+        </Provider>
+      </AppLoadingContext.Provider>
     </GestureHandlerRootView>
   );
 }
@@ -407,5 +443,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.dark.text,
     marginTop: 10,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colors.dark.background,
+    zIndex: 1000,
   },
 });

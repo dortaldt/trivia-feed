@@ -5,6 +5,7 @@
  */
 
 export { default as Button } from './Button';
+export { default as NeonButton } from './NeonButton';
 export { Text } from './Text';
 export { View } from './View';
 export { Card } from './Card';

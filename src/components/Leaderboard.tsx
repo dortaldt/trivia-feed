@@ -13,6 +13,7 @@ import { colors, spacing, borderRadius } from '@/src/theme';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Button from './ui/Button';
+import { useTheme } from '@/src/context/ThemeContext';
 
 const LeaderboardTabs = {
   Daily: 'day',
@@ -38,10 +39,61 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
   const isDark = colorScheme === 'dark';
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
+  const { currentTheme, themeDefinition } = useTheme();
+
+  // Get theme colors
+  const getThemeColor = (colorName: string = 'primary') => {
+    // For neon theme, override primary color to yellow
+    if (currentTheme === 'neon' && colorName === 'primary') {
+      return '#FFFF00'; // Bright yellow for neon theme
+    }
+    
+    if (themeDefinition && themeDefinition.colors && themeDefinition.colors[isDark ? 'dark' : 'light']) {
+      // Get the color palette for current theme and color scheme
+      const colorPalette = themeDefinition.colors[isDark ? 'dark' : 'light'];
+      
+      // Map the simplified color names to the theme color palette properties
+      const colorMap: Record<string, keyof typeof colorPalette> = {
+        primary: 'primary',
+        secondary: 'secondary',
+        accent: 'accent',
+        background: 'background',
+        surface: 'surface',
+        card: 'card',
+        text: 'text',
+        border: 'border',
+        success: 'success',
+        error: 'error',
+        warning: 'warning',
+        info: 'info',
+        icon: 'icon'
+      };
+      
+      // Get the mapped color key or use the direct key
+      const colorKey = colorMap[colorName] || colorName as keyof typeof colorPalette;
+      
+      // Check if the color exists in the palette and return it
+      if (colorKey in colorPalette) {
+        return colorPalette[colorKey];
+      }
+      
+      // Return fallback colors
+      return colorName === 'primary' ? '#ffc107' : 
+        colorName === 'error' ? '#e74c3c' : 
+        colorName === 'info' ? '#0a7ea4' : 
+        '#ffc107';
+    }
+    
+    // Default fallback colors
+    return colorName === 'primary' ? '#ffc107' : 
+      colorName === 'error' ? '#e74c3c' : 
+      colorName === 'info' ? '#0a7ea4' : 
+      '#ffc107';
+  };
 
   // Use theme colors instead of hardcoded values
-  const ACCENT_COLOR = colors.accent;
-  const ACCENT_FOREGROUND = colors.accentForeground;
+  const ACCENT_COLOR = getThemeColor('accent');
+  const ACCENT_FOREGROUND = isDark ? '#000000' : '#FFFFFF';
 
   // Add debug log for auth state
   useEffect(() => {
@@ -132,16 +184,23 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
     // Determine if this is the current user
     const isCurrentUser = user && user.id === item.id;
 
+    // Get theme-specific styles for the item
+    const itemBackgroundColor = isCurrentUser 
+      ? `${getThemeColor('accent')}20` // 20% opacity accent color
+      : index % 2 === 1 
+        ? `${getThemeColor('muted')}20` // 20% opacity muted color for alternating rows
+        : 'transparent';
+
     return (
       <ThemedView style={[
         styles.itemContainer, 
-        isCurrentUser && styles.currentUserItem,
-        index % 2 === 1 && !isCurrentUser && styles.altItemContainer,
+        isCurrentUser && [styles.currentUserItem, { backgroundColor: itemBackgroundColor }],
+        index % 2 === 1 && !isCurrentUser && [styles.altItemContainer, { backgroundColor: itemBackgroundColor }],
       ]}
       {...(Platform.OS === 'web' ? {
         className: `leaderboard-item ${isCurrentUser ? 'current-user' : ''}`
       } : {})}>
-        <ThemedText style={[styles.rank, isCurrentUser && styles.currentUserRank]}>
+        <ThemedText style={[styles.rank, isCurrentUser && [styles.currentUserRank, { color: getThemeColor('accent') }]]}>
           {index + 1}
         </ThemedText>
         
@@ -158,7 +217,13 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
             />
           ) : (
             // If user is logged in but the leaderboard item has no avatar - show initials
-            <View style={[styles.avatarPlaceholder, isCurrentUser && styles.currentUserAvatar]}>
+            <View style={[
+              styles.avatarPlaceholder, 
+              isCurrentUser && [
+                styles.currentUserAvatar, 
+                { backgroundColor: getThemeColor('accent') }
+              ]
+            ]}>
               <ThemedText style={styles.avatarText}>{getInitials(item.full_name, item.username)}</ThemedText>
             </View>
           )}
@@ -168,7 +233,7 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
           <View style={styles.usernameRow}>
             <ThemedText style={[styles.username, isCurrentUser && styles.currentUserText]}>
               {item.username || item.full_name || 'Anonymous'} 
-              {isCurrentUser && <ThemedText style={styles.youLabel}>(You)</ThemedText>}
+              {isCurrentUser && <ThemedText style={[styles.youLabel, { color: getThemeColor('accent') }]}>(You)</ThemedText>}
             </ThemedText>
             
             {item.country && (
@@ -180,7 +245,10 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
         </View>
         
         <View style={styles.scoreContainer}>
-          <ThemedText style={[styles.scoreValue, { color: isCurrentUser ? ACCENT_COLOR : isDark ? ACCENT_COLOR : colors.secondary }]}>
+          <ThemedText style={[
+            styles.scoreValue, 
+            { color: isCurrentUser ? getThemeColor('accent') : isDark ? getThemeColor('accent') : getThemeColor('secondary') }
+          ]}>
             {scoreToShow}
           </ThemedText>
           <ThemedText style={styles.scoreLabel}>
@@ -212,7 +280,7 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
     if (isLoading) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors[colorScheme].tint} />
+          <ActivityIndicator size="large" color={getThemeColor('primary')} />
         </View>
       );
     }
@@ -252,24 +320,31 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
       const checkLocalGuestMode = async () => {
         try {
           const guestMode = await AsyncStorage.getItem('guestMode');
-          const isGuestMode = guestMode === 'true';
-          console.log('Leaderboard banner - Guest mode check:', isGuestMode);
-          setLocalIsGuest(isGuestMode || isGuest);
+          setLocalIsGuest(guestMode === 'true' || isGuest);
         } catch (e) {
-          console.error('Error in local guest mode check:', e);
+          console.error('Error in local guest mode check in Leaderboard:', e);
         }
       };
       
       checkLocalGuestMode();
     }, [isGuest]);
     
-    if (!localIsGuest && !!user) return null;
+    if (!localIsGuest) return null;
     
-    // If we're in guest mode or don't have a user, show the banner
+    // Get theme-specific styling for the guest prompt
+    const promptBackgroundColor = currentTheme === 'neon'
+      ? 'rgba(255, 255, 0, 0.15)' // Yellow with opacity for neon theme  
+      : `${getThemeColor('primary')}15`; // 15% opacity of primary color
+    
+    const promptBorderColor = getThemeColor('primary');
+    
     return (
       <View style={[
         styles.guestPromptContainer,
-        { backgroundColor: isDark ? 'rgba(255, 193, 7, 0.15)' : 'rgba(255, 193, 7, 0.2)' }
+        { 
+          backgroundColor: promptBackgroundColor,
+          borderLeftColor: promptBorderColor 
+        }
       ]}>
         <Image 
           source={require('../../assets/images/guest-avatar.png')}
@@ -277,10 +352,10 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
           resizeMode="cover"
         />
         <View style={{ flex: 1 }}>
-          <ThemedText style={styles.guestPromptTitle}>
+          <ThemedText style={[styles.guestPromptTitle, { color: getThemeColor('text') }]}>
             Want to join the leaderboard?
           </ThemedText>
-          <ThemedText style={styles.guestPromptText}>
+          <ThemedText style={[styles.guestPromptText, { color: getThemeColor('textSecondary') }]}>
             Sign in to track your progress and compete with others!
           </ThemedText>
         </View>
@@ -289,16 +364,10 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
           size="sm"
           leftIcon={<FeatherIcon name="log-in" size={16} color="#000" />}
           onPress={() => {
-            // Navigate to login page
-            if (Platform.OS === 'web') {
-              window.location.href = '/auth/login?direct=true';
-            } else {
-              // Use Expo Router for iOS/Android navigation
-              router.push({
-                pathname: '/auth/login',
-                params: { direct: 'true' }
-              });
-            }
+            router.push({
+              pathname: '/auth/login',
+              params: { direct: 'true' }
+            });
           }}
         >
           Sign In
@@ -320,10 +389,22 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
         {(Object.keys(LeaderboardTabs) as LeaderboardTabKey[]).map((tab) => (
           <TouchableOpacity
             key={tab}
-            style={[styles.tab, tab === activeTab && styles.activeTab]}
+            style={[
+              styles.tab, 
+              tab === activeTab && [
+                styles.activeTab, 
+                { borderBottomColor: getThemeColor('accent') }
+              ]
+            ]}
             onPress={() => setActiveTab(tab)}
           >
-            <ThemedText style={[styles.tabText, tab === activeTab && styles.activeTabText]}>
+            <ThemedText style={[
+              styles.tabText, 
+              tab === activeTab && [
+                styles.activeTabText, 
+                { color: getThemeColor('accent') }
+              ]
+            ]}>
               {tab}
             </ThemedText>
           </TouchableOpacity>
@@ -333,7 +414,7 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
       {user && userRank !== null && (
         <ThemedView style={styles.yourRankContainer}>
           <ThemedText style={styles.yourRankText}>
-            Your Rank: <ThemedText style={styles.rankNumber}>#{userRank}</ThemedText>
+            Your Rank: <ThemedText style={[styles.rankNumber, { color: getThemeColor('accent') }]}>#{userRank}</ThemedText>
           </ThemedText>
         </ThemedView>
       )}
@@ -355,16 +436,16 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
         const style = document.createElement('style');
         style.textContent = `
           .leaderboard-container {
-            background-color: ${colors.background};
-            color: ${colors.foreground};
+            background-color: ${getThemeColor('background')};
+            color: ${getThemeColor('text')};
           }
           .leaderboard-item {
-            background-color: ${colors.card};
-            border: 1px solid ${colors.border};
+            background-color: ${getThemeColor('card')};
+            border: 1px solid ${getThemeColor('border')};
           }
           .leaderboard-item.current-user {
-            background-color: ${isDark ? '#2b2206' : '#fff8e1'};
-            border-color: ${colors.accent};
+            background-color: ${isDark ? `${getThemeColor('accent')}20` : `${getThemeColor('accent')}10`};
+            border-color: ${getThemeColor('accent')};
           }
         `;
         document.head.appendChild(style);
@@ -374,7 +455,7 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
         };
       }
       return () => {};
-    }, [isDark]);
+    }, [isDark, currentTheme]);
     
     return <WebContainer>{content}</WebContainer>;
   }
@@ -406,7 +487,6 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 3,
-    borderBottomColor: colors.accent,
   },
   tabText: {
     fontSize: 14,
@@ -414,7 +494,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   activeTabText: {
-    color: colors.accent,
     fontWeight: '600',
   },
   yourRankContainer: {
@@ -428,7 +507,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   rankNumber: {
-    color: colors.accent,
     fontWeight: 'bold',
   },
   listContent: {
@@ -440,18 +518,10 @@ const styles = StyleSheet.create({
     padding: spacing[4],
   },
   altItemContainer: {
-    backgroundColor: Platform.select({
-      ios: colors.muted + '20',
-      android: colors.muted + '20',
-      default: 'transparent'
-    }),
+    // Background color now set inline
   },
   currentUserItem: {
-    backgroundColor: Platform.select({
-      ios: colors.accent + '20',
-      android: colors.accent + '20',
-      default: 'transparent'
-    }),
+    // Background color now set inline
   },
   rank: {
     width: 30,
@@ -460,7 +530,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   currentUserRank: {
-    color: colors.accent,
+    // Color now set inline
   },
   avatarContainer: {
     marginRight: spacing[3],
@@ -479,7 +549,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   currentUserAvatar: {
-    backgroundColor: colors.accent,
+    // Background color now set inline
   },
   avatarText: {
     color: colors.foreground,
@@ -502,7 +572,6 @@ const styles = StyleSheet.create({
   },
   youLabel: {
     fontStyle: 'italic',
-    color: colors.accent,
     marginLeft: 4,
   },
   flag: {
@@ -546,7 +615,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#ffc107',
   },
   guestPromptTitle: {
     fontWeight: 'bold',

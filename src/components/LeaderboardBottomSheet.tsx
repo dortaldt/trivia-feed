@@ -23,10 +23,8 @@ const LeaderboardBottomSheet: React.FC<LeaderboardBottomSheetProps> = ({
     onClose();
   }, [onClose]);
   
-  // Determine appropriate snap points based on platform
-  const snapPoints = Platform.OS === 'ios' 
-    ? ['65%', '90%'] 
-    : ['70%', '90%'];
+  // Set a fixed 80% height for the leaderboard
+  const snapPoints = ['80%'];
 
   return (
     <BottomSheet
@@ -35,7 +33,11 @@ const LeaderboardBottomSheet: React.FC<LeaderboardBottomSheetProps> = ({
       title="Leaderboard"
       snapPoints={snapPoints}
     >
-      <View style={styles.container}>
+      <View style={[
+        styles.container,
+        // Add negative margin to counter any iOS-specific padding
+        Platform.OS === 'ios' && { marginBottom: -insets.bottom }
+      ]}>
         <Leaderboard limit={limit} disableScrolling={true} />
       </View>
     </BottomSheet>
@@ -45,7 +47,7 @@ const LeaderboardBottomSheet: React.FC<LeaderboardBottomSheetProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingBottom: spacing[5],
+    paddingBottom: 0,
   }
 });
 
