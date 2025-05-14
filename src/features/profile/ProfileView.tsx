@@ -26,6 +26,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { colors } from '../../theme';
 import Button from '../../components/ui/Button';
+import { useAppSelector } from '../../store/hooks';
 
 // Add interface for countries
 interface Country {
@@ -48,6 +49,9 @@ const ProfileView: React.FC = () => {
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
   const [localIsGuest, setLocalIsGuest] = useState(false);
+  
+  // Get user profile data from Redux store
+  const userProfile = useAppSelector(state => state.trivia.userProfile);
   
   // Add debug log for current auth state
   useEffect(() => {
@@ -75,11 +79,33 @@ const ProfileView: React.FC = () => {
   }, [user]);
 
   const fetchUserProfile = async () => {
+    // MODIFIED: No longer fetch directly from database
+    // User profile data should already be available from SimplifiedSyncManager
+    console.log('ProfileView - Avoiding direct database access, using SimplifiedSyncManager data instead');
+    
     if (!user) return;
     
     try {
       setLoadingProfile(true);
       
+      // Import the functions we need
+      const { fetchProfileWithDefaultCheck, hasAllDefaultWeights } = await import('../../lib/simplifiedSyncService');
+      
+      // Check if profile has default weights
+      if (hasAllDefaultWeights(userProfile)) {
+        console.log('ProfileView - Detected default weights, attempting to fetch from database');
+        
+        // Get from database directly, bypassing write-only mode
+        const profile = await fetchProfileWithDefaultCheck(user.id, userProfile);
+        
+        if (profile) {
+          console.log('ProfileView - Successfully fetched profile from database');
+          // Handle the Redux update in the SimplifiedSyncManager
+        }
+      }
+      
+      // Fetch user display data from database anyway - this is separate from the topics/weights
+      console.log('ProfileView - Fetching user display data from profiles table');
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -96,6 +122,8 @@ const ProfileView: React.FC = () => {
         setFullName(data.full_name || '');
         setAvatarUrl(data.avatar_url || '');
         setCountry(data.country || '');
+      } else {
+        console.log('ProfileView - No display data found');
       }
     } catch (error: any) {
       console.error('Error fetching user profile:', error.message);

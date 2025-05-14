@@ -6,7 +6,7 @@ import {
 } from '../lib/personalizationService';
 import { FeedItem } from '../lib/triviaService';
 import { recordUserAnswer } from '../lib/leaderboardService';
-import { syncUserProfile, syncUserInteractions, syncFeedChanges, syncWeightChanges, loadUserData } from '../lib/syncService';
+import { syncUserProfile } from '../lib/simplifiedSyncService';
 import { InteractionLog, FeedChange, WeightChange } from '../types/trackerTypes';
 import { RootState } from '../store';
 
@@ -395,9 +395,6 @@ const triviaSlice = createSlice({
         
         // Add to synced feed changes
         state.syncedFeedChanges.push(...feedChanges);
-        
-        // Sync feed changes with server
-        void syncFeedChanges(userId, feedChanges);
       }
     },
     updateUserProfile: (state, action: PayloadAction<{ profile: UserProfile; userId?: string; weightChange?: WeightChange }>) => {
@@ -437,11 +434,6 @@ const triviaSlice = createSlice({
       if (userId) {
         // Use safer version that handles null checking 
         safeSyncUserProfile(userId, profile);
-        
-        // Sync weight change with server if provided
-        if (weightChange) {
-          void syncWeightChanges(userId, [weightChange]);
-        }
       }
     },
     markTooltipAsViewed: (state) => {
@@ -486,17 +478,14 @@ const triviaSlice = createSlice({
     syncFailed: (state) => {
       state.isSyncing = false;
     },
-    loadUserDataStart: (state, action: PayloadAction<{ userId: string }>) => {
+    loadUserDataStart: (state) => {
       state.isSyncing = true;
     },
-    loadUserDataSuccess: (state, action: PayloadAction<{ 
+    loadUserDataSuccess: (state, action: PayloadAction<{
       profile: UserProfile | null;
-      interactions: InteractionLog[];
-      feedChanges: FeedChange[];
-      weightChanges: WeightChange[];
       timestamp: number;
     }>) => {
-      const { profile, interactions, feedChanges, weightChanges, timestamp } = action.payload;
+      const { profile, timestamp } = action.payload;
       
       // Only update profile if we received one
       if (profile) {
@@ -507,48 +496,6 @@ const triviaSlice = createSlice({
         } else {
           console.log('Local profile is newer than server profile, keeping local changes');
         }
-      }
-      
-      // Merge interactions (avoid duplicates by questionId and timestamp)
-      const existingInteractionKeys = new Set(
-        state.syncedInteractions.map(i => `${i.questionId}-${i.timestamp}`)
-      );
-      
-      const newInteractions = interactions.filter(
-        i => !existingInteractionKeys.has(`${i.questionId}-${i.timestamp}`)
-      );
-      
-      if (newInteractions.length > 0) {
-        console.log(`Adding ${newInteractions.length} new interactions from server`);
-        state.syncedInteractions = [...state.syncedInteractions, ...newInteractions];
-      }
-      
-      // Merge feed changes (avoid duplicates by itemId and timestamp)
-      const existingFeedChangeKeys = new Set(
-        state.syncedFeedChanges.map(f => `${f.itemId}-${f.timestamp}`)
-      );
-      
-      const newFeedChanges = feedChanges.filter(
-        f => !existingFeedChangeKeys.has(`${f.itemId}-${f.timestamp}`)
-      );
-      
-      if (newFeedChanges.length > 0) {
-        console.log(`Adding ${newFeedChanges.length} feed changes from server`);
-        state.syncedFeedChanges = [...state.syncedFeedChanges, ...newFeedChanges];
-      }
-      
-      // Merge weight changes (avoid duplicates by questionId and timestamp)
-      const existingWeightChangeKeys = new Set(
-        state.syncedWeightChanges.map(w => `${w.questionId}-${w.timestamp}`)
-      );
-      
-      const newWeightChanges = weightChanges.filter(
-        w => !existingWeightChangeKeys.has(`${w.questionId}-${w.timestamp}`)
-      );
-      
-      if (newWeightChanges.length > 0) {
-        console.log(`Adding ${newWeightChanges.length} weight changes from server`);
-        state.syncedWeightChanges = [...state.syncedWeightChanges, ...newWeightChanges];
       }
       
       // Update sync state
