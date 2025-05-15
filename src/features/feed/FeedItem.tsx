@@ -12,6 +12,7 @@ import {
   Modal,
   ScrollView,
   Image,
+  Pressable,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -61,6 +62,10 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
   const [hoveredAnswerIndex, setHoveredAnswerIndex] = useState<number | null>(null);
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
   
+  // Animation values for buttons
+  const answerAnimations = useRef(item.answers.map(() => new Animated.Value(1))).current;
+  const fadeInAnims = useRef(item.answers.map(() => new Animated.Value(0))).current;
+  
   const mouseEnterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mouseLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const renderCount = useRef(0);
@@ -84,6 +89,29 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     springAnimation,
     isIOS
   } = useIOSAnimations();
+
+  // Run animations when component mounts
+  useEffect(() => {
+    // Stagger fade-in animations for answer options
+    item.answers.forEach((_, index) => {
+      Animated.timing(fadeInAnims[index], {
+        toValue: 1,
+        duration: 250,
+        delay: 150 + (index * 70),
+        useNativeDriver: true
+      }).start();
+    });
+  }, []);
+
+  // Press animation for answer buttons
+  const animateAnswerPress = (index: number, pressed: boolean) => {
+    Animated.spring(answerAnimations[index], {
+      toValue: pressed ? 0.98 : 1,
+      friction: 8,
+      tension: 100,
+      useNativeDriver: true
+    }).start();
+  };
 
   const calculateFontSize = useMemo(() => {
     const textLength = item.question.length;
@@ -136,6 +164,21 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     if (isIOS) {
       springAnimation();
     }
+
+    // Animate selected answer with a bounce effect
+    Animated.sequence([
+      Animated.timing(answerAnimations[index], {
+        toValue: 0.96,
+        duration: 100,
+        useNativeDriver: true
+      }),
+      Animated.spring(answerAnimations[index], {
+        toValue: 1,
+        friction: 5,
+        tension: 40,
+        useNativeDriver: true
+      })
+    ]).start();
     
     if (onAnswer && !isAnswered()) {
       onAnswer(index, item.answers[index].isCorrect);
@@ -238,13 +281,14 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     }
   });
 
-  // In neon mode, answer options need a different style to stand out
+  // Get answer option style with animations
   const getAnswerOptionStyle = (index: number) => {
     const isSelected = isAnswered() && questionState?.answerIndex === index;
     const isCorrect = item.answers[index].isCorrect;
     const isSelectedCorrect = isSelected && isCorrect;
     const isSelectedIncorrect = isSelected && !isCorrect;
     const shouldShowCorrectAnswer = isAnswered() && !isSelectedAnswerCorrect() && isCorrect;
+    const isNotSelected = isAnswered() && questionState?.answerIndex !== index && !shouldShowCorrectAnswer;
 
     // Base styles for all themes
     const baseStyles = [
@@ -254,6 +298,8 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
       isSelectedCorrect && styles.correctAnswerOption,
       isSelectedIncorrect && styles.incorrectAnswerOption,
       shouldShowCorrectAnswer && styles.correctAnswerOption,
+      // Make non-selected answers semi-transparent after selection
+      isNotSelected && styles.nonSelectedAnswerOption,
       Platform.OS === 'web' && hoveredAnswerIndex === index && styles.hoveredAnswerOption,
       isSkipped() && styles.skippedAnswerOption,
     ];
@@ -321,6 +367,8 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     const topicColor = getTopicColor(item.topic);
     return topicColor.hex;
   };
+
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -390,41 +438,60 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
             <View style={styles.answersContainer}>
               <>
                 {item.answers.map((answer, index) => (
-                  <TouchableOpacity
-                    key={`${item.id}-answer-${index}`}
-                    style={getAnswerOptionStyle(index)}
-                    onPress={() => selectAnswer(index)}
-                    disabled={isAnswered()}
-                    {...(Platform.OS === 'web' ? {
-                      onMouseEnter: () => handleMouseEnter(index),
-                      onMouseLeave: handleMouseLeave
-                    } : {})}
+                  <Animated.View key={`${item.id}-answer-container-${index}`}
+                    style={{
+                      transform: [{ scale: answerAnimations[index] }],
+                      opacity: fadeInAnims[index],
+                    }}
                   >
-                    <ThemedText 
-                      type="default"
-                      style={[
-                        styles.answerText, 
-                        isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerText,
-                        isSkipped() && styles.skippedAnswerText,
-                        isNeonTheme && {
-                          color: '#FFFFFF',
-                          ...(Platform.OS === 'web' && hoveredAnswerIndex === index ? { 
-                            textShadow: '0 0 5px #FFFFFF' 
-                          } as any : {})
-                        }
+                    <Pressable
+                      key={`${item.id}-answer-${index}`}
+                      style={({ pressed }) => [
+                        ...getAnswerOptionStyle(index),
+                        pressed && styles.pressedAnswerOption
                       ]}
+                      onPress={() => selectAnswer(index)}
+                      onPressIn={() => animateAnswerPress(index, true)}
+                      onPressOut={() => animateAnswerPress(index, false)}
+                      disabled={isAnswered()}
+                      {...(Platform.OS === 'web' ? {
+                        onMouseEnter: () => handleMouseEnter(index),
+                        onMouseLeave: handleMouseLeave
+                      } : {})}
                     >
-                      {answer.text}
-                    </ThemedText>
-                    
-                    {(isAnswered() && questionState?.answerIndex === index && (
-                      answer.isCorrect ? 
-                      <FeatherIcon name="check-square" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} /> : 
-                      <FeatherIcon name="x-circle" size={24} color="#F44336" style={{marginLeft: 8} as TextStyle} />
-                    )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
-                      <FeatherIcon name="square" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} />
-                    ))}
-                  </TouchableOpacity>
+                      <ThemedText 
+                        type="default"
+                        style={[
+                          styles.answerText,
+                          // Basic selection styling 
+                          isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerText,
+                          isSkipped() && styles.skippedAnswerText,
+                          
+                          // Apply color based on answer correctness after selection
+                          // Selected answer - correct (green) or incorrect (red)
+                          isAnswered() && questionState?.answerIndex === index && (
+                            answer.isCorrect ? styles.correctAnswerText : styles.incorrectAnswerText
+                          ),
+                          
+                          // Highlight correct answer when user selected wrong
+                          isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && styles.correctAnswerText,
+                          
+                          // Base color for neon theme
+                          !isAnswered() && isNeonTheme && { color: '#FFFFFF' }
+                        ]}
+                      >
+                        {answer.text}
+                      </ThemedText>
+                      
+                      {(isAnswered() && questionState?.answerIndex === index && (
+                        answer.isCorrect ? 
+                        <FeatherIcon name="check-square" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} /> : 
+                        <FeatherIcon name="x-circle" size={24} color="#F44336" style={{marginLeft: 8} as TextStyle} />
+                      )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
+                        <FeatherIcon name="square" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} />
+                      ))}
+                    </Pressable>
+                  </Animated.View>
                 ))}
                 
                 {isAnswered() && (
@@ -450,9 +517,9 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
             >
               <FeatherIcon 
                 name={isLiked ? "heart" : "heart"} 
-                size={20} 
-                color={isLiked ? '#F44336' : 'white'} 
-                style={[styles.icon, isLiked ? {} : {opacity: 0.8}]} 
+                size={22} 
+                color={isLiked ? '#FF4C65' : 'white'} 
+                style={[styles.icon, isLiked ? {} : {opacity: 0.9}]} 
               />
               <ThemedText style={[styles.actionText, isNeonTheme && styles.neonActionText]}>
                 {isLiked ? item.likes + 1 : item.likes}
@@ -473,8 +540,8 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
             >
               <FeatherIcon 
                 name="award" 
-                size={20} 
-                color="white" 
+                size={22} 
+                color={isNeonTheme ? '#F0E68C' : 'white'} 
                 style={styles.icon} 
               />
               <ThemedText style={[styles.actionText, isNeonTheme && styles.neonActionText]}>Leaderboard</ThemedText>
@@ -649,18 +716,16 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   neonActionButton: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    borderWidth: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     paddingHorizontal: 15,
     paddingVertical: 8,
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0 0 5px rgba(0, 255, 255, 0.3)'
+      boxShadow: '0 0 5px rgba(0, 255, 255, 0.2)'
     } as any : {
       shadowColor: '#00FFFF',
       shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.3,
-      shadowRadius: 5,
+      shadowOpacity: 0.2,
+      shadowRadius: 3,
     })
   },
   hoveredActionButton: {
@@ -730,6 +795,26 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   disabledText: {
+    opacity: 0.5,
+  },
+  pressedAnswerOption: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 3,
+  },
+  correctAnswerText: {
+    color: '#4CAF50',
+    fontWeight: 'bold',
+  },
+  incorrectAnswerText: {
+    color: '#F44336',
+    fontWeight: 'bold',
+  },
+  nonSelectedAnswerOption: {
     opacity: 0.5,
   },
 });
