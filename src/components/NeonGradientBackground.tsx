@@ -33,38 +33,67 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
   const { primary, secondary } = getTopicColors();
   
   // Create colors for the background gradient
+  // Increase alpha for more vivid colors in key areas, but use darker base
   const topicPrimary = addAlphaToColor(primary, 1.0);
-  const topicSecondary = addAlphaToColor(secondary, 0.9);
+  const topicSecondary = addAlphaToColor(secondary, 0.85);
   
-  // Dark background colors with topics' hue influence
-  const darkened = adjustHexBrightness(secondary, -80); // Very dark version of the topic color
+  // Very dark background colors with a hint of the topic's hue
+  const darkened = adjustHexBrightness(secondary, -90); // Very dark version of the topic color
+  const darkerBackground = '#080810'; // Very dark blue-black
+  const darkestBackground = '#030305'; // Almost black
   
   // Different implementations for iOS, Android, and web for best compatibility
   if (Platform.OS === 'ios' || Platform.OS === 'android') {
     return (
       <View style={[styles.container, style]}>
-        {/* Full coverage gradient - extends from top to bottom */}
+        {/* Base dark gradient - full coverage from corner to corner */}
+        <LinearGradient
+          colors={[
+            darkerBackground, 
+            darkestBackground
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.baseGradient}
+        />
+        
+        {/* Diagonal topic color gradient - more pronounced */}
         <LinearGradient
           colors={[
             topicPrimary, 
-            topicSecondary, 
-            darkened
-          ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          locations={[0, 0.35, 1.0]}
-          style={styles.fullGradient}
-        />
-        
-        {/* Diagonal accent gradient for additional visual flair */}
-        <LinearGradient
-          colors={[
-            addAlphaToColor(primary, 0.7), 
+            'transparent',
             'transparent'
           ]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
+          locations={[0, 0.4, 1.0]}
+          style={styles.diagonalGradient}
+        />
+        
+        {/* Secondary diagonal from bottom left */}
+        <LinearGradient
+          colors={[
+            'transparent',
+            'transparent',
+            addAlphaToColor(topicSecondary, 0.6)
+          ]}
+          start={{ x: 0, y: 1 }}
+          end={{ x: 1, y: 0 }}
+          locations={[0, 0.7, 1.0]}
           style={styles.accentGradient}
+        />
+        
+        {/* Optional vertical fade to add depth */}
+        <LinearGradient
+          colors={[
+            addAlphaToColor(topicPrimary, 0.2),
+            'transparent',
+            darkened
+          ]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          locations={[0, 0.3, 1.0]}
+          style={styles.verticalGradient}
         />
       </View>
     );
@@ -72,7 +101,7 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
     // For web, use a more direct approach with explicit linear gradients
     return (
       <View style={[styles.container, style]}>
-        {/* Primary full-page gradient */}
+        {/* Dark base layer */}
         <View 
           style={{
             position: 'absolute',
@@ -80,12 +109,12 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
             left: 0,
             right: 0,
             bottom: 0,
-            background: `linear-gradient(to bottom, ${topicPrimary} 0%, ${topicSecondary} 35%, ${darkened} 100%)`,
+            background: `linear-gradient(135deg, ${darkerBackground} 0%, ${darkestBackground} 100%)`,
             zIndex: 1
           } as any}
         />
         
-        {/* Diagonal accent overlay */}
+        {/* Diagonal primary gradient */}
         <View 
           style={{
             position: 'absolute',
@@ -93,8 +122,35 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
             left: 0,
             right: 0,
             bottom: 0,
-            background: `linear-gradient(135deg, ${addAlphaToColor(primary, 0.7)} 0%, transparent 70%)`,
+            background: `linear-gradient(135deg, ${topicPrimary} 0%, transparent 50%)`,
+            opacity: 0.9,
             zIndex: 2
+          } as any}
+        />
+        
+        {/* Secondary diagonal accent */}
+        <View 
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `linear-gradient(315deg, ${addAlphaToColor(topicSecondary, 0.8)} 0%, transparent 40%)`,
+            zIndex: 3
+          } as any}
+        />
+        
+        {/* Vertical darkening gradient */}
+        <View 
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `linear-gradient(to bottom, ${addAlphaToColor(topicPrimary, 0.1)} 0%, transparent 30%, ${darkened} 100%)`,
+            zIndex: 4
           } as any}
         />
       </View>
@@ -146,7 +202,16 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  fullGradient: {
+  baseGradient: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+  },
+  diagonalGradient: {
     position: 'absolute',
     width: '100%',
     height: '100%',
@@ -156,6 +221,15 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   accentGradient: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+  },
+  verticalGradient: {
     position: 'absolute',
     width: '100%',
     height: '100%',

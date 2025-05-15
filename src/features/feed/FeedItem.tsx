@@ -13,6 +13,7 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { QuestionState } from '../../store/triviaSlice';
 import { FeatherIcon } from '@/components/FeatherIcon';
@@ -24,6 +25,7 @@ import Leaderboard from '../../components/Leaderboard';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import NeonGradientBackground from '../../components/NeonGradientBackground';
+import { NeonTopicColors, getTopicColor } from '@/constants/NeonColors';
 
 const { width, height } = Dimensions.get('window');
 
@@ -125,6 +127,12 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
   const textColor = useThemeColor({}, 'text');
 
   const selectAnswer = (index: number) => {
+    // Trigger gentle haptic feedback when selecting an answer
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+        .catch(err => console.log('Haptics not supported', err));
+    }
+    
     if (isIOS) {
       springAnimation();
     }
@@ -142,6 +150,12 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
   };
 
   const toggleLike = () => {
+    // Add subtle haptic for like button too
+    if (Platform.OS !== 'web') {
+      Haptics.selectionAsync()
+        .catch(err => console.log('Haptics not supported', err));
+    }
+    
     if (isIOS) {
       springAnimation();
     }
@@ -301,6 +315,13 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     return baseStyles;
   };
 
+  // Get topic color for the current topic
+  const getTopicTitleColor = () => {
+    if (!isNeonTheme) return 'white'; // Default color for non-neon theme
+    const topicColor = getTopicColor(item.topic);
+    return topicColor.hex;
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -319,10 +340,13 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
             <Text style={[
               styles.topicLabel, 
               isNeonTheme && { 
-                textShadowColor: '#FFFFFF',
+                color: getTopicTitleColor(),
+                textShadowColor: getTopicTitleColor(),
                 textShadowOffset: { width: 0, height: 0 },
                 textShadowRadius: 10,
-                ...(Platform.OS === 'web' ? { textShadow: '0 0 10px #FFFFFF' } as any : {})
+                ...(Platform.OS === 'web' ? { 
+                  textShadow: `0 0 10px ${getTopicTitleColor()}, 0 0 15px ${getTopicTitleColor()}80` 
+                } as any : {})
               }
             ]}>{item.topic}</Text>
             <View style={[styles.difficulty, { 
@@ -349,10 +373,6 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
               },
               isNeonTheme && {
                 color: '#FFFFFF',
-                textShadowColor: '#00FFFF',
-                textShadowOffset: { width: 0, height: 0 },
-                textShadowRadius: 8,
-                ...(Platform.OS === 'web' ? { textShadow: '0 0 8px #00FFFF, 0 0 15px rgba(0, 255, 255, 0.5)' } as any : {})
               }
             ]}>
               {item.question}
