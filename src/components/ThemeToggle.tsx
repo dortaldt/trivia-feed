@@ -1,9 +1,26 @@
-import React, { useState } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Modal, ScrollView, Platform } from 'react-native';
+import React, { useState, useContext, useEffect } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet, Modal, ScrollView, Platform, ViewStyle } from 'react-native';
 import { FeatherIcon } from '@/components/FeatherIcon';
-import { useTheme } from '@/src/context/ThemeContext';
 import { BlurView } from 'expo-blur';
-import { ThemeName } from '@/src/context/ThemeContext';
+
+// Import only what's needed
+import { useColorScheme } from '@/hooks/useColorScheme';
+
+// Define types for themes
+export type ThemeName = 'default' | 'neon' | 'retro' | 'modern';
+export type ColorSchemeType = 'light' | 'dark';
+
+// Define the ThemeContext type interface
+interface ThemeContextType {
+  currentTheme: ThemeName;
+  colorScheme: ColorSchemeType;
+  themeDefinition: any; // Using 'any' for simplicity
+  isNeonTheme: boolean;
+  setTheme: (themeName: ThemeName) => void;
+  toggleColorScheme: () => void;
+  toggleTheme: () => void;
+  getThemeAppIcon: () => string;
+}
 
 type ThemeOption = {
   id: ThemeName;
@@ -18,17 +35,110 @@ type ThemeColorPreviews = {
   }
 };
 
-const ThemeToggle: React.FC = () => {
-  const { currentTheme, colorScheme, setTheme, toggleColorScheme } = useTheme();
+type ThemeToggleProps = {
+  style?: ViewStyle;
+  size?: 'small' | 'normal';
+};
+
+// Fallback theme options when ThemeContext is not available
+const defaultThemeOptions: ThemeOption[] = [
+  { id: 'default', name: 'Default', icon: 'circle' },
+  { id: 'neon', name: 'Neon', icon: 'zap' },
+  { id: 'retro', name: 'Retro', icon: 'hard-drive' },
+  { id: 'modern', name: 'Modern', icon: 'smartphone' },
+];
+
+const ThemeToggle: React.FC<ThemeToggleProps> = ({ style, size = 'normal' }) => {
+  // Use a try/catch to safely attempt to import the theme context
+  let themeContext: ThemeContextType | null = null;
+  let currentTheme: ThemeName = 'default';
+  let colorScheme: ColorSchemeType = useColorScheme() as ColorSchemeType || 'dark';
+  
+  // Add effect to check theme status on mount
+  useEffect(() => {
+    const checkThemeStatus = async () => {
+      try {
+        // Check AsyncStorage
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const storedTheme = await AsyncStorage.getItem('app-theme');
+        const storedColorScheme = await AsyncStorage.getItem('app-color-scheme');
+        
+        console.log('ThemeToggle diagnostics:');
+        console.log('- Stored theme:', storedTheme);
+        console.log('- Stored color scheme:', storedColorScheme);
+        
+        // For web, check CSS variables
+        if (Platform.OS === 'web') {
+          const themeId = getComputedStyle(document.documentElement).getPropertyValue('--theme-id').trim();
+          const dataTheme = document.documentElement.dataset.theme;
+          
+          console.log('- CSS theme variable:', themeId);
+          console.log('- HTML data-theme attribute:', dataTheme);
+        }
+      } catch (error) {
+        console.error('Error checking theme status:', error);
+      }
+    };
+    
+    checkThemeStatus();
+  }, []);
+  
+  try {
+    // First, try to get the context from src/context/ThemeContext
+    try {
+      const { useTheme } = require('@/src/context/ThemeContext');
+      themeContext = useTheme();
+      if (themeContext) {
+        currentTheme = themeContext.currentTheme;
+        colorScheme = themeContext.colorScheme;
+        
+        console.log('Successfully connected to ThemeContext:');
+        console.log('- Current theme:', currentTheme);
+        console.log('- Color scheme:', colorScheme);
+        console.log('- Is neon theme:', themeContext.isNeonTheme);
+      }
+    } catch (error) {
+      console.warn('ThemeToggle: Could not access context/ThemeContext, trying theme/ThemeProvider', error);
+      
+      // If that fails, try the ThemeProvider from src/theme/ThemeProvider
+      try {
+        const { useTheme } = require('@/src/theme/ThemeProvider');
+        const simpleThemeContext = useTheme();
+        
+        if (simpleThemeContext) {
+          // Map the simple theme provider to our interface
+          themeContext = {
+            currentTheme: 'default', // The simple provider doesn't have themes, just light/dark
+            colorScheme: simpleThemeContext.theme as ColorSchemeType,
+            themeDefinition: {},
+            isNeonTheme: false,
+            setTheme: () => console.warn('ThemeToggle: setTheme not supported with simple theme provider'),
+            toggleColorScheme: simpleThemeContext.toggleTheme,
+            toggleTheme: () => console.warn('ThemeToggle: toggleTheme not supported with simple theme provider'),
+            getThemeAppIcon: () => '/assets/images/app-icon.png'
+          };
+          
+          // Update current values
+          colorScheme = simpleThemeContext.theme as ColorSchemeType;
+          
+          console.log('Using fallback UIThemeProvider:');
+          console.log('- UI theme:', simpleThemeContext.theme);
+          console.log('- Is dark mode:', simpleThemeContext.isDarkMode);
+        }
+      } catch (secondError) {
+        console.warn('ThemeToggle: Could not access theme/ThemeProvider either', secondError);
+        // Continue with defaults
+      }
+    }
+  } catch (error) {
+    console.warn('ThemeToggle: Error setting up theming', error);
+    // Continue with defaults, button will be non-functional
+  }
+  
   const [modalVisible, setModalVisible] = useState(false);
   
   // Available theme options
-  const themeOptions: ThemeOption[] = [
-    { id: 'default', name: 'Default', icon: 'circle' },
-    { id: 'neon', name: 'Neon', icon: 'zap' },
-    { id: 'retro', name: 'Retro', icon: 'hard-drive' },
-    { id: 'modern', name: 'Modern', icon: 'smartphone' },
-  ];
+  const themeOptions: ThemeOption[] = defaultThemeOptions;
   
   // Simplified color preview for each theme
   const themeColorPreviews: ThemeColorPreviews = {
@@ -57,7 +167,57 @@ const ThemeToggle: React.FC = () => {
   
   // Select a theme and close the modal
   const selectTheme = (themeId: ThemeName) => {
-    setTheme(themeId);
+    if (themeContext && themeContext.setTheme) {
+      console.log(`ThemeToggle: Setting theme to ${themeId}`);
+      themeContext.setTheme(themeId);
+      
+      // Direct application for web platform
+      if (Platform.OS === 'web') {
+        try {
+          // Try to directly apply the theme
+          const { 
+            applyThemeVariables, 
+            setMetaThemeColor 
+          } = require('@/src/utils/applyThemeVariables');
+          
+          const { 
+            defaultTheme, 
+            neonTheme, 
+            retroTheme, 
+            modernTheme 
+          } = require('@/src/design/themes');
+          
+          // Map of theme IDs to definitions
+          const themeMap = {
+            default: defaultTheme,
+            neon: neonTheme,
+            retro: retroTheme,
+            modern: modernTheme
+          };
+          
+          // Force apply theme variables
+          const themeDefinition = themeMap[themeId];
+          if (themeDefinition) {
+            console.log(`ThemeToggle: Directly applying ${themeId} theme variables`);
+            applyThemeVariables(themeDefinition, colorScheme);
+            setMetaThemeColor(themeDefinition, colorScheme);
+            
+            // Add class to body for theme-specific styling
+            document.body.dataset.theme = themeId;
+            document.documentElement.dataset.theme = themeId;
+            
+            // Force page refresh after a short delay to ensure all components pick up the theme
+            setTimeout(() => {
+              window.location.reload();
+            }, 100);
+          }
+        } catch (error) {
+          console.warn('ThemeToggle: Could not directly apply theme variables', error);
+        }
+      }
+    } else {
+      console.warn('ThemeToggle: Cannot set theme, ThemeContext unavailable');
+    }
     setModalVisible(false);
   };
   
@@ -84,16 +244,17 @@ const ThemeToggle: React.FC = () => {
   };
   
   return (
-    <View>
+    <View style={style}>
       {/* Theme Toggle Button */}
       <TouchableOpacity 
         onPress={toggleModal}
         style={[
           styles.themeButton,
+          size === 'small' && styles.themeButtonSmall,
           { backgroundColor: getBackgroundColor() }
         ]}
       >
-        <FeatherIcon name="droplet" size={24} color={getIconColor()} />
+        <FeatherIcon name="droplet" size={size === 'small' ? 18 : 24} color={getIconColor()} />
       </TouchableOpacity>
       
       {/* Theme Selection Modal */}
@@ -175,7 +336,13 @@ const ThemeToggle: React.FC = () => {
                     styles.colorSchemeToggle, 
                     { backgroundColor: colorScheme === 'dark' ? '#333' : '#ddd' }
                   ]} 
-                  onPress={toggleColorScheme}
+                  onPress={() => {
+                    if (themeContext && themeContext.toggleColorScheme) {
+                      themeContext.toggleColorScheme();
+                    } else {
+                      console.warn('ThemeToggle: Cannot toggle color scheme, ThemeContext unavailable');
+                    }
+                  }}
                 >
                   <View 
                     style={[
@@ -215,6 +382,11 @@ const styles = StyleSheet.create({
         transform: 'scale(1.1)',
       },
     } as any : {})
+  },
+  themeButtonSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   modalOverlay: {
     flex: 1,

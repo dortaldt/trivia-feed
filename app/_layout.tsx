@@ -21,7 +21,8 @@ import MaterialIconsIcon from '@expo/vector-icons/MaterialIcons';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { store } from '@/src/store';
 import { AuthProvider, useAuth } from '@/src/context/AuthContext';
-import { ThemeProvider } from '@/src/theme/ThemeProvider';
+import { ThemeProvider } from '@/src/context/ThemeContext';
+import { ThemeProvider as UIThemeProvider } from '@/src/theme/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { SimplifiedSyncManager } from '@/src/components/SimplifiedSyncManager';
 
@@ -364,7 +365,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
         <AuthProvider>
-          <ThemeProvider initialTheme="dark">
+          {/* Custom theme provider from context for advanced theme options */}
+          <ThemeProvider>
+            {/* We removed the UIThemeProvider to avoid conflicts */}
             <NavigationThemeProvider value={DarkTheme}>
               <AuthWrapper>
                 <View style={styles.container}>

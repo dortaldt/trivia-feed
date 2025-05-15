@@ -46,9 +46,9 @@ const createNeonColor = (name: string, hex: string, rgb: string): NeonColor => (
   secondary: adjustHexBrightness(hex, -15) // Create a slightly darker secondary color
 });
 
-// Neon category colors with vibrant distinct colors
-export const NeonCategoryColors: Record<string, NeonColor> = {
-  // Top categories from database
+// Neon topic colors with vibrant distinct colors
+export const NeonTopicColors: Record<string, NeonColor> = {
+  // Top topics from database
   "Music": createNeonColor("Electric Purple", "#BC13FE", "188, 19, 254"),
   "Entertainment": createNeonColor("Hot Pink", "#FF10F0", "255, 16, 240"),
   "Science": createNeonColor("Toxic Green", "#00FF8F", "0, 255, 143"),
@@ -81,7 +81,7 @@ export const NeonCategoryColors: Record<string, NeonColor> = {
   "Math": createNeonColor("Digital Lime", "#C1FF00", "193, 255, 0"),
   "Food": createNeonColor("Power Peach", "#FFAA5E", "255, 170, 94"),
   
-  // Additional useful categories
+  // Additional useful topics
   "Movies": createNeonColor("Neon Red", "#FF3131", "255, 49, 49"),
   "Television": createNeonColor("Shocking Orange", "#FF5F1F", "255, 95, 31"),
   "Video Games": createNeonColor("Plasma Blue", "#1F51FF", "31, 81, 255"),
@@ -99,10 +99,16 @@ export const NeonCategoryColors: Record<string, NeonColor> = {
   "default": createNeonColor("Electric Blue", "#0AEFFF", "10, 239, 255")
 };
 
-// Helper function to get color for a category
-export const getCategoryColor = (category: string) => {
-  return NeonCategoryColors[category] || NeonCategoryColors["default"];
+// For backward compatibility, keep the old name as well
+export const NeonCategoryColors = NeonTopicColors;
+
+// Helper function to get color for a topic
+export const getTopicColor = (topic: string) => {
+  return NeonTopicColors[topic] || NeonTopicColors["default"];
 };
+
+// For backward compatibility, keep the old function as well
+export const getCategoryColor = getTopicColor;
 
 export const NeonColors = {
   light: {

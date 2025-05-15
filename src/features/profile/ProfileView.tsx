@@ -28,6 +28,7 @@ import { router } from 'expo-router';
 import { colors } from '../../theme';
 import Button from '../../components/ui/Button';
 import { useAppSelector } from '../../store/hooks';
+import ThemeToggle from '@/src/components/ThemeToggle';
 
 // Add interface for countries
 interface Country {
@@ -1353,6 +1354,15 @@ const ProfileView: React.FC = () => {
           {/* Account section */}
           <View style={profileStyles.accountSection}>
             <ThemedText style={profileStyles.accountSectionTitle}>Account</ThemedText>
+            
+            {/* Theme selector section */}
+            <View style={{ marginBottom: 24 }}>
+              <ThemedText style={[profileStyles.detailLabel, { marginBottom: 10 }]}>Appearance</ThemedText>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <ThemedText style={profileStyles.detailValue}>Theme & Color Mode</ThemedText>
+                <ThemeToggle size="small" />
+              </View>
+            </View>
             
             {/* Sign Out button - Using proper Button component for web and native */}
             <Button 

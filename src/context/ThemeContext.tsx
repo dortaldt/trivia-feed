@@ -105,6 +105,25 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log('Calling updateFavicon from ThemeContext useEffect');
       updateFavicon(currentTheme);
       updateSocialMetaTags('TriviaFeed');
+      
+      // Add theme-specific body class for CSS selectors
+      document.body.className = document.body.className
+        .replace(/theme-\w+/g, '')
+        .trim();
+      document.body.classList.add(`theme-${currentTheme}`);
+      
+      // Force re-render by applying a small styling change
+      document.documentElement.style.transition = 'all 0.3s ease';
+      // Force DOM reflow
+      const reflow = document.documentElement.offsetHeight;
+      
+      // Debug output for theme variables
+      console.log('Current theme state:');
+      console.log(`- Theme: ${currentTheme}`);
+      console.log(`- Color scheme: ${colorScheme}`);
+      console.log(`- CSS Theme ID variable: ${getComputedStyle(document.documentElement).getPropertyValue('--theme-id')}`);
+      console.log(`- Body classes: ${document.body.className}`);
+      console.log(`- HTML data-theme: ${document.documentElement.dataset.theme}`);
     }
   }, [themeDefinition, colorScheme, currentTheme]);
 
@@ -116,10 +135,35 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCurrentTheme(themeName);
       setThemeDefinition(themeMap[themeName]);
       
-      // Immediately update favicon for web platform
+      // Web-specific theme changes
       if (Platform.OS === 'web') {
         console.log('Calling updateFavicon directly from setTheme');
         updateFavicon(themeName);
+        
+        // Immediately apply theme variables for faster visual feedback
+        applyThemeVariables(themeMap[themeName], colorScheme);
+        setMetaThemeColor(themeMap[themeName], colorScheme);
+        
+        // Add theme-specific body class for CSS selectors
+        document.body.className = document.body.className
+          .replace(/theme-\w+/g, '')
+          .trim();
+        document.body.classList.add(`theme-${themeName}`);
+        
+        // Force a subtle visual change to trigger re-renders
+        document.documentElement.style.outline = '1px solid transparent';
+        // Force DOM reflow
+        const reflow = document.documentElement.offsetHeight;
+        document.documentElement.style.outline = '';
+        
+        // In case of extensive changes needed, consider a delayed refresh
+        // Only do this for major theme changes like switching to/from neon theme
+        if (themeName === 'neon' || currentTheme === 'neon') {
+          console.log('Major theme change detected. Will apply full refresh in 500ms');
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
+        }
       }
       
       try {

@@ -5,23 +5,23 @@ import { NeonCategoryColors, getCategoryColor } from '@/constants/NeonColors';
 import { useTheme } from '@/src/context/ThemeContext';
 
 interface NeonGradientBackgroundProps {
-  category: string;
+  topic: string;
   style?: object;
 }
 
 export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
-  category,
+  topic,
   style
 }) => {
   const { isNeonTheme } = useTheme();
   
-  // Get the neon colors for this category, or use default if not found
-  const getCategoryColors = () => {
+  // Get the neon colors for this topic, or use default if not found
+  const getTopicColors = () => {
     // If not in neon theme, return empty colors (will be transparent)
     if (!isNeonTheme) return { primary: 'transparent', secondary: 'transparent' };
     
-    // Use the helper function to get category color
-    const colorInfo = getCategoryColor(category);
+    // Use the helper function to get topic color
+    const colorInfo = getCategoryColor(topic);
     
     // Convert to the format expected by this component
     return { 
@@ -30,72 +30,49 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
     };
   };
   
-  const { primary, secondary } = getCategoryColors();
+  const { primary, secondary } = getTopicColors();
   
-  // Create darker versions of the colors for the background gradient
-  const darkenedPrimary = addAlphaToColor(primary, 0.6);
-  const darkenedSecondary = addAlphaToColor(secondary, 0.6);
-  const darkBackground = '#0A0A14'; // Very dark blue-black
+  // Create colors for the background gradient
+  const topicPrimary = addAlphaToColor(primary, 1.0);
+  const topicSecondary = addAlphaToColor(secondary, 0.9);
+  
+  // Dark background colors with topics' hue influence
+  const darkened = adjustHexBrightness(secondary, -80); // Very dark version of the topic color
   
   // Different implementations for iOS, Android, and web for best compatibility
-  if (Platform.OS === 'ios') {
-    // iOS-specific implementation with nested gradients
+  if (Platform.OS === 'ios' || Platform.OS === 'android') {
     return (
       <View style={[styles.container, style]}>
-        {/* Base dark background with subtle radial feel */}
+        {/* Full coverage gradient - extends from top to bottom */}
         <LinearGradient
-          colors={['#0A0A14', '#080810', '#050508']} 
-          start={{ x: 0.5, y: 0.3 }}
-          end={{ x: 0.5, y: 1 }}
-          style={styles.baseGradient}
+          colors={[
+            topicPrimary, 
+            topicSecondary, 
+            darkened
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          locations={[0, 0.35, 1.0]}
+          style={styles.fullGradient}
         />
         
-        {/* Category color gradient overlay */}
+        {/* Diagonal accent gradient for additional visual flair */}
         <LinearGradient
-          colors={[darkBackground, darkenedPrimary, darkenedSecondary, darkBackground]}
-          start={{ x: 0.1, y: 0.1 }}
-          end={{ x: 0.9, y: 0.9 }}
-          style={styles.colorGradient}
-          locations={[0, 0.3, 0.7, 1.0]}
-        />
-      </View>
-    );
-  } else if (Platform.OS === 'android') {
-    // Android implementation with nested Views
-    return (
-      <View style={[styles.container, style]}>
-        {/* Base dark background with subtle radial feel */}
-        <LinearGradient
-          colors={['#0A0A14', '#080810', '#050508']} 
-          start={{ x: 0.5, y: 0.3 }}
-          end={{ x: 0.5, y: 1 }}
-          style={styles.baseGradient}
-        />
-        
-        {/* Category color gradient overlay */}
-        <LinearGradient
-          colors={[darkBackground, darkenedPrimary, darkenedSecondary, darkBackground]}
-          start={{ x: 0.1, y: 0.1 }}
-          end={{ x: 0.9, y: 0.9 }}
-          style={styles.colorGradient}
-          locations={[0, 0.3, 0.7, 1.0]}
+          colors={[
+            addAlphaToColor(primary, 0.7), 
+            'transparent'
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.accentGradient}
         />
       </View>
     );
   } else {
-    // For web, use CSS gradients with multiple layers
+    // For web, use a more direct approach with explicit linear gradients
     return (
-      <View 
-        style={[
-          styles.container, 
-          style,
-          { 
-            background: `radial-gradient(circle at 50% 50%, #0A0A14, #080810 70%, #050508 100%)`,
-            // Add a second gradient layer using a pseudo element in CSS
-            position: 'relative',
-          }
-        ]} 
-      >
+      <View style={[styles.container, style]}>
+        {/* Primary full-page gradient */}
         <View 
           style={{
             position: 'absolute',
@@ -103,8 +80,21 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundImage: `linear-gradient(135deg, #0A0A14 0%, ${darkenedPrimary} 30%, ${darkenedSecondary} 70%, #0A0A14 100%)`,
-            opacity: 0.75,
+            background: `linear-gradient(to bottom, ${topicPrimary} 0%, ${topicSecondary} 35%, ${darkened} 100%)`,
+            zIndex: 1
+          } as any}
+        />
+        
+        {/* Diagonal accent overlay */}
+        <View 
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `linear-gradient(135deg, ${addAlphaToColor(primary, 0.7)} 0%, transparent 70%)`,
+            zIndex: 2
           } as any}
         />
       </View>
@@ -150,18 +140,29 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
+    overflow: 'hidden',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
   },
-  baseGradient: {
+  fullGradient: {
     position: 'absolute',
     width: '100%',
     height: '100%',
-    opacity: 1,
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
   },
-  colorGradient: {
+  accentGradient: {
     position: 'absolute',
     width: '100%',
     height: '100%',
-    opacity: 0.75,
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
   }
 });
 

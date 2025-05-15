@@ -22,6 +22,8 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Leaderboard from '../../components/Leaderboard';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '@/src/context/ThemeContext';
+import NeonGradientBackground from '../../components/NeonGradientBackground';
 
 const { width, height } = Dimensions.get('window');
 
@@ -64,6 +66,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
   const fadeAnim = useRef(new Animated.Value(0)).current;
   
   const colorScheme = useColorScheme();
+  const { isNeonTheme } = useTheme();
   
   const questionState = useAppSelector(state => 
     state.trivia.questions[item.id] as QuestionState | undefined
@@ -221,16 +224,107 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     }
   });
 
+  // In neon mode, answer options need a different style to stand out
+  const getAnswerOptionStyle = (index: number) => {
+    const isSelected = isAnswered() && questionState?.answerIndex === index;
+    const isCorrect = item.answers[index].isCorrect;
+    const isSelectedCorrect = isSelected && isCorrect;
+    const isSelectedIncorrect = isSelected && !isCorrect;
+    const shouldShowCorrectAnswer = isAnswered() && !isSelectedAnswerCorrect() && isCorrect;
+
+    // Base styles for all themes
+    const baseStyles = [
+      styles.answerOption,
+      { backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.2)' },
+      isSelected && styles.selectedAnswerOption,
+      isSelectedCorrect && styles.correctAnswerOption,
+      isSelectedIncorrect && styles.incorrectAnswerOption,
+      shouldShowCorrectAnswer && styles.correctAnswerOption,
+      Platform.OS === 'web' && hoveredAnswerIndex === index && styles.hoveredAnswerOption,
+      isSkipped() && styles.skippedAnswerOption,
+    ];
+    
+    // Add neon-specific styles when neon theme is active
+    if (isNeonTheme) {
+      const neonStyle: any = {
+        borderWidth: 1,
+        shadowOffset: { width: 0, height: 0 },
+        shadowRadius: 5,
+      };
+      
+      // Set background color based on answer state
+      if (isSelectedCorrect) {
+        // Correct answer selected
+        neonStyle.backgroundColor = 'rgba(0, 255, 0, 0.15)';
+        neonStyle.borderColor = '#4CAF50';
+        neonStyle.shadowColor = '#4CAF50';
+        neonStyle.shadowOpacity = 0.8;
+        if (Platform.OS === 'web') {
+          neonStyle.boxShadow = '0 0 10px #4CAF50, 0 0 5px rgba(76, 175, 80, 0.5)';
+        }
+      } else if (isSelectedIncorrect) {
+        // Incorrect answer selected
+        neonStyle.backgroundColor = 'rgba(255, 0, 0, 0.15)';
+        neonStyle.borderColor = '#F44336';
+        neonStyle.shadowColor = '#F44336';
+        neonStyle.shadowOpacity = 0.8;
+        if (Platform.OS === 'web') {
+          neonStyle.boxShadow = '0 0 10px #F44336, 0 0 5px rgba(244, 67, 54, 0.5)';
+        }
+      } else if (shouldShowCorrectAnswer) {
+        // This is the correct answer but user selected a different one
+        neonStyle.backgroundColor = 'rgba(0, 255, 0, 0.15)';
+        neonStyle.borderColor = '#4CAF50';
+        neonStyle.borderStyle = 'dashed';
+        neonStyle.shadowColor = '#4CAF50';
+        neonStyle.shadowOpacity = 0.5;
+        if (Platform.OS === 'web') {
+          neonStyle.boxShadow = '0 0 8px rgba(76, 175, 80, 0.5)';
+        }
+      } else {
+        // Default neon style for unanswered or non-relevant answers
+        neonStyle.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+        neonStyle.borderColor = hoveredAnswerIndex === index ? '#FFFFFF' : 'rgba(255, 255, 255, 0.3)';
+        neonStyle.shadowColor = '#00FFFF';
+        neonStyle.shadowOpacity = 0.5;
+        if (Platform.OS === 'web') {
+          neonStyle.boxShadow = hoveredAnswerIndex === index 
+            ? '0 0 10px #00FFFF, 0 0 5px rgba(0, 255, 255, 0.5)' 
+            : '0 0 5px rgba(0, 255, 255, 0.2)';
+          neonStyle.transition = 'all 0.2s ease';
+        }
+      }
+      
+      baseStyles.push(neonStyle);
+    }
+    
+    return baseStyles;
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <View style={dynamicStyles.backgroundColor} />
+        {isNeonTheme ? (
+          // Use NeonGradientBackground for neon theme
+          <NeonGradientBackground topic={item.topic} />
+        ) : (
+          // Use regular background color for other themes
+          <View style={dynamicStyles.backgroundColor} />
+        )}
         
         <View style={[styles.overlay, {zIndex: 1}]} />
 
         <View style={[styles.content, {zIndex: 2}]}>
           <View style={styles.header}>
-            <Text style={styles.topicLabel}>{item.topic}</Text>
+            <Text style={[
+              styles.topicLabel, 
+              isNeonTheme && { 
+                textShadowColor: '#FFFFFF',
+                textShadowOffset: { width: 0, height: 0 },
+                textShadowRadius: 10,
+                ...(Platform.OS === 'web' ? { textShadow: '0 0 10px #FFFFFF' } as any : {})
+              }
+            ]}>{item.topic}</Text>
             <View style={[styles.difficulty, { 
               backgroundColor: 
                 item.difficulty?.toLowerCase() === 'easy' ? '#8BC34A' :
@@ -247,10 +341,20 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
           </View>
 
           <View style={styles.questionContainer}>
-            <ThemedText type="question" style={[styles.questionText, { 
-              fontSize: calculateFontSize,
-              lineHeight: lineHeight 
-            }]}>
+            <ThemedText type="question" style={[
+              styles.questionText, 
+              { 
+                fontSize: calculateFontSize,
+                lineHeight: lineHeight 
+              },
+              isNeonTheme && {
+                color: '#FFFFFF',
+                textShadowColor: '#00FFFF',
+                textShadowOffset: { width: 0, height: 0 },
+                textShadowRadius: 8,
+                ...(Platform.OS === 'web' ? { textShadow: '0 0 8px #00FFFF, 0 0 15px rgba(0, 255, 255, 0.5)' } as any : {})
+              }
+            ]}>
               {item.question}
             </ThemedText>
 
@@ -268,26 +372,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                 {item.answers.map((answer, index) => (
                   <TouchableOpacity
                     key={`${item.id}-answer-${index}`}
-                    style={[
-                      styles.answerOption,
-                      { backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.2)' },
-                      isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerOption,
-                      isAnswered() && 
-                      questionState?.answerIndex === index && 
-                      answer.isCorrect && 
-                      styles.correctAnswerOption,
-                      isAnswered() && 
-                      questionState?.answerIndex === index && 
-                      !answer.isCorrect && 
-                      styles.incorrectAnswerOption,
-                      isAnswered() && 
-                      questionState?.answerIndex !== index && 
-                      answer.isCorrect && 
-                      !isSelectedAnswerCorrect() && 
-                      styles.correctAnswerOption,
-                      Platform.OS === 'web' && hoveredAnswerIndex === index && styles.hoveredAnswerOption,
-                      isSkipped() && styles.skippedAnswerOption,
-                    ]}
+                    style={getAnswerOptionStyle(index)}
                     onPress={() => selectAnswer(index)}
                     disabled={isAnswered()}
                     {...(Platform.OS === 'web' ? {
@@ -300,7 +385,13 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                       style={[
                         styles.answerText, 
                         isAnswered() && questionState?.answerIndex === index && styles.selectedAnswerText,
-                        isSkipped() && styles.skippedAnswerText
+                        isSkipped() && styles.skippedAnswerText,
+                        isNeonTheme && {
+                          color: '#FFFFFF',
+                          ...(Platform.OS === 'web' && hoveredAnswerIndex === index ? { 
+                            textShadow: '0 0 5px #FFFFFF' 
+                          } as any : {})
+                        }
                       ]}
                     >
                       {answer.text}
@@ -329,7 +420,8 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
               onPress={toggleLike} 
               style={[
                 styles.actionButton,
-                Platform.OS === 'web' && hoveredAction === 'like' && styles.hoveredActionButton
+                Platform.OS === 'web' && hoveredAction === 'like' && styles.hoveredActionButton,
+                isNeonTheme && styles.neonActionButton
               ]}
               {...(Platform.OS === 'web' ? {
                 onMouseEnter: () => handleActionMouseEnter('like'),
@@ -342,7 +434,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                 color={isLiked ? '#F44336' : 'white'} 
                 style={[styles.icon, isLiked ? {} : {opacity: 0.8}]} 
               />
-              <ThemedText style={styles.actionText}>
+              <ThemedText style={[styles.actionText, isNeonTheme && styles.neonActionText]}>
                 {isLiked ? item.likes + 1 : item.likes}
               </ThemedText>
             </TouchableOpacity>
@@ -351,7 +443,8 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
               onPress={toggleLeaderboard}
               style={[
                 styles.actionButton,
-                Platform.OS === 'web' && hoveredAction === 'leaderboard' && styles.hoveredActionButton
+                Platform.OS === 'web' && hoveredAction === 'leaderboard' && styles.hoveredActionButton,
+                isNeonTheme && styles.neonActionButton
               ]}
               {...(Platform.OS === 'web' ? {
                 onMouseEnter: () => handleActionMouseEnter('leaderboard'),
@@ -364,7 +457,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                 color="white" 
                 style={styles.icon} 
               />
-              <ThemedText style={styles.actionText}>Leaderboard</ThemedText>
+              <ThemedText style={[styles.actionText, isNeonTheme && styles.neonActionText]}>Leaderboard</ThemedText>
             </TouchableOpacity>
           </View>
         </View>
@@ -535,6 +628,21 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 20,
   },
+  neonActionButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderWidth: 1,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 0 5px rgba(0, 255, 255, 0.3)'
+    } as any : {
+      shadowColor: '#00FFFF',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.3,
+      shadowRadius: 5,
+    })
+  },
   hoveredActionButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
@@ -544,6 +652,15 @@ const styles = StyleSheet.create({
   actionText: {
     color: 'white',
     fontSize: 14,
+  },
+  neonActionText: {
+    ...(Platform.OS === 'web' ? {
+      textShadow: '0 0 5px rgba(255, 255, 255, 0.7)'
+    } as any : {
+      textShadowColor: '#FFFFFF',
+      textShadowOffset: { width: 0, height: 0 },
+      textShadowRadius: 2,
+    })
   },
   learningCapsule: {
     position: 'absolute',
