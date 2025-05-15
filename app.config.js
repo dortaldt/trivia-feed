@@ -57,6 +57,7 @@ export default {
     slug: "trivia-feed",
     scheme: "trivia-feed",
     version: "1.0.0",
+    icon: "./assets/images/app-icon.png",
     extra: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
@@ -71,7 +72,7 @@ export default {
     },
     runtimeVersion: "1.0.0",
     splash: {
-      image: "./assets/images/splash-icon.png",
+      image: "./assets/images/splash-icon-neon.png",
       resizeMode: "contain",
       backgroundColor: "#151718"
     },
@@ -81,6 +82,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.triviafeed",
+      icon: "./assets/images/app-icon.png",
       infoPlist: {
         UIAppFonts: [
           "AntDesign.ttf",
