@@ -1,51 +1,53 @@
-// A mapping of each category/topic to a specific background color
-export const categoryColors: Record<string, string> = {
-  // Main categories
-  'Science': '#3498db',         // Blue
-  'Technology': '#2980b9',      // Darker blue
-  'History': '#8e44ad',         // Purple
-  'Geography': '#27ae60',       // Green
-  'Sports': '#e67e22',          // Orange
-  'Movies': '#7f8c8d',          // Gray
-  'Music': '#9b59b6',           // Light purple
-  'Television': '#34495e',      // Dark blue-gray
-  'Literature': '#c0392b',      // Dark red
-  'Art': '#e74c3c',             // Red
-  'Pop Culture': '#f39c12',     // Yellow-orange
-  'Food & Drink': '#d35400',    // Dark orange
-  'General Knowledge': '#16a085', // Teal
-  'Nature': '#2ecc71',          // Light green
-  'Politics': '#95a5a6',        // Light gray
-  'Celebrities': '#f1c40f',     // Yellow
+// Define colors for different topic categories
+export const topicColors: Record<string, string> = {
+  // Academic topics
+  'Science': '#4CAF50',          // Green
+  'History': '#FFC107',          // Amber
+  'Geography': '#2196F3',        // Blue
+  'Literature': '#9C27B0',       // Purple
+  'Math': '#F44336',             // Red
+  'Art': '#FF9800',              // Orange
+  'Arts': '#FF9800',             // Orange (alias)
+  'Music': '#E91E63',            // Pink
+  'Technology': '#607D8B',       // Blue Gray
+  'Engineering': '#795548',      // Brown
+  'Nature': '#8BC34A',           // Light Green
+  'Politics': '#9E9E9E',         // Gray
+  'Sports': '#03A9F4',           // Light Blue
+  'Movies': '#673AB7',           // Deep Purple
+  'Entertainment': '#673AB7',    // Deep Purple (alias)
+  'Miscellaneous': '#795548',    // Brown
+  'General Knowledge': '#009688', // Teal
+  'Pop Culture': '#FF5722',      // Deep Orange
   
-  // Special categories
-  'Modern Cinema': '#2c3e50',   // Navy
-  'Mathematics': '#1abc9c',     // Turquoise
-  'Language': '#3498db',        // Blue
-  'Mythology': '#8e44ad',       // Purple
-  'Animals': '#27ae60',         // Green
-  
-  // Default fallback color
-  'default': '#34495e'          // Dark blue-gray
+  // Default color for unknown topics
+  'default': '#009688'           // Teal
 };
 
-// Function to get a color based on category
-export function getCategoryColor(category: string): string {
-  // Try to get direct match
-  if (categoryColors[category]) {
-    return categoryColors[category];
+// Function to get a color for a given topic
+// Renamed from getCategoryColor but keeping parameter name for backward compatibility
+export function getTopicColor(category: string): string {
+  // Try direct match first (case insensitive)
+  const lowerCategory = category.toLowerCase();
+  
+  // Exact match (case-insensitive)
+  if (topicColors[category]) {
+    return topicColors[category];
   }
   
-  // Try to find a partial match
-  const partialMatch = Object.keys(categoryColors).find(key => 
-    category.toLowerCase().includes(key.toLowerCase()) || 
-    key.toLowerCase().includes(category.toLowerCase())
+  // Try partial match (if "History" isn't found, but "American History" is provided, use History's color)
+  const partialMatch = Object.keys(topicColors).find(key => 
+    lowerCategory.includes(key.toLowerCase()) || key.toLowerCase().includes(lowerCategory)
   );
   
   if (partialMatch) {
-    return categoryColors[partialMatch];
+    console.log(`Using color for "${partialMatch}" as a match for "${category}"`);
+    return topicColors[partialMatch];
   }
   
-  // Return default color if no match found
-  return categoryColors.default;
-} 
+  // Default fallback color
+  return topicColors.default;
+}
+
+// Export old function name for backward compatibility
+export const getCategoryColor = getTopicColor; 

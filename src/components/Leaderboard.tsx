@@ -89,7 +89,12 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
 
   // Convert country code to flag emoji
   const getCountryFlag = (code: string | null): string => {
-    if (!code || code.length !== 2) return '';
+    if (!code) return '';
+    
+    // Special case for "Other" country
+    if (code === 'OT') {
+      return '🌍'; // Earth globe emoji for "Other"
+    }
     
     // Country code to regional indicator symbols
     // For example: 'US' becomes 🇺🇸
@@ -101,12 +106,9 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
   };
 
   // Get initials for avatar
-  const getInitials = (name: string = '', username: string = '') => {
+  const getInitials = (name: string = '') => {
     if (name) {
-      return name.split(' ').map(n => n[0]).join('').toUpperCase();
-    }
-    if (username) {
-      return username.substring(0, 2).toUpperCase();
+      return name.substring(0, 2).toUpperCase();
     }
     return '?';
   };
@@ -159,7 +161,7 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
           ) : (
             // If user is logged in but the leaderboard item has no avatar - show initials
             <View style={[styles.avatarPlaceholder, isCurrentUser && styles.currentUserAvatar]}>
-              <ThemedText style={styles.avatarText}>{getInitials(item.full_name, item.username)}</ThemedText>
+              <ThemedText style={styles.avatarText}>{getInitials(item.full_name)}</ThemedText>
             </View>
           )}
         </View>
@@ -167,7 +169,7 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
         <View style={styles.userInfo}>
           <View style={styles.usernameRow}>
             <ThemedText style={[styles.username, isCurrentUser && styles.currentUserText]}>
-              {item.username || item.full_name || 'Anonymous'} 
+              {item.full_name || 'Anonymous'} 
               {isCurrentUser && <ThemedText style={styles.youLabel}>(You)</ThemedText>}
             </ThemedText>
             
