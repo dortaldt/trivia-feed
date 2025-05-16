@@ -1421,10 +1421,12 @@ const ProfileView: React.FC = () => {
                     leftIcon={<FeatherIcon name="trash-2" size={16} color="currentColor" />}
                     onPress={removeAvatar}
                     style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 12,
+                      paddingHorizontal: 0,
+                      paddingVertical: 0,
                       width: 44,
-                      height: 44
+                      height: 44,
+                      justifyContent: 'center',
+                      alignItems: 'center'
                     }}
                     aria-label="Delete photo"
                   >
