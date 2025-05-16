@@ -527,8 +527,8 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                 styles.actionButton,
                 Platform.OS === 'web' && hoveredAction === 'like' && styles.hoveredActionButton,
                 isNeonTheme && {
-                  ...styles.neonActionButton,
                   borderWidth: 0,
+                  backgroundColor: 'transparent',
                   ...(Platform.OS === 'web' ? {
                     boxShadow: 'none'
                   } : {
@@ -550,7 +550,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
               <ThemedText style={[
                 styles.actionText, 
                 isNeonTheme && {
-                  ...styles.neonActionText,
+                  color: 'white',
                   ...(Platform.OS === 'web' ? {
                     textShadow: 'none'
                   } : {
@@ -570,8 +570,8 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                 styles.actionButton,
                 Platform.OS === 'web' && hoveredAction === 'leaderboard' && styles.hoveredActionButton,
                 isNeonTheme && {
-                  ...styles.neonActionButton,
                   borderWidth: 0,
+                  backgroundColor: 'transparent',
                   ...(Platform.OS === 'web' ? {
                     boxShadow: 'none'
                   } : {
@@ -593,7 +593,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
               <ThemedText style={[
                 styles.actionText, 
                 isNeonTheme && {
-                  ...styles.neonActionText,
+                  color: 'white',
                   ...(Platform.OS === 'web' ? {
                     textShadow: 'none'
                   } : {
@@ -778,20 +778,21 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   neonActionButton: {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'transparent',
     paddingHorizontal: 15,
     paddingVertical: 8,
+    borderWidth: 0,
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0 0 5px rgba(0, 255, 255, 0.2)'
+      boxShadow: 'none'
     } as any : {
-      shadowColor: '#00FFFF',
+      shadowColor: 'transparent',
       shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.2,
-      shadowRadius: 3,
+      shadowOpacity: 0,
+      shadowRadius: 0,
     })
   },
   hoveredActionButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'transparent',
   },
   icon: {
     marginRight: 5,
