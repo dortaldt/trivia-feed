@@ -51,7 +51,7 @@ const defaultThemeOptions: ThemeOption[] = [
 const ThemeToggle: React.FC<ThemeToggleProps> = ({ style, size = 'normal' }) => {
   // Use a try/catch to safely attempt to import the theme context
   let themeContext: ThemeContextType | null = null;
-  let currentTheme: ThemeName = 'default';
+  let currentTheme: ThemeName = 'neon';
   let colorScheme: ColorSchemeType = useColorScheme() as ColorSchemeType || 'dark';
   
   // Add effect to check theme status on mount
