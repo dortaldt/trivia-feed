@@ -67,9 +67,9 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
   const topicComplementary = addAlphaToColor(complementary, 0.3);
   
   // Next topic colors (for bottom of gradient)
-  const nextTopicPrimary = nextTopic ? addAlphaToColor(nextColors.primary, 0.4) : 'transparent';
-  const nextTopicSecondary = nextTopic ? addAlphaToColor(nextColors.secondary, 0.35) : 'transparent';
-  const nextTopicBright = nextTopic ? addAlphaToColor(nextColors.bright, 0.3) : 'transparent';
+  const nextTopicPrimary = nextTopic ? addAlphaToColor(nextColors.primary, 0.3) : 'transparent';
+  const nextTopicSecondary = nextTopic ? addAlphaToColor(nextColors.secondary, 0.25) : 'transparent';
+  const nextTopicBright = nextTopic ? addAlphaToColor(nextColors.bright, 0.2) : 'transparent';
   
   // Very dark background colors with a hint of the topic's hue
   const darkened = adjustHexBrightness(secondary, -90);
@@ -109,7 +109,7 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
           />
         </View>
         
-        {/* Bottom radial effect - hint of next topic's color */}
+        {/* Bottom radial effect - hint of next topic's color (from bottom-right diagonal) */}
         {nextTopic && (
           <View style={styles.radialContainer}>
             <LinearGradient
@@ -117,9 +117,24 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
                 nextTopicPrimary,
                 'transparent'
               ]}
-              start={{ x: 0.5, y: 1 }}
-              end={{ x: 0.5, y: 0.3 }}
-              style={[styles.bottomRadial, { opacity: 0.4 }]}
+              start={{ x: 0.8, y: 1 }}
+              end={{ x: 0.2, y: 0.4 }}
+              style={[styles.bottomDiagonalRadial, { opacity: 0.35 }]}
+            />
+          </View>
+        )}
+        
+        {/* Additional diagonal gradient for next topic color */}
+        {nextTopic && (
+          <View style={styles.radialContainer}>
+            <LinearGradient
+              colors={[
+                'transparent',
+                addAlphaToColor(nextColors.bright, 0.25)
+              ]}
+              start={{ x: 0.2, y: 0.4 }}
+              end={{ x: 0.9, y: 0.9 }}
+              style={[styles.additionalDiagonalGradient, { opacity: 0.3 }]}
             />
           </View>
         )}
@@ -136,21 +151,6 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
             style={[styles.centerRadial, { opacity: 0.5 }]}
           />
         </View>
-        
-        {/* Additional subtle hint of next topic color in center-bottom area */}
-        {nextTopic && (
-          <View style={[styles.centerRadialContainer, { justifyContent: 'flex-end' }]}>
-            <LinearGradient
-              colors={[
-                nextTopicBright,
-                'transparent'
-              ]}
-              start={{ x: 0.5, y: 1 }}
-              end={{ x: 0.5, y: 0 }}
-              style={[styles.bottomCenterRadial, { opacity: 0.4 }]}
-            />
-          </View>
-        )}
       </View>
     );
   } else {
@@ -200,7 +200,7 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
           } as any}
         />
         
-        {/* Bottom hint of next topic's color if present */}
+        {/* Diagonal gradient from bottom-right with next topic color */}
         {nextTopic && (
           <View 
             style={{
@@ -209,10 +209,27 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
               left: 0,
               right: 0,
               bottom: 0,
-              background: `radial-gradient(circle at 50% 100%, ${nextTopicPrimary} 0%, transparent 70%)`,
-              opacity: 0.45,
+              background: `linear-gradient(125deg, transparent 60%, ${nextTopicPrimary} 100%)`,
+              opacity: 0.35,
               zIndex: 4,
               filter: 'blur(35px)'
+            } as any}
+          />
+        )}
+        
+        {/* Additional diagonal gradient using bright next topic color */}
+        {nextTopic && (
+          <View 
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: `linear-gradient(135deg, transparent 70%, ${addAlphaToColor(nextColors.bright, 0.25)} 100%)`,
+              opacity: 0.3,
+              zIndex: 5,
+              filter: 'blur(25px)'
             } as any}
           />
         )}
@@ -227,27 +244,10 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
             bottom: '20%',
             background: `radial-gradient(circle at center, ${addAlphaToColor(topicBright, 0.3)} 0%, transparent 70%)`,
             opacity: 0.5,
-            zIndex: 5,
+            zIndex: 6,
             filter: 'blur(40px)'
           } as any}
         />
-        
-        {/* Additional subtle hint of next topic's color rising from bottom */}
-        {nextTopic && (
-          <View 
-            style={{
-              position: 'absolute',
-              left: '30%',
-              right: '30%',
-              bottom: '0%',
-              height: '40%',
-              background: `radial-gradient(ellipse at bottom, ${nextTopicBright} 0%, transparent 85%)`,
-              opacity: 0.5,
-              zIndex: 4,
-              filter: 'blur(25px)'
-            } as any}
-          />
-        )}
       </View>
     );
   }
@@ -360,12 +360,30 @@ const styles = StyleSheet.create({
   },
   bottomRadial: {
     position: 'absolute',
-    width: '180%',
-    height: '180%',
-    left: '-40%',
-    bottom: '-40%',
+    width: '150%',
+    height: '150%',
+    left: '-25%',
+    bottom: '-50%',
+    borderRadius: 1000,
+    transform: [{ scale: 1.2 }],
+  },
+  bottomDiagonalRadial: {
+    position: 'absolute',
+    width: '150%',
+    height: '150%',
+    right: '-25%',
+    bottom: '-30%',
     borderRadius: 1000,
     transform: [{ scale: 1.3 }],
+  },
+  additionalDiagonalGradient: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
   },
   centerRadialContainer: {
     position: 'absolute',
@@ -381,12 +399,6 @@ const styles = StyleSheet.create({
     width: '120%',
     height: '120%',
     borderRadius: 1000,
-  },
-  bottomCenterRadial: {
-    width: '70%',
-    height: '40%',
-    borderRadius: 1000,
-    marginBottom: '-5%',
   },
   diagonalGradient: {
     position: 'absolute',
