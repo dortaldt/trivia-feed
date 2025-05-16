@@ -1159,20 +1159,45 @@ const FeedScreen: React.FC = () => {
   const isAndroid = Platform.OS === 'android';
   const isWeb = Platform.OS === 'web';
   
+  // Pre-rendering configuration for smooth TikTok-like scroll
+  const PRE_RENDER_COUNT = 2; // Pre-render 2 items ahead
+  const RENDER_WINDOW = 5; // Keep 5 items in memory (current + 2 before + 2 after)
+  
+  // Add this ref to track pre-rendered items
+  const preRenderedItems = useRef(new Set<string>());
+  
   // Optimize scrolling on iOS by preventing handling during momentum
   const isMomentumScrolling = useRef(false);
   
   // Add optimal deceleration rate for different platforms
   const getOptimalDecelerationRate = useCallback(() => {
     if (isIOS) {
-      // Custom iOS deceleration for TikTok-like feel while maintaining performance
-      return 0.992; // Between normal (0.998) and fast (0.99)
+      // TikTok-like feel: slightly faster than normal but not too fast
+      return 0.993; // Further refined for more natural TikTok-like feel
     } else if (isAndroid) {
       return 'fast';
     } else {
       return 'fast';
     }
   }, [isIOS, isAndroid]);
+
+  // Add a function to preload the next items - this will ensure they're ready
+  const preloadNextItems = useCallback((currentIdx: number) => {
+    if (!personalizedFeed || personalizedFeed.length === 0) return;
+    
+    // Define the range of items to preload (current + PRE_RENDER_COUNT ahead)
+    const startIdx = currentIdx;
+    const endIdx = Math.min(currentIdx + PRE_RENDER_COUNT, personalizedFeed.length - 1);
+    
+    // Add items to the preRendered set
+    for (let i = startIdx; i <= endIdx; i++) {
+      const itemId = personalizedFeed[i].id;
+      if (!preRenderedItems.current.has(itemId)) {
+        console.log(`Preloading item ${i} (${itemId})`);
+        preRenderedItems.current.add(itemId);
+      }
+    }
+  }, [personalizedFeed]);
 
   // Optimize handleScroll for iOS specifically
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -1226,14 +1251,15 @@ const FeedScreen: React.FC = () => {
     }
   }, [currentIndex, viewportHeight, showTooltip, hideTooltip, isActivelyScrolling, handleFastScroll, isIOS]);
 
-  // Enhanced onMomentumScrollBegin with iOS-specific optimizations
-  // This will be defined later - we're avoiding duplicate declarations
-
+  // Enhanced onViewableItemsChanged with preloading
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0 && viewableItems[0].index !== null && personalizedFeed.length > 0) {
         const newIndex = viewableItems[0].index;
         const currentItem = personalizedFeed[newIndex];
+        
+        // Start preloading next items immediately when a new item becomes visible
+        preloadNextItems(newIndex);
         
         if (currentItem && currentItem.id) {
           const currentItemId = currentItem.id;
@@ -1378,7 +1404,8 @@ const FeedScreen: React.FC = () => {
         }
       }
     },  // Close the function
-    [markPreviousAsSkipped, personalizedFeed, feedExplanations, dispatch, interactionStartTimes, feedData, userProfile, debugPanelVisible, questions, user?.id]  // Dependencies array
+    [markPreviousAsSkipped, personalizedFeed, feedExplanations, dispatch, interactionStartTimes, 
+     feedData, userProfile, debugPanelVisible, questions, user?.id, preloadNextItems]  // Add preloadNextItems to dependencies
   );
 
   useEffect(() => {
@@ -1415,10 +1442,17 @@ const FeedScreen: React.FC = () => {
     }
   }, [personalizedFeed.length]); // Only run when feed length changes
 
+  // Enhance the viewability configuration for smoother detection
   const viewabilityConfig = {
     itemVisiblePercentThreshold: 50,
-    minimumViewTime: 300, // Question must be visible for at least 300ms to be considered viewed
+    minimumViewTime: 100, // Reduced from 300ms for faster detection
   };
+
+  // Custom onLayout handler to start preloading after initial layout
+  const handleInitialLayout = useCallback(() => {
+    // Preload the first few items immediately on layout
+    preloadNextItems(0);
+  }, [preloadNextItems]);
 
   const viewabilityConfigCallbackPairs = useRef([
     { viewabilityConfig, onViewableItemsChanged },
@@ -2108,6 +2142,7 @@ const FeedScreen: React.FC = () => {
     <View 
       style={styles.container}
       onTouchStart={handleTouchStart}
+      onLayout={handleInitialLayout}
     >
       {/* Profile Button with User Avatar */}
       <TouchableOpacity 
@@ -2162,23 +2197,30 @@ const FeedScreen: React.FC = () => {
         onMomentumScrollBegin={onMomentumScrollBegin}
         onMomentumScrollEnd={onMomentumScrollEnd}
         onScroll={handleScroll}
-        scrollEventThrottle={isIOS ? 32 : 16} // Higher value for iOS
+        scrollEventThrottle={isIOS ? 16 : 16} // Lower for more responsive tracking (16 = 60fps)
         snapToAlignment="start"
-        decelerationRate={getOptimalDecelerationRate()} // Custom deceleration for iOS
+        decelerationRate={getOptimalDecelerationRate()}
         snapToInterval={viewportHeight}
         style={styles.flatList}
         contentContainerStyle={styles.flatListContent}
-        removeClippedSubviews={true} // Enable for all platforms
-        maxToRenderPerBatch={isIOS ? 1 : 2} // Even smaller batch size for iOS
-        windowSize={isIOS ? 2 : 3} // Even smaller window size for iOS
-        initialNumToRender={1}
-        updateCellsBatchingPeriod={isIOS ? 200 : 100} // Longer batching period for iOS
+        removeClippedSubviews={false} // Keep for iOS to prevent rendering issues
+        maxToRenderPerBatch={isIOS ? 2 : 2} // Render 2 items per batch on iOS for smooth transitions
+        windowSize={RENDER_WINDOW} // Keep 5 items in memory (current + 2 before + 2 after)
+        initialNumToRender={3} // Render 3 items initially (current + 2 next)
+        updateCellsBatchingPeriod={isIOS ? 50 : 100} // More frequent updates on iOS
         maintainVisibleContentPosition={{
           minIndexForVisible: 0,
           autoscrollToTopThreshold: 10
         }}
-        directionalLockEnabled={true} // Prevent diagonal scrolling
-        disableIntervalMomentum={true} // Better snap performance
+        onEndReached={() => {
+          // Preload more when nearing the end
+          if (currentIndex < personalizedFeed.length - 3) {
+            preloadNextItems(currentIndex + 1);
+          }
+        }}
+        onEndReachedThreshold={0.5} // Trigger when halfway through the last item
+        directionalLockEnabled={true}
+        disableIntervalMomentum={true}
         legacyImplementation={false}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
