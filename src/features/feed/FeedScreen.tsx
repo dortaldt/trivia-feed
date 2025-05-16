@@ -1153,9 +1153,43 @@ const FeedScreen: React.FC = () => {
     }
   }, [personalizedFeed, questions, markPreviousAsSkipped, feedData, userProfile, feedExplanations, dispatch, user, addQuestionsAtCheckpoint, shouldAddQuestionsAtPosition, logFeedState]);
 
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+  // This should be near the top of your component
+  // Use a more precise method to detect iOS
+  const isIOS = Platform.OS === 'ios';
+  const isAndroid = Platform.OS === 'android';
+  const isWeb = Platform.OS === 'web';
+  
+  // Optimize scrolling on iOS by preventing handling during momentum
+  const isMomentumScrolling = useRef(false);
+  
+  // Add optimal deceleration rate for different platforms
+  const getOptimalDecelerationRate = useCallback(() => {
+    if (isIOS) {
+      // Custom iOS deceleration for TikTok-like feel while maintaining performance
+      return 0.992; // Between normal (0.998) and fast (0.99)
+    } else if (isAndroid) {
+      return 'fast';
+    } else {
+      return 'fast';
+    }
+  }, [isIOS, isAndroid]);
+
+  // Optimize handleScroll for iOS specifically
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    // Early return for tooltips - hide only on first scroll
     if (event.nativeEvent.contentOffset.y !== 0 && showTooltip) {
       hideTooltip();
+      return; // Early return after hiding tooltip
+    }
+    
+    // Special iOS optimization: skip all processing during momentum scrolling
+    if (isIOS && isMomentumScrolling.current) {
+      return;
+    }
+    
+    // Skip all processing if already actively scrolling
+    if (isActivelyScrolling) {
+      return;
     }
     
     // Mark as actively scrolling
@@ -1171,23 +1205,29 @@ const FeedScreen: React.FC = () => {
       setIsActivelyScrolling(false);
     }, 500);
     
-    // Check for skipped questions during scroll
+    // Track scroll direction but with minimal processing
     const currentScrollPos = event.nativeEvent.contentOffset.y;
     const scrollDirection = currentScrollPos > lastScrollPosition.current ? 'down' : 'up';
     lastScrollPosition.current = currentScrollPos;
     
-    // If scrolling down quickly, check for questions to mark as skipped
-    if (scrollDirection === 'down') {
-      // Calculate the approximate index based on scroll position
-      const estimatedIndex = Math.round(currentScrollPos / viewportHeight);
-      
-      // If we've moved more than one question, we may have skipped some
-      if (estimatedIndex > currentIndex + 1) {
-        // Use optimized function to handle fast scroll skipping
-        handleFastScroll(currentIndex, estimatedIndex);
-      }
+    // Only process "skipped" logic on desktop or when scrolling has ended
+    // This significantly reduces processing during actual scroll animation
+    if (scrollDirection === 'down' && Platform.OS === 'web' && !isActivelyScrolling) {
+      // Use requestAnimationFrame to process after current frame is complete
+      requestAnimationFrame(() => {
+        // Calculate the approximate index based on scroll position
+        const estimatedIndex = Math.round(currentScrollPos / viewportHeight);
+        
+        // Only process if we've moved more than one question
+        if (estimatedIndex > currentIndex + 1) {
+          handleFastScroll(currentIndex, estimatedIndex);
+        }
+      });
     }
-  };
+  }, [currentIndex, viewportHeight, showTooltip, hideTooltip, isActivelyScrolling, handleFastScroll, isIOS]);
+
+  // Enhanced onMomentumScrollBegin with iOS-specific optimizations
+  // This will be defined later - we're avoiding duplicate declarations
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -1390,13 +1430,23 @@ const FeedScreen: React.FC = () => {
       hideTooltip();
     }
     
+    // For iOS, mark that we are in momentum scrolling to skip heavy processing
+    if (isIOS) {
+      isMomentumScrolling.current = true;
+    }
+    
     // Log scroll movement for debugging
     console.log(`Scroll movement started from question ${currentIndex}`);
-  }, [showTooltip, currentIndex]);
+  }, [showTooltip, currentIndex, isIOS, hideTooltip]);
 
   const onMomentumScrollEnd = useCallback(() => {
     const scrollTime = Date.now() - lastInteractionTime.current;
     console.log(`Scroll transition time: ${scrollTime}ms to question ${currentIndex}`);
+    
+    // For iOS, mark that momentum scrolling has ended
+    if (isIOS) {
+      isMomentumScrolling.current = false;
+    }
     
     // Double-check if we need to mark questions as skipped
     if (previousIndex.current !== currentIndex && previousIndex.current < currentIndex) {
@@ -1406,7 +1456,7 @@ const FeedScreen: React.FC = () => {
     
     // Update previous index after ensuring skipped questions are marked
     previousIndex.current = currentIndex;
-  }, [currentIndex, handleFastScroll]);
+  }, [currentIndex, handleFastScroll, isIOS]);
 
   // Add this hook to handle question generation
   const { triggerQuestionGeneration, trackQuestionInteraction } = useQuestionGenerator();
@@ -2112,21 +2162,26 @@ const FeedScreen: React.FC = () => {
         onMomentumScrollBegin={onMomentumScrollBegin}
         onMomentumScrollEnd={onMomentumScrollEnd}
         onScroll={handleScroll}
-        scrollEventThrottle={16}
+        scrollEventThrottle={isIOS ? 32 : 16} // Higher value for iOS
         snapToAlignment="start"
-        decelerationRate="fast" // Use fast deceleration for better snapping
+        decelerationRate={getOptimalDecelerationRate()} // Custom deceleration for iOS
         snapToInterval={viewportHeight}
         style={styles.flatList}
         contentContainerStyle={styles.flatListContent}
-        removeClippedSubviews={Platform.OS !== 'web'} // Improve performance on mobile but can cause issues on web
-        maxToRenderPerBatch={3}
-        windowSize={5} // Increase window size for better visibility detection
-        initialNumToRender={2}
-        updateCellsBatchingPeriod={50} // Optimize batch updates
-        maintainVisibleContentPosition={{ // Help maintain position during dynamic content changes
+        removeClippedSubviews={true} // Enable for all platforms
+        maxToRenderPerBatch={isIOS ? 1 : 2} // Even smaller batch size for iOS
+        windowSize={isIOS ? 2 : 3} // Even smaller window size for iOS
+        initialNumToRender={1}
+        updateCellsBatchingPeriod={isIOS ? 200 : 100} // Longer batching period for iOS
+        maintainVisibleContentPosition={{
           minIndexForVisible: 0,
           autoscrollToTopThreshold: 10
         }}
+        directionalLockEnabled={true} // Prevent diagonal scrolling
+        disableIntervalMomentum={true} // Better snap performance
+        legacyImplementation={false}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
       />
 
       {/* InteractionTracker Component */}

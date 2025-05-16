@@ -82,6 +82,46 @@
     <!-- Meta tags for PWA -->
     <meta name="description" content="%WEB_DESCRIPTION%" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Open Graph Meta Tags for social sharing -->
+    <meta property="og:title" content="TriviaFeed - Test Your Knowledge" />
+    <meta property="og:description" content="Challenge yourself with personalized trivia questions and compete with friends. TriviaFeed adapts to your interests and knowledge level." />
+    <meta property="og:image" content="https://trivia-feed.vercel.app/social-preview.png" />
+    <meta property="og:url" content="https://trivia-feed.vercel.app/" />
+    <meta property="og:type" content="website" />
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TriviaFeed - Test Your Knowledge" />
+    <meta name="twitter:description" content="Challenge yourself with personalized trivia questions and compete with friends. TriviaFeed adapts to your interests and knowledge level." />
+    <meta name="twitter:image" content="https://trivia-feed.vercel.app/social-preview.png" />
+    
+    <!-- Initialize social sharing metadata on page load -->
+    <script>
+      // Ensure social media meta tags are correctly set on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        // Get base URL
+        var baseUrl = window.location.origin;
+        
+        // Update image URLs to be absolute (required by most social platforms)
+        var ogImage = document.querySelector('meta[property="og:image"]');
+        var twitterImage = document.querySelector('meta[name="twitter:image"]');
+        
+        if (ogImage && !ogImage.content.startsWith('http')) {
+          ogImage.content = baseUrl + ogImage.content;
+        }
+        
+        if (twitterImage && !twitterImage.content.startsWith('http')) {
+          twitterImage.content = baseUrl + twitterImage.content;
+        }
+        
+        // Update og:url to current page URL
+        var ogUrl = document.querySelector('meta[property="og:url"]');
+        if (ogUrl) {
+          ogUrl.content = window.location.href;
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

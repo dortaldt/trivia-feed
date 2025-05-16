@@ -56,6 +56,9 @@ export const updateFavicon = (theme: ThemeName): void => {
     // Force reload by adding a cache-busting parameter
     const cacheBuster = `?v=${Date.now()}`;
     
+    // Get base URL for absolute paths
+    const baseUrl = window.location.origin;
+    
     // Update main favicon (shortcut icon)
     const mainFavicon = document.querySelector('link[rel="shortcut icon"]');
     if (mainFavicon) {
@@ -89,18 +92,20 @@ export const updateFavicon = (theme: ThemeName): void => {
     }
     
     // Also update social preview images for Open Graph and Twitter
-    const ogImage = document.querySelector('meta[property="og:image"]');
-    const twitterImage = document.querySelector('meta[name="twitter:image"]');
+    const socialPath = theme === 'neon' ? '/social-preview-neon.png' : '/social-preview.png';
+    const absoluteSocialPath = `${baseUrl}${socialPath}${cacheBuster}`;
     
-    if (ogImage) {
-      const socialPath = theme === 'neon' ? '/social-preview-neon.png' : '/social-preview.png';
-      ogImage.setAttribute('content', `${socialPath}${cacheBuster}`);
-    }
+    // Helper function to create or update meta tags
+    const createOrUpdateMetaTag = (type: string, property: string, content: string) => {
+      let metaTag = document.querySelector(`meta[${type}="${property}"]`);
+      if (metaTag) {
+        metaTag.setAttribute('content', content);
+      }
+    };
     
-    if (twitterImage) {
-      const socialPath = theme === 'neon' ? '/social-preview-neon.png' : '/social-preview.png';
-      twitterImage.setAttribute('content', `${socialPath}${cacheBuster}`);
-    }
+    // Update only if tags already exist
+    createOrUpdateMetaTag('property', 'og:image', absoluteSocialPath);
+    createOrUpdateMetaTag('name', 'twitter:image', absoluteSocialPath);
     
     // Create a test element to force favicon reload
     const testLink = document.createElement('link');
@@ -125,20 +130,36 @@ export const updateSocialMetaTags = (title?: string, description?: string): void
     // Default values if not provided
     const finalTitle = title || 'TriviaFeed';
     const finalDescription = description || 'Test your knowledge with TriviaFeed - The ultimate trivia experience';
+    const baseUrl = window.location.origin;
+    const imageUrl = `${baseUrl}/social-preview.png`;
+    
+    // Helper function to create or update meta tags
+    const createOrUpdateMetaTag = (type: string, property: string, content: string) => {
+      let metaTag = document.querySelector(`meta[${type}="${property}"]`);
+      
+      if (!metaTag) {
+        metaTag = document.createElement('meta');
+        metaTag.setAttribute(type, property);
+        document.head.appendChild(metaTag);
+      }
+      
+      metaTag.setAttribute('content', content);
+    };
     
     // Update Open Graph tags
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    const ogDescription = document.querySelector('meta[property="og:description"]');
-    
-    if (ogTitle) ogTitle.setAttribute('content', finalTitle);
-    if (ogDescription) ogDescription.setAttribute('content', finalDescription);
+    createOrUpdateMetaTag('property', 'og:title', finalTitle);
+    createOrUpdateMetaTag('property', 'og:description', finalDescription);
+    createOrUpdateMetaTag('property', 'og:image', imageUrl);
+    createOrUpdateMetaTag('property', 'og:url', window.location.href);
+    createOrUpdateMetaTag('property', 'og:type', 'website');
     
     // Update Twitter Card tags
-    const twitterTitle = document.querySelector('meta[name="twitter:title"]');
-    const twitterDescription = document.querySelector('meta[name="twitter:description"]');
+    createOrUpdateMetaTag('name', 'twitter:card', 'summary_large_image');
+    createOrUpdateMetaTag('name', 'twitter:title', finalTitle);
+    createOrUpdateMetaTag('name', 'twitter:description', finalDescription);
+    createOrUpdateMetaTag('name', 'twitter:image', imageUrl);
     
-    if (twitterTitle) twitterTitle.setAttribute('content', finalTitle);
-    if (twitterDescription) twitterDescription.setAttribute('content', finalDescription);
+    console.log('Social meta tags updated successfully');
   } catch (error) {
     console.error('Error updating social meta tags:', error);
   }

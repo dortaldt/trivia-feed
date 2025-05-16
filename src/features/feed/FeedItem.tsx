@@ -56,24 +56,27 @@ type FeedItemProps = {
   onToggleLeaderboard?: () => void;
 };
 
-const FeedItem: React.FC<FeedItemProps> = ({ 
+const FeedItem = React.memo(({ 
   item, 
   nextTopic, 
   onAnswer, 
   showExplanation, 
   onNextQuestion, 
   onToggleLeaderboard 
-}) => {
+}: FeedItemProps) => {
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [showLearningCapsule, setShowLearningCapsule] = useState(false);
   const [hoveredAnswerIndex, setHoveredAnswerIndex] = useState<number | null>(null);
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
   
-  // Animation values for buttons
+  // Animation values for buttons - simplify to just scale animations
   const answerAnimations = useRef(item.answers.map(() => new Animated.Value(1))).current;
-  const fadeInAnims = useRef(item.answers.map(() => new Animated.Value(0))).current;
   
+  // Single animation value for all answers
+  const answersOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Optimize event handlers with useCallback to prevent recreating on each render
   const mouseEnterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mouseLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const renderCount = useRef(0);
@@ -98,28 +101,25 @@ const FeedItem: React.FC<FeedItemProps> = ({
     isIOS
   } = useIOSAnimations();
 
-  // Run animations when component mounts
+  // Run animations when component mounts - simplified to a single animation
   useEffect(() => {
-    // Stagger fade-in animations for answer options
-    item.answers.forEach((_, index) => {
-      Animated.timing(fadeInAnims[index], {
-        toValue: 1,
-        duration: 250,
-        delay: 150 + (index * 70),
-        useNativeDriver: true
-      }).start();
-    });
-  }, []);
+    // Simple fade-in for all answers at once
+    Animated.timing(answersOpacity, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true
+    }).start();
+  }, [answersOpacity]);
 
-  // Press animation for answer buttons
-  const animateAnswerPress = (index: number, pressed: boolean) => {
+  // Press animation for answer buttons - memoize with useCallback
+  const animateAnswerPress = useCallback((index: number, pressed: boolean) => {
     Animated.spring(answerAnimations[index], {
       toValue: pressed ? 0.98 : 1,
       friction: 8,
       tension: 100,
       useNativeDriver: true
     }).start();
-  };
+  }, [answerAnimations]);
 
   const calculateFontSize = useMemo(() => {
     const textLength = item.question.length;
@@ -155,10 +155,12 @@ const FeedItem: React.FC<FeedItemProps> = ({
     return Math.round(calculateFontSize * 1.2);
   }, [calculateFontSize]);
   
-  useEffect(() => {
-    console.log(`[DEBUG] FeedItem component render #${renderCount.current} for item ${item.id}`);
-    console.log(`[DEBUG] Current state - hoveredAnswerIndex: ${hoveredAnswerIndex}, hoveredAction: ${hoveredAction}`);
-  });
+  // Only log in development mode
+  if (process.env.NODE_ENV !== 'production') {
+    useEffect(() => {
+      console.log(`[DEBUG] FeedItem component render #${renderCount.current} for item ${item.id}`);
+    });
+  }
   
   const textColor = useThemeColor({}, 'text');
 
@@ -249,31 +251,32 @@ const FeedItem: React.FC<FeedItemProps> = ({
     return item.answers[questionState.answerIndex].isCorrect;
   };
 
-  const handleMouseEnter = (index: number) => {
+  // Memoize handler functions to prevent recreating them on each render
+  const handleMouseEnter = useCallback((index: number) => {
     if (mouseEnterTimerRef.current) {
       clearTimeout(mouseEnterTimerRef.current);
     }
     mouseEnterTimerRef.current = setTimeout(() => {
       setHoveredAnswerIndex(index);
     }, 30);
-  };
+  }, []);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     if (mouseLeaveTimerRef.current) {
       clearTimeout(mouseLeaveTimerRef.current);
     }
     mouseLeaveTimerRef.current = setTimeout(() => {
       setHoveredAnswerIndex(null);
     }, 30);
-  };
+  }, []);
 
-  const handleActionMouseEnter = (action: string) => {
+  const handleActionMouseEnter = useCallback((action: string) => {
     setHoveredAction(action);
-  };
+  }, []);
 
-  const handleActionMouseLeave = () => {
+  const handleActionMouseLeave = useCallback(() => {
     setHoveredAction(null);
-  };
+  }, []);
 
   const dynamicStyles = StyleSheet.create({
     backgroundColor: {
@@ -402,16 +405,31 @@ const FeedItem: React.FC<FeedItemProps> = ({
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
+  // Memoize the background component to prevent unnecessary re-renders
+  const backgroundComponent = useMemo(() => {
+    if (isNeonTheme) {
+      // Use NeonGradientBackground for neon theme - pass the nextTopic
+      return <NeonGradientBackground topic={item.topic} nextTopic={nextTopic} />;
+    } else {
+      // Use regular background color for other themes
+      return <View style={dynamicStyles.backgroundColor} />;
+    }
+  }, [isNeonTheme, item.topic, nextTopic, dynamicStyles.backgroundColor]);
+
+  // Optimize rendering on iOS with rasterization for static content
+  const shouldRasterize = Platform.OS === 'ios';
+  const rasterizationProps = shouldRasterize ? {
+    shouldRasterizeIOS: true,
+    renderToHardwareTextureAndroid: true
+  } : {};
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {isNeonTheme ? (
-          // Use NeonGradientBackground for neon theme - pass the nextTopic
-          <NeonGradientBackground topic={item.topic} nextTopic={nextTopic} />
-        ) : (
-          // Use regular background color for other themes
-          <View style={dynamicStyles.backgroundColor} />
-        )}
+      <View 
+        style={styles.container}
+        {...rasterizationProps}
+      >
+        {backgroundComponent}
         
         <View style={[styles.overlay, {zIndex: 1}]} />
 
@@ -467,7 +485,9 @@ const FeedItem: React.FC<FeedItemProps> = ({
                   <Animated.View key={`${item.id}-answer-container-${index}`}
                     style={{
                       transform: [{ scale: answerAnimations[index] }],
-                      opacity: fadeInAnims[index],
+                      opacity: answersOpacity,
+                      // We'll handle this separately for web platforms
+                      ...(Platform.OS === 'web' ? { willChange: 'transform, opacity' as any } : {})
                     }}
                   >
                     <Pressable
@@ -616,11 +636,16 @@ const FeedItem: React.FC<FeedItemProps> = ({
         </View>
 
         {showLearningCapsule && (
-          <Animated.View style={[
-            styles.learningCapsule, 
-            isNeonTheme && styles.neonLearningCapsule,
-            getPopupAnimatedStyle()
-          ]}>
+          <Animated.View 
+            style={[
+              styles.learningCapsule, 
+              isNeonTheme && styles.neonLearningCapsule,
+              getPopupAnimatedStyle(),
+              // Add transform origin for iOS
+              Platform.OS === 'ios' ? { transform: [{ perspective: 1000 }] } : {}
+            ]}
+            {...rasterizationProps}
+          >
             <View style={styles.learningCapsuleHeader}>
               <ThemedText style={styles.learningCapsuleTitle}>Learn More</ThemedText>
               <TouchableOpacity onPress={toggleLearningCapsule} style={styles.closeButton}>
@@ -635,7 +660,12 @@ const FeedItem: React.FC<FeedItemProps> = ({
       </View>
     </SafeAreaView>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison function for React.memo
+  // Only re-render if the item ID changes or if nextTopic changes
+  return prevProps.item.id === nextProps.item.id && 
+         prevProps.nextTopic === nextProps.nextTopic;
+});
 
 export default FeedItem;
 

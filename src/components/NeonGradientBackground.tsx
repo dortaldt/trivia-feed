@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NeonCategoryColors, getCategoryColor } from '@/constants/NeonColors';
@@ -10,7 +10,8 @@ interface NeonGradientBackgroundProps {
   style?: object;
 }
 
-export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
+// Memoize the entire component to prevent unnecessary re-renders
+const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = React.memo(({
   topic,
   nextTopic,
   style
@@ -18,9 +19,15 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
   const { isNeonTheme } = useTheme();
   
   // Get the neon colors for this topic, or use default if not found
-  const getTopicColors = () => {
+  // Memoize color calculations to prevent recalculating on every render
+  const { primary, secondary, bright, complementary } = useMemo(() => {
     // If not in neon theme, return empty colors (will be transparent)
-    if (!isNeonTheme) return { primary: 'transparent', secondary: 'transparent', bright: 'transparent', complementary: 'transparent' };
+    if (!isNeonTheme) return { 
+      primary: 'transparent', 
+      secondary: 'transparent', 
+      bright: 'transparent', 
+      complementary: 'transparent' 
+    };
     
     // Use the helper function to get topic color
     const colorInfo = getCategoryColor(topic);
@@ -33,10 +40,11 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
       bright: adjustHexBrightness(primaryColor, 30),     // Create a brighter version for glow effects
       complementary: getComplementaryColor(primaryColor) // Add complementary color for organic feel
     };
-  };
+  }, [isNeonTheme, topic]);
   
   // Get the next topic's colors - used for seamless transition
-  const getNextTopicColors = () => {
+  // Also memoize next topic colors
+  const nextColors = useMemo(() => {
     if (!isNeonTheme || !nextTopic) {
       return { 
         primary: 'transparent', 
@@ -55,35 +63,91 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
       bright: adjustHexBrightness(nextPrimaryColor, 30),
       complementary: getComplementaryColor(nextPrimaryColor)
     };
-  };
+  }, [isNeonTheme, nextTopic]);
   
-  const { primary, secondary, bright, complementary } = getTopicColors();
-  const nextColors = getNextTopicColors();
-  
-  // Create colors for the background gradient with more organic alpha values
-  const topicPrimary = addAlphaToColor(primary, 0.7);
-  const topicSecondary = addAlphaToColor(secondary, 0.6);
-  const topicBright = addAlphaToColor(bright, 0.5);
-  const topicComplementary = addAlphaToColor(complementary, 0.3);
-  
-  // Next topic colors (for bottom of gradient)
-  const nextTopicPrimary = nextTopic ? addAlphaToColor(nextColors.primary, 0.3) : 'transparent';
-  const nextTopicSecondary = nextTopic ? addAlphaToColor(nextColors.secondary, 0.25) : 'transparent';
-  const nextTopicBright = nextTopic ? addAlphaToColor(nextColors.bright, 0.2) : 'transparent';
-  
-  // Very dark background colors with a hint of the topic's hue
-  const darkened = adjustHexBrightness(secondary, -90);
-  const darkerBackground = '#020203';
-  const darkestBackground = '#010102';
+  // Memoize gradient colors to prevent recalculating on every render
+  const gradientColors = useMemo(() => {
+    // Create colors for the background gradient with more organic alpha values
+    const topicPrimary = addAlphaToColor(primary, 0.7);
+    const topicSecondary = addAlphaToColor(secondary, 0.6);
+    const topicBright = addAlphaToColor(bright, 0.5);
+    const topicComplementary = addAlphaToColor(complementary, 0.3);
+    
+    // Next topic colors (for bottom of gradient)
+    const nextTopicPrimary = nextTopic ? addAlphaToColor(nextColors.primary, 0.3) : 'transparent';
+    const nextTopicSecondary = nextTopic ? addAlphaToColor(nextColors.secondary, 0.25) : 'transparent';
+    const nextTopicBright = nextTopic ? addAlphaToColor(nextColors.bright, 0.2) : 'transparent';
+    
+    // Very dark background colors with a hint of the topic's hue
+    const darkened = adjustHexBrightness(secondary, -90);
+    const darkerBackground = '#020203';
+    const darkestBackground = '#010102';
+    
+    return {
+      topicPrimary,
+      topicSecondary,
+      topicBright,
+      topicComplementary,
+      nextTopicPrimary,
+      nextTopicSecondary,
+      nextTopicBright,
+      darkened,
+      darkerBackground,
+      darkestBackground
+    };
+  }, [primary, secondary, bright, complementary, nextTopic, nextColors]);
   
   // Different implementations for iOS, Android, and web for best compatibility
   if (Platform.OS === 'ios' || Platform.OS === 'android') {
+    // Simplified version for iOS - single flat gradient with minimal effects
+    const { 
+      topicPrimary, 
+      topicBright,
+      nextTopicPrimary,
+      darkestBackground 
+    } = gradientColors;
+    
+    // For iOS, create an ultra-simplified version
+    if (Platform.OS === 'ios') {
+      return (
+        <View style={[styles.container, style]}>
+          {/* Base dark background - single layer */}
+          <View style={[styles.baseGradient, { backgroundColor: darkestBackground }]} />
+          
+          {/* Single optimized gradient for iOS */}
+          <LinearGradient
+            colors={[
+              topicPrimary, 
+              'rgba(0,0,0,0.9)'
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.iosOptimizedGradient}
+          />
+          
+          {/* Optional center glow for aesthetics */}
+          {nextTopic && (
+            <LinearGradient
+              colors={[
+                'transparent',
+                addAlphaToColor(topicBright, 0.1)
+              ]}
+              start={{ x: 0.5, y: 0.5 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.centerRadial, { opacity: 0.3 }]}
+            />
+          )}
+        </View>
+      );
+    }
+    
+    // For Android, keep the slightly more detailed version
     return (
       <View style={[styles.container, style]}>
         {/* Base dark background */}
         <View style={[styles.baseGradient, { backgroundColor: darkestBackground }]} />
         
-        {/* Main top-left radial effect */}
+        {/* Main top-left radial effect - keep this one */}
         <View style={styles.radialContainer}>
           <LinearGradient
             colors={[
@@ -96,20 +160,7 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
           />
         </View>
         
-        {/* Top-right radial effect */}
-        <View style={styles.radialContainer}>
-          <LinearGradient
-            colors={[
-              topicSecondary,
-              'transparent'
-            ]}
-            start={{ x: 1, y: 0 }}
-            end={{ x: 0.2, y: 0.8 }}
-            style={[styles.topRightRadial, { opacity: 0.6 }]}
-          />
-        </View>
-        
-        {/* Bottom radial effect - hint of next topic's color (from bottom-right diagonal) */}
+        {/* Bottom radial effect - only render if nextTopic exists */}
         {nextTopic && (
           <View style={styles.radialContainer}>
             <LinearGradient
@@ -124,22 +175,7 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
           </View>
         )}
         
-        {/* Additional diagonal gradient for next topic color */}
-        {nextTopic && (
-          <View style={styles.radialContainer}>
-            <LinearGradient
-              colors={[
-                'transparent',
-                addAlphaToColor(nextColors.bright, 0.25)
-              ]}
-              start={{ x: 0.2, y: 0.4 }}
-              end={{ x: 0.9, y: 0.9 }}
-              style={[styles.additionalDiagonalGradient, { opacity: 0.3 }]}
-            />
-          </View>
-        )}
-        
-        {/* Center glow radial effect */}
+        {/* Only include one center glow radial effect */}
         <View style={styles.centerRadialContainer}>
           <LinearGradient
             colors={[
@@ -154,7 +190,20 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
       </View>
     );
   } else {
-    // For web, use radial gradients
+    // Web version - optimize for better performance
+    const { 
+      topicPrimary, 
+      topicSecondary, 
+      topicBright, 
+      nextTopicPrimary,
+      nextTopicBright, 
+      darkestBackground 
+    } = gradientColors;
+    
+    // Reduce blur radius for better performance
+    const blurRadiusLarge = '20px'; // reduced from 30px  
+    const blurRadiusSmall = '15px'; // reduced from 25px
+    
     return (
       <View style={[styles.container, style]}>
         {/* Dark base layer */}
@@ -181,26 +230,13 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
             background: `radial-gradient(circle at 0% 0%, ${topicPrimary} 0%, transparent 60%)`,
             opacity: 0.8,
             zIndex: 2,
-            filter: 'blur(30px)'
+            filter: `blur(${blurRadiusLarge})`
           } as any}
         />
         
-        {/* Secondary radial gradient from top right */}
-        <View 
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: `radial-gradient(circle at 100% 0%, ${topicSecondary} 0%, transparent 60%)`,
-            opacity: 0.6,
-            zIndex: 3,
-            filter: 'blur(30px)'
-          } as any}
-        />
+        {/* Remove secondary gradient for performance */}
         
-        {/* Diagonal gradient from bottom-right with next topic color */}
+        {/* Diagonal gradient from bottom-right with next topic color - only if nextTopic exists */}
         {nextTopic && (
           <View 
             style={{
@@ -212,24 +248,7 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
               background: `linear-gradient(125deg, transparent 60%, ${nextTopicPrimary} 100%)`,
               opacity: 0.35,
               zIndex: 4,
-              filter: 'blur(35px)'
-            } as any}
-          />
-        )}
-        
-        {/* Additional diagonal gradient using bright next topic color */}
-        {nextTopic && (
-          <View 
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: `linear-gradient(135deg, transparent 70%, ${addAlphaToColor(nextColors.bright, 0.25)} 100%)`,
-              opacity: 0.3,
-              zIndex: 5,
-              filter: 'blur(25px)'
+              filter: `blur(${blurRadiusLarge})`
             } as any}
           />
         )}
@@ -245,13 +264,13 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
             background: `radial-gradient(circle at center, ${addAlphaToColor(topicBright, 0.3)} 0%, transparent 70%)`,
             opacity: 0.5,
             zIndex: 6,
-            filter: 'blur(40px)'
+            filter: `blur(${blurRadiusSmall})`
           } as any}
         />
       </View>
     );
   }
-};
+});
 
 // Helper function to add alpha to hex color
 const addAlphaToColor = (hexColor: string, alpha: number): string => {
@@ -322,6 +341,15 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   baseGradient: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+  },
+  iosOptimizedGradient: {
     position: 'absolute',
     width: '100%',
     height: '100%',
