@@ -61,105 +61,81 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
   const nextColors = getNextTopicColors();
   
   // Create colors for the background gradient with more organic alpha values
-  // Reduce opacity of all colors for more subtle effect
-  const topicPrimary = addAlphaToColor(primary, 0.5); // Reduced from 0.85
-  const topicSecondary = addAlphaToColor(secondary, 0.4); // Reduced from 0.7
-  const topicBright = addAlphaToColor(bright, 0.3); // Reduced from 0.65
-  const topicComplementary = addAlphaToColor(complementary, 0.2); // Reduced from 0.4
+  const topicPrimary = addAlphaToColor(primary, 0.7);
+  const topicSecondary = addAlphaToColor(secondary, 0.6);
+  const topicBright = addAlphaToColor(bright, 0.5);
+  const topicComplementary = addAlphaToColor(complementary, 0.3);
   
   // Next topic colors (for bottom of gradient)
-  const nextTopicPrimary = nextTopic ? addAlphaToColor(nextColors.primary, 0.5) : 'transparent'; // Reduced from 0.85
-  const nextTopicSecondary = nextTopic ? addAlphaToColor(nextColors.secondary, 0.4) : 'transparent'; // Reduced from 0.7
-  const nextTopicBright = nextTopic ? addAlphaToColor(nextColors.bright, 0.3) : 'transparent'; // Reduced from 0.65
+  const nextTopicPrimary = nextTopic ? addAlphaToColor(nextColors.primary, 0.2) : 'transparent';
+  const nextTopicSecondary = nextTopic ? addAlphaToColor(nextColors.secondary, 0.15) : 'transparent';
+  const nextTopicBright = nextTopic ? addAlphaToColor(nextColors.bright, 0.1) : 'transparent';
   
   // Very dark background colors with a hint of the topic's hue
   const darkened = adjustHexBrightness(secondary, -90);
-  const darkerBackground = '#020203'; // Even darker background (was #050508)
-  const darkestBackground = '#010102'; // Almost pure black (was #020204)
+  const darkerBackground = '#020203';
+  const darkestBackground = '#010102';
   
   // Different implementations for iOS, Android, and web for best compatibility
   if (Platform.OS === 'ios' || Platform.OS === 'android') {
     return (
       <View style={[styles.container, style]}>
-        {/* Base dark gradient - full coverage from corner to corner */}
-        <LinearGradient
-          colors={[
-            darkerBackground, 
-            darkestBackground
-          ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.baseGradient}
-        />
+        {/* Base dark background */}
+        <View style={[styles.baseGradient, { backgroundColor: darkestBackground }]} />
         
-        {/* Main diagonal organic gradient - now ends with next topic's color - full width */}
+        {/* Main gradient from top color - radial from top left */}
         <LinearGradient
           colors={[
             topicPrimary, 
-            'transparent',
-            nextTopic ? nextTopicPrimary : topicComplementary
+            'transparent'
           ]}
           start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }} // Extended to full edge
-          locations={[0, 0.4, 0.8]}
-          style={[styles.diagonalGradient, { opacity: 0.6 }]} // Kept reduced opacity
+          end={{ x: 1, y: 1 }}
+          locations={[0, 0.7]}
+          style={[styles.diagonalGradient, { opacity: 0.8 }]}
         />
         
-        {/* Secondary corner gradients for organic feel - full width */}
+        {/* Secondary radial gradient for top right corner */}
         <LinearGradient
           colors={[
-            'transparent',
-            topicSecondary
+            topicSecondary,
+            'transparent'
           ]}
           start={{ x: 1, y: 0 }}
-          end={{ x: 0, y: 0.7 }} // Extended to full edge
-          locations={[0.6, 1.0]}
-          style={[styles.cornerGradient, { opacity: 0.5 }]} // Kept reduced opacity
+          end={{ x: 0, y: 1 }}
+          locations={[0, 0.7]}
+          style={[styles.cornerGradient, { opacity: 0.6 }]}
         />
         
-        {/* Bottom gradient to next topic's color - full width */}
+        {/* Bottom gradient - just a hint of bottom color if present */}
         {nextTopic && (
           <LinearGradient
             colors={[
               'transparent',
               nextTopicSecondary
             ]}
-            start={{ x: 0, y: 0.6 }} // Adjusted for better edge coverage
-            end={{ x: 1, y: 1 }} // Extended to full edge
-            locations={[0.6, 1.0]}
-            style={[styles.bottomGradient, { opacity: 0.4 }]} // Kept reduced opacity
+            start={{ x: 0.5, y: 0.8 }}
+            end={{ x: 0.5, y: 1 }}
+            locations={[0, 1]}
+            style={[styles.bottomGradient, { opacity: 0.2 }]}
           />
         )}
         
-        {/* Soft vertical gradient for added dimension - full height */}
+        {/* Central glow effect */}
         <LinearGradient
           colors={[
-            addAlphaToColor(topicBright, 0.1),
-            'transparent',
-            nextTopic ? addAlphaToColor(nextColors.complementary, 0.15) : addAlphaToColor(complementary, 0.15)
-          ]}
-          start={{ x: 0.5, y: 0 }} // Extended to full top
-          end={{ x: 0.5, y: 1 }} // Extended to full bottom
-          locations={[0, 0.5, 1.0]}
-          style={[styles.verticalGradient, { opacity: 0.5 }]} // Kept reduced opacity
-        />
-        
-        {/* Blurred glow accent - larger but still subtle */}
-        <LinearGradient
-          colors={[
-            'transparent',
-            addAlphaToColor(topicBright, 0.1),
+            addAlphaToColor(topicBright, 0.3),
             'transparent'
           ]}
-          start={{ x: 0.3, y: 0.3 }}
-          end={{ x: 0.7, y: 0.7 }}
-          locations={[0.3, 0.5, 0.7]}
-          style={[styles.glowGradient, { opacity: 0.4 }]} // Kept reduced opacity
+          start={{ x: 0.5, y: 0.3 }}
+          end={{ x: 0.5, y: 0.7 }}
+          locations={[0, 1]}
+          style={[styles.glowGradient, { opacity: 0.5, borderRadius: 1000 }]}
         />
       </View>
     );
   } else {
-    // For web, use a more direct approach with explicit linear gradients
+    // For web, use radial gradients
     return (
       <View style={[styles.container, style]}>
         {/* Dark base layer */}
@@ -170,12 +146,12 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
             left: 0,
             right: 0,
             bottom: 0,
-            background: `linear-gradient(135deg, ${darkerBackground} 0%, ${darkestBackground} 100%)`,
+            backgroundColor: darkestBackground,
             zIndex: 1
           } as any}
         />
         
-        {/* Main diagonal gradient with organic feel - full screen */}
+        {/* Main radial gradient from top left */}
         <View 
           style={{
             position: 'absolute',
@@ -183,14 +159,14 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
             left: 0,
             right: 0,
             bottom: 0,
-            background: `linear-gradient(135deg, ${topicPrimary} 0%, transparent 40%, ${nextTopic ? nextTopicPrimary : topicComplementary} 80%)`,
-            opacity: 0.5, // Kept reduced opacity
+            background: `radial-gradient(circle at 0% 0%, ${topicPrimary} 0%, transparent 60%)`,
+            opacity: 0.8,
             zIndex: 2,
-            filter: 'blur(25px)'
+            filter: 'blur(30px)'
           } as any}
         />
         
-        {/* Secondary gradient from opposite corner - full screen */}
+        {/* Secondary radial gradient from top right */}
         <View 
           style={{
             position: 'absolute',
@@ -198,46 +174,31 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
             left: 0,
             right: 0,
             bottom: 0,
-            background: `linear-gradient(45deg, transparent 60%, ${topicSecondary} 100%)`,
-            opacity: 0.4, // Kept reduced opacity
+            background: `radial-gradient(circle at 100% 0%, ${topicSecondary} 0%, transparent 60%)`,
+            opacity: 0.6,
             zIndex: 3,
             filter: 'blur(30px)'
           } as any}
         />
         
-        {/* Bottom gradient to next topic's color - full width */}
+        {/* Bottom hint of next topic's color if present */}
         {nextTopic && (
           <View 
             style={{
               position: 'absolute',
-              top: '50%', // Lower position but full width
+              top: 0,
               left: 0,
               right: 0,
               bottom: 0,
-              background: `linear-gradient(to bottom, transparent 30%, ${nextTopicSecondary} 100%)`,
-              opacity: 0.4, // Kept reduced opacity
+              background: `radial-gradient(circle at 50% 90%, ${nextTopicSecondary} 0%, transparent 50%)`,
+              opacity: 0.2,
               zIndex: 4,
-              filter: 'blur(25px)'
+              filter: 'blur(30px)'
             } as any}
           />
         )}
         
-        {/* Soft vertical gradient for added dimension - full screen */}
-        <View 
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: `linear-gradient(to bottom, ${addAlphaToColor(topicBright, 0.1)} 0%, transparent 50%, ${nextTopic ? addAlphaToColor(nextColors.complementary, 0.15) : addAlphaToColor(complementary, 0.15)} 100%)`,
-            opacity: 0.4, // Kept reduced opacity
-            zIndex: 4,
-            filter: 'blur(20px)'
-          } as any}
-        />
-        
-        {/* Central soft glow - larger area */}
+        {/* Central glow effect */}
         <View 
           style={{
             position: 'absolute',
@@ -245,10 +206,10 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
             left: '20%',
             right: '20%',
             bottom: '20%',
-            background: `radial-gradient(ellipse at center, ${addAlphaToColor(topicBright, 0.1)} 0%, transparent 70%)`,
-            opacity: 0.4, // Kept reduced opacity
+            background: `radial-gradient(circle at center, ${addAlphaToColor(topicBright, 0.3)} 0%, transparent 70%)`,
+            opacity: 0.5,
             zIndex: 5,
-            filter: 'blur(30px)'
+            filter: 'blur(40px)'
           } as any}
         />
       </View>
@@ -371,12 +332,10 @@ const styles = StyleSheet.create({
   },
   glowGradient: {
     position: 'absolute',
-    width: '100%',
-    height: '100%',
-    left: 0,
-    top: 0,
-    right: 0,
-    bottom: 0,
+    width: '150%',
+    height: '150%',
+    left: '-25%',
+    top: '-25%',
   }
 });
 
