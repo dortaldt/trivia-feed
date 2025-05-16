@@ -615,6 +615,15 @@ const ProfileView: React.FC = () => {
     container: {
       flex: 1,
       padding: 20,
+      ...(Platform.OS === 'web' ? {
+        alignItems: 'center',
+      } : {}),
+    },
+    contentContainer: {
+      width: '100%',
+      ...(Platform.OS === 'web' ? {
+        maxWidth: 600,
+      } : {}),
     },
     scrollView: {
       flex: 1,
@@ -1263,8 +1272,9 @@ const ProfileView: React.FC = () => {
 
   return (
     <View style={profileStyles.container}>
-      {/* User avatar and email */}
-      <View style={profileStyles.userInfoSection}>
+      <View style={profileStyles.contentContainer}>
+        {/* User avatar and email */}
+        <View style={profileStyles.userInfoSection}>
         <View style={profileStyles.avatarContainer}>
           {uploadingImage ? (
             <View style={profileStyles.avatarPlaceholder}>
@@ -1571,6 +1581,7 @@ const ProfileView: React.FC = () => {
           <ActivityIndicator size="large" color={isDark ? 'white' : '#0a7ea4'} />
         </View>
       )}
+      </View>
     </View>
   );
 };

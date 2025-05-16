@@ -135,40 +135,60 @@ export const buttons = {
       paddingHorizontal: spacing[2],
       borderRadius: borderRadius.sm,
       fontSize: typography.fontSizes.xs,
+      iconSpacing: 4, // 4px spacing
     },
     sm: {
       paddingVertical: spacing[2],
       paddingHorizontal: spacing[3],
       borderRadius: borderRadius.md,
       fontSize: typography.fontSizes.sm,
+      iconSpacing: 6, // 6px spacing
     },
     md: {
       paddingVertical: spacing[3],
       paddingHorizontal: spacing[4],
       borderRadius: borderRadius.md,
       fontSize: typography.fontSizes.md,
+      iconSpacing: 8, // 8px spacing
     },
     lg: {
       paddingVertical: spacing[4],
       paddingHorizontal: spacing[5],
       borderRadius: borderRadius.lg,
       fontSize: typography.fontSizes.lg,
+      iconSpacing: 10, // 10px spacing
     },
   },
   
   // Style variants
   variants: {
+    // Primary button - filled background
     primary: {
       backgroundColor: colors.primary,
       color: colors.primaryForeground,
+      borderWidth: 0,
     },
+    
+    // Secondary button - outline only
     secondary: {
-      backgroundColor: colors.secondary,
-      color: colors.secondaryForeground,
+      backgroundColor: 'transparent',
+      color: colors.secondary,
+      borderWidth: 2,
+      borderColor: colors.secondary,
     },
+    
+    // Tertiary button - no background, no border
+    tertiary: {
+      backgroundColor: 'transparent',
+      color: colors.foreground,
+      borderWidth: 0,
+    },
+    
+    // Legacy variants maintained for backwards compatibility
     accent: {
       backgroundColor: colors.accent,
       color: colors.accentForeground,
+      borderWidth: 0,
     },
     outline: {
       backgroundColor: 'transparent',
@@ -179,24 +199,101 @@ export const buttons = {
     ghost: {
       backgroundColor: 'transparent',
       color: colors.foreground,
+      borderWidth: 0,
     },
     destructive: {
       backgroundColor: colors.destructive,
       color: colors.destructiveForeground,
+      borderWidth: 0,
     },
     success: {
       backgroundColor: colors.success,
       color: colors.successForeground,
+      borderWidth: 0,
     },
     warning: {
       backgroundColor: colors.warning,
       color: colors.warningForeground,
+      borderWidth: 0,
     },
     info: {
       backgroundColor: colors.info,
       color: colors.infoForeground,
+      borderWidth: 0,
     },
   },
+  
+  // Neon theme token overrides
+  neon: {
+    primary: {
+      color: colors.accent,
+      glow: colors.accent,
+      background: 'rgba(40, 25, 0, 0.8)',
+    },
+    secondary: {
+      color: colors.accent,
+      glow: colors.accent,
+      background: 'transparent',
+    },
+    tertiary: {
+      color: colors.accent,
+      glow: colors.accent,
+      background: 'transparent',
+    },
+    accent: {
+      color: colors.accent,
+      glow: colors.accent,
+      background: 'rgba(40, 25, 0, 0.8)',
+    },
+    outline: {
+      color: colors.accent,
+      glow: colors.accent,
+      background: 'transparent',
+    },
+    ghost: {
+      color: colors.accent,
+      glow: colors.accent,
+      background: 'transparent',
+    },
+    destructive: {
+      color: colors.destructive,
+      glow: colors.destructive,
+      background: 'rgba(40, 10, 10, 0.8)',
+    },
+    success: {
+      color: colors.success,
+      glow: colors.success,
+      background: 'rgba(10, 40, 25, 0.8)',
+    },
+    warning: {
+      color: colors.warning,
+      glow: colors.warning,
+      background: 'rgba(40, 25, 0, 0.8)',
+    },
+    info: {
+      color: colors.info,
+      glow: colors.info,
+      background: 'rgba(10, 25, 40, 0.8)',
+    }
+  },
+  
+  // Add button states for all platforms
+  states: {
+    hover: {
+      opacity: 0.9,
+      transform: 'scale(1.02)',
+    },
+    active: {
+      opacity: 0.7,
+      transform: 'scale(0.98)',
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    disabled: {
+      opacity: 0.5,
+    }
+  }
 };
 
 export default {
