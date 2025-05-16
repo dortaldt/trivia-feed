@@ -69,6 +69,7 @@ import { useQuestionGenerator } from '../../hooks/useQuestionGenerator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LoadingBar } from '../../components/ui';
 import { QuestionInteraction } from '../../lib/personalizationService';
+import { recordUserAnswer } from '../../lib/leaderboardService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -1436,6 +1437,16 @@ const FeedScreen: React.FC = () => {
     
     // Get the user ID from auth context
     const userId = user?.id;
+    
+    // Record the answer for leaderboard tracking if user is logged in
+    if (userId) {
+      try {
+        // This directly calls the Supabase database to update leaderboard stats
+        await recordUserAnswer(userId, questionId, isCorrect, answerIndex);
+      } catch (error) {
+        console.error('Error recording answer for leaderboard:', error);
+      }
+    }
     
     // Update user profile for personalization
     const { updatedProfile, weightChange } = updateUserProfile(
