@@ -1383,40 +1383,27 @@ const ProfileView: React.FC = () => {
           {/* Add Avatar Selection UI at the top of the edit form */}
           <View style={profileStyles.inputContainer}>
             <ThemedText style={profileStyles.inputLabel}>Profile Photo</ThemedText>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 10 }}>
-              {avatarUrl ? (
-                <Image 
-                  source={{ uri: avatarUrl }} 
-                  style={{ width: 60, height: 60, borderRadius: 30, marginRight: 15 }}
-                />
-              ) : (
-                <View style={{ 
-                  width: 60, 
-                  height: 60, 
-                  borderRadius: 30, 
-                  backgroundColor: 'rgba(10, 126, 164, 0.2)', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  marginRight: 15 
-                }}>
-                  <ThemedText style={{ fontSize: 24, fontWeight: 'bold' }}>{getInitials()}</ThemedText>
-                </View>
-              )}
-              <View>
+            <View style={{ marginVertical: 10 }}>
+              <View style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
                 <TouchableOpacity 
                   onPress={pickImage}
                   style={{ 
                     flexDirection: 'row', 
                     alignItems: 'center',
-                    marginBottom: 8,
                     backgroundColor: 'rgba(10, 126, 164, 0.1)',
-                    paddingVertical: 6,
-                    paddingHorizontal: 12,
-                    borderRadius: 20
+                    paddingVertical: 8,
+                    paddingHorizontal: 16,
+                    borderRadius: 20,
+                    flex: 1,
+                    marginRight: avatarUrl ? 8 : 0
                   }}
                 >
-                  <FeatherIcon name="upload" size={14} color="#0a7ea4" />
-                  <ThemedText style={{ color: '#0a7ea4', fontSize: 14, marginLeft: 6 }}>
+                  <FeatherIcon name="upload" size={16} color="#0a7ea4" />
+                  <ThemedText style={{ color: '#0a7ea4', fontSize: 16, marginLeft: 8, fontWeight: '500' }}>
                     {avatarUrl ? 'Change photo' : 'Upload photo'}
                   </ThemedText>
                 </TouchableOpacity>
@@ -1425,16 +1412,17 @@ const ProfileView: React.FC = () => {
                   <TouchableOpacity 
                     onPress={removeAvatar}
                     style={{ 
-                      flexDirection: 'row', 
                       alignItems: 'center',
+                      justifyContent: 'center',
                       backgroundColor: 'rgba(255, 59, 48, 0.1)',
-                      paddingVertical: 6,
-                      paddingHorizontal: 12,
-                      borderRadius: 20
+                      paddingVertical: 8,
+                      paddingHorizontal: 8,
+                      borderRadius: 20,
+                      height: 40,
+                      width: 40
                     }}
                   >
-                    <FeatherIcon name="trash-2" size={14} color="#ff3b30" />
-                    <ThemedText style={{ color: '#ff3b30', fontSize: 14, marginLeft: 6 }}>Remove photo</ThemedText>
+                    <FeatherIcon name="trash-2" size={20} color="#ff3b30" />
                   </TouchableOpacity>
                 )}
               </View>
