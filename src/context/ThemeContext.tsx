@@ -44,7 +44,8 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const deviceColorScheme = useDeviceColorScheme() as ColorSchemeType || 'dark';
   const [currentTheme, setCurrentTheme] = useState<ThemeName>('neon');
-  const [colorScheme, setColorScheme] = useState<ColorSchemeType>(deviceColorScheme);
+  // Always use dark mode, regardless of device theme
+  const [colorScheme, setColorScheme] = useState<ColorSchemeType>('dark');
   const [themeDefinition, setThemeDefinition] = useState<ThemeDefinition>(neonTheme);
 
   // Initialize the theme to neon if no theme is set yet
@@ -70,16 +71,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const loadThemeSettings = async () => {
       try {
         const savedTheme = await AsyncStorage.getItem('app-theme');
-        const savedColorScheme = await AsyncStorage.getItem('app-color-scheme');
         
         if (savedTheme && themeMap[savedTheme as ThemeName]) {
           setCurrentTheme(savedTheme as ThemeName);
           setThemeDefinition(themeMap[savedTheme as ThemeName]);
         }
         
-        if (savedColorScheme && (savedColorScheme === 'light' || savedColorScheme === 'dark')) {
-          setColorScheme(savedColorScheme as ColorSchemeType);
-        }
+        // Always force dark mode, ignore saved color scheme
+        setColorScheme('dark');
+        await AsyncStorage.setItem('app-color-scheme', 'dark');
       } catch (error) {
         console.error('Failed to load theme settings from storage:', error);
       }
@@ -88,121 +88,74 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     loadThemeSettings();
   }, []);
 
-  // Update colorScheme when device theme changes, unless user has explicitly set it
+  // Force dark mode, ignore device theme changes
   useEffect(() => {
-    const checkUserSetColorScheme = async () => {
-      try {
-        const userSet = await AsyncStorage.getItem('user-set-color-scheme');
-        if (userSet !== 'true') {
-          setColorScheme(deviceColorScheme);
-        }
-      } catch (error) {
-        console.error('Failed to check user color scheme setting:', error);
-        setColorScheme(deviceColorScheme);
-      }
-    };
+    // Always use dark mode
+    setColorScheme('dark');
     
-    checkUserSetColorScheme();
-  }, [deviceColorScheme]);
-  
-  // Apply theme CSS variables for web when theme or colorScheme changes
+    // Save dark mode preference
+    AsyncStorage.setItem('app-color-scheme', 'dark').catch(error => {
+      console.error('Failed to save color scheme to storage:', error);
+    });
+  }, []);
+
+  // Apply theme variables for web platform
   useEffect(() => {
     if (Platform.OS === 'web') {
-      console.log('Theme or colorScheme changed. Updating theme variables...', { 
-        theme: currentTheme, 
-        colorScheme
-      });
-      
-      // Apply CSS variables to document
-      applyThemeVariables(themeDefinition, colorScheme);
-      
-      // Set theme color meta tag for mobile browsers
-      setMetaThemeColor(themeDefinition, colorScheme);
-      
-      // Update favicon and social media tags based on theme
-      console.log('Calling updateFavicon from ThemeContext useEffect');
-      updateFavicon(currentTheme);
-      updateSocialMetaTags('TriviaFeed');
-      
-      // Add theme-specific body class for CSS selectors
-      document.body.className = document.body.className
-        .replace(/theme-\w+/g, '')
-        .trim();
-      document.body.classList.add(`theme-${currentTheme}`);
-      
-      // Force re-render by applying a small styling change
-      document.documentElement.style.transition = 'all 0.3s ease';
-      // Force DOM reflow
-      const reflow = document.documentElement.offsetHeight;
-      
-      // Debug output for theme variables
-      console.log('Current theme state:');
-      console.log(`- Theme: ${currentTheme}`);
-      console.log(`- Color scheme: ${colorScheme}`);
-      console.log(`- CSS Theme ID variable: ${getComputedStyle(document.documentElement).getPropertyValue('--theme-id')}`);
-      console.log(`- Body classes: ${document.body.className}`);
-      console.log(`- HTML data-theme: ${document.documentElement.dataset.theme}`);
+      try {
+        applyThemeVariables(themeDefinition, colorScheme);
+        
+        // Set the theme color for browser UI (mobile)
+        setMetaThemeColor(themeDefinition, colorScheme);
+        
+        // Update the favicon based on the theme
+        updateFavicon(currentTheme);
+        
+        // Update meta tags for social sharing
+        updateSocialMetaTags(currentTheme);
+        
+        // Add data-theme attributes to root elements for CSS targeting
+        if (typeof document !== 'undefined') {
+          document.documentElement.dataset.theme = currentTheme;
+          document.documentElement.dataset.colorScheme = colorScheme;
+          document.body.dataset.theme = currentTheme;
+          document.body.dataset.colorScheme = colorScheme;
+        }
+      } catch (error) {
+        console.error('Failed to apply theme variables:', error);
+      }
     }
   }, [themeDefinition, colorScheme, currentTheme]);
 
-  // Set theme by name
-  const setTheme = async (themeName: ThemeName) => {
-    console.log(`Setting theme to: ${themeName}`);
+  // Track theme changes for analytics
+  useEffect(() => {
+    // Log theme changes to analytics
+    console.log(`Theme changed to: ${currentTheme}, color scheme: ${colorScheme}`);
     
+    // Additional analytics tracking could be added here
+  }, [currentTheme, colorScheme]);
+
+  // Set a specific theme
+  const setTheme = async (themeName: ThemeName) => {
     if (themeMap[themeName]) {
       setCurrentTheme(themeName);
       setThemeDefinition(themeMap[themeName]);
-      
-      // Web-specific theme changes
-      if (Platform.OS === 'web') {
-        console.log('Calling updateFavicon directly from setTheme');
-        updateFavicon(themeName);
-        
-        // Immediately apply theme variables for faster visual feedback
-        applyThemeVariables(themeMap[themeName], colorScheme);
-        setMetaThemeColor(themeMap[themeName], colorScheme);
-        
-        // Add theme-specific body class for CSS selectors
-        document.body.className = document.body.className
-          .replace(/theme-\w+/g, '')
-          .trim();
-        document.body.classList.add(`theme-${themeName}`);
-        
-        // Force a subtle visual change to trigger re-renders
-        document.documentElement.style.outline = '1px solid transparent';
-        // Force DOM reflow
-        const reflow = document.documentElement.offsetHeight;
-        document.documentElement.style.outline = '';
-        
-        // In case of extensive changes needed, consider a delayed refresh
-        // Only do this for major theme changes like switching to/from neon theme
-        if (themeName === 'neon' || currentTheme === 'neon') {
-          console.log('Major theme change detected. Will apply full refresh in 500ms');
-          setTimeout(() => {
-            window.location.reload();
-          }, 500);
-        }
-      }
       
       try {
         await AsyncStorage.setItem('app-theme', themeName);
       } catch (error) {
         console.error('Failed to save theme to storage:', error);
       }
+    } else {
+      console.error(`Invalid theme name: ${themeName}`);
     }
   };
 
-  // Toggle between light and dark color schemes
+  // Toggle between light and dark color schemes - now does nothing since we're dark-only
   const toggleColorScheme = async () => {
-    const newColorScheme = colorScheme === 'light' ? 'dark' : 'light';
-    setColorScheme(newColorScheme);
-    
-    try {
-      await AsyncStorage.setItem('app-color-scheme', newColorScheme);
-      await AsyncStorage.setItem('user-set-color-scheme', 'true');
-    } catch (error) {
-      console.error('Failed to save color scheme to storage:', error);
-    }
+    // Do nothing - app is dark mode only
+    console.log('App is dark mode only');
+    return;
   };
 
   // Cycle through available themes
@@ -252,7 +205,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 };
 
-export const useTheme = (): ThemeContextType => {
+export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (context === undefined) {
     throw new Error('useTheme must be used within a ThemeProvider');

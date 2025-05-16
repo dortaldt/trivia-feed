@@ -27,27 +27,23 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   initialTheme = 'system',
 }) => {
   const deviceTheme = useColorScheme();
-  const [theme, setTheme] = useState<'dark' | 'light'>(
-    initialTheme === 'system'
-      ? deviceTheme === 'dark'
-        ? 'dark'
-        : 'light'
-      : initialTheme as 'dark' | 'light'
-  );
+  // Always use dark theme, regardless of initialTheme or system settings
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
-  // Listen for device theme changes if using system theme
+  // Force dark theme, ignore device theme changes
   useEffect(() => {
-    if (initialTheme === 'system' && deviceTheme) {
-      setTheme(deviceTheme === 'dark' ? 'dark' : 'light');
-    }
-  }, [deviceTheme, initialTheme]);
+    // Always set to dark, regardless of system theme
+    setTheme('dark');
+  }, []);
 
+  // Toggle theme function - does nothing since we're always in dark mode
   const toggleTheme = () => {
-    setTheme(current => (current === 'dark' ? 'light' : 'dark'));
+    // Do nothing - app is dark mode only
+    console.log('App is dark mode only');
   };
 
-  const isDarkMode = theme === 'dark';
-  const paperTheme = isDarkMode ? darkTheme : lightTheme;
+  const isDarkMode = true; // Always dark mode
+  const paperTheme = darkTheme; // Always use dark theme
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, isDarkMode }}>

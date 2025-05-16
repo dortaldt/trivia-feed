@@ -328,32 +328,9 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ style, size = 'normal' }) => 
               </ScrollView>
               
               <View style={styles.colorSchemeToggleContainer}>
-                <Text style={[styles.colorSchemeLabel, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-                  {colorScheme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                <Text style={[styles.colorSchemeLabel, { color: '#fff' }]}>
+                  Dark Mode Only
                 </Text>
-                <TouchableOpacity 
-                  style={[
-                    styles.colorSchemeToggle, 
-                    { backgroundColor: colorScheme === 'dark' ? '#333' : '#ddd' }
-                  ]} 
-                  onPress={() => {
-                    if (themeContext && themeContext.toggleColorScheme) {
-                      themeContext.toggleColorScheme();
-                    } else {
-                      console.warn('ThemeToggle: Cannot toggle color scheme, ThemeContext unavailable');
-                    }
-                  }}
-                >
-                  <View 
-                    style={[
-                      styles.colorSchemeIndicator, 
-                      { 
-                        backgroundColor: getIconColor(),
-                        transform: [{ translateX: colorScheme === 'dark' ? 20 : 0 }]
-                      }
-                    ]} 
-                  />
-                </TouchableOpacity>
               </View>
             </View>
           </BlurView>
