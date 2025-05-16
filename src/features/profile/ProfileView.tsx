@@ -1380,7 +1380,68 @@ const ProfileView: React.FC = () => {
         </View>
       ) : (
         <View style={profileStyles.formContainer}>
-          {/* Edit form */}
+          {/* Add Avatar Selection UI at the top of the edit form */}
+          <View style={profileStyles.inputContainer}>
+            <ThemedText style={profileStyles.inputLabel}>Profile Photo</ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 10 }}>
+              {avatarUrl ? (
+                <Image 
+                  source={{ uri: avatarUrl }} 
+                  style={{ width: 60, height: 60, borderRadius: 30, marginRight: 15 }}
+                />
+              ) : (
+                <View style={{ 
+                  width: 60, 
+                  height: 60, 
+                  borderRadius: 30, 
+                  backgroundColor: 'rgba(10, 126, 164, 0.2)', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  marginRight: 15 
+                }}>
+                  <ThemedText style={{ fontSize: 24, fontWeight: 'bold' }}>{getInitials()}</ThemedText>
+                </View>
+              )}
+              <View>
+                <TouchableOpacity 
+                  onPress={pickImage}
+                  style={{ 
+                    flexDirection: 'row', 
+                    alignItems: 'center',
+                    marginBottom: 8,
+                    backgroundColor: 'rgba(10, 126, 164, 0.1)',
+                    paddingVertical: 6,
+                    paddingHorizontal: 12,
+                    borderRadius: 20
+                  }}
+                >
+                  <FeatherIcon name="upload" size={14} color="#0a7ea4" />
+                  <ThemedText style={{ color: '#0a7ea4', fontSize: 14, marginLeft: 6 }}>
+                    {avatarUrl ? 'Change photo' : 'Upload photo'}
+                  </ThemedText>
+                </TouchableOpacity>
+                
+                {avatarUrl && (
+                  <TouchableOpacity 
+                    onPress={removeAvatar}
+                    style={{ 
+                      flexDirection: 'row', 
+                      alignItems: 'center',
+                      backgroundColor: 'rgba(255, 59, 48, 0.1)',
+                      paddingVertical: 6,
+                      paddingHorizontal: 12,
+                      borderRadius: 20
+                    }}
+                  >
+                    <FeatherIcon name="trash-2" size={14} color="#ff3b30" />
+                    <ThemedText style={{ color: '#ff3b30', fontSize: 14, marginLeft: 6 }}>Remove photo</ThemedText>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
+
+          {/* Edit form name field */}
           <View style={profileStyles.inputContainer}>
             <ThemedText style={profileStyles.inputLabel}>Name</ThemedText>
             <TextInput

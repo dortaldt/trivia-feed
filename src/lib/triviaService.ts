@@ -219,6 +219,24 @@ export async function analyzeCorrectAnswers() {
   }
 }
 
+/**
+ * Fisher-Yates shuffle algorithm to randomize array elements
+ * @param array The array to shuffle
+ * @returns A new shuffled array
+ */
+function shuffleArray<T>(array: T[]): T[] {
+  // Create a copy of the array to avoid mutating the original
+  const shuffled = [...array];
+  
+  // Fisher-Yates algorithm
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  
+  return shuffled;
+}
+
 // Function to fetch trivia questions from Supabase
 export async function fetchTriviaQuestions(limit: number = 20, language: string = 'English'): Promise<FeedItem[]> {
   // Note: Caching of trivia questions is implemented in the FeedScreen component
@@ -382,6 +400,9 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
           ];
           console.warn(`No valid answers found for question "${questionText}". Using dummy answers.`);
         }
+
+        // Shuffle the answers to randomize their order
+        answers = shuffleArray(answers);
 
         // Get category/topic and standardize it
         const category = question.topic || question.category || 'General Knowledge';
