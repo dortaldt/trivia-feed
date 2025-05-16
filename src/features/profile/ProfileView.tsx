@@ -732,6 +732,7 @@ const ProfileView: React.FC = () => {
       padding: 12,
       fontSize: 16,
       color: isDark ? 'white' : 'black',
+      backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
     },
     buttonContainer: {
       marginTop: 20,
@@ -1399,41 +1400,36 @@ const ProfileView: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between'
               }}>
-                <TouchableOpacity 
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  leftIcon={<FeatherIcon name="upload" size={16} color="currentColor" />}
                   onPress={pickImage}
                   style={{ 
-                    flexDirection: 'row', 
-                    alignItems: 'center',
-                    backgroundColor: 'rgba(10, 126, 164, 0.1)',
-                    paddingVertical: 8,
-                    paddingHorizontal: 16,
-                    borderRadius: 20,
                     flex: 1,
-                    marginRight: avatarUrl ? 8 : 0
+                    marginRight: avatarUrl ? 8 : 0,
+                    paddingVertical: 12
                   }}
                 >
-                  <FeatherIcon name="upload" size={16} color="#0a7ea4" />
-                  <ThemedText style={{ color: '#0a7ea4', fontSize: 16, marginLeft: 8, fontWeight: '500' }}>
-                    {avatarUrl ? 'Change photo' : 'Upload photo'}
-                  </ThemedText>
-                </TouchableOpacity>
+                  {avatarUrl ? 'Change photo' : 'Upload photo'}
+                </Button>
                 
                 {avatarUrl && (
-                  <TouchableOpacity 
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    leftIcon={<FeatherIcon name="trash-2" size={16} color="currentColor" />}
                     onPress={removeAvatar}
-                    style={{ 
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: 'rgba(255, 59, 48, 0.1)',
-                      paddingVertical: 8,
-                      paddingHorizontal: 8,
-                      borderRadius: 20,
-                      height: 40,
-                      width: 40
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 12,
+                      width: 44,
+                      height: 44
                     }}
+                    aria-label="Delete photo"
                   >
-                    <FeatherIcon name="trash-2" size={20} color="#ff3b30" />
-                  </TouchableOpacity>
+                    {''}
+                  </Button>
                 )}
               </View>
             </View>
@@ -1474,14 +1470,39 @@ const ProfileView: React.FC = () => {
                 <FeatherIcon name="chevron-down" size={20} color={isDark ? '#ccc' : '#666'} />
               </TouchableOpacity>
             ) : (
-              <View style={[
-                profileStyles.input, 
-                { padding: 0, paddingHorizontal: 8 }
-              ]}>
+              <View 
+                style={[
+                  profileStyles.input, 
+                  { 
+                    padding: Platform.OS === 'web' ? 0 : 12,
+                    height: Platform.OS === 'web' ? 46 : 'auto',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    borderWidth: 1,
+                    borderColor: 'rgba(150, 150, 150, 0.3)',
+                    borderRadius: 8
+                  },
+                  // Add inline styles for web only
+                  Platform.OS === 'web' && {
+                    backgroundColor: isDark ? '#1c1c1c' : 'white'
+                  }
+                ]}
+              >
                 <Picker
                   selectedValue={country}
                   onValueChange={(itemValue) => setCountry(itemValue as string)}
-                  style={{ color: isDark ? 'white' : 'black' }}
+                  style={{ 
+                    color: isDark ? 'white' : 'black',
+                    marginLeft: Platform.OS === 'web' ? 4 : 0,
+                    height: Platform.OS === 'web' ? 44 : 'auto',
+                    width: '100%',
+                    // Add web styling directly inline
+                    ...(Platform.OS === 'web' && {
+                      backgroundColor: isDark ? '#1c1c1c' : 'white',
+                      border: 'none',
+                      outline: 'none'
+                    })
+                  }}
                   dropdownIconColor={isDark ? 'white' : 'black'}
                 >
                   <Picker.Item label="Select country" value="" />
@@ -1496,12 +1517,16 @@ const ProfileView: React.FC = () => {
           <View style={{ 
             flexDirection: 'row',
             justifyContent: 'space-between',
-            marginTop: 20
+            marginTop: 24
           }}>
             <Button 
               variant="ghost"
               size="md"
-              style={{ flex: 1, marginRight: 5 }}
+              style={{ 
+                flex: 1, 
+                marginRight: 5,
+                paddingVertical: 14
+              }}
               onPress={() => {
                 setIsEditing(false);
                 // Reset to original values
@@ -1518,7 +1543,11 @@ const ProfileView: React.FC = () => {
             <Button 
               variant="accent"
               size="md"
-              style={{ flex: 1, marginLeft: 5 }}
+              style={{ 
+                flex: 1, 
+                marginLeft: 5,
+                paddingVertical: 14
+              }}
               onPress={handleUpdateProfile}
             >
               Save Changes

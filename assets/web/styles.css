@@ -23,15 +23,42 @@ body.dark-theme ::-webkit-scrollbar-thumb {
 body.dark-theme input,
 body.dark-theme select,
 body.dark-theme button {
-  background-color: #1c1c1c;
-  color: #ECEDEE;
-  border-color: #3f3f46;
+  background-color: #1c1c1c !important;
+  color: #ECEDEE !important;
+  border-color: #3f3f46 !important;
 }
 
-/* Fix for some native elements that might need dark styling */
-body.dark-theme .react-native-picker select {
-  color: #ECEDEE;
-  background-color: #1c1c1c;
+/* Force dark styling for select elements and picker components */
+body.dark-theme select,
+body.dark-theme select option {
+  background-color: #1c1c1c !important;
+  color: #ECEDEE !important;
+}
+
+/* Fix select arrows */
+body.dark-theme select {
+  background-image: linear-gradient(45deg, transparent 50%, #ECEDEE 50%), 
+                   linear-gradient(135deg, #ECEDEE 50%, transparent 50%) !important;
+  background-position: calc(100% - 20px) calc(1em + 2px), 
+                      calc(100% - 15px) calc(1em + 2px) !important;
+  background-size: 5px 5px, 5px 5px !important;
+  background-repeat: no-repeat !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Remove double borders from select containers */
+.react-native-view select,
+select.react-native-picker,
+div > select {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Center the main content area to match navigation */
