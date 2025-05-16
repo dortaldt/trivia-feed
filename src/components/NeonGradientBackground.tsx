@@ -18,7 +18,7 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
   // Get the neon colors for this topic, or use default if not found
   const getTopicColors = () => {
     // If not in neon theme, return empty colors (will be transparent)
-    if (!isNeonTheme) return { primary: 'transparent', secondary: 'transparent' };
+    if (!isNeonTheme) return { primary: 'transparent', secondary: 'transparent', bright: 'transparent' };
     
     // Use the helper function to get topic color
     const colorInfo = getCategoryColor(topic);
@@ -26,16 +26,18 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
     // Convert to the format expected by this component
     return { 
       primary: colorInfo.hex,
-      secondary: adjustHexBrightness(colorInfo.hex, -15) // Create a slightly darker secondary color
+      secondary: adjustHexBrightness(colorInfo.hex, -15), // Create a slightly darker secondary color
+      bright: adjustHexBrightness(colorInfo.hex, 30)      // Create a brighter version for glow effects
     };
   };
   
-  const { primary, secondary } = getTopicColors();
+  const { primary, secondary, bright } = getTopicColors();
   
   // Create colors for the background gradient
   // Increase alpha for more vivid colors in key areas, but use darker base
   const topicPrimary = addAlphaToColor(primary, 1.0);
   const topicSecondary = addAlphaToColor(secondary, 0.85);
+  const topicBright = addAlphaToColor(bright, 0.9); // Bright glow color with high alpha
   
   // Very dark background colors with a hint of the topic's hue
   const darkened = adjustHexBrightness(secondary, -90); // Very dark version of the topic color
@@ -95,6 +97,32 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
           locations={[0, 0.3, 1.0]}
           style={styles.verticalGradient}
         />
+        
+        {/* Bright neon glow from top left */}
+        <LinearGradient
+          colors={[
+            topicBright,
+            addAlphaToColor(topicBright, 0.3),
+            'transparent'
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.6, y: 0.6 }}
+          locations={[0, 0.2, 0.5]}
+          style={styles.glowGradient}
+        />
+        
+        {/* Second bright neon glow from bottom right */}
+        <LinearGradient
+          colors={[
+            'transparent',
+            addAlphaToColor(topicBright, 0.3),
+            topicBright
+          ]}
+          start={{ x: 0.4, y: 0.4 }}
+          end={{ x: 1, y: 1 }}
+          locations={[0, 0.4, 1.0]}
+          style={styles.glowGradient2}
+        />
       </View>
     );
   } else {
@@ -151,6 +179,34 @@ export const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = ({
             bottom: 0,
             background: `linear-gradient(to bottom, ${addAlphaToColor(topicPrimary, 0.1)} 0%, transparent 30%, ${darkened} 100%)`,
             zIndex: 4
+          } as any}
+        />
+        
+        {/* Bright neon glow from top left */}
+        <View 
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `linear-gradient(135deg, ${topicBright} 0%, ${addAlphaToColor(topicBright, 0.4)} 30%, transparent 60%)`,
+            opacity: 0.8,
+            zIndex: 5
+          } as any}
+        />
+        
+        {/* Second bright neon glow from bottom right */}
+        <View 
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `linear-gradient(315deg, ${topicBright} 100%, ${addAlphaToColor(topicBright, 0.3)} 60%, transparent 40%)`,
+            opacity: 0.8,
+            zIndex: 6
           } as any}
         />
       </View>
@@ -230,6 +286,24 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   verticalGradient: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+  },
+  glowGradient: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+  },
+  glowGradient2: {
     position: 'absolute',
     width: '100%',
     height: '100%',

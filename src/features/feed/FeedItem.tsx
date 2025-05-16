@@ -438,14 +438,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                 lineHeight: lineHeight 
               },
               isNeonTheme && {
-                color: '#FFFFFF',
-                ...(Platform.OS === 'web' ? {
-                  textShadow: `0 0 10px ${getTopicBackgroundColor(0.7)}`
-                } : {
-                  textShadowColor: getTopicNeonColor(),
-                  textShadowOffset: { width: 0, height: 0 },
-                  textShadowRadius: 5,
-                })
+                color: '#FFFFFF'
               }
             ]}>
               {item.question}
@@ -535,11 +528,11 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                 Platform.OS === 'web' && hoveredAction === 'like' && styles.hoveredActionButton,
                 isNeonTheme && {
                   ...styles.neonActionButton,
-                  borderColor: getTopicNeonColor(),
+                  borderWidth: 0,
                   ...(Platform.OS === 'web' ? {
-                    boxShadow: `0 0 5px ${getTopicBackgroundColor(0.6)}`
+                    boxShadow: 'none'
                   } : {
-                    shadowColor: getTopicNeonColor(),
+                    shadowColor: 'transparent',
                   })
                 }
               ]}
@@ -559,9 +552,11 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                 isNeonTheme && {
                   ...styles.neonActionText,
                   ...(Platform.OS === 'web' ? {
-                    textShadow: `0 0 5px ${getTopicBackgroundColor(0.7)}`
+                    textShadow: 'none'
                   } : {
-                    textShadowColor: getTopicNeonColor(),
+                    textShadowColor: 'transparent',
+                    textShadowOffset: { width: 0, height: 0 },
+                    textShadowRadius: 0,
                   })
                 }
               ]}>
@@ -576,11 +571,11 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                 Platform.OS === 'web' && hoveredAction === 'leaderboard' && styles.hoveredActionButton,
                 isNeonTheme && {
                   ...styles.neonActionButton,
-                  borderColor: getTopicNeonColor(),
+                  borderWidth: 0,
                   ...(Platform.OS === 'web' ? {
-                    boxShadow: `0 0 5px ${getTopicBackgroundColor(0.6)}`
+                    boxShadow: 'none'
                   } : {
-                    shadowColor: getTopicNeonColor(),
+                    shadowColor: 'transparent',
                   })
                 }
               ]}
@@ -592,7 +587,7 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
               <FeatherIcon 
                 name="award" 
                 size={22} 
-                color={isNeonTheme ? getTopicNeonColor() : 'white'} 
+                color="white" 
                 style={styles.icon} 
               />
               <ThemedText style={[
@@ -600,9 +595,11 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
                 isNeonTheme && {
                   ...styles.neonActionText,
                   ...(Platform.OS === 'web' ? {
-                    textShadow: `0 0 5px ${getTopicBackgroundColor(0.7)}`
+                    textShadow: 'none'
                   } : {
-                    textShadowColor: getTopicNeonColor(),
+                    textShadowColor: 'transparent',
+                    textShadowOffset: { width: 0, height: 0 },
+                    textShadowRadius: 0,
                   })
                 }
               ]}>Leaderboard</ThemedText>
@@ -611,7 +608,11 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
         </View>
 
         {showLearningCapsule && (
-          <Animated.View style={[styles.learningCapsule, getPopupAnimatedStyle()]}>
+          <Animated.View style={[
+            styles.learningCapsule, 
+            isNeonTheme && styles.neonLearningCapsule,
+            getPopupAnimatedStyle()
+          ]}>
             <View style={styles.learningCapsuleHeader}>
               <ThemedText style={styles.learningCapsuleTitle}>Learn More</ThemedText>
               <TouchableOpacity onPress={toggleLearningCapsule} style={styles.closeButton}>
@@ -829,6 +830,18 @@ const styles = StyleSheet.create({
       maxWidth: 600,
       width: '80%',
     } : {})
+  },
+  neonLearningCapsule: {
+    borderColor: '#00BBFF',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 0 10px #00BBFF, 0 0 20px rgba(0, 187, 255, 0.5), inset 0 0 8px rgba(0, 187, 255, 0.3)'
+    } : {
+      borderWidth: 2,
+      shadowColor: '#00BBFF',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.8,
+      shadowRadius: 10,
+    })
   },
   learningCapsuleHeader: {
     flexDirection: 'row',
