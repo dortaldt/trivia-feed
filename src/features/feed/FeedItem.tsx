@@ -49,13 +49,21 @@ type FeedItemProps = {
     // category is now optional since we've migrated to using topic
     category?: string;
   };
+  nextTopic?: string; // Add the next item's topic prop
   onAnswer?: (answerIndex: number, isCorrect: boolean) => void;
   showExplanation?: () => void;
   onNextQuestion?: () => void;
   onToggleLeaderboard?: () => void;
 };
 
-const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, onNextQuestion, onToggleLeaderboard }) => {
+const FeedItem: React.FC<FeedItemProps> = ({ 
+  item, 
+  nextTopic, 
+  onAnswer, 
+  showExplanation, 
+  onNextQuestion, 
+  onToggleLeaderboard 
+}) => {
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [showLearningCapsule, setShowLearningCapsule] = useState(false);
@@ -398,8 +406,8 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, onAnswer, showExplanation, on
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         {isNeonTheme ? (
-          // Use NeonGradientBackground for neon theme
-          <NeonGradientBackground topic={item.topic} />
+          // Use NeonGradientBackground for neon theme - pass the nextTopic
+          <NeonGradientBackground topic={item.topic} nextTopic={nextTopic} />
         ) : (
           // Use regular background color for other themes
           <View style={dynamicStyles.backgroundColor} />

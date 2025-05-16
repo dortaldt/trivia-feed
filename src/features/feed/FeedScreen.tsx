@@ -1658,10 +1658,14 @@ const FeedScreen: React.FC = () => {
     console.log(`Rendering item ${index}: ${item.id} - "${item.question.substring(0, 30)}..."`, 
       questions[item.id] ? `(Question status: ${questions[item.id].status})` : '(No status yet)');
     
+    // Get the next item's topic for gradient transition (if any)
+    const nextItemTopic = index < personalizedFeed.length - 1 ? personalizedFeed[index + 1].topic : undefined;
+    
     return (
       <View style={[styles.itemContainer, { width, height: viewportHeight }]}>
         <FeedItem 
           item={item} 
+          nextTopic={nextItemTopic}
           onAnswer={(answerIndex, isCorrect) => 
             handleAnswer(item.id, answerIndex, isCorrect)
           }
