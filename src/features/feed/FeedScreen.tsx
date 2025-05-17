@@ -2297,9 +2297,7 @@ const FeedScreen: React.FC = () => {
         >
           <View style={styles.tooltipArrow} />
           <Text style={styles.tooltipText}>
-            {Platform.OS === 'web' 
-              ? 'Use arrow keys to navigate' 
-              : 'Swipe up for next question!'}
+            Swipe up for next question!
           </Text>
 
           <View style={styles.tiktokAnimationContainer}>
@@ -2378,12 +2376,13 @@ const styles = StyleSheet.create({
   tooltip: {
     position: 'absolute',
     bottom: 80,
-    right: Platform.OS === 'web' ? '50%' : 20,
-    transform: Platform.OS === 'web' ? [{ translateX: 110 }] : [],
+    // Centered tooltip for all platforms
+    left: '50%',
+    marginLeft: -100, // Half the width for better position
     backgroundColor: colors.card,
     borderRadius: borderRadius.xl,
     padding: spacing[4],
-    width: Platform.OS === 'web' ? 220 : 155,
+    width: 200, // Slightly wider for better text fit
     alignItems: 'center',
     zIndex: 100,
     ...(Platform.OS === 'web' ? {
@@ -2401,6 +2400,16 @@ const styles = StyleSheet.create({
   tooltipArrow: {
     position: 'absolute',
     bottom: -8,
+    ...(Platform.OS === 'web' 
+      ? {
+          left: '50%',
+          marginLeft: -8, // Half of the arrow width to center it
+        }
+      : {
+          left: '50%',
+          marginLeft: -8, // Half of the arrow width to center it
+        }
+    ),
     width: 0,
     height: 0,
     backgroundColor: 'transparent',
