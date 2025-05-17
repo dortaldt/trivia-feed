@@ -45,7 +45,7 @@ const LeaderboardBottomSheet: React.FC<LeaderboardBottomSheetProps> = ({
       snapPoints={snapPoints}
     >
       <View style={styles.container}>
-        <Leaderboard ref={leaderboardRef} limit={limit} disableScrolling={true} />
+        <Leaderboard ref={leaderboardRef} limit={limit} disableScrolling={false} />
       </View>
     </BottomSheet>
   );
