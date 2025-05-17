@@ -118,10 +118,10 @@ const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = React.memo
           <LinearGradient
             colors={[
               topicPrimary, 
-              'rgba(0,0,0,0.9)'
+              'rgba(45, 45, 45, 0.38)'
             ]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
+            end={{ x: 1, y: 1 }}
             style={styles.iosOptimizedGradient}
           />
           
@@ -246,7 +246,7 @@ const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = React.memo
               right: 0,
               bottom: 0,
               background: `linear-gradient(125deg, transparent 60%, ${nextTopicPrimary} 100%)`,
-              opacity: 0.35,
+              opacity: 0.9,
               zIndex: 4,
               filter: `blur(${blurRadiusLarge})`
             } as any}
@@ -257,10 +257,10 @@ const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = React.memo
         <View 
           style={{
             position: 'absolute',
-            top: '20%',
-            left: '20%',
-            right: '20%',
-            bottom: '20%',
+            top: '0%',
+            left: '0%',
+            right: '10%',
+            bottom: '10%',
             background: `radial-gradient(circle at center, ${addAlphaToColor(topicBright, 0.3)} 0%, transparent 70%)`,
             opacity: 0.5,
             zIndex: 6,
