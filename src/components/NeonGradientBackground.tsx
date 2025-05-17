@@ -227,8 +227,8 @@ const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = React.memo
             left: 0,
             right: 0,
             bottom: 0,
-            background: `radial-gradient(circle at 0% 0%, ${topicPrimary} 0%, transparent 60%)`,
-            opacity: 0.8,
+            background: `radial-gradient(circle at 0% 0%, ${topicPrimary} 0%, transparent 90%)`,
+            opacity: 0.9,
             zIndex: 2,
             filter: `blur(${blurRadiusLarge})`
           } as any}
@@ -259,10 +259,10 @@ const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = React.memo
             position: 'absolute',
             top: '0%',
             left: '0%',
-            right: '10%',
-            bottom: '10%',
-            background: `radial-gradient(circle at center, ${addAlphaToColor(topicBright, 0.3)} 0%, transparent 70%)`,
-            opacity: 0.5,
+            right: '0%',
+            bottom: '0%',
+            background: `radial-gradient(circle at center, ${addAlphaToColor(topicBright, 0.4)} 0%, transparent 85%)`,
+            opacity: 0.7,
             zIndex: 6,
             filter: `blur(${blurRadiusSmall})`
           } as any}
