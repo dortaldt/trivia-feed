@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { View, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, useWindowDimensions, Platform, Text } from 'react-native';
 import { fetchLeaderboard, LeaderboardUser, LeaderboardPeriod, fetchUserRank } from '../lib/leaderboardService';
 import { useAuth } from '../context/AuthContext';
@@ -28,7 +28,12 @@ interface LeaderboardProps {
   disableScrolling?: boolean;
 }
 
-export default function Leaderboard({ limit = 10, disableScrolling = false }: LeaderboardProps) {
+// Export the loadLeaderboardData method type for parent components to use
+export interface LeaderboardRef {
+  loadLeaderboardData: () => Promise<void>;
+}
+
+const Leaderboard = forwardRef<LeaderboardRef, LeaderboardProps>(({ limit = 10, disableScrolling = false }, ref) => {
   const [activeTab, setActiveTab] = useState<LeaderboardTabKey>('Daily');
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,6 +47,11 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
   // Use theme colors instead of hardcoded values
   const ACCENT_COLOR = colors.accent;
   const ACCENT_FOREGROUND = colors.accentForeground;
+
+  // Expose the loadLeaderboardData method to parent components via ref
+  useImperativeHandle(ref, () => ({
+    loadLeaderboardData
+  }));
 
   // Add debug log for auth state
   useEffect(() => {
@@ -382,7 +392,7 @@ export default function Leaderboard({ limit = 10, disableScrolling = false }: Le
   }
 
   return content;
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -559,4 +569,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.8,
   },
-}); 
+});
+
+export default Leaderboard; 

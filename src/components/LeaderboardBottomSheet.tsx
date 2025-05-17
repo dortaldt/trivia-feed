@@ -1,7 +1,7 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
 import BottomSheet from './BottomSheet';
-import Leaderboard from '../components/Leaderboard';
+import Leaderboard, { LeaderboardRef } from '../components/Leaderboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing } from '@/src/theme';
 
@@ -17,11 +17,20 @@ const LeaderboardBottomSheet: React.FC<LeaderboardBottomSheetProps> = ({
   limit = 10
 }) => {
   const insets = useSafeAreaInsets();
+  const leaderboardRef = useRef<LeaderboardRef>(null);
   
   // Use a proper callback for closing to prevent re-renders
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
+  
+  // Refresh leaderboard data when the bottom sheet becomes visible
+  useEffect(() => {
+    if (isVisible && leaderboardRef.current) {
+      // Refresh the leaderboard data
+      leaderboardRef.current.loadLeaderboardData();
+    }
+  }, [isVisible]);
   
   // Determine appropriate snap points based on platform
   const snapPoints = Platform.OS === 'ios' 
@@ -36,7 +45,7 @@ const LeaderboardBottomSheet: React.FC<LeaderboardBottomSheetProps> = ({
       snapPoints={snapPoints}
     >
       <View style={styles.container}>
-        <Leaderboard limit={limit} disableScrolling={true} />
+        <Leaderboard ref={leaderboardRef} limit={limit} disableScrolling={true} />
       </View>
     </BottomSheet>
   );
