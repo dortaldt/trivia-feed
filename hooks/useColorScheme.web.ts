@@ -13,12 +13,6 @@ export function useColorScheme() {
     hasHydratedRef.current = true;
   }, []);
 
-  const colorScheme = useRNColorScheme();
-
-  // Use the ref value directly without triggering re-renders
-  if (hasHydratedRef.current) {
-    return colorScheme;
-  }
-
+  // Always return 'dark' regardless of device theme
   return 'dark';
 }
