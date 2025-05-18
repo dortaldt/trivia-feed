@@ -44,7 +44,7 @@ import {
 } from '../../store/triviaSlice';
 import { useIOSAnimations } from '@/hooks/useIOSAnimations';
 // Fix the import path
-import { fetchTriviaQuestions, FeedItem as FeedItemType, analyzeCorrectAnswers } from '../../lib/triviaService';
+import { fetchTriviaQuestions, fetchNewTriviaQuestions, FeedItem as FeedItemType, analyzeCorrectAnswers } from '../../lib/triviaService';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { 
   updateUserProfile, 
@@ -137,6 +137,10 @@ const FeedScreen: React.FC = () => {
   
   // Add state for profile username at component level
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
+
+  // Add refs to track answered questions count and already fetched question IDs
+  const answeredQuestionCountRef = useRef<number>(0);
+  const fetchedQuestionIdsRef = useRef<Set<string>>(new Set());
 
   // Fetch username from the database when user changes
   useEffect(() => {
@@ -256,6 +260,71 @@ const FeedScreen: React.FC = () => {
     };
   }, []);
 
+  // Helper function to build explanations object
+  const buildUniqueExplanations = useCallback((items: FeedItemType[], explanations: Record<string, string[]>) => {
+    const uniqueExplanations: Record<string, string[]> = {};
+    items.forEach(item => {
+      if (explanations[item.id]) {
+        uniqueExplanations[item.id] = explanations[item.id];
+      }
+    });
+    return uniqueExplanations;
+  }, []);
+
+  // Function to fetch only new questions
+  const fetchNewQuestions = useCallback(async () => {
+    try {
+      console.log('Fetching new questions after 10 answers');
+      // Get the current IDs we have
+      const existingIds = Array.from(fetchedQuestionIdsRef.current);
+      
+      // Call the function to fetch new questions excluding ones we already have
+      const newQuestions = await fetchNewTriviaQuestions(existingIds);
+      
+      if (newQuestions.length === 0) {
+        console.log('No new questions available');
+        return;
+      }
+      
+      console.log(`Fetched ${newQuestions.length} new questions`);
+      
+      // Add these new IDs to our tracked set
+      newQuestions.forEach(q => {
+        fetchedQuestionIdsRef.current.add(q.id);
+      });
+      
+      // Get the current feed data and add the new questions
+      const updatedFeedData = [...feedData, ...newQuestions];
+      
+      // Update cached data
+      await AsyncStorage.setItem('cachedTriviaQuestions', JSON.stringify(updatedFeedData));
+      
+      // Update state with combined data
+      setFeedData(updatedFeedData);
+      
+      // REMOVED: Call to getPersonalizedFeed that was causing feed restart
+      // Let the existing useEffect hooks handle updating the personalized feed
+      
+    } catch (error) {
+      console.error('Error fetching new questions:', error);
+    }
+  }, [feedData, fetchNewTriviaQuestions]);
+
+  // Track question answers and fetch new questions when needed
+  const handleQuestionAnswered = useCallback(() => {
+    // Increment the counter
+    answeredQuestionCountRef.current += 1;
+    console.log(`User has answered ${answeredQuestionCountRef.current} questions since last refresh`);
+    
+    // Check if we need to fetch new questions
+    if (answeredQuestionCountRef.current >= 10) {
+      console.log('Reached 10 answers, fetching new questions');
+      fetchNewQuestions();
+      // Reset the counter
+      answeredQuestionCountRef.current = 0;
+    }
+  }, [fetchNewQuestions]);
+
   // Fetch trivia questions from Supabase and apply personalization
   useEffect(() => {
     const loadTriviaQuestions = async () => {
@@ -271,6 +340,11 @@ const FeedScreen: React.FC = () => {
           console.log('Using cached trivia questions');
           allQuestions = JSON.parse(cachedData);
           setFeedData(allQuestions);
+          
+          // Track these question IDs
+          allQuestions.forEach((q: FeedItemType) => {
+            fetchedQuestionIdsRef.current.add(q.id);
+          });
           
           // Apply personalization with cached data
           if (allQuestions.length > 0) {
@@ -301,6 +375,11 @@ const FeedScreen: React.FC = () => {
           console.log('Using mock data due to connection error');
           setUsingMockData(true);
         } else {
+          // Track these question IDs
+          freshQuestions.forEach((q: FeedItemType) => {
+            fetchedQuestionIdsRef.current.add(q.id);
+          });
+          
           // Cache the fresh data
           await AsyncStorage.setItem('cachedTriviaQuestions', JSON.stringify(freshQuestions));
         }
@@ -310,7 +389,7 @@ const FeedScreen: React.FC = () => {
           index === self.findIndex(t => t.id === item.id)
         );
         
-        console.log(`Loaded ${freshQuestions.length} questions, ${uniqueQuestions.length} unique questions after filtering duplicates`);
+        console.log(`Initial load: Fetched ${freshQuestions.length} questions, tracking ${fetchedQuestionIdsRef.current.size} IDs`);
         setFeedData(uniqueQuestions); // Store unique questions
         
         // Apply personalization if we have questions
@@ -1673,8 +1752,11 @@ const FeedScreen: React.FC = () => {
           console.error('Error triggering question generation:', error);
         });
       }
+      
+      // Track answer count and fetch new questions when needed
+      handleQuestionAnswered();
     }, 300);
-  }, [dispatch, personalizedFeed, userProfile, interactionStartTimes, feedData, feedExplanations, user, triggerQuestionGeneration, trackQuestionInteraction, addQuestionsAtCheckpoint, shouldAddQuestionsAtPosition]);
+  }, [dispatch, personalizedFeed, userProfile, interactionStartTimes, feedData, feedExplanations, user, triggerQuestionGeneration, trackQuestionInteraction, addQuestionsAtCheckpoint, shouldAddQuestionsAtPosition, handleQuestionAnswered]);
 
   // Modify handleNextQuestion to be more controlled and prevent unexpected scrolling
   const handleNextQuestion = useCallback(() => {

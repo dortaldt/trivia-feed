@@ -228,6 +228,58 @@ export async function getUserTopTopics(userId: string, scoreThreshold: number = 
 const lastGenerationTimes: Record<string, { timestamp: number, answerCount: number }> = {};
 
 /**
+ * Simple function to get existing topic-intent combinations from the database
+ * This helps prevent generating questions with the same intent for the same topic
+ */
+async function getExistingTopicIntents(topics: string[]): Promise<Map<string, Set<string>>> {
+  try {
+    const topicIntents = new Map<string, Set<string>>();
+    
+    // Initialize with empty sets for all topics
+    topics.forEach(topic => {
+      topicIntents.set(topic, new Set<string>());
+    });
+    
+    // For each topic, get existing questions and extract their intents
+    const { data, error } = await supabase
+      .from('trivia_questions')
+      .select('question_text, topic')
+      .in('topic', topics);
+      
+    if (error) {
+      console.error('[GENERATOR] Error fetching topic intents:', error);
+      return topicIntents;
+    }
+    
+    // Process each question to extract its intent
+    data?.forEach((question: { question_text?: string, topic?: string }) => {
+      if (!question.question_text || !question.topic) return;
+      
+      // Import the extractQuestionIntent function from openaiService
+      const { generateEnhancedFingerprint } = require('./openaiService');
+      
+      // Get the first part of the enhanced fingerprint which is the intent
+      try {
+        const fingerprint = generateEnhancedFingerprint(question.question_text);
+        const intent = fingerprint.split('|')[0];
+        
+        // Add to the appropriate topic's intent set
+        if (topicIntents.has(question.topic)) {
+          topicIntents.get(question.topic)?.add(intent);
+        }
+      } catch (e) {
+        console.warn('[GENERATOR] Error extracting intent:', e);
+      }
+    });
+    
+    return topicIntents;
+  } catch (error) {
+    console.error('[GENERATOR] Error getting topic intents:', error);
+    return new Map<string, Set<string>>();
+  }
+}
+
+/**
  * Check if question generation should be triggered
  * Returns an object with information about why generation should occur
  */
@@ -819,6 +871,30 @@ export async function runQuestionGeneration(
       }
     }
     
+    // NEW STEP: Get existing topic-intent combinations to avoid duplicates
+    const topicIntents = await getExistingTopicIntents([...primaryTopics, ...uniqueAdjacentTopics]);
+    
+    // Create intent avoidance section for the prompt
+    let avoidIntentsSection = '';
+    if (topicIntents.size > 0) {
+      const topicIntentStrings = [];
+      
+      for (const [topic, intents] of topicIntents.entries()) {
+        if (intents.size > 0) {
+          topicIntentStrings.push(`${topic}: ${Array.from(intents).join(', ')}`);
+        }
+      }
+      
+      if (topicIntentStrings.length > 0) {
+        avoidIntentsSection = `
+      AVOID THESE TOPIC-INTENT COMBINATIONS (these already exist in our database):
+      ${topicIntentStrings.join('\n      ')}
+      
+      For these topics, create questions with DIFFERENT intents than those listed above.
+      `;
+      }
+    }
+    
     // Step 4: Generate questions with detailed preferences
     const generatedQuestions = await generateQuestions(
       primaryTopics,
@@ -828,7 +904,8 @@ export async function runQuestionGeneration(
       finalSubtopics,
       finalBranches,
       finalTags,
-      validRecentQuestions // Pass recent questions to avoid duplication
+      validRecentQuestions, // Pass recent questions to avoid duplication
+      avoidIntentsSection // NEW: Pass the avoid intents section
     );
     
     // Step 5: Filter out duplicates and save to database
@@ -874,7 +951,76 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
   try {
     let savedCount = 0;
     
+    // ENHANCEMENT: Group questions by normalized answer for additional duplicate checking
+    const questionsByAnswer = new Map<string, GeneratedQuestion[]>();
+    
+    // First pass: organize by answer
     for (const question of questions) {
+      // Find the correct answer
+      const correctAnswer = question.answers.find(a => a.isCorrect)?.text || '';
+      
+      // Skip questions without answers
+      if (!correctAnswer) continue;
+      
+      // Normalize the answer for comparison
+      const normalizedAnswer = correctAnswer.toLowerCase().trim();
+      
+      // Create entry if this is the first question with this answer
+      if (!questionsByAnswer.has(normalizedAnswer)) {
+        questionsByAnswer.set(normalizedAnswer, []);
+      }
+      
+      // Add this question to its answer group
+      questionsByAnswer.get(normalizedAnswer)?.push(question);
+    }
+    
+    // Second pass: identify duplicates among questions with the same answer
+    for (const [answer, answerQuestions] of questionsByAnswer.entries()) {
+      // If we have multiple questions with the same answer, further analyze them
+      if (answerQuestions.length > 1) {
+        console.log(`[GENERATOR] Analyzing ${answerQuestions.length} questions with answer "${answer}"`);
+        
+        // Import functions from openaiService
+        const { generateEnhancedFingerprint, calculateFingerprintSimilarity } = require('./openaiService');
+        
+        // Keep track of questions to remove
+        for (let i = 1; i < answerQuestions.length; i++) {
+          // Compare each question to the first one (which we're planning to keep)
+          const mainQuestion = answerQuestions[0];
+          const compareQuestion = answerQuestions[i];
+          
+          try {
+            // Generate enhanced fingerprints for better semantic comparison
+            const mainFingerprint = generateEnhancedFingerprint(mainQuestion.question);
+            const compareFingerprint = generateEnhancedFingerprint(compareQuestion.question);
+            
+            // Calculate similarity between fingerprints
+            const similarity = calculateFingerprintSimilarity(mainFingerprint, compareFingerprint);
+            
+            // If similarity is too high, mark as duplicate
+            if (similarity > 0.6) {
+              console.log(`[GENERATOR] Duplicate detected with similarity ${similarity.toFixed(2)}:`);
+              console.log(`  - Main: ${mainQuestion.question}`);
+              console.log(`  - Dupe: ${compareQuestion.question}`);
+              
+              // Mark this question as a duplicate
+              compareQuestion.isDuplicate = true;
+            }
+          } catch (e) {
+            console.warn('[GENERATOR] Error comparing fingerprints:', e);
+          }
+        }
+      }
+    }
+    
+    // Third pass: process all questions, skipping marked duplicates
+    for (const question of questions) {
+      // Skip questions marked as duplicates
+      if ((question as any).isDuplicate) {
+        console.log('[GENERATOR] Skipping duplicate question:', question.question.substring(0, 30) + '...');
+        continue;
+      }
+      
       // Generate fingerprint for deduplication
       const fingerprint = generateQuestionFingerprint(question.question, question.tags || []);
       
