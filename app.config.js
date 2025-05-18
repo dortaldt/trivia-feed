@@ -100,7 +100,7 @@ export default {
       package: "com.triviafeed"
     },
     web: {
-      favicon: "./assets/images/favicon.png"
+      favicon: "./assets/images/app-icon.png"
     },
     plugins: [
       "expo-router",
