@@ -10,6 +10,7 @@ import { View, Text, StyleSheet, Platform, Image } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Font from 'expo-font';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Analytics } from '@vercel/analytics/react';
 
 // Import icons - use default imports instead of named imports
 // This can help resolve some naming conflicts
@@ -275,6 +276,19 @@ export default function RootLayout() {
   // Add web-specific styles to document if on web platform
   useEffect(() => {
     if (Platform.OS === 'web') {
+      // Load Vercel Analytics for web only
+      const loadAnalytics = async () => {
+        try {
+          const { inject } = await import('@vercel/analytics');
+          inject();
+          console.log('Vercel Analytics loaded successfully');
+        } catch (error) {
+          console.error('Failed to load Vercel Analytics:', error);
+        }
+      };
+      
+      loadAnalytics();
+      
       // Add viewport meta tag for mobile browsers
       const viewportMeta = document.createElement('meta');
       viewportMeta.name = 'viewport';
