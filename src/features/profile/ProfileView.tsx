@@ -283,59 +283,134 @@ const ProfileView: React.FC = () => {
         input.click();
         return pickerPromise;
       } else {
-        // Native platforms: Use standard expo-image-picker
-        console.log('Launching standard image picker');
-        
-        // Request permissions
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission needed', 'Please grant photo library permissions to upload images');
-          return;
-        }
-        
-        // Launch the image picker
-        const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: MediaTypeOptions.Images,
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.7, // Reduced quality to ensure smaller file size
-        });
-        
-        console.log('Image picker result:', {
-          canceled: result.canceled,
-          hasAssets: !!result.assets,
-          assetsCount: result.assets?.length || 0
-        });
-        
-        if (!result.canceled && result.assets && result.assets.length > 0) {
-          const selectedImage = result.assets[0];
-          console.log('Selected image:', {
-            uri: selectedImage.uri.substring(0, 50) + '...',
-            width: selectedImage.width,
-            height: selectedImage.height,
-            fileSize: selectedImage.fileSize || 'unknown'
-          });
-          
-          // Compress the image if needed
-          try {
-            // Always compress to ensure consistent size and format
-            const compressedImage = await compressImage(selectedImage.uri);
-            console.log('Compressed image:', {
-              uri: compressedImage.uri.substring(0, 50) + '...',
-              width: compressedImage.width,
-              height: compressedImage.height
-            });
-            
-            await uploadAvatar(compressedImage.uri);
-          } catch (error) {
-            console.error('Compression/upload error:', error);
-            Alert.alert('Error', 'Could not process the image. Please try again.');
-          }
+        // Native platforms (iOS/Android)
+        if (Platform.OS === 'ios') {
+          // Use Alert with action sheet style on iOS to provide options
+          Alert.alert(
+            'Change Profile Photo',
+            'Choose a source',
+            [
+              {
+                text: 'Cancel',
+                style: 'cancel',
+              },
+              {
+                text: 'Take Photo',
+                onPress: () => launchCamera(),
+              },
+              {
+                text: 'Choose from Library',
+                onPress: () => launchLibrary(),
+              },
+            ],
+            { cancelable: true }
+          );
+        } else {
+          // On Android, just open the library as before
+          launchLibrary();
         }
       }
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
+  // Function to launch camera
+  const launchCamera = async () => {
+    try {
+      // Request camera permissions
+      const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+      if (cameraStatus !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant camera permissions to take photos');
+        return;
+      }
+
+      // Also request media library permissions since we need to save the photo
+      const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (mediaStatus !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant photo library permissions to save photos');
+        return;
+      }
+
+      // Launch camera
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      console.log('Camera result:', {
+        canceled: result.canceled,
+        hasAssets: !!result.assets,
+        assetsCount: result.assets?.length || 0
+      });
+
+      handleImageResult(result);
+    } catch (error) {
+      console.error('Error using camera:', error);
+      Alert.alert('Error', 'Could not access camera. Please try again.');
+    }
+  };
+
+  // Function to launch photo library
+  const launchLibrary = async () => {
+    try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant photo library permissions to upload images');
+        return;
+      }
+      
+      // Launch the image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      
+      console.log('Image picker result:', {
+        canceled: result.canceled,
+        hasAssets: !!result.assets,
+        assetsCount: result.assets?.length || 0
+      });
+      
+      handleImageResult(result);
+    } catch (error) {
+      console.error('Error accessing photo library:', error);
+      Alert.alert('Error', 'Could not access photo library. Please try again.');
+    }
+  };
+
+  // Common handler for both camera and library results
+  const handleImageResult = async (result: ImagePicker.ImagePickerResult) => {
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const selectedImage = result.assets[0];
+      console.log('Selected image:', {
+        uri: selectedImage.uri.substring(0, 50) + '...',
+        width: selectedImage.width,
+        height: selectedImage.height,
+        fileSize: selectedImage.fileSize || 'unknown'
+      });
+      
+      // Compress the image if needed
+      try {
+        // Always compress to ensure consistent size and format
+        const compressedImage = await compressImage(selectedImage.uri);
+        console.log('Compressed image:', {
+          uri: compressedImage.uri.substring(0, 50) + '...',
+          width: compressedImage.width,
+          height: compressedImage.height
+        });
+        
+        await uploadAvatar(compressedImage.uri);
+      } catch (error) {
+        console.error('Compression/upload error:', error);
+        Alert.alert('Error', 'Could not process the image. Please try again.');
+      }
     }
   };
 
