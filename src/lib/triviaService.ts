@@ -447,4 +447,181 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
     console.error('Unexpected error while fetching trivia questions:', error);
     return mockFeedData;
   }
+}
+
+// Function to fetch only new trivia questions that aren't in the provided IDs list
+export async function fetchNewTriviaQuestions(existingIds: string[]): Promise<FeedItem[]> {
+  try {
+    console.log(`Fetching new questions, excluding ${existingIds.length} existing IDs`);
+    
+    // First check if we can connect
+    try {
+      const { count, error: pingError } = await supabase
+        .from('trivia_questions')
+        .select('*', { count: 'exact', head: true });
+        
+      if (pingError) {
+        console.error('Connection test failed:', pingError);
+        return [];
+      }
+    } catch (pingError) {
+      console.error('Connection test error:', pingError);
+      return [];
+    }
+    
+    // If we have more than 100 IDs, use a different approach to avoid query size limits
+    let data;
+    let error;
+    
+    if (existingIds.length > 100) {
+      // For large ID sets, fetch all and filter client-side
+      const response = await supabase
+        .from('trivia_questions')
+        .select('*');
+      
+      data = response.data;
+      error = response.error;
+      
+      // Filter out questions we already have
+      if (data && !error) {
+        const existingIdSet = new Set(existingIds);
+        data = data.filter((q: TriviaQuestion) => !existingIdSet.has(q.id));
+      }
+    } else {
+      // For smaller sets, filter in the query
+      const response = await supabase
+        .from('trivia_questions')
+        .select('*')
+        .not('id', 'in', existingIds);
+      
+      data = response.data;
+      error = response.error;
+    }
+    
+    if (error) {
+      console.error('Error fetching new trivia questions:', error);
+      return [];
+    }
+
+    if (!data || data.length === 0) {
+      console.log('No new trivia questions found');
+      return [];
+    }
+
+    console.log(`Found ${data.length} new questions`);
+    
+    // Transform the data same as in fetchTriviaQuestions
+    return data.map((question: TriviaQuestion) => {
+      // Determine the question text
+      const questionText = question.question_text || question.question || 'Unknown question';
+      
+      // Handle answers
+      let answers: { text: string, isCorrect: boolean }[] = [];
+      
+      // Case 1: Pre-formatted answers array with isCorrect flags
+      if (question.answers && Array.isArray(question.answers)) {
+        answers = question.answers;
+      }
+      // Case 2: answer_choices array + separate correct_answer
+      else if (question.answer_choices && Array.isArray(question.answer_choices)) {
+        if (question.correct_answer) {
+          const correctAnswerStr = String(question.correct_answer).trim();
+          
+          // Create a normalized version for comparison (lowercase, no punctuation)
+          const normalizeString = (str: string): string => {
+            return str.toLowerCase()
+              .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+              .replace(/\s+/g, " ")
+              .trim();
+          };
+          
+          const normalizedCorrectAnswer = normalizeString(correctAnswerStr);
+          
+          answers = question.answer_choices.map((choice: any) => {
+            const choiceStr = String(choice).trim();
+            const normalizedChoice = normalizeString(choiceStr);
+            
+            // Try different matching strategies in order of strictness
+            const exactMatch = choiceStr === correctAnswerStr;
+            const normalizedMatch = normalizedChoice === normalizedCorrectAnswer;
+            const substringMatch = normalizedChoice.includes(normalizedCorrectAnswer) || 
+                                 normalizedCorrectAnswer.includes(normalizedChoice);
+            
+            return {
+              text: choiceStr,
+              isCorrect: exactMatch || normalizedMatch || substringMatch
+            };
+          });
+          
+          // Check if we successfully marked any answer as correct
+          const hasCorrectAnswer = answers.some(a => a.isCorrect);
+          
+          if (!hasCorrectAnswer) {
+            // If no correct answer was identified, mark the first answer as correct
+            console.warn(`No matching answer found for "${correctAnswerStr}" in question "${questionText}". Marking first answer as correct.`);
+            if (answers.length > 0) {
+              answers[0].isCorrect = true;
+            }
+          }
+        } else {
+          // No correct_answer field, mark the first answer as correct
+          answers = question.answer_choices.map((choice: any, index: number) => ({
+            text: String(choice).trim(),
+            isCorrect: index === 0  // Mark the first answer as correct
+          }));
+          console.warn(`No correct_answer field for question "${questionText}". Defaulting to first answer as correct.`);
+        }
+      }
+      // Case 3: Fallback to dummy answers
+      else {
+        answers = [
+          { text: "Yes", isCorrect: true },
+          { text: "No", isCorrect: false },
+          { text: "Maybe", isCorrect: false },
+        ];
+        console.warn(`No valid answers found for question "${questionText}". Using dummy answers.`);
+      }
+
+      // Shuffle the answers to randomize their order
+      answers = shuffleArray(answers);
+
+      // Get category/topic and standardize it
+      const category = question.topic || question.category || 'General Knowledge';
+      const standardizedTopic = getStandardizedTopicName(category);
+      
+      // Get subtopic and branch (if available)
+      const subtopic = question.subtopic || undefined;
+      const branch = question.branch || undefined;
+      
+      // Get tags (if available)
+      const tags = question.tags || [];
+      
+      // Get difficulty
+      const difficulty = question.difficulty || 'Medium';
+      
+      // Get learning capsule/explanation
+      const learningCapsule = question.learning_capsule || question.explanation || 'No additional information available for this question.';
+      
+      // Get background color based on category
+      const backgroundColor = getTopicColor(category);
+
+      return {
+        id: question.id || String(Math.random()),
+        topic: standardizedTopic,
+        question: questionText,
+        answers,
+        difficulty,
+        likes: Math.floor(Math.random() * 2000),  // Placeholder values
+        views: Math.floor(Math.random() * 10000), // Placeholder values
+        backgroundColor,
+        learningCapsule,
+        subtopic,
+        branch,
+        tags
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching new trivia questions:', error);
+    return [];
+  }
 } 

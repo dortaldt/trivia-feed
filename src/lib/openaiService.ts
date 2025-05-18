@@ -74,6 +74,7 @@ export interface GeneratedQuestion {
   format?: string;
   source?: string;
   created_at?: string;
+  isDuplicate?: boolean; // Flag for marking duplicates when processing
 }
 
 /**
@@ -87,7 +88,8 @@ export async function generateQuestions(
   preferredSubtopics: string[] = [],
   preferredBranches: string[] = [],
   preferredTags: string[] = [],
-  recentQuestions: { id: string, questionText: string }[] = []
+  recentQuestions: { id: string, questionText: string }[] = [],
+  avoidIntentsSection: string = '' // Add parameter for topic-intent combinations to avoid
 ): Promise<GeneratedQuestion[]> {
   try {
     console.log('\n\n====================== OPENAI SERVICE LOGS ======================');
@@ -98,6 +100,7 @@ export async function generateQuestions(
     console.log('[OPENAI] Input preferred branches:', preferredBranches);
     console.log('[OPENAI] Input preferred tags:', preferredTags);
     console.log('[OPENAI] Recent questions to avoid duplicating:', recentQuestions.length);
+    console.log('[OPENAI] Has avoid intents section:', !!avoidIntentsSection);
 
     // Check if any topics have hierarchical format (topic:subtopic or topic:branch)
     const hasHierarchicalTopics = primaryTopics.some(topic => topic.includes(':'));
@@ -286,6 +289,23 @@ export async function generateQuestions(
     - Each question must be entirely distinct in subject matter from all others in this batch
     - Create maximum variety in questions, even within the same topic
  
+    CRITICAL DUPLICATION PREVENTION:
+    1. SUBJECT-INTENT UNIQUENESS:
+       - When asking about a specific entity (person, place, thing), only ask ONE question about each specific property
+       - Example: If asking about Amazon Rainforest's size, don't also ask about its area or extent
+       - Example: If asking about Amazon Rainforest's biodiversity, don't also ask about species count or variety
+
+    2. FINGERPRINT PATTERNS TO AVOID:
+       - Don't create questions that follow these patterns for the same entity:
+         * "What is the [adjective] [feature] of [entity]?" + "Which [entity] is known for [same feature]?"
+         * "Where is [entity] located?" + "In which [location] can [entity] be found?"
+         * "When was [event] that happened at [entity]?" + "What year did [same event] occur at [entity]?"
+
+    3. ANSWER-BASED DIVERSIFICATION:
+       - BEFORE adding a question to the final set, check if any other question in this batch has the same answer
+       - If two questions would have the same answer, ensure they're asking about COMPLETELY different aspects
+       - Example: If "What rainforest has the most biodiversity?" and "Which ecosystem contains the largest variety of plant species?" both have "Amazon Rainforest" as the answer, only keep one
+    ${avoidIntentsSection}
     ${hierarchySection}
     ${subtopicsSection}
     ${branchesSection}
@@ -513,6 +533,228 @@ export function generateQuestionFingerprint(question: string, tags: string[]): s
 }
 
 /**
+ * Generate an enhanced fingerprint that includes intent and entity recognition
+ * This provides more accurate duplicate detection by understanding question meaning
+ */
+export function generateEnhancedFingerprint(question: string, tags: string[] = []): string {
+  // Extract the basic intent of the question (what, where, when, who, how many)
+  const intent = extractQuestionIntent(question);
+  
+  // Extract named entities from the question
+  const entities = extractNamedEntities(question);
+  
+  // Normalize the question text as in the original function
+  const normalizedQuestion = question
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Sort and join tags
+  const normalizedTags = [...tags].sort().join('|').toLowerCase();
+  
+  // Create enhanced fingerprint with intent and entities
+  return `${intent}|${entities.join('|')}|${normalizedQuestion}|${normalizedTags}`;
+}
+
+/**
+ * Extract the primary intent of a question
+ */
+function extractQuestionIntent(question: string): string {
+  if (!question) return 'unknown';
+  
+  const text = question.toLowerCase();
+  
+  // Questions asking for dates/years
+  if ((text.includes('year') || text.includes('date') || text.includes('when')) && 
+       /\b(occur|happened|established|founded|created|built|launched|released|started)\b/.test(text)) {
+    return 'temporal';
+  }
+  
+  // Questions asking for places/locations
+  if ((text.includes('where') || text.includes('location') || text.includes('place')) ||
+      (text.includes('which') && 
+       (text.includes('country') || text.includes('city') || text.includes('continent') || 
+        text.includes('region') || text.includes('located')))) {
+    return 'spatial';
+  }
+  
+  // Questions asking about people
+  if (text.includes('who') || 
+      (text.includes('which') && (text.includes('person') || text.includes('individual') || 
+                                 text.includes('actor') || text.includes('actress') || 
+                                 text.includes('scientist') || text.includes('artist')))) {
+    return 'person';
+  }
+  
+  // Questions asking for quantities or measurements
+  if ((text.includes('how many') || text.includes('how much')) || 
+      (text.includes('number of') || text.includes('amount of') || 
+       text.includes('percentage') || text.includes('proportion'))) {
+    return 'quantitative';
+  }
+  
+  // Known-for pattern detection
+  if (/\b(known|famous|recognized|remembered|celebrated)\s+(for|as)\b/.test(text)) {
+    return 'attribute';
+  }
+  
+  // Questions about works/creations
+  if (/\b(paint|wrote|directed|composed|created|designed|built|constructed)\b/.test(text)) {
+    return 'creation';
+  }
+  
+  // Default to a generic intent based on the first question word
+  if (text.includes('what')) return 'definition';
+  if (text.includes('which')) return 'selection';
+  if (text.includes('why')) return 'causation';
+  if (text.includes('how')) return 'process';
+  
+  return 'unknown';
+}
+
+/**
+ * Extract named entities from question text
+ */
+function extractNamedEntities(text: string): string[] {
+  if (!text) return [];
+  
+  const entities: string[] = [];
+  
+  // Simple named entity extraction using capitalization
+  const words = text.split(/\s+/);
+  let currentEntity: string[] = [];
+  
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    // Skip first word of sentence and common words even if capitalized
+    const isFirstWord = i === 0 || words[i-1].match(/[.!?]$/);
+    const isCommonWord = /^(The|A|An|In|On|Of|For|And|But|Or|Not|Is|Are|Was|Were|Be|Been|Being)$/i.test(word);
+    
+    if (word.match(/^[A-Z][a-z]+/) && !isFirstWord && !isCommonWord) {
+      currentEntity.push(word);
+    } else if (currentEntity.length > 0) {
+      entities.push(currentEntity.join(' ').toLowerCase());
+      currentEntity = [];
+    }
+  }
+  
+  // Add any remaining entity
+  if (currentEntity.length > 0) {
+    entities.push(currentEntity.join(' ').toLowerCase());
+  }
+  
+  // Also extract quoted entities
+  const quoteRegex = /'([^']+)'|"([^"]+)"|'([^']+)'|"([^"]+)"/g;
+  let match;
+  
+  while ((match = quoteRegex.exec(text)) !== null) {
+    const entity = match[1] || match[2] || match[3] || match[4];
+    if (entity && entity.length > 2) {
+      entities.push(entity.toLowerCase());
+    }
+  }
+  
+  return [...new Set(entities)]; // Remove duplicates
+}
+
+/**
+ * Calculate similarity between two fingerprints
+ */
+export function calculateFingerprintSimilarity(fp1: string, fp2: string): number {
+  if (!fp1 || !fp2) return 0;
+  
+  // Split fingerprints into their components
+  const [intent1, entities1, question1, tags1] = fp1.split('|', 4);
+  const [intent2, entities2, question2, tags2] = fp2.split('|', 4);
+  
+  // Calculate intent similarity (same/different)
+  const intentSimilarity = intent1 === intent2 ? 1.0 : 0.0;
+  
+  // Calculate entity similarity
+  let entitySimilarity = 0;
+  if (entities1 && entities2) {
+    const entitiesArr1 = entities1.split('|');
+    const entitiesArr2 = entities2.split('|');
+    
+    // Find common entities
+    const commonEntities = entitiesArr1.filter(e => entitiesArr2.includes(e));
+    entitySimilarity = commonEntities.length / Math.max(entitiesArr1.length, entitiesArr2.length) || 0;
+  }
+  
+  // Calculate question text similarity using our string similarity function
+  const textSimilarity = question1 && question2 ? calculateLevenshteinSimilarity(question1, question2) : 0;
+  
+  // Calculate tag similarity
+  let tagSimilarity = 0;
+  if (tags1 && tags2) {
+    const tagsArr1 = tags1.split('|');
+    const tagsArr2 = tags2.split('|');
+    
+    // Find common tags
+    const commonTags = tagsArr1.filter(t => tagsArr2.includes(t));
+    tagSimilarity = commonTags.length / Math.max(tagsArr1.length, tagsArr2.length) || 0;
+  }
+  
+  // Weight the different components
+  return (
+    0.5 * textSimilarity +    // Text similarity matters most
+    0.3 * entitySimilarity +  // Entities matter second most
+    0.1 * intentSimilarity +  // Intent similarity
+    0.1 * tagSimilarity       // Tags matter least
+  );
+}
+
+/**
+ * Helper function for calculating Levenshtein-based string similarity
+ * (Wrapper around the existing calculateStringSimilarity function)
+ */
+function calculateLevenshteinSimilarity(str1: string, str2: string): number {
+  if (!str1 || !str2) return 0;
+  
+  // Normalize strings
+  const a = str1.toLowerCase().trim();
+  const b = str2.toLowerCase().trim();
+  
+  // Quick check for exact match
+  if (a === b) return 1;
+  
+  // Calculate Levenshtein distance
+  const matrix = [];
+  
+  // Increment along the first column of each row
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  
+  // Increment each column in the first row
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  
+  // Fill in the rest of the matrix
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i-1) === a.charAt(j-1)) {
+        matrix[i][j] = matrix[i-1][j-1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i-1][j-1] + 1, // substitution
+          matrix[i][j-1] + 1,   // insertion
+          matrix[i-1][j] + 1    // deletion
+        );
+      }
+    }
+  }
+  
+  // Convert distance to similarity score between 0 and 1
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1; // Both strings are empty
+  
+  return 1 - matrix[b.length][a.length] / maxLen;
+}
+
+/**
  * Check if a question already exists in the database
  */
 export async function checkQuestionExists(fingerprint: string): Promise<boolean> {
@@ -603,6 +845,31 @@ async function checkQuestionSimilarity(fingerprint: string): Promise<boolean> {
           console.log('  Existing:', storedNormalized);
           console.log('  Diff words:', [...uniqueToNew, ...uniqueToStored].join(', '));
           return true;
+        }
+        
+        // ENHANCEMENT: Add semantic similarity check using enhanced fingerprints
+        try {
+          // Generate enhanced fingerprints for better comparison
+          const enhancedFingerprintNew = generateEnhancedFingerprint(normalizedQuestion);
+          const enhancedFingerprintStored = generateEnhancedFingerprint(question.question_text);
+          
+          // Calculate semantic similarity between the fingerprints
+          const semanticSimilarity = calculateFingerprintSimilarity(
+            enhancedFingerprintNew,
+            enhancedFingerprintStored
+          );
+          
+          // If the semantic similarity is high, consider it a duplicate
+          if (semanticSimilarity > 0.75) {
+            console.log('[GENERATOR] Found semantically similar question:');
+            console.log('  New:     ', normalizedQuestion);
+            console.log('  Existing:', storedNormalized);
+            console.log('  Semantic similarity:', semanticSimilarity.toFixed(2));
+            return true;
+          }
+        } catch (semanticError) {
+          // If semantic check fails, fall back to word-based comparison only
+          console.warn('[GENERATOR] Semantic similarity check failed, using only word-based comparison');
         }
       }
     }

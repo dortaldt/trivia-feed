@@ -417,15 +417,73 @@ const triviaSlice = createSlice({
         // Add to synced weight changes
         state.syncedWeightChanges.push(weightChange);
         console.log(`[Redux] Added weight change to syncedWeightChanges (current count: ${state.syncedWeightChanges.length})`);
+        
+        // Apply only the specific weight changes instead of replacing the entire profile
+        const { topic, subtopic, branch } = weightChange;
+        
+        // Ensure topic exists
+        if (!state.userProfile.topics[topic]) {
+          state.userProfile.topics[topic] = {
+            weight: 0.5,
+            subtopics: {},
+            lastViewed: Date.now()
+          };
+        }
+        
+        // Update topic weight
+        state.userProfile.topics[topic].weight = weightChange.newWeights.topicWeight;
+        
+        // Update subtopic if it exists in the weight change
+        if (subtopic && weightChange.newWeights.subtopicWeight !== undefined) {
+          // Ensure subtopic exists
+          if (!state.userProfile.topics[topic].subtopics[subtopic]) {
+            state.userProfile.topics[topic].subtopics[subtopic] = {
+              weight: 0.5,
+              branches: {},
+              lastViewed: Date.now()
+            };
+          }
+          
+          // Update subtopic weight
+          state.userProfile.topics[topic].subtopics[subtopic].weight = weightChange.newWeights.subtopicWeight;
+          
+          // Update branch if it exists in the weight change
+          if (branch && weightChange.newWeights.branchWeight !== undefined) {
+            // Ensure branch exists
+            if (!state.userProfile.topics[topic].subtopics[subtopic].branches[branch]) {
+              state.userProfile.topics[topic].subtopics[subtopic].branches[branch] = {
+                weight: 0.5,
+                lastViewed: Date.now()
+              };
+            }
+            
+            // Update branch weight
+            state.userProfile.topics[topic].subtopics[subtopic].branches[branch].weight = weightChange.newWeights.branchWeight;
+          }
+        }
+        
+        // Update total questions answered counter and lastRefreshed
+        if (profile.totalQuestionsAnswered !== undefined) {
+          state.userProfile.totalQuestionsAnswered = profile.totalQuestionsAnswered;
+        }
+        
+        // Record the interaction in the user profile
+        if (profile.interactions && weightChange.questionId) {
+          state.userProfile.interactions[weightChange.questionId] = profile.interactions[weightChange.questionId];
+        }
+        
+        // Update lastRefreshed timestamp
+        state.userProfile.lastRefreshed = Date.now();
+      } else {
+        // If no weight change information is provided, we have to update the entire profile
+        // This might be the case for initial profile load from server or profile reset
+        state.userProfile = profile;
       }
       
-      // Update the state with the new profile
-      state.userProfile = profile;
-      
       // Verify key topic weights after update
-      if (profile.topics) {
+      if (state.userProfile.topics) {
         console.log('[Redux] Updated profile topic weights:');
-        Object.entries(profile.topics).forEach(([topic, data]) => {
+        Object.entries(state.userProfile.topics).forEach(([topic, data]) => {
           console.log(`  ${topic}: ${data.weight.toFixed(4)}`);
         });
       }
@@ -433,7 +491,7 @@ const triviaSlice = createSlice({
       // Sync user profile with server if user is logged in
       if (userId) {
         // Use safer version that handles null checking 
-        safeSyncUserProfile(userId, profile);
+        safeSyncUserProfile(userId, state.userProfile);
       }
     },
     markTooltipAsViewed: (state) => {
