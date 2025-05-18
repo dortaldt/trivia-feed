@@ -42,9 +42,8 @@ const themeAppIconMap: Record<ThemeName, string> = {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const deviceColorScheme = useDeviceColorScheme() as ColorSchemeType || 'dark';
+  // Ignore device color scheme, always use dark mode
   const [currentTheme, setCurrentTheme] = useState<ThemeName>('neon');
-  // Always use dark mode, regardless of device theme
   const [colorScheme, setColorScheme] = useState<ColorSchemeType>('dark');
   const [themeDefinition, setThemeDefinition] = useState<ThemeDefinition>(neonTheme);
 

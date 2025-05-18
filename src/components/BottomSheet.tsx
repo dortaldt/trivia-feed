@@ -29,8 +29,9 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
 }) => {
   const bottomSheetRef = useRef<BottomSheetCore>(null);
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme() ?? 'dark';
-  const isDark = colorScheme === 'dark';
+  // Always use dark mode regardless of device theme
+  const colorScheme = 'dark';
+  const isDark = true;
   
   // Add refs to track state
   const isClosingRef = useRef(false);

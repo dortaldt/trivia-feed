@@ -206,7 +206,8 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  // Always use dark mode, regardless of device theme
+  const colorScheme = 'dark';
   const [appIsReady, setAppIsReady] = useState(false);
   
   console.log('Attempting to load fonts...');

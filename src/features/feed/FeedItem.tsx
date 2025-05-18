@@ -529,13 +529,16 @@ const FeedItem = React.memo(({
                         {answer.text}
                       </ThemedText>
                       
-                      {(isAnswered() && questionState?.answerIndex === index && (
-                        answer.isCorrect ? 
-                        <FeatherIcon name="check-square" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} /> : 
-                        <FeatherIcon name="x-circle" size={24} color="#F44336" style={{marginLeft: 8} as TextStyle} />
-                      )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
-                        <FeatherIcon name="square" size={24} color="#4CAF50" style={{marginLeft: 8} as TextStyle} />
-                      ))}
+                      {/* Reserve space for the icon with a fixed width */}
+                      <View style={{width: 32, alignItems: 'center', justifyContent: 'center'}}>
+                        {(isAnswered() && questionState?.answerIndex === index && (
+                          answer.isCorrect ? 
+                          <FeatherIcon name="check-square" size={24} color="#4CAF50" /> : 
+                          <FeatherIcon name="x-circle" size={24} color="#F44336" />
+                        )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
+                          <FeatherIcon name="square" size={24} color="#4CAF50" />
+                        ))}
+                      </View>
                     </Pressable>
                   </Animated.View>
                 ))}
@@ -736,6 +739,10 @@ const styles = StyleSheet.create({
   },
   answersContainer: {
     marginTop: 10,
+    // Use flexGrow and flexShrink to ensure the container takes a proportional space
+    // but doesn't shrink or grow beyond limits
+    flexGrow: 0,
+    flexShrink: 0,
   },
   answerOption: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -750,6 +757,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 1.5,
     elevation: 2,
+    minHeight: 56, // Add fixed minimum height
   },
   selectedAnswerOption: {
     borderWidth: 2,
@@ -776,7 +784,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     flex: 1,
-    marginRight: 8,
+    marginRight: 0,
   },
   selectedAnswerText: {
     fontWeight: 'bold',

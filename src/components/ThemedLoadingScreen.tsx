@@ -16,7 +16,9 @@ export const ThemedLoadingScreen: React.FC<ThemedLoadingScreenProps> = ({
   message = 'Loading...',
   style
 }) => {
-  const { themeDefinition, colorScheme, currentTheme, isNeonTheme } = useTheme();
+  const { themeDefinition, currentTheme, isNeonTheme } = useTheme();
+  // Always use dark mode regardless of device theme
+  const colorScheme = 'dark';
   const colors = themeDefinition.colors[colorScheme];
   
   // Animation values
