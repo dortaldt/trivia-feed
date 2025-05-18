@@ -16,7 +16,7 @@ const appIconMap: Record<ThemeName, string> = {
 // Map theme names to their respective favicons with proper paths
 const faviconMap: Record<ThemeName, string> = {
   default: 'favicon.png',
-  neon: 'favicon-neon.png',
+  neon: 'favicon.png',
   retro: 'favicon.png', // Fallback to default if no dedicated icon
   modern: 'favicon.png', // Fallback to default if no dedicated icon
 };
