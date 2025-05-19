@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Font from 'expo-font';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Analytics } from '@vercel/analytics/react';
+import { initMixpanel } from '../src/lib/mixpanelAnalytics';
 
 // Import icons - use default imports instead of named imports
 // This can help resolve some naming conflicts
@@ -273,18 +274,34 @@ export default function RootLayout() {
       );
     }
   }, [appIsReady]);
+  
+  // Initialize Mixpanel for mobile platforms
+  useEffect(() => {
+    // Only initialize on native platforms (not web)
+    if (Platform.OS !== 'web' && appIsReady) {
+      // Initialize Mixpanel
+      initMixpanel()
+        .then(() => console.log('Mixpanel initialized for mobile platform'))
+        .catch(error => console.error('Failed to initialize Mixpanel:', error));
+    }
+  }, [appIsReady]);
 
   // Add web-specific styles to document if on web platform
   useEffect(() => {
     if (Platform.OS === 'web') {
-      // Load Vercel Analytics for web only
+      // Load analytics for web platform
       const loadAnalytics = async () => {
         try {
+          // Initialize Vercel Analytics
           const { inject } = await import('@vercel/analytics');
           inject();
           console.log('Vercel Analytics loaded successfully');
+          
+          // Initialize Mixpanel
+          await initMixpanel();
+          console.log('Mixpanel initialized for web platform');
         } catch (error) {
-          console.error('Failed to load Vercel Analytics:', error);
+          console.error('Failed to load analytics:', error);
         }
       };
       

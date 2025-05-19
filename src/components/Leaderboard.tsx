@@ -293,27 +293,27 @@ const Leaderboard = forwardRef<LeaderboardRef, LeaderboardProps>(({ limit = 10, 
             Want to join the leaderboard?
           </ThemedText>
           <ThemedText style={styles.guestPromptText}>
-            Sign in to track your progress and compete with others!
+            Sign up to track your progress and compete with others!
           </ThemedText>
         </View>
         <Button
           variant="accent"
           size="sm"
-          leftIcon={<FeatherIcon name="log-in" size={16} color="#000" />}
+          leftIcon={<FeatherIcon name="user-plus" size={16} color="#000" />}
           onPress={() => {
-            // Navigate to login page
+            // Navigate to signup page instead of login
             if (Platform.OS === 'web') {
-              window.location.href = '/auth/login?direct=true';
+              window.location.href = '/auth/signup?direct=true';
             } else {
               // Use Expo Router for iOS/Android navigation
               router.push({
-                pathname: '/auth/login',
+                pathname: '/auth/signup',
                 params: { direct: 'true' }
               });
             }
           }}
         >
-          Sign In
+          Sign Up
         </Button>
       </View>
     );

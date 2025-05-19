@@ -1228,11 +1228,27 @@ const ProfileView: React.FC = () => {
     return (
       <View style={profileStyles.emptyState}>
         <ThemedText style={profileStyles.emptyText}>
-          You need to sign in to view your profile
+          Go to your inbox and confirm your email address
         </ThemedText>
         
         {/* Add buttons for sign in and resend confirmation */}
         <View style={profileStyles.actionButtonsContainer}>
+          <Button
+            variant="secondary"
+            fullWidth
+            leftIcon={<FeatherIcon name="mail" size={18} color="#333" style={{ marginRight: 8 }} />}
+            onPress={() => setShowEmailModal(true)}
+            style={profileStyles.resendEmailButton}
+          >
+            Resend Confirmation Email
+          </Button>
+          
+          <View style={profileStyles.divider}>
+            <View style={profileStyles.dividerLine} />
+            <ThemedText style={profileStyles.dividerText}>OR</ThemedText>
+            <View style={profileStyles.dividerLine} />
+          </View>
+          
           <Button
             variant="primary"
             fullWidth
@@ -1250,23 +1266,7 @@ const ProfileView: React.FC = () => {
             }}
             style={profileStyles.signInButton}
           >
-            Sign In
-          </Button>
-          
-          <View style={profileStyles.divider}>
-            <View style={profileStyles.dividerLine} />
-            <ThemedText style={profileStyles.dividerText}>OR</ThemedText>
-            <View style={profileStyles.dividerLine} />
-          </View>
-          
-          <Button
-            variant="secondary"
-            fullWidth
-            leftIcon={<FeatherIcon name="mail" size={18} color="#333" style={{ marginRight: 8 }} />}
-            onPress={() => setShowEmailModal(true)}
-            style={profileStyles.resendEmailButton}
-          >
-            Resend Confirmation Email
+            Sign in with a different email
           </Button>
           
           <TouchableOpacity 
