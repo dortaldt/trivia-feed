@@ -137,7 +137,10 @@ const FeedScreen: React.FC = () => {
   
   // Add state for profile username at component level
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
-
+  
+  // Add state to track skipped questions that need processing
+  const [pendingSkips, setPendingSkips] = useState<Set<string>>(new Set());
+  
   // Fetch username from the database when user changes
   useEffect(() => {
     const fetchUsername = async () => {
@@ -825,6 +828,13 @@ const FeedScreen: React.FC = () => {
       const previousQuestion = personalizedFeed[prevIndex];
       const previousQuestionId = previousQuestion.id;
       
+      // Add this ID to pending skips for reliable processing
+      setPendingSkips(current => {
+        const updated = new Set(current);
+        updated.add(previousQuestionId);
+        return updated;
+      });
+      
       // Add special logging for first question
       if (prevIndex === 0) {
         console.log(`[Feed] FIRST QUESTION being marked as skipped: ID ${previousQuestionId}, question "${previousQuestion.question?.substring(0, 30)}..."`)
@@ -1441,6 +1451,79 @@ const FeedScreen: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [personalizedFeed.length]); // Only run when feed length changes
+
+  // Add effect to process pending skips reliably across platforms
+  useEffect(() => {
+    if (pendingSkips.size > 0 && feedData.length > 0 && personalizedFeed.length > 0) {
+      console.log(`[Feed] Processing ${pendingSkips.size} pending skips`);
+      
+      // Process one skip at a time to maintain order
+      const skipToProcess = Array.from(pendingSkips)[0];
+      const skipIndex = personalizedFeed.findIndex(item => item.id === skipToProcess);
+      
+      if (skipIndex >= 0) {
+        const currentPosition = skipIndex + 1;
+        
+        // Only proceed if the question hasn't been processed already
+        if (!questions[skipToProcess] || 
+            (questions[skipToProcess].status !== 'skipped' && 
+             questions[skipToProcess].status !== 'answered')) {
+          
+          console.log(`[Feed] Processing pending skip at position ${currentPosition}`);
+          
+          // Check for checkpoint to add questions
+          if (currentPosition <= 20 && shouldAddQuestionsAtPosition(currentPosition)) {
+            console.log(`[Feed] Processing pending skip at checkpoint position ${currentPosition}`);
+            addQuestionsAtCheckpoint(currentPosition, userProfile);
+          } else if (currentPosition > 20 && feedData.length > personalizedFeed.length) {
+            console.log('[Feed] Processing pending skip past cold start');
+            
+            // Similar to original code, add one question
+            const currentFeed = [...personalizedFeed];
+            const existingIds = new Set(currentFeed.map(item => item.id));
+            const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
+            
+            if (availableQuestions.length > 0) {
+              const { items: personalizedItems, explanations: personalizedExplanations } = 
+                getPersonalizedFeed(availableQuestions, userProfile, 1);
+              
+              const newQuestions = personalizedItems.filter(item => !existingIds.has(item.id)).slice(0, 1);
+              
+              if (newQuestions.length > 0) {
+                // Add the question to the feed
+                const updatedFeed = [...currentFeed, ...newQuestions];
+                const combinedExplanations = { ...feedExplanations };
+                
+                newQuestions.forEach(item => {
+                  combinedExplanations[item.id] = [
+                    ...(personalizedExplanations[item.id] || []),
+                    `Added after pending skip processing`
+                  ];
+                });
+                
+                dispatch(setPersonalizedFeed({
+                  items: updatedFeed,
+                  explanations: combinedExplanations,
+                  userId: user?.id || undefined
+                }));
+              }
+            }
+          }
+        } else {
+          console.log(`[Feed] Skip ${skipToProcess} already processed as ${questions[skipToProcess]?.status}, skipping`);
+        }
+      }
+      
+      // Remove the processed skip
+      setPendingSkips(current => {
+        const updated = new Set(current);
+        updated.delete(skipToProcess);
+        return updated;
+      });
+    }
+  }, [pendingSkips, feedData, personalizedFeed, userProfile, questions, 
+      addQuestionsAtCheckpoint, shouldAddQuestionsAtPosition, dispatch, 
+      feedExplanations, user?.id]);
 
   // Enhance the viewability configuration for smoother detection
   const viewabilityConfig = {
