@@ -27,6 +27,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import NeonGradientBackground from '../../components/NeonGradientBackground';
 import { NeonTopicColors, getTopicColor } from '@/constants/NeonColors';
+import { trackEvent } from '../../lib/mixpanelAnalytics';
 
 const { width, height } = Dimensions.get('window');
 
@@ -89,6 +90,9 @@ const FeedItem = React.memo(({
   const questionState = useAppSelector(state => 
     state.trivia.questions[item.id] as QuestionState | undefined
   );
+  
+  // Get user profile from Redux to access total answered questions
+  const userProfile = useAppSelector(state => state.trivia.userProfile);
   
   const dispatch = useAppDispatch();
   
@@ -191,9 +195,34 @@ const FeedItem = React.memo(({
     ]).start();
     
     if (onAnswer && !isAnswered()) {
-      onAnswer(index, item.answers[index].isCorrect);
+      const isCorrect = item.answers[index].isCorrect;
+      onAnswer(index, isCorrect);
       
-      if (!item.answers[index].isCorrect) {
+      // Get the current total questions answered (before this one)
+      const currentTotalAnswered = userProfile?.totalQuestionsAnswered || 0;
+      const newTotalAnswered = currentTotalAnswered + 1; // Add 1 to include the current answer
+      
+      // Track answer event in Mixpanel
+      trackEvent('Question Answered', {
+        questionId: item.id,
+        isCorrect,
+        answerIndex: index + 1, // Use 1-indexed for better readability (1,2,3,4 instead of 0,1,2,3)
+        selectedAnswer: `Option ${index + 1}`, // Add human-readable answer option
+        topic: item.topic,
+        difficulty: item.difficulty,
+        totalAnswered: newTotalAnswered,
+      });
+      
+      // Track milestone events (first question, 50, 100, 150, etc.)
+      if (newTotalAnswered === 1 || newTotalAnswered % 50 === 0) {
+        trackEvent('Question Milestone Reached', {
+          milestone: newTotalAnswered === 1 ? 'First Question' : `${newTotalAnswered} Questions`,
+          totalAnswered: newTotalAnswered,
+          isCorrect,
+        });
+      }
+      
+      if (!isCorrect) {
         setShowLearningCapsule(true);
         setTimeout(() => {
           animateIn();
@@ -212,6 +241,13 @@ const FeedItem = React.memo(({
     if (isIOS) {
       springAnimation();
     }
+    
+    // Track like event in Mixpanel
+    trackEvent('Button Click', {
+      button: isLiked ? 'Unlike' : 'Like',
+      questionId: item.id,
+      topic: item.topic,
+    });
     
     setIsLiked(!isLiked);
   };
@@ -232,9 +268,16 @@ const FeedItem = React.memo(({
 
   const toggleLeaderboard = useCallback(() => {
     if (onToggleLeaderboard) {
+      // Track leaderboard toggle in Mixpanel
+      trackEvent('Button Click', {
+        button: 'Leaderboard',
+        questionId: item.id,
+        topic: item.topic,
+      });
+      
       onToggleLeaderboard();
     }
-  }, [onToggleLeaderboard]);
+  }, [onToggleLeaderboard, item.id, item.topic]);
 
   const isAnswered = () => {
     return questionState?.status === 'answered' && questionState?.answerIndex !== undefined;

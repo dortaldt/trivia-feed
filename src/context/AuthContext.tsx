@@ -1,10 +1,11 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
-import { Alert , Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { identifyUser, trackEvent, resetUser } from '../lib/mixpanelAnalytics';
 
 // Define the shape of our auth context
 type AuthContextType = {
@@ -245,6 +246,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
       
+      // Track signup event in Mixpanel
+      if (data.user) {
+        trackEvent('User Signup', {
+          method: 'email',
+          requiresEmailConfirmation: !data.session,
+          userStatus: !data.session ? 'awaiting_confirmation' : 'registered_confirmed'
+        });
+        
+        // For users that don't need email confirmation, immediately identify them
+        if (data.session) {
+          // This will automatically alias the device ID to the user ID
+          identifyUser(data.user.id, {
+            email: data.user.email,
+            isGuest: false,
+            authMethod: 'email',
+            signupDate: new Date().toISOString(),
+            userStatus: 'registered_confirmed'
+          });
+        }
+      }
+      
       if (!data.session) {
         // Email confirmation is required
         console.log('Email confirmation required for new user');
@@ -265,6 +287,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // Ensure guest mode is cleared in storage
         await AsyncStorage.removeItem('guestMode');
+        
+                  // Identify user in Mixpanel when automatically confirmed
+          if (data.user) {
+            // This will automatically alias the device ID to the user ID
+            // connecting all previous activity to the user
+            identifyUser(data.user.id, {
+              email: data.user.email,
+              isGuest: false,
+              authMethod: 'email',
+              signupDate: new Date().toISOString(),
+              userStatus: 'registered_confirmed'
+            });
+          }
         
         // Navigation after successful signup
         Alert.alert(
@@ -431,6 +466,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         sessionSet: data.session?.access_token ? 'Present' : 'Missing'
       });
       
+      // Track login event with Mixpanel
+      trackEvent('User Login', {
+        method: 'email',
+      });
+      
+      // Identify user in Mixpanel and create alias from device ID
+      identifyUser(data.user.id, {
+        email: data.user.email,
+        isGuest: false,
+        authMethod: 'email',
+        lastLoginAt: new Date().toISOString(),
+        userStatus: 'registered_confirmed'
+      });
+      
       // Force app state refresh
       await forceRefreshAppState();
       
@@ -462,10 +511,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // If already in guest mode, just clear it and return
       if (isGuest) {
         console.log('AuthContext: Clearing guest mode');
+        
+        // Track guest mode exit
+        trackEvent('User Logout', {
+          method: 'guest',
+          reason: 'guest_mode_exit'
+        });
+        
+        // Reset Mixpanel user
+        resetUser();
+        
         await AsyncStorage.removeItem('guestMode');
         setIsGuest(false);
         setIsLoading(false);
         return true;
+      }
+      
+      // Track regular logout for authenticated user
+      if (user) {
+        trackEvent('User Logout', {
+          method: 'email',
+          userId: user.id
+        });
+        
+        // Reset Mixpanel user
+        resetUser();
       }
       
       // First attempt - Standard signOut with global scope
@@ -651,6 +721,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsGuest(true);
       setUser(null);
       setSession(null);
+      
+      // We'll use the persistent device ID for guest users
+      // This ensures we maintain identity across sessions
+      
+      // Track guest login in Mixpanel
+      trackEvent('User Login', {
+        method: 'guest',
+      });
+      
+      // Identify guest user in Mixpanel using the device ID
+      // The device ID is automatically used by the Mixpanel functions
+      identifyUser(await AsyncStorage.getItem('mixpanel_device_id') || '', {
+        isGuest: true,
+        authMethod: 'guest',
+        firstSeen: new Date().toISOString(),
+      });
       
       // On iOS, ensure changes are applied sequentially with small delays
       if (Platform.OS === 'ios') {

@@ -108,6 +108,8 @@ const FeedScreen: React.FC = () => {
   const previousUserProfileRef = useRef<typeof userProfile | null>(null);
   // Add this near the top of the component with other refs
   const lastVisibleIndexRef = useRef<number | null>(null);
+  // Add ref to prevent duplicate profile button clicks
+  const lastProfileClickTime = useRef<number | null>(null);
 
   // Get a background color for the loading state
   const backgroundColor = useThemeColor({}, 'background');
@@ -1842,6 +1844,7 @@ const FeedScreen: React.FC = () => {
 
   // Toggle profile modal
   const toggleProfile = () => {
+    // Note: No tracking here - we'll use a ref to prevent duplicate tracking
     setShowProfile(!showProfile);
   };
 
@@ -2147,7 +2150,23 @@ const FeedScreen: React.FC = () => {
       {/* Profile Button with User Avatar */}
       <TouchableOpacity 
         style={styles.profileButton} 
-        onPress={toggleProfile}
+        onPress={() => {
+          // Track the profile button click directly here 
+          // This avoids duplicate tracking with the tab navigation
+          const now = Date.now();
+          if (!lastProfileClickTime.current || now - lastProfileClickTime.current > 500) {
+            // Only track if it's been at least 500ms since the last click
+            lastProfileClickTime.current = now;
+            import('../../lib/mixpanelAnalytics').then(({ trackButtonClick }) => {
+              trackButtonClick('Profile Icon', {
+                location: 'FeedScreen',
+                isGuest: isGuest,
+                hasAvatar: !!avatarUrl
+              });
+            }).catch(err => console.error('Failed to track profile button click:', err));
+          }
+          toggleProfile();
+        }}
       >
         <View style={styles.avatarCircle}>
           {isGuest ? (

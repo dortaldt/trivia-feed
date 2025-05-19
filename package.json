@@ -46,6 +46,8 @@
     "expo-system-ui": "~5.0.5",
     "expo-updates": "~0.28.12",
     "expo-web-browser": "~14.1.6",
+    "mixpanel-browser": "^2.64.0",
+    "mixpanel-react-native": "^3.0.9",
     "node-fetch": "^3.3.2",
     "react": "19.0.0",
     "react-dom": "19.0.0",
