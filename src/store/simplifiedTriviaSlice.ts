@@ -247,11 +247,43 @@ const triviaSlice = createSlice({
     // Force a sync regardless of interaction count (for critical updates)
     forceSyncProfile: (state, action: PayloadAction<{ userId: string }>) => {
       const { userId } = action.payload;
-      if (userId && state.userProfile) {
-        console.log('[Redux] Force WRITE-ONLY profile update (identical to normal syncs)');
-        // Use the exact same method as regular interaction syncs
+      
+      console.log('[Redux] Force syncing profile to database');
+      
+      // Check for default weights to avoid overwriting non-default weights in DB
+      // Inline implementation since we can't import
+      const hasAllDefaultWeights = (profile: UserProfile): boolean => {
+        if (!profile.topics || Object.keys(profile.topics).length === 0) {
+          return true;
+        }
+        
+        for (const topicKey in profile.topics) {
+          const topic = profile.topics[topicKey];
+          if (Math.abs(topic.weight - 0.5) > 0.01) {
+            return false;
+          }
+          
+          if (topic.subtopics) {
+            for (const subtopicKey in topic.subtopics) {
+              const subtopic = topic.subtopics[subtopicKey];
+              if (Math.abs(subtopic.weight - 0.5) > 0.01) {
+                return false;
+              }
+            }
+          }
+        }
+        
+        return true;
+      };
+      
+      // Only sync if we have non-default weights or it's urgent (app background/close)
+      if (!hasAllDefaultWeights(state.userProfile)) {
+        console.log('[Redux] Profile has non-default weights, safe to sync');
         safeSyncUserProfile(userId, state.userProfile);
-        state.interactionCount = 0; // Reset counter after forced sync
+      } else {
+        console.log('[Redux] WARNING: Profile has all default weights, sync may overwrite DB values');
+        console.log('[Redux] Proceeding with sync anyway in case of app close/background');
+        safeSyncUserProfile(userId, state.userProfile);
       }
     },
     startQuestionInteraction: (state, action: PayloadAction<{ questionId: string }>) => {
@@ -296,8 +328,51 @@ const triviaSlice = createSlice({
       state.lastSyncTime = action.payload.timestamp;
       
       if (action.payload.profile) {
-        // Only update if profile is provided
-        state.userProfile = action.payload.profile;
+        // Import the hasAllDefaultWeights function (inline implementation since we can't import)
+        const hasAllDefaultWeights = (profile: UserProfile): boolean => {
+          if (!profile.topics || Object.keys(profile.topics).length === 0) {
+            return true;
+          }
+          
+          for (const topicKey in profile.topics) {
+            const topic = profile.topics[topicKey];
+            if (Math.abs(topic.weight - 0.5) > 0.01) {
+              return false;
+            }
+            
+            if (topic.subtopics) {
+              for (const subtopicKey in topic.subtopics) {
+                const subtopic = topic.subtopics[subtopicKey];
+                if (Math.abs(subtopic.weight - 0.5) > 0.01) {
+                  return false;
+                }
+              }
+            }
+          }
+          
+          return true;
+        };
+        
+        const newProfile = action.payload.profile;
+        const currentProfile = state.userProfile;
+        
+        // Check if new profile has default weights while current profile doesn't
+        if (hasAllDefaultWeights(newProfile) && !hasAllDefaultWeights(currentProfile)) {
+          console.log('Incoming profile has default weights but current profile has non-default weights');
+          console.log('Keeping current profile weights to avoid losing personalization');
+          
+          // Merge profiles: keep current topics/weights but take other fields from new profile
+          newProfile.topics = currentProfile.topics;
+          state.userProfile = newProfile;
+        } 
+        // If server profile is newer and has non-default weights, or both have default weights
+        else if (newProfile.lastRefreshed > currentProfile.lastRefreshed || 
+                 hasAllDefaultWeights(currentProfile)) {
+          console.log('Updating local profile with server profile (newer or has better weights)');
+          state.userProfile = newProfile;
+        } else {
+          console.log('Local profile is newer and has non-default weights, keeping local changes');
+        }
       }
     },
   },

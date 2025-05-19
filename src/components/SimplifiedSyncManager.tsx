@@ -13,7 +13,8 @@ import {
   markInitialDataLoadComplete,
   logSyncStatus,
   hasAllDefaultWeights,
-  fetchProfileWithDefaultCheck
+  fetchProfileWithDefaultCheck,
+  isWriteOnlyMode
 } from '../lib/simplifiedSyncService';
 import { AppState, AppStateStatus } from 'react-native';
 
@@ -58,6 +59,48 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
   // Get selector data from Redux store
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   
+  // Create a check function for manual use
+  const checkDefaultWeights = async () => {
+    if (!user || !user.id) return;
+    
+    // Check if we need to fetch profile data due to default weights
+    if (hasAllDefaultWeights(userProfile)) {
+      console.log('⚠️ Default weights detected - checking database for actual weights');
+      
+      try {
+        const remoteProfile = await fetchProfileWithDefaultCheck(user.id, userProfile);
+        
+        if (remoteProfile && !hasAllDefaultWeights(remoteProfile)) {
+          console.log('✅ Found non-default weights in database - updating local profile');
+          dispatch(loadUserDataSuccess({ 
+            profile: remoteProfile,
+            timestamp: Date.now()
+          }));
+          
+          // Now we have non-default weights, safe to enter write-only mode
+          if (!isWriteOnlyMode()) {
+            console.log('✅ Non-default weights retrieved, now entering write-only mode');
+            markInitialDataLoadComplete();
+          }
+        } else {
+          console.log('📊 No non-default weights found in database - keeping defaults');
+          // Continue allowing database reads since we still have default weights
+        }
+      } catch (error) {
+        console.error('❌ Error checking for default weights:', error);
+      }
+    } else {
+      // We already have non-default weights in memory, make sure we're in write-only mode
+      if (!isWriteOnlyMode()) {
+        console.log('✅ Local profile already has non-default weights, entering write-only mode');
+        markInitialDataLoadComplete();
+      }
+    }
+  };
+  
+  // Export the function for use by other components
+  (SimplifiedSyncManager as any).checkWeights = checkDefaultWeights;
+  
   // Run diagnostic check and reset on mount - this must run first
   useEffect(() => {
     console.log('🔥 SimplifiedSyncManager MOUNTED - FORCING MODULE STATE RESET 🔥');
@@ -76,31 +119,6 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
   
   // Check for default weights and load from database if needed
   useEffect(() => {
-    const checkDefaultWeights = async () => {
-      if (!user || !user.id) return;
-      
-      // Check if we need to fetch profile data due to default weights
-      if (hasAllDefaultWeights(userProfile)) {
-        console.log('⚠️ Default weights detected - checking database for actual weights');
-        
-        try {
-          const remoteProfile = await fetchProfileWithDefaultCheck(user.id, userProfile);
-          
-          if (remoteProfile && !hasAllDefaultWeights(remoteProfile)) {
-            console.log('✅ Found non-default weights in database - updating local profile');
-            dispatch(loadUserDataSuccess({ 
-              profile: remoteProfile,
-              timestamp: Date.now()
-            }));
-          } else {
-            console.log('📊 No non-default weights found in database - keeping defaults');
-          }
-        } catch (error) {
-          console.error('❌ Error checking for default weights:', error);
-        }
-      }
-    };
-    
     // Don't run on first mount, wait for initial data load
     if (initialDataLoaded) {
       checkDefaultWeights();
@@ -160,13 +178,28 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
               timestamp: Date.now()
             }));
           } else {
-            // If local profile is newer, keep local but sync to server
-            console.log('SyncManager: Local profile is newer or same age, keeping local but syncing to server');
-            await syncUserProfile(user.id, userProfile);
-            dispatch(loadUserDataSuccess({ 
-              profile: userProfile,
-              timestamp: Date.now()
-            }));
+            // Check for default weights in local profile but non-default in remote
+            const localHasDefaultWeights = hasAllDefaultWeights(userProfile);
+            const remoteHasNonDefaultWeights = !hasAllDefaultWeights(remoteProfile);
+            
+            if (localHasDefaultWeights && remoteHasNonDefaultWeights) {
+              console.log('SyncManager: IMPORTANT - Remote profile has non-default weights but local has defaults');
+              console.log('SyncManager: Prioritizing remote profile to preserve personalization');
+              
+              // Use remote profile to preserve personalization
+              dispatch(loadUserDataSuccess({ 
+                profile: remoteProfile,
+                timestamp: Date.now()
+              }));
+            } else {
+              // If local profile is newer, keep local but sync to server
+              console.log('SyncManager: Local profile is newer or same age, keeping local but syncing to server');
+              await syncUserProfile(user.id, userProfile);
+              dispatch(loadUserDataSuccess({ 
+                profile: userProfile,
+                timestamp: Date.now()
+              }));
+            }
           }
         } else {
           // If no remote profile exists, use the current one and upload it
@@ -181,8 +214,17 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
         console.log('SyncManager: Initial data load complete - NO MORE READS');
         setInitialDataLoaded(true);
         
-        // Mark initial data load as complete to prevent future reads
-        markInitialDataLoadComplete();
+        // Only enter write-only mode if we have non-default weights 
+        // or confirmed that no weights exist in the database
+        const profileToCheck = remoteProfile || userProfile;
+        if (!hasAllDefaultWeights(profileToCheck)) {
+          console.log('SyncManager: Non-default weights found, safe to enter write-only mode');
+          markInitialDataLoadComplete();
+        } else {
+          console.log('SyncManager: WARNING - All weights are default!');
+          console.log('SyncManager: Staying in read-write mode until non-default weights are detected');
+          // Don't mark initial data load complete yet to allow future reads
+        }
         
         // Check sync status after completion
         logSyncStatus();

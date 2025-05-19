@@ -17,6 +17,11 @@ let initialDataLoadComplete = false;
 console.log('🔄 simplifiedSyncService module initialized - write-only mode is OFF');
 console.log('🔄 Initial data load will be permitted');
 
+// Function to check if we're in write-only mode
+export const isWriteOnlyMode = () => {
+  return initialDataLoadComplete;
+};
+
 // Function to mark initial data load as complete
 export const markInitialDataLoadComplete = () => {
   // Check if a reset was requested (hack to reset module state)
@@ -184,6 +189,30 @@ async function _syncUserProfile(userId: string, userProfile: UserProfile): Promi
     // Ensure lastRefreshed is set
     if (!userProfile.lastRefreshed) {
       userProfile.lastRefreshed = Date.now();
+    }
+    
+    // DEBUG: Check if we're about to sync a profile with all default weights
+    if (hasAllDefaultWeights(userProfile)) {
+      console.warn('⚠️⚠️⚠️ WARNING: About to sync a profile with ALL DEFAULT WEIGHTS');
+      console.warn('⚠️⚠️⚠️ This might overwrite custom weights in the database');
+      
+      // Print first 3 topics as an example
+      const topicKeys = Object.keys(userProfile.topics || {});
+      console.log(`Topics found (${topicKeys.length}): ${topicKeys.slice(0, 3).join(', ')}${topicKeys.length > 3 ? '...' : ''}`);
+      
+      // Log the first topic's weight as an example
+      if (topicKeys.length > 0) {
+        const firstTopic = topicKeys[0];
+        console.log(`Sample topic "${firstTopic}" weight: ${userProfile.topics[firstTopic].weight.toFixed(4)}`);
+      }
+      
+      // Check if we should fetch from DB first to compare
+      if (initialDataLoadComplete) {
+        console.log('Sync is in write-only mode, proceeding with update');
+      } else {
+        console.log('Still in read-write mode, this update may not be intentional');
+        console.log('Syncing default weights anyway, but this could be a problem');
+      }
     }
     
     // Simple data structure - same for all operations
