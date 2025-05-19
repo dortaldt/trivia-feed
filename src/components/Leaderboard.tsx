@@ -303,11 +303,11 @@ const Leaderboard = forwardRef<LeaderboardRef, LeaderboardProps>(({ limit = 10, 
           onPress={() => {
             // Navigate to signup page instead of login
             if (Platform.OS === 'web') {
-              window.location.href = '/auth/register?direct=true';
+              window.location.href = '/auth/signup?direct=true';
             } else {
               // Use Expo Router for iOS/Android navigation
               router.push({
-                pathname: '/auth/register',
+                pathname: '/auth/signup',
                 params: { direct: 'true' }
               });
             }
