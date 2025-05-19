@@ -9,12 +9,14 @@ import { dbEventEmitter } from './syncService';
 const pendingRequests = new Map<string, Promise<any>>();
 // Keep track of last request times to implement cooldown
 const lastRequestTimes = new Map<string, number>();
-// Cooldown period in milliseconds (300ms)
-const REQUEST_COOLDOWN = 300;
+// Cooldown period in milliseconds - longer for iOS
+const REQUEST_COOLDOWN = Platform.OS === 'ios' ? 800 : 300;
+// Timeout for fetch operations - longer for iOS
+const FETCH_TIMEOUT = Platform.OS === 'ios' ? 15000 : 5000;
 
 // Add flag to prevent reads after initial load - RESET ON EACH APP START
 let initialDataLoadComplete = false;
-console.log('🔄 simplifiedSyncService module initialized - write-only mode is OFF');
+console.log(`🔄 simplifiedSyncService module initialized on ${Platform.OS} - write-only mode is OFF`);
 console.log('🔄 Initial data load will be permitted');
 
 // Function to check if we're in write-only mode
@@ -348,6 +350,11 @@ async function _fetchUserProfile(userId: string, forceLoad: boolean = false): Pr
       console.log('🔥🔥🔥 BYPASSING write-only mode 🔥🔥🔥');
     }
     
+    // iOS-specific logging
+    if (Platform.OS === 'ios') {
+      console.log('🍎 iOS: Fetching profile data with forceLoad =', forceLoad);
+    }
+    
     console.log('Initial Load: Fetching profile data for user:', userId);
     console.log('Initial Load: This is ONLY executed once at login');
     
@@ -355,11 +362,32 @@ async function _fetchUserProfile(userId: string, forceLoad: boolean = false): Pr
     // We need topics, interactions, and metadata for personalization
     console.log('Starting Supabase database query...');
     
-    const { data, error } = await supabase
-      .from('user_profile_data')
-      .select('topics, interactions, last_refreshed, cold_start_complete, total_questions_answered')
-      .eq('id', userId)
-      .single();
+    // Set up fetch with timeout for iOS to prevent hanging requests
+    let result;
+    if (Platform.OS === 'ios') {
+      console.log(`🍎 iOS: Using ${FETCH_TIMEOUT}ms timeout for database fetch`);
+      
+      // Set up a promise race with timeout
+      const fetchPromise = supabase
+        .from('user_profile_data')
+        .select('topics, interactions, last_refreshed, cold_start_complete, total_questions_answered')
+        .eq('id', userId)
+        .single();
+        
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Fetch timeout exceeded')), FETCH_TIMEOUT));
+      
+      result = await Promise.race([fetchPromise, timeoutPromise]);
+    } else {
+      // Regular fetch for other platforms
+      result = await supabase
+        .from('user_profile_data')
+        .select('topics, interactions, last_refreshed, cold_start_complete, total_questions_answered')
+        .eq('id', userId)
+        .single();
+    }
+    
+    const { data, error } = result;
     
     console.log('Supabase query completed');
     
@@ -398,6 +426,14 @@ async function _fetchUserProfile(userId: string, forceLoad: boolean = false): Pr
       userId
     );
     
+    // iOS-specific validation
+    if (Platform.OS === 'ios') {
+      console.log('🍎 iOS: Validating fetched data structure');
+      if (!data.topics || typeof data.topics !== 'object' || Object.keys(data.topics).length === 0) {
+        console.log('🍎 iOS: Warning - topics data is empty or invalid:', data.topics);
+      }
+    }
+    
     console.log('Initial Load: Successfully retrieved user profile data');
     console.log(`Initial Load: Got topics with ${Object.keys(data.topics || {}).length} entries`);
     console.log(`Initial Load: Got interactions with ${Object.keys(data.interactions || {}).length} entries`);
@@ -425,7 +461,19 @@ async function _fetchUserProfile(userId: string, forceLoad: boolean = false): Pr
       totalQuestionsAnswered: data.total_questions_answered || 0
     };
   } catch (error) {
-    console.error('⚠️⚠️⚠️ Error in fetchUserProfile:', error);
+    // Enhanced error logging for iOS
+    if (Platform.OS === 'ios') {
+      console.error('🍎 iOS ERROR in fetchUserProfile:', error);
+      if (error instanceof Error) {
+        console.error('🍎 iOS ERROR details:', {
+          message: error.message,
+          name: error.name,
+          stack: error.stack
+        });
+      }
+    } else {
+      console.error('⚠️⚠️⚠️ Error in fetchUserProfile:', error);
+    }
     return null;
   }
 }
@@ -466,6 +514,67 @@ async function _loadUserData(userId: string, forceLoad: boolean = false): Promis
       return { profile: null };
     }
     
+    // iOS-specific logging and handling
+    if (Platform.OS === 'ios') {
+      console.log('🍎 iOS: loadUserData called with forceLoad =', forceLoad);
+      console.log('🍎 iOS: Using direct profile fetch with extra validation');
+      
+      try {
+        // Fetch with detailed logging
+        const profile = await _fetchUserProfile(userId, true);
+        
+        // Additional validation specific to iOS
+        if (profile) {
+          // Verify topic data integrity
+          const topicCount = Object.keys(profile.topics || {}).length;
+          console.log(`🍎 iOS: Fetched profile with ${topicCount} topics`);
+          
+          if (topicCount > 0) {
+            // Check for valid weights in topics
+            let allWeightsValid = true;
+            let sampleInvalidTopic = '';
+            
+            for (const [topicName, topicData] of Object.entries(profile.topics)) {
+              if (typeof topicData.weight !== 'number' || isNaN(topicData.weight)) {
+                allWeightsValid = false;
+                sampleInvalidTopic = topicName;
+                break;
+              }
+            }
+            
+            if (!allWeightsValid) {
+              console.error(`🍎 iOS: Found invalid weight for topic "${sampleInvalidTopic}"`);
+              console.error('🍎 iOS: Cleaning invalid topic data');
+              
+              // Filter out invalid topics
+              const cleanedTopics: any = {};
+              
+              for (const [topicName, topicData] of Object.entries(profile.topics)) {
+                if (typeof topicData.weight === 'number' && !isNaN(topicData.weight)) {
+                  cleanedTopics[topicName] = topicData;
+                }
+              }
+              
+              profile.topics = cleanedTopics;
+              console.log(`🍎 iOS: After cleaning, profile has ${Object.keys(cleanedTopics).length} valid topics`);
+            } else {
+              console.log('🍎 iOS: All topic weights are valid');
+            }
+          } else {
+            console.log('🍎 iOS: No topics found in profile, may use defaults');
+          }
+        } else {
+          console.log('🍎 iOS: Profile fetch returned null');
+        }
+        
+        return { profile };
+      } catch (iosError) {
+        console.error('🍎 iOS: Error in loadUserData:', iosError);
+        return { profile: null };
+      }
+    }
+    
+    // Original non-iOS implementation
     console.log('Initial Load: Loading complete user data for user:', userId);
     console.log('Initial Load: This is the ONLY database read that should happen');
     

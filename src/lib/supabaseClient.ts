@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
-console.log('DEBUG: Initializing Supabase client');
+console.log(`DEBUG: Initializing Supabase client on ${Platform.OS}`);
 
 let supabaseUrl = '';
 let supabaseAnonKey = '';
@@ -66,6 +67,36 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+// Add iOS-specific network connectivity check
+const checkNetworkConnectivity = async (): Promise<boolean> => {
+  if (Platform.OS === 'ios') {
+    try {
+      console.log('🍎 iOS: Checking network connectivity to Supabase');
+      
+      // Create an AbortController to prevent the request from hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(supabaseUrl, { 
+        method: 'HEAD',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      const isConnected = response.status >= 200 && response.status < 400;
+      console.log(`🍎 iOS: Network connectivity check result: ${isConnected ? 'CONNECTED' : 'FAILED'} (status: ${response.status})`);
+      return isConnected;
+    } catch (error) {
+      console.error('🍎 iOS: Network connectivity check failed:', error);
+      return false;
+    }
+  }
+  
+  // Skip for non-iOS platforms
+  return true;
+};
+
 // Declare the supabase client variable first
 let supabase: any;
 
@@ -79,12 +110,25 @@ try {
     throw new Error('Missing Supabase credentials');
   }
   
+  // Run network check for iOS (don't wait for result to continue initialization)
+  if (Platform.OS === 'ios') {
+    checkNetworkConnectivity().then(isConnected => {
+      console.log(`🍎 iOS: Network check complete, status: ${isConnected ? 'CONNECTED' : 'DISCONNECTED'}`);
+    });
+  }
+  
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       storage: AsyncStorage,
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
+    },
+    // Add iOS-specific configuration
+    global: {
+      headers: {
+        'X-Client-Platform': Platform.OS === 'ios' ? 'ios-app' : 'other',
+      },
     },
   });
   

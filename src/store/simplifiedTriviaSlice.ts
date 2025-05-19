@@ -245,8 +245,8 @@ const triviaSlice = createSlice({
       }
     },
     // Force a sync regardless of interaction count (for critical updates)
-    forceSyncProfile: (state, action: PayloadAction<{ userId: string }>) => {
-      const { userId } = action.payload;
+    forceSyncProfile: (state, action: PayloadAction<{ userId: string; preventDefaultWeightSync?: boolean }>) => {
+      const { userId, preventDefaultWeightSync = false } = action.payload;
       
       console.log('[Redux] Force syncing profile to database');
       
@@ -276,8 +276,17 @@ const triviaSlice = createSlice({
         return true;
       };
       
+      const allDefaultWeights = hasAllDefaultWeights(state.userProfile);
+      
+      // Check if we should prevent syncing default weights
+      if (preventDefaultWeightSync && allDefaultWeights) {
+        console.log('[Redux] PREVENTED syncing profile with default weights to database');
+        console.log('[Redux] This prevents overwriting personalized weights in the database');
+        return; // Skip the sync operation entirely
+      }
+      
       // Only sync if we have non-default weights or it's urgent (app background/close)
-      if (!hasAllDefaultWeights(state.userProfile)) {
+      if (!allDefaultWeights) {
         console.log('[Redux] Profile has non-default weights, safe to sync');
         safeSyncUserProfile(userId, state.userProfile);
       } else {
@@ -355,23 +364,40 @@ const triviaSlice = createSlice({
         
         const newProfile = action.payload.profile;
         const currentProfile = state.userProfile;
+        const newHasDefaultWeights = hasAllDefaultWeights(newProfile);
+        const currentHasDefaultWeights = hasAllDefaultWeights(currentProfile);
         
-        // Check if new profile has default weights while current profile doesn't
-        if (hasAllDefaultWeights(newProfile) && !hasAllDefaultWeights(currentProfile)) {
-          console.log('Incoming profile has default weights but current profile has non-default weights');
-          console.log('Keeping current profile weights to avoid losing personalization');
-          
-          // Merge profiles: keep current topics/weights but take other fields from new profile
+        // PRIORITIZE NON-DEFAULT WEIGHTS OVER TIMESTAMPS
+        // Always prefer the profile with custom weights
+        
+        // If both profiles have non-default weights, use the newer one
+        if (!newHasDefaultWeights && !currentHasDefaultWeights) {
+          console.log('Both profiles have non-default weights - using newer profile');
+          if (newProfile.lastRefreshed > currentProfile.lastRefreshed) {
+            console.log('Remote profile is newer, using remote weights');
+            state.userProfile = newProfile;
+          } else {
+            console.log('Local profile is newer, keeping local weights');
+          }
+        }
+        // If remote profile has custom weights but local has defaults, use remote
+        else if (!newHasDefaultWeights && currentHasDefaultWeights) {
+          console.log('Remote profile has custom weights while local has defaults - using remote profile');
+          state.userProfile = newProfile;
+        }
+        // If local profile has custom weights but remote has defaults, keep local
+        else if (newHasDefaultWeights && !currentHasDefaultWeights) {
+          console.log('Local profile has custom weights while remote has defaults - keeping local profile');
+          // Merge to keep timestamps/metadata from remote but weights from local
           newProfile.topics = currentProfile.topics;
           state.userProfile = newProfile;
-        } 
-        // If server profile is newer and has non-default weights, or both have default weights
-        else if (newProfile.lastRefreshed > currentProfile.lastRefreshed || 
-                 hasAllDefaultWeights(currentProfile)) {
-          console.log('Updating local profile with server profile (newer or has better weights)');
-          state.userProfile = newProfile;
-        } else {
-          console.log('Local profile is newer and has non-default weights, keeping local changes');
+        }
+        // If both have default weights, use the newer one
+        else {
+          console.log('Both profiles have default weights - using newer profile');
+          if (newProfile.lastRefreshed > currentProfile.lastRefreshed) {
+            state.userProfile = newProfile;
+          }
         }
       }
     },
