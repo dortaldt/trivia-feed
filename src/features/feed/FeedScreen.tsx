@@ -1390,52 +1390,49 @@ const FeedScreen: React.FC = () => {
   // Add effect to process pending skips reliably across platforms
   useEffect(() => {
     if (pendingSkips.size > 0 && feedData.length > 0 && personalizedFeed.length > 0) {
-      console.log(`[Feed] Processing ${pendingSkips.size} pending skips`);
-      
-      // Process one skip at a time to maintain order
-      const skipToProcess = Array.from(pendingSkips)[0];
-      const skipIndex = personalizedFeed.findIndex(item => item.id === skipToProcess);
-      
-      if (skipIndex >= 0) {
-        const currentPosition = skipIndex + 1;
+      console.log(`[Feed] Processing ${pendingSkips.size} pending skips in effect`);
+      const skipsToProcessArray = Array.from(pendingSkips);
+      const newPendingSkipsState = new Set(pendingSkips); // Create a mutable copy for this run
+
+      // It's important to use the latest userProfile for checkpoint decisions.
+      // The userProfile from the hook's closure (dependencies) should be up-to-date enough for this batch.
+
+      skipsToProcessArray.forEach(skipToProcessId => {
+        const skipIndex = personalizedFeed.findIndex(item => item.id === skipToProcessId);
         
-        // Only proceed if the question hasn't been processed already
-        if (!questions[skipToProcess] || 
-            (questions[skipToProcess].status !== 'skipped' && 
-             questions[skipToProcess].status !== 'answered')) {
+        if (skipIndex >= 0) {
+          const currentPosition = skipIndex + 1; // 1-indexed position of the skipped item
           
-          console.log(`[Feed] Processing pending skip at position ${currentPosition}`);
+          // The question status should ideally be 'skipped' here due to earlier dispatches.
+          // This useEffect is for post-skip actions like adding questions.
+          // We proceed with checkpoint logic assuming the skip was validly recorded.
           
-          // Check for checkpoint to add questions
+          console.log(`[Feed] Pending skip effect: Processing checkpoint logic for item at index ${skipIndex} (ID: ${skipToProcessId}), position ${currentPosition}`);
+
           if (currentPosition <= 20 && shouldAddQuestionsAtPosition(currentPosition)) {
-            console.log(`[Feed] Processing pending skip at checkpoint position ${currentPosition}`);
-            addQuestionsAtCheckpoint(currentPosition, userProfile);
+            console.log(`[Feed] Pending skip effect: At checkpoint position ${currentPosition}, adding 4 questions.`);
+            addQuestionsAtCheckpoint(currentPosition, userProfile); // userProfile from hook dependency
           } else if (currentPosition > 20 && feedData.length > personalizedFeed.length) {
-            console.log('[Feed] Processing pending skip past cold start');
-            
-            // Similar to original code, add one question
+            console.log('[Feed] Pending skip effect: Past cold start, adding one question.');
             const currentFeed = [...personalizedFeed];
             const existingIds = new Set(currentFeed.map(item => item.id));
             const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
             
             if (availableQuestions.length > 0) {
               const { items: personalizedItems, explanations: personalizedExplanations } = 
-                getPersonalizedFeed(availableQuestions, userProfile, 1);
+                getPersonalizedFeed(availableQuestions, userProfile, 1); // userProfile from hook dependency
               
               const newQuestions = personalizedItems.filter(item => !existingIds.has(item.id)).slice(0, 1);
               
               if (newQuestions.length > 0) {
-                // Add the question to the feed
                 const updatedFeed = [...currentFeed, ...newQuestions];
                 const combinedExplanations = { ...feedExplanations };
-                
                 newQuestions.forEach(item => {
                   combinedExplanations[item.id] = [
                     ...(personalizedExplanations[item.id] || []),
-                    `Added after pending skip processing`
+                    `Added after pending skip processing (batch)`
                   ];
                 });
-                
                 dispatch(setPersonalizedFeed({
                   items: updatedFeed,
                   explanations: combinedExplanations,
@@ -1445,20 +1442,17 @@ const FeedScreen: React.FC = () => {
             }
           }
         } else {
-          console.log(`[Feed] Skip ${skipToProcess} already processed as ${questions[skipToProcess]?.status}, skipping`);
+          console.log(`[Feed] Pending skip effect: Skipped item ${skipToProcessId} not found in personalizedFeed.`);
         }
-      }
-      
-      // Remove the processed skip
-      setPendingSkips(current => {
-        const updated = new Set(current);
-        updated.delete(skipToProcess);
-        return updated;
+        newPendingSkipsState.delete(skipToProcessId); // Remove from the copy as it's processed
       });
+      
+      // Update the state with all processed skips removed
+      setPendingSkips(newPendingSkipsState);
     }
   }, [pendingSkips, feedData, personalizedFeed, userProfile, questions, 
       addQuestionsAtCheckpoint, shouldAddQuestionsAtPosition, dispatch, 
-      feedExplanations, user?.id]);
+      feedExplanations, user?.id, getPersonalizedFeed]); // Added getPersonalizedFeed to dependencies
 
   // Enhance the viewability configuration for smoother detection
   const viewabilityConfig = {
@@ -1491,55 +1485,75 @@ const FeedScreen: React.FC = () => {
     console.log(`Scroll movement started from question ${currentIndex}`);
   }, [showTooltip, currentIndex, isIOS, hideTooltip]);
 
-  const onMomentumScrollEnd = useCallback(() => {
+  const onMomentumScrollEnd = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const scrollTime = Date.now() - lastInteractionTime.current;
-    
-    // For iOS, mark that momentum scrolling has ended
+    let eventCorrectedCurrentIndex = currentIndex; // Start with the current state from closure
+
     if (isIOS) {
-      isMomentumScrolling.current = false;
+      isMomentumScrolling.current = false; // Mark momentum as ended for iOS
       
-      // Calculate the current visible index based on last known scroll position
-      // This is critical for iOS where the state update in onViewableItemsChanged may not take effect in time
-      const currentScrollPos = lastScrollPosition.current;
-      const estimatedIndex = Math.round(currentScrollPos / viewportHeight);
+      const finalScrollPos = event.nativeEvent.contentOffset.y;
+      const estimatedIndex = Math.round(finalScrollPos / viewportHeight);
+      console.log(`[onMomentumScrollEnd] iOS: finalScrollPos from event: ${finalScrollPos}, estimatedIndex: ${estimatedIndex}`);
+
+      if (estimatedIndex >= 0 && estimatedIndex < personalizedFeed.length) {
+        // This estimatedIndex is the most accurate representation of where the scroll ended.
+        eventCorrectedCurrentIndex = estimatedIndex;
+      } else {
+        console.warn(`[onMomentumScrollEnd] iOS: Estimated index ${estimatedIndex} is out of bounds. Falling back to state currentIndex: ${currentIndex}`);
+        eventCorrectedCurrentIndex = currentIndex; // Fallback if calculation is odd
+      }
+    } else {
+      // For non-iOS, onMomentumScrollEnd might not be triggered by this exact callback signature from FlatList if not defined to take an event,
+      // or we might rely on onViewableItemsChanged for index updates.
+      // For safety, use the current state index if not iOS.
+      eventCorrectedCurrentIndex = currentIndex;
+    }
+
+    console.log(`[onMomentumScrollEnd] Effective currentIndex for this event: ${eventCorrectedCurrentIndex}. Previous index was: ${previousIndex.current}. Scroll time: ${scrollTime}ms.`);
+
+    // Perform skip logic using the eventCorrectedCurrentIndex
+    if (previousIndex.current !== eventCorrectedCurrentIndex && previousIndex.current < eventCorrectedCurrentIndex) {
+      console.log(`[onMomentumScrollEnd] Skip condition met: previousIndex=${previousIndex.current}, newIndex=${eventCorrectedCurrentIndex}. Calling handleFastScroll.`);
+      handleFastScroll(previousIndex.current, eventCorrectedCurrentIndex);
+    } else {
+      console.log(`[onMomentumScrollEnd] Skip condition NOT met: previousIndex=${previousIndex.current}, newIndex=${eventCorrectedCurrentIndex}.`);
+    }
+
+    // Update previousIndex.current to reflect the index used for THIS event's logic.
+    previousIndex.current = eventCorrectedCurrentIndex;
+
+    // If the eventCorrectedCurrentIndex is different from the actual current state, or other refs are out of sync, update.
+    if (eventCorrectedCurrentIndex !== currentIndex || lastVisibleIndexRef.current !== eventCorrectedCurrentIndex) {
+      console.log(`[onMomentumScrollEnd] Updating state: currentIndex from ${currentIndex} to ${eventCorrectedCurrentIndex}.`);
+      setCurrentIndex(eventCorrectedCurrentIndex);
       
-      // Force update the currentIndex if needed
-      if (estimatedIndex !== currentIndex && estimatedIndex >= 0 && estimatedIndex < personalizedFeed.length) {
-        console.log(`[onMomentumScrollEnd] Updating currentIndex from ${currentIndex} to ${estimatedIndex} (based on scroll position ${currentScrollPos})`);
-        setCurrentIndex(estimatedIndex);
-        
-        // Also update last visible index ref for consistency
-        lastVisibleIndexRef.current = estimatedIndex;
-        
-        // Start tracking interaction with new question
-        if (personalizedFeed[estimatedIndex]) {
-          const currentItemId = personalizedFeed[estimatedIndex].id;
-          lastVisibleItemId.current = currentItemId;
-          dispatch(startInteraction({ questionId: currentItemId }));
+      if (personalizedFeed[eventCorrectedCurrentIndex]) {
+        const currentItemId = personalizedFeed[eventCorrectedCurrentIndex].id;
+        if (lastVisibleItemId.current !== currentItemId) { // Avoid redundant dispatches
+            lastVisibleItemId.current = currentItemId;
+            dispatch(startInteraction({ questionId: currentItemId }));
+            console.log(`[onMomentumScrollEnd] Dispatched startInteraction for item ${currentItemId} at index ${eventCorrectedCurrentIndex}.`);
         }
-        
-        // No need to check for skips here since the index just changed
-        // We'll let the next render cycle handle that with the updated index
-        return;
+        lastVisibleIndexRef.current = eventCorrectedCurrentIndex; // Sync ref
+      } else {
+        console.warn(`[onMomentumScrollEnd] No item in personalizedFeed at eventCorrectedCurrentIndex ${eventCorrectedCurrentIndex} to start interaction.`);
+      }
+    } else {
+       // If currentIndex state already matches eventCorrectedCurrentIndex, ensure interaction for the current item is dispatched if it's new.
+       if (personalizedFeed[eventCorrectedCurrentIndex]) {
+        const currentItemId = personalizedFeed[eventCorrectedCurrentIndex].id;
+        if (lastVisibleItemId.current !== currentItemId) {
+             console.log(`[onMomentumScrollEnd] currentIndex matches, but dispatching startInteraction for new item ${currentItemId}.`);
+             lastVisibleItemId.current = currentItemId;
+             lastVisibleIndexRef.current = eventCorrectedCurrentIndex;
+             dispatch(startInteraction({ questionId: currentItemId }));
+        }
+      } else {
+        console.warn(`[onMomentumScrollEnd] (Else branch) No item in personalizedFeed at eventCorrectedCurrentIndex ${eventCorrectedCurrentIndex}.`);
       }
     }
-    
-    console.log(`Scroll transition time: ${scrollTime}ms to question ${currentIndex}`);
-    
-    // Double-check if we need to mark questions as skipped
-    if (previousIndex.current !== currentIndex && previousIndex.current < currentIndex) {
-      // Log more information for debugging
-      console.log(`[onMomentumScrollEnd] Checking for skipped questions: previousIndex=${previousIndex.current}, currentIndex=${currentIndex}`);
-      
-      // Use our optimized function to handle any missed skipping
-      handleFastScroll(previousIndex.current, currentIndex);
-    } else {
-      console.log(`[onMomentumScrollEnd] No need to check for skips: previousIndex=${previousIndex.current}, currentIndex=${currentIndex}`);
-    }
-    
-    // Update previous index after ensuring skipped questions are marked
-    previousIndex.current = currentIndex;
-  }, [currentIndex, handleFastScroll, isIOS, viewportHeight, personalizedFeed, dispatch, lastScrollPosition]);
+  }, [currentIndex, setCurrentIndex, handleFastScroll, isIOS, viewportHeight, personalizedFeed, dispatch]);
 
   // Add this hook to handle question generation
   const { triggerQuestionGeneration, trackQuestionInteraction } = useQuestionGenerator();
