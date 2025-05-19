@@ -1245,6 +1245,18 @@ const FeedScreen: React.FC = () => {
     const scrollDirection = currentScrollPos > lastScrollPosition.current ? 'down' : 'up';
     lastScrollPosition.current = currentScrollPos;
     
+    // For iOS, calculate the current index based on scroll position
+    // and update if it's significantly different from the current index
+    if (isIOS && scrollDirection === 'down' && !isActivelyScrolling) {
+      const estimatedIndex = Math.round(currentScrollPos / viewportHeight);
+      
+      // Only update if we've moved to a clearly different question
+      if (estimatedIndex > currentIndex + 0.5) {
+        console.log(`[handleScroll] On iOS: Updating currentIndex from ${currentIndex} to ${estimatedIndex}`);
+        setCurrentIndex(estimatedIndex);
+      }
+    }
+    
     // Only process "skipped" logic on desktop or when scrolling has ended
     // This significantly reduces processing during actual scroll animation
     if (scrollDirection === 'down' && Platform.OS === 'web' && !isActivelyScrolling) {
@@ -1259,7 +1271,7 @@ const FeedScreen: React.FC = () => {
         }
       });
     }
-  }, [currentIndex, viewportHeight, showTooltip, hideTooltip, isActivelyScrolling, handleFastScroll, isIOS]);
+  }, [currentIndex, viewportHeight, showTooltip, hideTooltip, isActivelyScrolling, handleFastScroll, isIOS, setCurrentIndex]);
 
   // Enhanced onViewableItemsChanged with preloading
   const onViewableItemsChanged = useCallback(
@@ -1311,6 +1323,10 @@ const FeedScreen: React.FC = () => {
             lastVisibleIndexRef.current = newIndex;
             lastVisibleItemId.current = currentItemId;
             
+            // Update currentIndex state to match the visible item
+            // This is critical for iOS to correctly detect skipped questions in onMomentumScrollEnd
+            setCurrentIndex(newIndex);
+            
             // Start tracking interaction with new question
             dispatch(startInteraction({ questionId: currentItemId }));
             
@@ -1321,101 +1337,11 @@ const FeedScreen: React.FC = () => {
           } else {
             console.log(`[ViewableItemsChanged] Index didn't change, not marking as skipped`);
           }
-          
-          // Proactively check if we're getting close to the end of the feed (within 3 questions)
-          // and append more questions if needed
-          if (newIndex >= personalizedFeed.length - 3 && feedData.length > personalizedFeed.length) {
-            const currentFeed = [...personalizedFeed];
-            const existingIds = new Set(currentFeed.map(item => item.id));
-            
-            // Get questions that aren't already in our feed and consider weights based on phase
-            const availableQuestions = feedData.filter((item: FeedItemType) => {
-              const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
-              const isColdStart = !userProfile.coldStartComplete && totalQuestionsAnswered < 20;
-              
-              // Filter by difficulty based on total questions answered
-              const isAppropriateDifficulty = totalQuestionsAnswered < 10 
-                ? ['easy', 'medium'].includes(item.difficulty?.toLowerCase() || '')
-                : true; // Allow all difficulties after first 10 questions
-              
-              if (isColdStart) {
-                // Phase 1 (Questions 1-5): Pure exploration
-                if (totalQuestionsAnswered < 5) {
-                  return !existingIds.has(item.id) && isAppropriateDifficulty;
-                }
-                
-                // Phase 2 (Questions 6-12): Begin using initial topic weights
-                if (totalQuestionsAnswered < 12) {
-                  const isLowWeight = userProfile.topics[item.topic]?.weight < 0.2;
-                  return !existingIds.has(item.id) && !isLowWeight && isAppropriateDifficulty;
-                }
-                
-                // Phase 3 (Questions 13-20): Adaptive Personalization
-                if (totalQuestionsAnswered < 20) {
-                  const isLowWeight = userProfile.topics[item.topic]?.weight < 0.3;
-                  return !existingIds.has(item.id) && !isLowWeight;
-                }
-              } else {
-                // Phase 4 (Beyond 20 questions): Steady state
-                const isLowWeight = userProfile.topics[item.topic]?.weight < 0.2;
-                return !existingIds.has(item.id) && !isLowWeight;
-              }
-              
-              return !existingIds.has(item.id);
-            });
-            
-            // Use personalization logic to select new questions
-            const { items: personalizedItems, explanations: personalizedExplanations } = 
-              getPersonalizedFeed(availableQuestions, userProfile, 4); // Reduced from 8 to 4
-              
-            // Take only 2 new personalized questions (reduced from 5)
-            const newQuestions = personalizedItems.filter(item => !existingIds.has(item.id)).slice(0, 2);
-            
-            if (newQuestions.length > 0) {
-              // Create a new feed with existing + new questions
-              const updatedFeed = [...currentFeed, ...newQuestions];
-              
-              console.log(`[ViewableItemsChanged] Adding ${newQuestions.length} proactive questions, feed will have ${updatedFeed.length} items`);
-              
-              // Add additional explanation about why we added them
-              const combinedExplanations: Record<string, string[]> = { ...feedExplanations };
-              
-              // Add the explanations from the personalization system plus our message
-              newQuestions.forEach((item: FeedItemType) => {
-                const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
-                let phaseMessage = '';
-                
-                if (!userProfile.coldStartComplete && totalQuestionsAnswered < 20) {
-                  if (totalQuestionsAnswered < 5) {
-                    phaseMessage = 'Added during initial exploration phase';
-                  } else if (totalQuestionsAnswered < 12) {
-                    phaseMessage = 'Added during topic weight discovery phase';
-                  } else {
-                    phaseMessage = 'Added during adaptive personalization phase';
-                  }
-                } else {
-                  phaseMessage = 'Added during steady state phase';
-                }
-                
-                combinedExplanations[item.id] = [
-                  ...(personalizedExplanations[item.id] || []),
-                  phaseMessage
-                ];
-              });
-              
-              // Update the feed in Redux
-              dispatch(setPersonalizedFeed({
-                items: updatedFeed,
-                explanations: combinedExplanations,
-                userId: user?.id || undefined // Handle nullable user
-              }));
-            }
-          }
         }
       }
-    },  // Close the function
-    [markPreviousAsSkipped, personalizedFeed, feedExplanations, dispatch, interactionStartTimes, 
-     feedData, userProfile, debugPanelVisible, questions, user?.id, preloadNextItems]  // Add preloadNextItems to dependencies
+    },
+    [personalizedFeed, questions, preloadNextItems, markPreviousAsSkipped, dispatch, 
+     debugPanelVisible, feedExplanations, setCurrentIndex]
   );
 
   useEffect(() => {
@@ -1433,6 +1359,15 @@ const FeedScreen: React.FC = () => {
   // Remove interactionStartTimes from dependencies to prevent infinite loop
   }, [personalizedFeed, dispatch]);
   
+  // Add a new effect to keep lastVisibleIndexRef and currentIndex synchronized
+  useEffect(() => {
+    // When currentIndex changes, also update lastVisibleIndexRef if needed
+    if (currentIndex !== lastVisibleIndexRef.current) {
+      console.log(`[Sync] Updating lastVisibleIndexRef from ${lastVisibleIndexRef.current} to match currentIndex ${currentIndex}`);
+      lastVisibleIndexRef.current = currentIndex;
+    }
+  }, [currentIndex]);
+
   // Separate useEffect for verification to prevent infinite loops
   useEffect(() => {
     // Only run once after component mounts to verify first question tracking
@@ -1558,22 +1493,53 @@ const FeedScreen: React.FC = () => {
 
   const onMomentumScrollEnd = useCallback(() => {
     const scrollTime = Date.now() - lastInteractionTime.current;
-    console.log(`Scroll transition time: ${scrollTime}ms to question ${currentIndex}`);
     
     // For iOS, mark that momentum scrolling has ended
     if (isIOS) {
       isMomentumScrolling.current = false;
+      
+      // Calculate the current visible index based on last known scroll position
+      // This is critical for iOS where the state update in onViewableItemsChanged may not take effect in time
+      const currentScrollPos = lastScrollPosition.current;
+      const estimatedIndex = Math.round(currentScrollPos / viewportHeight);
+      
+      // Force update the currentIndex if needed
+      if (estimatedIndex !== currentIndex && estimatedIndex >= 0 && estimatedIndex < personalizedFeed.length) {
+        console.log(`[onMomentumScrollEnd] Updating currentIndex from ${currentIndex} to ${estimatedIndex} (based on scroll position ${currentScrollPos})`);
+        setCurrentIndex(estimatedIndex);
+        
+        // Also update last visible index ref for consistency
+        lastVisibleIndexRef.current = estimatedIndex;
+        
+        // Start tracking interaction with new question
+        if (personalizedFeed[estimatedIndex]) {
+          const currentItemId = personalizedFeed[estimatedIndex].id;
+          lastVisibleItemId.current = currentItemId;
+          dispatch(startInteraction({ questionId: currentItemId }));
+        }
+        
+        // No need to check for skips here since the index just changed
+        // We'll let the next render cycle handle that with the updated index
+        return;
+      }
     }
+    
+    console.log(`Scroll transition time: ${scrollTime}ms to question ${currentIndex}`);
     
     // Double-check if we need to mark questions as skipped
     if (previousIndex.current !== currentIndex && previousIndex.current < currentIndex) {
+      // Log more information for debugging
+      console.log(`[onMomentumScrollEnd] Checking for skipped questions: previousIndex=${previousIndex.current}, currentIndex=${currentIndex}`);
+      
       // Use our optimized function to handle any missed skipping
       handleFastScroll(previousIndex.current, currentIndex);
+    } else {
+      console.log(`[onMomentumScrollEnd] No need to check for skips: previousIndex=${previousIndex.current}, currentIndex=${currentIndex}`);
     }
     
     // Update previous index after ensuring skipped questions are marked
     previousIndex.current = currentIndex;
-  }, [currentIndex, handleFastScroll, isIOS]);
+  }, [currentIndex, handleFastScroll, isIOS, viewportHeight, personalizedFeed, dispatch, lastScrollPosition]);
 
   // Add this hook to handle question generation
   const { triggerQuestionGeneration, trackQuestionInteraction } = useQuestionGenerator();
