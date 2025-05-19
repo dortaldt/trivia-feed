@@ -547,8 +547,24 @@ const triviaSlice = createSlice({
       
       // Only update profile if we received one
       if (profile) {
-        // Check if the server profile is newer than our local one
-        if (profile.lastRefreshed > state.userProfile.lastRefreshed) {
+        // Check if we should use the database profile
+        // MODIFIED: Always prioritize non-default database weights
+        const localHasDefaultWeights = Object.values(state.userProfile.topics).every(
+          (topic: any) => Math.abs(topic.weight - 0.5) < 0.01
+        );
+        
+        const remoteHasNonDefaultWeights = Object.values(profile.topics).some(
+          (topic: any) => Math.abs(topic.weight - 0.5) >= 0.01
+        );
+        
+        // ALWAYS use database profile when it has non-default weights but local has defaults
+        if (remoteHasNonDefaultWeights && localHasDefaultWeights) {
+          console.log('PRIORITY: Database profile has non-default weights but local has defaults');
+          console.log('Using database profile to preserve personalization');
+          state.userProfile = profile;
+        }
+        // Otherwise use timestamp comparison
+        else if (profile.lastRefreshed > state.userProfile.lastRefreshed) {
           console.log('Updating local profile with newer server profile');
           state.userProfile = profile;
         } else {
