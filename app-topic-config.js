@@ -1,0 +1,45 @@
+/**
+ * Topic-Based App Configuration
+ * 
+ * This file controls which topic the app is focused on and related settings.
+ * To build a topic-specific app, change the activeTopic value and ensure
+ * the corresponding assets are available.
+ */
+
+module.exports = {
+  // The active topic for this build (default, music, science, etc.)
+  // Set to 'default' for the standard multi-topic experience
+  // Set to a specific topic name for a focused single-topic experience
+  activeTopic: 'music',
+  
+  // Whether to filter content based on the active topic
+  // When true, only questions matching the active topic will be shown
+  // When false, all questions will be shown regardless of topic
+  filterContentByTopic: true,
+  
+  // Available topics configuration
+  // Add new topics here as they become available
+  topics: {
+    default: {
+      displayName: 'All Topics',
+      description: 'The full trivia experience across all topics',
+      dbTopicName: null, // No filtering for default
+    },
+    music: {
+      displayName: 'Music Trivia',
+      description: 'Test your knowledge about music, artists, and songs',
+      dbTopicName: 'Music', // Exact name as it appears in the database
+    },
+    science: {
+      displayName: 'Science Trivia',
+      description: 'Challenge yourself with science facts and discoveries',
+      dbTopicName: 'Science',
+    },
+    history: {
+      displayName: 'History Trivia',
+      description: 'Journey through time with historical questions',
+      dbTopicName: 'History',
+    },
+    // Add more topics as needed
+  }
+}; 

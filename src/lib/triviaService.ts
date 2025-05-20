@@ -1,6 +1,15 @@
 import { supabase } from './supabaseClient';
 import { getTopicColor } from './colors';
 import { getStandardizedTopicName } from '../constants/topics';
+import Constants from 'expo-constants';
+
+// Get topic configuration from app config
+const { activeTopic, filterContentByTopic, topicDbName } = Constants.expoConfig?.extra || {};
+console.log(`TriviaService initialized with topic: ${activeTopic || 'default'}`);
+console.log(`Content filtering: ${filterContentByTopic ? 'Enabled' : 'Disabled'}`);
+if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
+  console.log(`Will filter questions by topic: ${topicDbName}`);
+}
 
 // Define the type of trivia question from Supabase
 export interface TriviaQuestion {
@@ -284,11 +293,22 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
         console.log(`DEBUG: Total questions in database: ${totalCount}`);
       }
       
-      // Fetch the actual data - remove the limit to get all questions
-      console.log('DEBUG: Fetching all questions from database...');
-      const { data, error } = await supabase
+      // Start building the query
+      console.log('DEBUG: Fetching questions from database...');
+      let query = supabase
         .from('trivia_questions')
         .select('*');
+      
+      // Apply topic filter if configured
+      if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
+        console.log(`DEBUG: Filtering questions by topic: ${topicDbName}`);
+        
+        // Use the exact topic name from the database
+        query = query.eq('topic', topicDbName);
+      }
+      
+      // Execute the query
+      const { data, error } = await query;
 
       console.log('DEBUG: Supabase response:', data ? `Got ${data.length} records` : 'No data', error ? `Error: ${error.message}` : 'No error');
       
@@ -475,9 +495,17 @@ export async function fetchNewTriviaQuestions(existingIds: string[]): Promise<Fe
     
     if (existingIds.length > 100) {
       // For large ID sets, fetch all and filter client-side
-      const response = await supabase
+      let query = supabase
         .from('trivia_questions')
         .select('*');
+      
+      // Apply topic filter if configured
+      if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
+        console.log(`DEBUG: Filtering new questions by topic: ${topicDbName}`);
+        query = query.eq('topic', topicDbName);
+      }
+      
+      const response = await query;
       
       data = response.data;
       error = response.error;
@@ -489,10 +517,18 @@ export async function fetchNewTriviaQuestions(existingIds: string[]): Promise<Fe
       }
     } else {
       // For smaller sets, filter in the query
-      const response = await supabase
+      let query = supabase
         .from('trivia_questions')
         .select('*')
         .not('id', 'in', existingIds);
+      
+      // Apply topic filter if configured
+      if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
+        console.log(`DEBUG: Filtering new questions by topic: ${topicDbName}`);
+        query = query.eq('topic', topicDbName);
+      }
+      
+      const response = await query;
       
       data = response.data;
       error = response.error;
