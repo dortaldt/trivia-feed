@@ -11,6 +11,7 @@ This document outlines the implementation of a topic-based system for the Trivia
 3. **Centralized Configuration**: A single configuration setting should control all topic-related changes
 4. **Default Topic Support**: The current configuration should be maintained as the default
 5. **Scalability**: The solution should be easy to extend with new topics
+6. **Subtopic Display**: In topic-specific mode, display the subtopic instead of the main topic in feed items
 
 ## Implementation Approach
 
@@ -239,6 +240,36 @@ export const getFavicon = (theme: ThemeName): string => {
 // Similar adjustments for other asset getters
 ```
 
+### 6. Subtopic Display
+
+Update FeedItem.tsx to display subtopics instead of the main topic when in topic-specific mode:
+
+```typescript
+import Constants from 'expo-constants';
+
+// Get topic configuration from expo config
+const { activeTopic, filterContentByTopic } = Constants.expoConfig?.extra || {};
+const isTopicSpecificMode = activeTopic !== 'default' && filterContentByTopic;
+
+// Inside the FeedItem component
+const getDisplayLabel = () => {
+  if (isTopicSpecificMode) {
+    // If in topic-specific mode, prefer to show the subtopic if available
+    if (item.subtopic) {
+      return item.subtopic;
+    } else if (item.tags && item.tags.length > 0) {
+      // Fall back to the first tag as subtopic
+      return item.tags[0];
+    }
+  }
+  // Default to showing the main topic
+  return item.topic;
+};
+
+// In the render method
+<Text style={styles.topicLabel}>{getDisplayLabel()}</Text>
+```
+
 ## Actual Implementation
 
 The topic-based system has been successfully implemented in the Trivia Feed app, with 'music' as the first topic. Here's what was done:
@@ -348,6 +379,36 @@ const { data, error } = await query;
 
 The same filtering logic was applied to both `fetchTriviaQuestions` and `fetchNewTriviaQuestions` functions.
 
+### 5. Subtopic Display Implementation
+
+Updated FeedItem.tsx to show subtopics instead of the main topic when in topic-specific mode:
+
+```typescript
+// src/features/feed/FeedItem.tsx
+import Constants from 'expo-constants';
+
+// Get topic configuration from expo config
+const { activeTopic, filterContentByTopic } = Constants.expoConfig?.extra || {};
+const isTopicSpecificMode = activeTopic !== 'default' && filterContentByTopic;
+
+// Inside the FeedItem component
+const getDisplayLabel = () => {
+  if (isTopicSpecificMode) {
+    // If in topic-specific mode, prefer to show the subtopic if available
+    if (item.subtopic) {
+      return item.subtopic;
+    } else if (item.tags && item.tags.length > 0) {
+      // Fall back to the first tag as subtopic
+      return item.tags[0];
+    }
+  }
+  // Default to showing the main topic
+  return item.topic;
+};
+```
+
+This enhances the user experience in topic-specific apps by showing more granular information (subtopics) rather than repeatedly displaying the same topic on every card.
+
 ## Adding New Topics
 
 To add a new topic:
@@ -390,4 +451,125 @@ To add a new topic:
 
 3. **Content Filtering**: The system filters by the `topic` field in the database. Ensure your data is properly tagged.
 
-4. **Scalability Considerations**: As you add more topics, the assets directory will grow. Consider implementing an organizational structure if many topics are anticipated. 
+4. **Scalability Considerations**: As you add more topics, the assets directory will grow. Consider implementing an organizational structure if many topics are anticipated.
+
+## Subtopic Display and Coloring
+
+A key enhancement to the topic-specific mode is the use of subtopics not only for display labels but also for visual differentiation through colors:
+
+### 1. Subtopic Display
+
+When in topic-specific mode, the app displays the subtopic (or the first tag if no subtopic exists) instead of the main topic in feed items:
+
+```typescript
+// Inside the FeedItem component
+const getDisplayLabel = () => {
+  if (isTopicSpecificMode) {
+    // If in topic-specific mode, prefer to show the subtopic if available
+    if (item.subtopic) {
+      return item.subtopic;
+    } else if (item.tags && item.tags.length > 0) {
+      // Fall back to the first tag as subtopic
+      return item.tags[0];
+    }
+  }
+  // Default to showing the main topic
+  return item.topic;
+};
+```
+
+### 2. Subtopic-Based Background Colors
+
+To provide visual variety in topic-specific mode, background colors are now determined by subtopics rather than the main topic:
+
+#### A. In FeedItem.tsx
+
+```typescript
+// Get the display color - use subtopic for color in topic-specific mode
+const getDisplayColor = () => {
+  if (isTopicSpecificMode) {
+    // In topic-specific mode, use subtopic or tag for color variation
+    if (item.subtopic) {
+      return item.subtopic;
+    } else if (item.tags && item.tags.length > 0) {
+      return item.tags[0];
+    }
+  }
+  // Default to using the main topic for color
+  return item.topic;
+};
+
+// Use this function for all color-related operations
+const backgroundComponent = useMemo(() => {
+  if (isNeonTheme) {
+    const displayColor = getDisplayColor();
+    return <NeonGradientBackground topic={displayColor} nextTopic={nextTopic} />;
+  } else {
+    const colorObj = getTopicColor(getDisplayColor());
+    return <View style={[dynamicStyles.backgroundColor, {
+      backgroundColor: colorObj.hex
+    }]} />;
+  }
+}, [isNeonTheme, item.topic, item.subtopic, item.tags, nextTopic]);
+```
+
+#### B. In triviaService.ts
+
+The data fetching service was also updated to determine background colors based on subtopics in topic-specific mode:
+
+```typescript
+// Get background color based on category or subtopic depending on mode
+let backgroundColor;
+if (filterContentByTopic && activeTopic !== 'default') {
+  // In topic-specific mode, use subtopic or tag for background color variation
+  if (subtopic) {
+    backgroundColor = getTopicColor(subtopic);
+  } else if (tags && tags.length > 0) {
+    backgroundColor = getTopicColor(tags[0]);
+  } else {
+    backgroundColor = getTopicColor(category);
+  }
+} else {
+  // In multi-topic mode, use the main topic for color
+  backgroundColor = getTopicColor(category);
+}
+```
+
+#### C. Improved Color Mapping for Subtopics
+
+The getTopicColor function in constants/NeonColors.ts was enhanced to better handle subtopics:
+
+```typescript
+export const getTopicColor = (topic: string) => {
+  // Check for exact matches first
+  if (NeonTopicColors[topic]) {
+    return NeonTopicColors[topic];
+  }
+  
+  // Try fuzzy matching for subtopics
+  const normalizedTopic = topic.toLowerCase().trim();
+  
+  for (const key of Object.keys(NeonTopicColors)) {
+    if (normalizedTopic.includes(key.toLowerCase()) || 
+        key.toLowerCase().includes(normalizedTopic)) {
+      return NeonTopicColors[key];
+    }
+  }
+  
+  // If no match found, use a hash-based approach for consistent colors
+  const hashString = (str: string) => {
+    // Hash implementation...
+  };
+  
+  const topicKeys = Object.keys(NeonTopicColors).filter(key => key !== 'default');
+  const hash = hashString(normalizedTopic);
+  const colorKey = topicKeys[hash % topicKeys.length];
+  
+  return NeonTopicColors[colorKey] || NeonTopicColors["default"];
+};
+```
+
+This implementation ensures that:
+1. Subtopics within the same "family" (e.g., "Rock Music," "Classical Music") get related but distinct colors
+2. Unknown subtopics receive consistent colors based on their names rather than random colors
+3. The visual experience in topic-specific apps is more varied and engaging, with cards visually differentiated by their subtopics 

@@ -28,8 +28,13 @@ import { useTheme } from '@/src/context/ThemeContext';
 import NeonGradientBackground from '../../components/NeonGradientBackground';
 import { NeonTopicColors, getTopicColor } from '@/constants/NeonColors';
 import { trackEvent } from '../../lib/mixpanelAnalytics';
+import Constants from 'expo-constants';
 
 const { width, height } = Dimensions.get('window');
+
+// Get topic configuration from expo config
+const { activeTopic, filterContentByTopic } = Constants.expoConfig?.extra || {};
+const isTopicSpecificMode = activeTopic !== 'default' && filterContentByTopic;
 
 // Updated type to support multiple answers and add new props
 type FeedItemProps = {
@@ -49,6 +54,7 @@ type FeedItemProps = {
     topic: string;
     // category is now optional since we've migrated to using topic
     category?: string;
+    subtopic?: string;
   };
   nextTopic?: string; // Add the next item's topic prop
   onAnswer?: (answerIndex: number, isCorrect: boolean) => void;
@@ -423,24 +429,53 @@ const FeedItem = React.memo(({
     return baseStyles;
   };
 
-  // Get topic color for the current topic
+  // Get the display label - show subtopic instead of topic in topic-specific mode
+  const getDisplayLabel = () => {
+    if (isTopicSpecificMode) {
+      // If in topic-specific mode, prefer to show the subtopic if available
+      if (item.subtopic) {
+        return item.subtopic;
+      } else if (item.tags && item.tags.length > 0) {
+        // Fall back to the first tag as subtopic
+        return item.tags[0];
+      }
+    }
+    // Default to showing the main topic
+    return item.topic;
+  };
+
+  // Get the display color - use subtopic for color in topic-specific mode
+  const getDisplayColor = () => {
+    if (isTopicSpecificMode) {
+      // In topic-specific mode, use subtopic or tag for color variation
+      if (item.subtopic) {
+        return item.subtopic;
+      } else if (item.tags && item.tags.length > 0) {
+        return item.tags[0];
+      }
+    }
+    // Default to using the main topic for color
+    return item.topic;
+  };
+
+  // Get topic color for the current topic or subtopic
   const getTopicTitleColor = () => {
     if (!isNeonTheme) return 'white'; // Default color for non-neon theme
-    const topicColor = getTopicColor(item.topic);
+    const topicColor = getTopicColor(getDisplayColor());
     return topicColor.hex;
   };
 
   // Get adjusted topic color for UI elements like shadows and borders
   const getTopicNeonColor = () => {
     if (!isNeonTheme) return '#00FFFF'; // Default cyan
-    const topicColor = getTopicColor(item.topic);
+    const topicColor = getTopicColor(getDisplayColor());
     return topicColor.hex;
   };
 
   // Get the topic color with alpha for backgrounds
   const getTopicBackgroundColor = (alpha: number = 0.15) => {
     if (!isNeonTheme) return 'rgba(0, 0, 0, 0.6)';
-    const topicColor = getTopicColor(item.topic);
+    const topicColor = getTopicColor(getDisplayColor());
     const hex = topicColor.hex.replace('#', '');
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
@@ -451,13 +486,18 @@ const FeedItem = React.memo(({
   // Memoize the background component to prevent unnecessary re-renders
   const backgroundComponent = useMemo(() => {
     if (isNeonTheme) {
-      // Use NeonGradientBackground for neon theme - pass the nextTopic
-      return <NeonGradientBackground topic={item.topic} nextTopic={nextTopic} />;
+      // Use NeonGradientBackground for neon theme with display color
+      const displayColor = getDisplayColor();
+      const nextDisplayColor = nextTopic; // Keep passing nextTopic as is
+      return <NeonGradientBackground topic={displayColor} nextTopic={nextDisplayColor} />;
     } else {
-      // Use regular background color for other themes
-      return <View style={dynamicStyles.backgroundColor} />;
+      // For non-neon theme, update backgroundColor calculation in dynamicStyles
+      const colorObj = getTopicColor(getDisplayColor());
+      return <View style={[dynamicStyles.backgroundColor, {
+        backgroundColor: colorObj.hex // Use the hex property from the color object
+      }]} />;
     }
-  }, [isNeonTheme, item.topic, nextTopic, dynamicStyles.backgroundColor]);
+  }, [isNeonTheme, item.topic, item.subtopic, item.tags, nextTopic]);
 
   // Optimize rendering on iOS with rasterization for static content
   const shouldRasterize = Platform.OS === 'ios';
@@ -483,7 +523,7 @@ const FeedItem = React.memo(({
               isNeonTheme && { 
                 color: getTopicTitleColor()
               }
-            ]}>{item.topic}</Text>
+            ]}>{getDisplayLabel()}</Text>
             <View style={[styles.difficulty, { 
               backgroundColor: 
                 item.difficulty?.toLowerCase() === 'easy' ? '#8BC34A' :
@@ -708,9 +748,11 @@ const FeedItem = React.memo(({
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function for React.memo
-  // Only re-render if the item ID changes or if nextTopic changes
+  // Add subtopic and tags to comparison for re-rendering
   return prevProps.item.id === nextProps.item.id && 
-         prevProps.nextTopic === nextProps.nextTopic;
+         prevProps.nextTopic === nextProps.nextTopic &&
+         prevProps.item.subtopic === nextProps.item.subtopic &&
+         JSON.stringify(prevProps.item.tags) === JSON.stringify(nextProps.item.tags);
 });
 
 export default FeedItem;

@@ -325,6 +325,26 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
 
       console.log('DEBUG: Successfully retrieved data from Supabase');
       
+      // Log some stats about subtopics and tags when in topic-specific mode
+      if (filterContentByTopic && activeTopic !== 'default') {
+        // Track unique subtopics and tags
+        const subtopics = new Set<string>();
+        const allTags = new Set<string>();
+        
+        data.forEach((question: TriviaQuestion) => {
+          if (question.subtopic) {
+            subtopics.add(question.subtopic);
+          }
+          
+          if (question.tags && Array.isArray(question.tags)) {
+            question.tags.forEach(tag => allTags.add(tag));
+          }
+        });
+        
+        console.log(`DEBUG: Found ${subtopics.size} unique subtopics:`, Array.from(subtopics));
+        console.log(`DEBUG: Found ${allTags.size} unique tags:`, Array.from(allTags));
+      }
+      
       // Transform the Supabase data to match our app's format
       return data.map((question: TriviaQuestion) => {
         // Determine the question text
@@ -441,8 +461,21 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
         // Get learning capsule/explanation
         const learningCapsule = question.learning_capsule || question.explanation || 'No additional information available for this question.';
         
-        // Get background color based on category
-        const backgroundColor = getTopicColor(category);
+        // Get background color based on category or subtopic depending on mode
+        let backgroundColor;
+        if (filterContentByTopic && activeTopic !== 'default') {
+          // In topic-specific mode, use subtopic or tag for background color variation
+          if (subtopic) {
+            backgroundColor = getTopicColor(subtopic);
+          } else if (tags && tags.length > 0) {
+            backgroundColor = getTopicColor(tags[0]);
+          } else {
+            backgroundColor = getTopicColor(category);
+          }
+        } else {
+          // In multi-topic mode, use the main topic for color
+          backgroundColor = getTopicColor(category);
+        }
 
         return {
           id: question.id || String(Math.random()),
@@ -546,6 +579,26 @@ export async function fetchNewTriviaQuestions(existingIds: string[]): Promise<Fe
 
     console.log(`Found ${data.length} new questions`);
     
+    // Log some stats about subtopics and tags when in topic-specific mode
+    if (filterContentByTopic && activeTopic !== 'default') {
+      // Track unique subtopics and tags
+      const subtopics = new Set<string>();
+      const allTags = new Set<string>();
+      
+      data.forEach((question: TriviaQuestion) => {
+        if (question.subtopic) {
+          subtopics.add(question.subtopic);
+        }
+        
+        if (question.tags && Array.isArray(question.tags)) {
+          question.tags.forEach(tag => allTags.add(tag));
+        }
+      });
+      
+      console.log(`DEBUG: Found ${subtopics.size} unique subtopics in new questions:`, Array.from(subtopics));
+      console.log(`DEBUG: Found ${allTags.size} unique tags in new questions:`, Array.from(allTags));
+    }
+    
     // Transform the data same as in fetchTriviaQuestions
     return data.map((question: TriviaQuestion) => {
       // Determine the question text
@@ -581,7 +634,7 @@ export async function fetchNewTriviaQuestions(existingIds: string[]): Promise<Fe
             const exactMatch = choiceStr === correctAnswerStr;
             const normalizedMatch = normalizedChoice === normalizedCorrectAnswer;
             const substringMatch = normalizedChoice.includes(normalizedCorrectAnswer) || 
-                                 normalizedCorrectAnswer.includes(normalizedChoice);
+                               normalizedCorrectAnswer.includes(normalizedChoice);
             
             return {
               text: choiceStr,
@@ -638,8 +691,21 @@ export async function fetchNewTriviaQuestions(existingIds: string[]): Promise<Fe
       // Get learning capsule/explanation
       const learningCapsule = question.learning_capsule || question.explanation || 'No additional information available for this question.';
       
-      // Get background color based on category
-      const backgroundColor = getTopicColor(category);
+      // Get background color based on category or subtopic depending on mode
+      let backgroundColor;
+      if (filterContentByTopic && activeTopic !== 'default') {
+        // In topic-specific mode, use subtopic or tag for background color variation
+        if (subtopic) {
+          backgroundColor = getTopicColor(subtopic);
+        } else if (tags && tags.length > 0) {
+          backgroundColor = getTopicColor(tags[0]);
+        } else {
+          backgroundColor = getTopicColor(category);
+        }
+      } else {
+        // In multi-topic mode, use the main topic for color
+        backgroundColor = getTopicColor(category);
+      }
 
       return {
         id: question.id || String(Math.random()),

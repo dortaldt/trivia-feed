@@ -104,7 +104,47 @@ export const NeonCategoryColors = NeonTopicColors;
 
 // Helper function to get color for a topic
 export const getTopicColor = (topic: string) => {
-  return NeonTopicColors[topic] || NeonTopicColors["default"];
+  // Check if the topic exists exactly
+  if (NeonTopicColors[topic]) {
+    return NeonTopicColors[topic];
+  }
+  
+  // If no exact match, try to find a parent topic or fuzzy match
+  // This is important for subtopics and tags which don't have explicit color definitions
+  
+  // Normalize the topic for comparison
+  const normalizedTopic = topic.toLowerCase().trim();
+  
+  // First, check if this is a subtopic (contains a parent topic as a substring)
+  for (const key of Object.keys(NeonTopicColors)) {
+    if (normalizedTopic.includes(key.toLowerCase()) || key.toLowerCase().includes(normalizedTopic)) {
+      // Found a parent topic or partial match
+      return NeonTopicColors[key];
+    }
+  }
+  
+  // If no matches found through parent topic check, use a hash-based approach to ensure
+  // consistent colors for unknown subtopics/tags
+  
+  // Simple string hash function to generate a number from a string
+  const hashString = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+  };
+  
+  // Get all topic keys from NeonTopicColors (excluding 'default')
+  const topicKeys = Object.keys(NeonTopicColors).filter(key => key !== 'default');
+  
+  // Use hash to consistently select a color from the available colors
+  const hash = hashString(normalizedTopic);
+  const colorKey = topicKeys[hash % topicKeys.length];
+  
+  return NeonTopicColors[colorKey] || NeonTopicColors["default"];
 };
 
 // For backward compatibility, keep the old function as well
