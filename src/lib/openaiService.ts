@@ -88,7 +88,7 @@ export async function generateQuestions(
   preferredSubtopics: string[] = [],
   preferredBranches: string[] = [],
   preferredTags: string[] = [],
-  recentQuestions: { id: string, questionText: string }[] = [],
+  recentQuestions: { id: string, questionText: string, topic?: string, subtopic?: string, branch?: string, tags?: string[] }[] = [],
   avoidIntentsSection: string = '' // Add parameter for topic-intent combinations to avoid
 ): Promise<GeneratedQuestion[]> {
   try {
@@ -99,220 +99,154 @@ export async function generateQuestions(
     console.log('[OPENAI] Input preferred subtopics:', preferredSubtopics);
     console.log('[OPENAI] Input preferred branches:', preferredBranches);
     console.log('[OPENAI] Input preferred tags:', preferredTags);
-    console.log('[OPENAI] Recent questions to avoid duplicating:', recentQuestions.length);
-    console.log('[OPENAI] Has avoid intents section:', !!avoidIntentsSection);
-
-    // Check if any topics have hierarchical format (topic:subtopic or topic:branch)
-    const hasHierarchicalTopics = primaryTopics.some(topic => topic.includes(':'));
-    if (hasHierarchicalTopics) {
-      console.log('[OPENAI] DETECTED HIERARCHICAL TOPICS:',
-        primaryTopics.filter(t => t.includes(':')));
+    console.log('[OPENAI] Recent questions to use for generation:', recentQuestions.length);
+    
+    // Filter and enhance recent questions with full hierarchy if available
+    const enhancedRecentQuestions = recentQuestions
+      .filter(q => q.topic && q.subtopic) // Only use questions with proper categorization
+      .slice(0, 10); // Limit to 10 most recent questions
+    
+    console.log('[OPENAI] Enhanced recent questions with hierarchy:', enhancedRecentQuestions.length);
+    
+    // Check app topic configuration for single-topic mode
+    const topicConfig = Constants.expoConfig?.extra?.activeTopic || 'default';
+    const filterContentByTopic = Constants.expoConfig?.extra?.filterContentByTopic || false;
+    const topicDbName = Constants.expoConfig?.extra?.topicDbName || null;
+    
+    const isTopicSpecificApp = topicConfig !== 'default' && filterContentByTopic && topicDbName;
+    console.log(`[OPENAI] App topic configuration: ${isTopicSpecificApp ? topicDbName : 'multi-topic'}`);
+    
+    // If in topic-specific mode, ensure all topics are filtered
+    if (isTopicSpecificApp) {
+      console.log(`[OPENAI] Enforcing topic-specific mode for "${topicDbName}"`);
+      // Force all questions to be from the configured topic
+      primaryTopics = [topicDbName];
+      // Clear adjacent topics as we want all questions to be from the main topic
+      adjacentTopics = [];
     }
-
-    // Process hierarchical topic formats (topic:subtopic, topic:branch)
-    const processedPrimaryTopics: string[] = [];
-    const explicitSubtopics: { topic: string, subtopic: string }[] = [];
-    const explicitBranches: { topic: string, branch: string }[] = [];
-
-    // Process any hierarchical format in primary topics
-    primaryTopics.forEach(topic => {
-      if (topic.includes(':')) {
-        // Handle hierarchical format
-        const [mainTopic, secondaryItem] = topic.split(':');
-        console.log(`[OPENAI] Processing hierarchical topic: '${topic}' → main='${mainTopic}', secondary='${secondaryItem}'`);
-
-        // Add the main topic to our processed list if not already there
-        if (!processedPrimaryTopics.includes(mainTopic)) {
-          processedPrimaryTopics.push(mainTopic);
-          console.log(`[OPENAI] Added main topic: ${mainTopic}`);
-        }
-
-        // Determine if this is a subtopic or branch based on structure
-        // If we can find it in preferredSubtopics, assume it's a subtopic
-        if (preferredSubtopics.includes(secondaryItem)) {
-          explicitSubtopics.push({ topic: mainTopic, subtopic: secondaryItem });
-          console.log(`[OPENAI] Identified hierarchical topic:subtopic pair: ${mainTopic}:${secondaryItem}`);
-        }
-        // If we can find it in preferredBranches, assume it's a branch
-        else if (preferredBranches.includes(secondaryItem)) {
-          explicitBranches.push({ topic: mainTopic, branch: secondaryItem });
-          console.log(`[OPENAI] Identified hierarchical topic:branch pair: ${mainTopic}:${secondaryItem}`);
-        }
-        // Otherwise, default to subtopic
-        else {
-          explicitSubtopics.push({ topic: mainTopic, subtopic: secondaryItem });
-          console.log(`[OPENAI] Defaulting to topic:subtopic for unrecognized pair: ${mainTopic}:${secondaryItem}`);
-        }
-      } else {
-        // Regular topic format, just add it
-        processedPrimaryTopics.push(topic);
+    
+    // Select recent interactions to use for question generation
+    // Prioritize based on weight and cyclic selection
+    let selectedInteractions = [];
+    
+    // In a real implementation, we would sort by weights and use cyclic selection
+    // For simplicity, here we just take the most recent 3 interactions
+    if (enhancedRecentQuestions.length >= 3) {
+      // Take 3 interactions from the recently answered questions
+      selectedInteractions = enhancedRecentQuestions.slice(0, 3);
+    } else {
+      // If we don't have enough interactions, use the available ones
+      selectedInteractions = enhancedRecentQuestions;
+    }
+    
+    // Build the prompt based on the new logic
+    let mainPrompt = '';
+    
+    // Create question sets for each selected interaction (3 questions per interaction)
+    const questionPrompts = [];
+    
+    selectedInteractions.forEach((interaction, index) => {
+      if (!interaction.topic || !interaction.subtopic || !interaction.branch) {
+        console.log(`[OPENAI] Skipping interaction ${index} due to missing hierarchy`);
+        return;
       }
+      
+      // Create prompts for the 3 question types per interaction
+      
+      // 1. Preferred branch question
+      const focalTag = interaction.tags && interaction.tags.length > 0 
+        ? interaction.tags[Math.floor(Math.random() * interaction.tags.length)] 
+        : null;
+      
+      const exclusionTags = focalTag && interaction.tags 
+        ? interaction.tags.filter(tag => tag !== focalTag).join('","') 
+        : '';
+      
+      questionPrompts.push(`
+      // Question ${questionPrompts.length + 1}: Preferred branch from interaction ${index + 1}
+      Create a question about topic "${interaction.topic}", subtopic "${interaction.subtopic}", branch "${interaction.branch}"
+      Focal tag: "${focalTag}" ${exclusionTags ? `\nExclusion tags: ["${exclusionTags}"]` : ''}
+      `);
+      
+      // 2. Adjacent branch question (same subtopic, different branch)
+      questionPrompts.push(`
+      // Question ${questionPrompts.length + 1}: Adjacent branch from interaction ${index + 1}
+      Create a question about topic "${interaction.topic}", subtopic "${interaction.subtopic}", with a NEW random branch (not "${interaction.branch}")
+      Avoid these tags if possible: ${interaction.tags ? `["${interaction.tags.join('","')}"]` : '[]'}
+      `);
+      
+      // 3. Adjacent subtopic question (same topic, different subtopic and branch)
+      questionPrompts.push(`
+      // Question ${questionPrompts.length + 1}: Adjacent subtopic from interaction ${index + 1}
+      Create a question about topic "${interaction.topic}", with a NEW random subtopic (not "${interaction.subtopic}"), and a new random branch
+      Avoid these tags if possible: ${interaction.tags ? `["${interaction.tags.join('","')}"]` : '[]'}
+      `);
     });
-
-    // Log the processed hierarchical data
-    console.log('[OPENAI] Input primary topics:', primaryTopics);
-    console.log('[OPENAI] Processed primary topics:', processedPrimaryTopics);
-    if (explicitSubtopics.length > 0) {
-      console.log('[OPENAI] Explicit topic-subtopic pairs:',
-        explicitSubtopics.map(item => `${item.topic}/${item.subtopic}`));
-    }
-    if (explicitBranches.length > 0) {
-      console.log('[OPENAI] Explicit topic-branch pairs:',
-        explicitBranches.map(item => `${item.topic}/${item.branch}`));
-    }
-
-    // Create a more dynamic prompt based on user preferences
-    // Primary topics are intentionally ordered by priority - don't shuffle them
-    const orderedPrimaryTopics = [...processedPrimaryTopics]; // Keep original order
-    // Shuffle only the adjacent topics for variety
-    const shuffledAdjacentTopics = [...adjacentTopics].sort(() => Math.random() - 0.5);
-
-    // Create personalization sections for subtopics and branches if available
-    // Add our explicit topic-subtopic mappings to the prompt
-    let subtopicsSection = '';
-    if (preferredSubtopics.length > 0 || explicitSubtopics.length > 0) {
-      // Create a section that includes both standalone subtopics and explicit mappings
-      const shuffledSubtopics = [...preferredSubtopics].sort(() => Math.random() - 0.5);
-
-      // Create specialized section for explicit topic-subtopic pairs
-      let explicitSubtopicSection = '';
-      if (explicitSubtopics.length > 0) {
-        explicitSubtopicSection = `
-    IMPORTANT - DIRECT TOPIC-SUBTOPIC MAPPINGS (create at least ${Math.min(explicitSubtopics.length, 3)} questions using these exact pairs):
-    ${explicitSubtopics.map(pair => `${pair.topic} → ${pair.subtopic}`).join('\n    ')}`;
-      }
-
-      // Regular subtopics section
-      subtopicsSection = `
-    PREFERRED SUBTOPICS (include at least 3 of these):
-    ${shuffledSubtopics.join(', ')}${explicitSubtopicSection}`;
-    }
-
-    // Add our explicit topic-branch mappings to the prompt
-    let branchesSection = '';
-    if (preferredBranches.length > 0 || explicitBranches.length > 0) {
-      // Create a section that includes both standalone branches and explicit mappings
-      const shuffledBranches = [...preferredBranches].sort(() => Math.random() - 0.5);
-
-      // Create specialized section for explicit topic-branch pairs
-      let explicitBranchSection = '';
-      if (explicitBranches.length > 0) {
-        explicitBranchSection = `
-    IMPORTANT - DIRECT TOPIC-BRANCH MAPPINGS (create at least ${Math.min(explicitBranches.length, 2)} questions using these exact pairs):
-    ${explicitBranches.map(pair => `${pair.topic} → ${pair.branch}`).join('\n    ')}`;
-      }
-
-      // Regular branches section
-      branchesSection = `
-    PREFERRED BRANCHES (include at least 2 of these):
-    ${shuffledBranches.join(', ')}${explicitBranchSection}`;
-    }
-
-    // Create personalization sections for the hierarchy: subtopics, branches, tags
-    const top5Subtopics = preferredSubtopics.slice(0, 5);
-    const top5Branches = preferredBranches.slice(0, 5);
-    const top8Tags = preferredTags.slice(0, 8);
-
-    let hierarchySection = '';
-    if (top5Subtopics.length > 0 || top5Branches.length > 0 || top8Tags.length > 0 ||
-      explicitSubtopics.length > 0 || explicitBranches.length > 0) {
-      // Create a more detailed structure section based on what data we have
-      const tagsSection = top8Tags.length > 0 ?
-        `\n      * TAGS (IMPORTANT): Include at least 3-5 of these relevant tags per question: ${top8Tags.join(', ')}` :
-        '';
-
-      const subtopicsSection = top5Subtopics.length > 0 ?
-        `\n      * SUBTOPICS: Use at least 2 of these specific subtopics: ${top5Subtopics.join(', ')}` :
-        '';
-
-      const branchesSection = top5Branches.length > 0 ?
-        `\n      * BRANCHES: Use at least 2 of these specific branches: ${top5Branches.join(', ')}` :
-        '';
-
-      // Add explicit mapping instructions to the hierarchy section
-      let explicitMappingsSection = '';
-      if (explicitSubtopics.length > 0 || explicitBranches.length > 0) {
-        explicitMappingsSection = `
-    EXPLICIT HIERARCHICAL MAPPINGS (highest priority - MUST implement these exact relationships):
-    ${explicitSubtopics.map(pair => `- Topic "${pair.topic}" MUST use subtopic "${pair.subtopic}" for at least 1 question`).join('\n    ')}
-    ${explicitBranches.map(pair => `- Topic "${pair.topic}" MUST use branch "${pair.branch}" for at least 1 question`).join('\n    ')}`;
-      }
-
-      hierarchySection = `
-    HIERARCHICAL STRUCTURE REQUIREMENTS:
-    - For PRIMARY topics (${primaryCount} questions):${subtopicsSection}${branchesSection}${tagsSection}
-      
-    - For ADJACENT topics (${adjacentCount} questions):
-      * Create appropriate subtopics that relate directly to the adjacent topics
-      * Create appropriate branches that are specific subdivisions of those subtopics${tagsSection}
-      
-    Each question MUST follow this structure:
-    1. A main TOPIC (from the list above)
-    2. A specific SUBTOPIC (a specialized area within that topic)
-    3. A precise BRANCH (a very specific sub-area of that subtopic)
-    4. 3-5 relevant TAGS that directly relate to the question content
     
-    This hierarchical structure ensures proper categorization and personalization.${explicitMappingsSection}`;
+    // Get the highest weighted topics for the preferred exploration questions
+    // In single topic mode or when primaryTopics has only one topic, use that
+    const explorationTopic = isTopicSpecificApp ? topicDbName : 
+                            (primaryTopics.length > 0 ? primaryTopics[0] : "General Knowledge");
+    
+    // Get a few different topics for varied exploration when not in single-topic mode
+    const explorationTopics = isTopicSpecificApp ? 
+                            [topicDbName, topicDbName, topicDbName] :
+                            primaryTopics.slice(0, Math.min(3, primaryTopics.length));
+    
+    // If we have fewer than 3 topics, duplicate to ensure we have at least 3
+    while (explorationTopics.length < 3) {
+      explorationTopics.push(explorationTopics[0] || "General Knowledge");
     }
+    
+    // Get the highest weighted subtopic for question 10
+    // Use the first preferred subtopic if available, otherwise use a generic one
+    const topSubtopic = preferredSubtopics.length > 0 ? preferredSubtopics[0] : "General";
+    
+    // Create 3 preferred exploration questions with specific topics
+    questionPrompts.push(`
+    // Question ${questionPrompts.length + 1}: Preferred exploration
+    Create a unique question about topic "${explorationTopic}", subtopic "${topSubtopic}"
+    Use newest and most accurate information, leveraging online research if needed
+    `);
+    
+    // For questions 11-12, implement cyclic selection by using different topics
+    // from the user's preferred weights
+    questionPrompts.push(`
+    // Question ${questionPrompts.length + 1}: Preferred exploration
+    Create a unique and refreshing question about topic "${explorationTopics[1]}"
+    Focus on recent trends, developments, or discoveries in this field
+    `);
+    
+    // For question 12, focus on combining knowledge domains
+    questionPrompts.push(`
+    // Question ${questionPrompts.length + 1}: Preferred exploration
+    Create a unique and unexpected question that combines knowledge domains
+    Build on the topic "${explorationTopics[2]}" while introducing novel concepts
+    `);
+    
+    // Assemble the final prompt
+    mainPrompt = `Generate 12 unique trivia questions for a trivia app, following these specific instructions:
 
-    // Add section for recent questions
-    let recentQuestionsSection = '';
-    if (recentQuestions.length > 0) {
-      // Take the 10 most recent questions to avoid prompt getting too long
-      const limitedQuestions = recentQuestions.slice(0, 10);
-
-      recentQuestionsSection = `
+    CRITICAL STRUCTURAL REQUIREMENTS:
+    - Create EXACTLY 12 questions with detailed personalization
+    - Each question must follow the exact JSON structure shown at the end
+    - Make sure all questions are factually accurate with current information
+    - Include 4 answer choices per question (exactly one correct)
+    
+    DISTRIBUTION:
+    ${questionPrompts.join('\n')}
+    
+    QUESTION UNIQUENESS RULES:
+    - Each question must be completely distinct from all others
+    - Avoid asking multiple questions about the same person, event, work, or concept
+    - Ensure questions test different knowledge points even when related to similar topics
+    - Before finalizing, check that no two questions have the same answer
+    ${recentQuestions.length > 0 ? `
     RECENT QUESTIONS TO AVOID DUPLICATING:
-    ${limitedQuestions.map((q, idx) => `${idx + 1}. \"${q.questionText}\"`).join('\n    ')}
-    
-    IMPORTANT: Do NOT generate questions that are similar to or duplicates of these recent questions.
-    `;
-    }
-
-    // Build a more personalized prompt with specific instructions
-    const prompt = `Generate 12 unique trivia questions for a trivia app, with detailed personalization:
-
-    DISTRIBUTION AND STRUCTURE:
-    - 6 questions about primary user interest topics: ${orderedPrimaryTopics.join(', ')}
-      NOTE: The topics are listed in ORDER OF PRIORITY. Strongly favor the FIRST 3 topics in this list.
-      At least 4 questions MUST be about these first 3 topics.
-      
-    - 6 questions about adjacent topics for exploration: ${shuffledAdjacentTopics.join(', ')}
-      These are for variety and exploring related interests.
-
-    CRITICAL DUPLICATION RULES:
-    - Within this single response, do NOT create multiple questions about the same:
-      * Person/artist/historical figure (e.g., don't ask two different questions about Michael Jackson)
-      * Work/album/book/movie (e.g., don't ask about both sales and content of "Thriller")
-      * Event/phenomenon (e.g., don't ask two questions about the same historical event)
-      * Concept (e.g., don't ask multiple questions testing the same knowledge point)
-    - Each question must be entirely distinct in subject matter from all others in this batch
-    - Create maximum variety in questions, even within the same topic
- 
-    CRITICAL DUPLICATION PREVENTION:
-    1. SUBJECT-INTENT UNIQUENESS:
-       - When asking about a specific entity (person, place, thing), only ask ONE question about each specific property
-       - Example: If asking about Amazon Rainforest's size, don't also ask about its area or extent
-       - Example: If asking about Amazon Rainforest's biodiversity, don't also ask about species count or variety
-
-    2. FINGERPRINT PATTERNS TO AVOID:
-       - Don't create questions that follow these patterns for the same entity:
-         * "What is the [adjective] [feature] of [entity]?" + "Which [entity] is known for [same feature]?"
-         * "Where is [entity] located?" + "In which [location] can [entity] be found?"
-         * "When was [event] that happened at [entity]?" + "What year did [same event] occur at [entity]?"
-
-    3. ANSWER-BASED DIVERSIFICATION:
-       - BEFORE adding a question to the final set, check if any other question in this batch has the same answer
-       - If two questions would have the same answer, ensure they're asking about COMPLETELY different aspects
-       - Example: If "What rainforest has the most biodiversity?" and "Which ecosystem contains the largest variety of plant species?" both have "Amazon Rainforest" as the answer, only keep one
-    ${avoidIntentsSection}
-    ${hierarchySection}
-    ${subtopicsSection}
-    ${branchesSection}
-    ${recentQuestionsSection}
+    ${recentQuestions.slice(0, 5).map((q, i) => `${i + 1}. "${q.questionText}"`).join('\n    ')}` : ''}
 
     For EACH question, include:
-    1. A main topic (e.g., "Science", "History", "Geography") - choose from the provided topics
+    1. A main topic (e.g., "Science", "History", "Geography")
     2. A specific subtopic that represents a specialized area of the main topic
     3. A precise branch that represents a very specific sub-area within the subtopic
     4. 3-5 specific, descriptive tags related to the question content
@@ -321,25 +255,9 @@ export async function generateQuestions(
     7. A "learning capsule" providing interesting additional context about the answer
     8. The tone ("educational", "fun", "challenging", "neutral")
     9. Format ("multiple_choice")
-
-    IMPORTANT: Make the categorization HIGHLY SPECIFIC and HIERARCHICAL (topic → subtopic → branch).
-    For example, instead of "Science" → "Biology" → "Animals", use "Science" → "Zoology" → "Endangered Species Conservation".
-    Make tags very specific to the question content (e.g. "Alpine glaciers", "preservation techniques", "habitat restoration").
-    
-    DO NOT generate obvious or basic questions that test common knowledge. Instead, create thought-provoking questions that:
-    - Reveal surprising or lesser-known facts
-    - Connect concepts in unexpected ways
-    - Challenge users with interesting specifics rather than general trivia
-    - Focus on intriguing details rather than basic definitions
-    
-    Ensure a mix of difficulty levels across the questions.
-    For primary topics, match user preferences by creating questions that explore different subtopics and branches within those main topics.
-    For adjacent topics, create questions that might expand the user's interests related to their primary topics.
     
     IMPORTANT: Respond ONLY with a valid JSON array containing the question objects.
     DO NOT include any text before or after the JSON array.
-    DO NOT include numbered points or markdown formatting.
-    DO NOT include any explanations before or after the JSON array.
     ONLY return a JSON array in this exact format:
     [
       {
@@ -360,40 +278,10 @@ export async function generateQuestions(
         "format": "multiple_choice"
       },
       // more questions...
-    ]
-    
-    Ensure all questions are factually accurate and represented as valid JSON.`;
+    ]`;
 
-    // Log important sections of the prompt
-    console.log('[OPENAI] Primary topics in prompt:', orderedPrimaryTopics);
-    console.log('[OPENAI] Explicit mappings in prompt:');
-    if (explicitSubtopics.length > 0) {
-      console.log('  Topic-Subtopic pairs:');
-      explicitSubtopics.forEach(pair => {
-        console.log(`    ${pair.topic} → ${pair.subtopic}`);
-      });
-    }
-    if (explicitBranches.length > 0) {
-      console.log('  Topic-Branch pairs:');
-      explicitBranches.forEach(pair => {
-        console.log(`    ${pair.topic} → ${pair.branch}`);
-      });
-    }
-
-    // For debugging - show critical sections of the prompt
-    if (explicitSubtopics.length > 0 || explicitBranches.length > 0) {
-      console.log('[OPENAI] Hierarchical section in prompt:');
-      const section = hierarchySection ? hierarchySection.split('\n').slice(0, 10).join('\n') : 'None';
-      console.log(section);
-    }
-
-    console.log(`[OPENAI] Final prompt sections (first 3 lines of each):`);
-    console.log(`DISTRIBUTION:\n${prompt.split('\n').slice(2, 5).join('\n')}`);
-    console.log(`HIERARCHY:\n${hierarchySection ? hierarchySection.split('\n').slice(0, 3).join('\n') : 'None'}`);
-    console.log(`SUBTOPICS:\n${subtopicsSection ? subtopicsSection.split('\n').slice(0, 3).join('\n') : 'None'}`);
-    console.log(`BRANCHES:\n${branchesSection ? branchesSection.split('\n').slice(0, 3).join('\n') : 'None'}`);
-    console.log(`RECENT QUESTIONS:\n${recentQuestionsSection ? recentQuestionsSection.split('\n').slice(0, 3).join('\n') : 'None'}`);
-
+    console.log('[OPENAI] Generated prompt structure successfully');
+    console.log(`[OPENAI] Prompt has ${questionPrompts.length} question instructions`);
     console.log('====================== END OPENAI SERVICE LOGS ======================\n\n');
     const model = 'gpt-4o-mini'; // Make this easier to change if needed
     console.log('[GENERATOR] Making request to edge function');
@@ -435,7 +323,7 @@ export async function generateQuestions(
             },
             {
               role: 'user',
-              content: prompt
+              content: mainPrompt
             }
           ],
           temperature: 0.8,

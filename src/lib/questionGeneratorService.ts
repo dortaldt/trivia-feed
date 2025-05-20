@@ -20,6 +20,16 @@ interface UserAnswerWithQuestion {
   [key: string]: any;
 }
 
+// Interface for the user profile from the database
+interface UserProfile {
+  id: string;
+  topics: Record<string, { weight: number }>;
+  topic_weights?: Record<string, number>; // Legacy format
+  subtopics?: Record<string, { topic: string, weight: number }>; // Added for subtopic weights
+  recentGenerationTopics?: string[]; // Added for cyclic selection tracking
+  [key: string]: any;
+}
+
 // Local implementation of the TopicMapper to avoid import errors
 class TopicMapper {
   // Map of topics to related topics
@@ -379,27 +389,107 @@ export async function runQuestionGeneration(
   recentQuestions?: {id: string, questionText: string}[] // Add parameter for recent questions
 ): Promise<boolean> {
   try {
-    // Step 1: Check if we should generate questions (skip if forcedTopics is provided)
-    if (!forcedTopics) {
-      const generationCheck = await shouldGenerateQuestions(userId);
-      if (!generationCheck.shouldGenerate) {
-        // Don't log anything, just return false
+    // Ensure user ID is valid
+    if (!userId) {
+      console.error('[GENERATOR] Invalid user ID');
         return false;
       }
-      console.log(`[GENERATOR] Starting generation for user ${userId} based on DB check`);
-    } else {
-      console.log(`[GENERATOR] Starting forced generation for user ${userId} with provided topics`);
-    }
     
-    // Filter out any undefined or null questionText entries
-    const validRecentQuestions = recentQuestions?.filter(q => q.questionText) || [];
+    // Step 1: Get recent questions to avoid duplication
+    let validRecentQuestions: {id: string, questionText: string, topic?: string, subtopic?: string, branch?: string, tags?: string[]}[] = [];
     
-    // Log if we have recent questions to avoid duplication
-    if (validRecentQuestions.length > 0) {
-      console.log(`[GENERATOR] Using ${validRecentQuestions.length} recent questions to avoid duplication`);
+    if (recentQuestions && recentQuestions.length > 0) {
+      // Client provided recent questions - use those
+      console.log(`[GENERATOR] Using ${recentQuestions.length} client-provided recent questions`);
+      validRecentQuestions = recentQuestions;
+      
+      // Log a sample for verification
       validRecentQuestions.slice(0, 3).forEach((q, i) => {
         console.log(`[GENERATOR] Recent question ${i+1}: ${q.questionText.substring(0, 50)}...`);
       });
+    } else {
+      // No client-provided questions, fetch from database
+      try {
+        // Get IDs of questions answered by the user
+        const { data: answerData, error: answerError } = await supabase
+          .from('user_answers')
+          .select('question_id')
+          .eq('user_id', userId)
+          .order('answered_at', { ascending: false })
+          .limit(10);
+          
+        if (answerError) {
+          console.error('[GENERATOR] Error fetching recent answers:', answerError);
+        } else if (answerData && answerData.length > 0) {
+          // Get question texts for these IDs
+          const questionIds = answerData.map((a: any) => a.question_id);
+          
+          const { data: questionData, error: questionError } = await supabase
+            .from('trivia_questions')
+            .select('id, question_text, question, topic, subtopic, branch, tags')
+            .in('id', questionIds);
+            
+          if (questionError) {
+            console.error('[GENERATOR] Error fetching recent questions:', questionError);
+          } else if (questionData && questionData.length > 0) {
+            // Map to correct format
+            validRecentQuestions = questionData.map((q: any) => ({
+              id: q.id,
+              questionText: q.question_text || q.question || '',
+              topic: q.topic,
+              subtopic: q.subtopic,
+              branch: q.branch,
+              tags: q.tags
+            }));
+            
+            console.log(`[GENERATOR] Found ${validRecentQuestions.length} recent questions from database`);
+          }
+        }
+      } catch (error) {
+        console.error('[GENERATOR] Error getting recent questions:', error);
+      }
+    }
+    
+    // Enhance recent questions - if we have basic ones without hierarchical data
+    if (validRecentQuestions.length > 0) {
+      // If any recent questions are missing hierarchy data (topic, subtopic, branch), 
+      // try to fetch the complete data from the database
+      const incompleteQuestions = validRecentQuestions.filter(q => !q.topic || !q.subtopic || !q.branch);
+      
+      if (incompleteQuestions.length > 0) {
+        console.log(`[GENERATOR] Enhancing ${incompleteQuestions.length} questions with missing hierarchy data`);
+        
+        try {
+          const questionIds = incompleteQuestions.map(q => q.id);
+          const { data, error } = await supabase
+            .from('trivia_questions')
+            .select('id, topic, subtopic, branch, tags')
+            .in('id', questionIds);
+            
+          if (error) {
+            console.error('[GENERATOR] Error fetching hierarchy data:', error);
+          } else if (data && data.length > 0) {
+            // Update the questions with the fetched data
+            validRecentQuestions = validRecentQuestions.map(q => {
+              const completeData = data.find((d: any) => d.id === q.id);
+              if (completeData) {
+                return {
+                  ...q,
+                  topic: completeData.topic || q.topic,
+                  subtopic: completeData.subtopic || q.subtopic,
+                  branch: completeData.branch || q.branch,
+                  tags: completeData.tags || q.tags
+                };
+              }
+              return q;
+            });
+            
+            console.log('[GENERATOR] Successfully enhanced recent questions with hierarchy data');
+          }
+        } catch (error) {
+          console.error('[GENERATOR] Error enhancing questions with hierarchy data:', error);
+        }
+      }
     }
     
     // Step 2: Get primary topics (recent + top user topics) - or use forced topics
@@ -635,7 +725,7 @@ export async function runQuestionGeneration(
     if (!forcedTopics || forcedTopics.length === 0) {
       try {
         // Import the user profile fetching function if not already imported
-        let userProfile;
+        let userProfile: UserProfile | null;
         try {
           const { fetchUserProfile } = await import('./syncService');
           userProfile = await fetchUserProfile(userId);
@@ -765,7 +855,7 @@ export async function runQuestionGeneration(
     if (!forcedTopics || forcedTopics.length === 0) {
       try {
         // Import the user profile fetching function if not already imported
-        let userProfile;
+        let userProfile: UserProfile | null;
         try {
           const { fetchUserProfile } = await import('./syncService');
           userProfile = await fetchUserProfile(userId);
@@ -871,54 +961,145 @@ export async function runQuestionGeneration(
       }
     }
     
-    // NEW STEP: Get existing topic-intent combinations to avoid duplicates
-    const topicIntents = await getExistingTopicIntents([...primaryTopics, ...uniqueAdjacentTopics]);
+    // Step 4: Build topic-intent combinations to avoid
+    const avoidIntentsSection = await buildAvoidTopicIntentsSection(primaryTopics);
     
-    // Create intent avoidance section for the prompt
-    let avoidIntentsSection = '';
-    if (topicIntents.size > 0) {
-      const topicIntentStrings = [];
-      
-      for (const [topic, intents] of topicIntents.entries()) {
-        if (intents.size > 0) {
-          topicIntentStrings.push(`${topic}: ${Array.from(intents).join(', ')}`);
+    // Step 5: Call the OpenAI service for generation
+    try {
+      // Ensure we have at least some primary topics
+      if (primaryTopics.length === 0) {
+        primaryTopics = ['General Knowledge', 'Trivia'];
+        console.log('[GENERATOR] Using fallback topics as no primary topics were found');
+      }
+
+      // Collection of preferred subtopics from client or user profile
+      let preferredSubtopics = clientSubtopics || [];
+
+      // Try to get preferred subtopics from user profile for exploration questions
+      try {
+        const { fetchUserProfile } = await import('./syncService');
+        const userProfile = await fetchUserProfile(userId);
+        
+        if (userProfile && userProfile.topics) {
+          // Sort topics by weight
+          const weightedTopics: [string, number][] = [];
+          
+          Object.entries(userProfile.topics).forEach(([topic, data]) => {
+            if (typeof data === 'object' && data !== null && data.weight !== undefined) {
+              weightedTopics.push([topic, data.weight]);
+            }
+          });
+          
+          // Sort by weight (highest first)
+          weightedTopics.sort((a, b) => b[1] - a[1]);
+          
+          // Reorder primary topics based on weight
+          if (weightedTopics.length > 0) {
+            // Create a map for quick lookup
+            const topicSet = new Set(primaryTopics);
+            
+            // Add weighted topics that exist in primaryTopics at the beginning
+            const orderedPrimaryTopics = weightedTopics
+              .filter(([topic]) => topicSet.has(topic))
+              .map(([topic]) => topic);
+            
+            // Add any remaining topics that weren't in the weighted list
+            const remainingTopics = primaryTopics.filter(topic => !orderedPrimaryTopics.includes(topic));
+            
+            // Create the final ordered list
+            primaryTopics = [...orderedPrimaryTopics, ...remainingTopics];
+            
+            console.log('[GENERATOR] Ordered primary topics by weight:', primaryTopics);
+          }
+          
+          // Try to extract subtopics for the highest weighted topic for question 10
+          // Look for subtopics in user_answers with the top topic
+          if (primaryTopics.length > 0) {
+            const topTopic = primaryTopics[0];
+            
+            try {
+              // Get recently answered questions for this topic
+              const { data: topicAnswers, error: topicError } = await supabase
+                .from('user_answers')
+                .select('questions:question_id(subtopic)')
+                .eq('user_id', userId)
+                .eq('questions.topic', topTopic)
+                .order('answer_time', { ascending: false })
+                .limit(5);
+              
+              if (!topicError && topicAnswers && topicAnswers.length > 0) {
+                // Count subtopics to find the most common ones
+                const subtopicCount = new Map<string, number>();
+                
+                topicAnswers.forEach(answer => {
+                  if (answer.questions && answer.questions.subtopic) {
+                    const subtopic = answer.questions.subtopic;
+                    subtopicCount.set(subtopic, (subtopicCount.get(subtopic) || 0) + 1);
+                  }
+                });
+                
+                // Convert to array and sort by count
+                const sortedSubtopics = Array.from(subtopicCount.entries())
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([subtopic]) => subtopic);
+                
+                // Add these subtopics to the preferred list
+                if (sortedSubtopics.length > 0) {
+                  preferredSubtopics = [...sortedSubtopics, ...preferredSubtopics];
+                  console.log('[GENERATOR] Added top subtopics for exploration:', sortedSubtopics);
+                }
+              }
+            } catch (subtopicError) {
+              console.error('[GENERATOR] Error fetching subtopics for top topic:', subtopicError);
+            }
+          }
         }
+      } catch (profileError) {
+        console.error('[GENERATOR] Error processing user profile for subtopics:', profileError);
       }
+
+      // Prepare variables for OpenAI call  
+      const preferredBranches = clientBranches || [];
+      const preferredTags = clientTags || [];
       
-      if (topicIntentStrings.length > 0) {
-        avoidIntentsSection = `
-      AVOID THESE TOPIC-INTENT COMBINATIONS (these already exist in our database):
-      ${topicIntentStrings.join('\n      ')}
+      // Prepare recent questions with full hierarchy
+      const enhancedRecentQuestions = validRecentQuestions.map(q => ({
+        id: q.id,
+        questionText: q.questionText,
+        topic: q.topic || '',
+        subtopic: q.subtopic || '',
+        branch: q.branch || '',
+        tags: q.tags || []
+      }));
+
+      // Build avoid section for topic-intent combinations
+      const avoidIntentsSection = await buildAvoidTopicIntentsSection(primaryTopics);
       
-      For these topics, create questions with DIFFERENT intents than those listed above.
-      `;
-      }
-    }
+      // Generate questions
+      console.log('[GENERATOR] Calling OpenAI with preferred subtopics:', preferredSubtopics);
+      const generatedQuestions = await generateQuestions(
+        primaryTopics,
+        adjacentTopics,
+        6, // primaryCount
+        6, // adjacentCount
+        preferredSubtopics,
+        preferredBranches,
+        preferredTags,
+        enhancedRecentQuestions,
+        avoidIntentsSection
+      );
+
+      // Step 6: Filter out duplicates and save to database
+      const savedCount = await saveUniqueQuestions(generatedQuestions);
     
-    // Step 4: Generate questions with detailed preferences
-    const generatedQuestions = await generateQuestions(
-      primaryTopics,
-      uniqueAdjacentTopics,
-      6, // 6 questions from primary topics
-      6, // 6 questions from adjacent topics
-      finalSubtopics,
-      finalBranches,
-      finalTags,
-      validRecentQuestions, // Pass recent questions to avoid duplication
-      avoidIntentsSection // NEW: Pass the avoid intents section
-    );
-    
-    // Step 5: Filter out duplicates and save to database
-    const savedCount = await saveUniqueQuestions(generatedQuestions);
-    
-    console.log(`[GENERATOR] Generated ${generatedQuestions.length} questions, saved ${savedCount}`);
+      console.log(`[GENERATOR] Generated ${generatedQuestions.length} questions, saved ${savedCount}`);
     
     // Log generation results
     logGeneratorEvent(
       userId,
       primaryTopics,
-      uniqueAdjacentTopics,
-      generatedQuestions.length,
+      adjacentTopics,
+        generatedQuestions.length,
       savedCount,
       savedCount > 0,
       undefined,
@@ -927,7 +1108,21 @@ export async function runQuestionGeneration(
     
     return savedCount > 0;
   } catch (error) {
-    // Log error event
+      console.error('[GENERATOR] Error during question generation:', error);
+      
+      logGeneratorEvent(
+        userId,
+        [],
+        [],
+        0,
+        0,
+        false,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      
+      return false;
+    }
+  } catch (error) {
     console.error('[GENERATOR] Error during question generation:', error);
     
     logGeneratorEvent(
@@ -1120,5 +1315,41 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
   } catch (error) {
     console.error('[GENERATOR] Error saving unique questions:', error);
     return 0;
+  }
+}
+
+/**
+ * Build a section for the OpenAI prompt that lists topic-intent combinations to avoid
+ */
+async function buildAvoidTopicIntentsSection(topics: string[]): Promise<string> {
+  try {
+    // Get existing topic-intent combinations
+    const topicIntents = await getExistingTopicIntents(topics);
+    
+    // Create intent avoidance section for the prompt
+    let avoidIntentsSection = '';
+    if (topicIntents.size > 0) {
+      const topicIntentStrings = [];
+      
+      for (const [topic, intents] of topicIntents.entries()) {
+        if (intents.size > 0) {
+          topicIntentStrings.push(`${topic}: ${Array.from(intents).join(', ')}`);
+        }
+      }
+      
+      if (topicIntentStrings.length > 0) {
+        avoidIntentsSection = `
+    AVOID THESE TOPIC-INTENT COMBINATIONS (these already exist in our database):
+    ${topicIntentStrings.join('\n    ')}
+    
+    For these topics, create questions with DIFFERENT intents than those listed above.
+    `;
+      }
+    }
+    
+    return avoidIntentsSection;
+  } catch (error) {
+    console.error('[GENERATOR] Error building avoid intents section:', error);
+    return '';
   }
 } 
