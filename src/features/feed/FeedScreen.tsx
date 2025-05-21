@@ -2171,6 +2171,7 @@ const FeedScreen: React.FC = () => {
   // Then, add a useEffect to handle the needMoreQuestions state
   useEffect(() => {
     if (needMoreQuestions && personalizedFeed.length > 0) {
+      console.log('\n\n====== NEED MORE QUESTIONS TRIGGERED ======');
       console.log('[Feed] Need more questions triggered, fetching...');
       console.log(`[Feed] Current position: ${currentIndex} of ${personalizedFeed.length} items`);
       
@@ -2183,18 +2184,23 @@ const FeedScreen: React.FC = () => {
       // Check if we need to fetch new questions from the database (every 10 answered questions)
       if (totalQuestionsAnswered > 0 && totalQuestionsAnswered % 10 === 0) {
         console.log(`[Feed] User has answered ${totalQuestionsAnswered} questions (multiple of 10), fetching new questions from database`);
+        console.log(`====== FETCHING NEW QUESTIONS FROM DATABASE ======`);
+        console.log(`Trigger: ${totalQuestionsAnswered} questions answered (every 10)`);
         
         // Create a set of IDs that are already in our feed and local pool
         const existingIds = new Set([
           ...personalizedFeed.map(item => item.id),
           ...feedData.map(item => item.id)
         ]);
+        console.log(`Excluding ${existingIds.size} existing question IDs from fetch`);
         
         // Fetch new questions from the database that aren't in our existing set
         fetchNewTriviaQuestions(Array.from(existingIds))
           .then(newQuestions => {
             if (newQuestions.length > 0) {
-              console.log(`[Feed] Fetched ${newQuestions.length} new questions from database`);
+              console.log(`====== DATABASE FETCH RESULTS ======`);
+              console.log(`[Feed] Successfully fetched ${newQuestions.length} new questions from database!`);
+              console.log(`Topics fetched: ${[...new Set(newQuestions.map(q => q.topic))].join(', ')}`);
               
               // Add the new questions to both the feed data (local pool) and the personalized feed
               const updatedFeedData = [...feedData, ...newQuestions];
@@ -2221,6 +2227,8 @@ const FeedScreen: React.FC = () => {
               console.log(`[Feed] Added ${questionsToAdd.length} new questions from database to the feed`);
             } else {
               console.log('[Feed] No new questions found in database');
+              console.log(`====== DATABASE FETCH COMPLETE - NO NEW QUESTIONS ======`);
+              console.log(`All ${existingIds.size} existing questions were already in the local pool`);
               
               // Fall back to using existing questions from feedData
               addQuestionsFromExistingPool();
@@ -2228,6 +2236,8 @@ const FeedScreen: React.FC = () => {
           })
           .catch(error => {
             console.error('[Feed] Error fetching new questions from database:', error);
+            console.log(`====== DATABASE FETCH FAILED ======`);
+            console.log(`Falling back to existing question pool due to fetch error`);
             
             // Fall back to using existing questions from feedData
             addQuestionsFromExistingPool();
