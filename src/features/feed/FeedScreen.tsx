@@ -49,7 +49,7 @@ import {
 } from '../../store/triviaSlice';
 import { useIOSAnimations } from '@/hooks/useIOSAnimations';
 // Fix the import path
-import { fetchTriviaQuestions, FeedItem as FeedItemType, analyzeCorrectAnswers } from '../../lib/triviaService';
+import { fetchTriviaQuestions, fetchNewTriviaQuestions, FeedItem as FeedItemType, analyzeCorrectAnswers } from '../../lib/triviaService';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { 
   updateUserProfile, 
@@ -2177,9 +2177,72 @@ const FeedScreen: React.FC = () => {
       // Reset the flag
       setNeedMoreQuestions(false);
       
+      // Get total answered questions count
+      const totalQuestionsAnswered = userProfile?.totalQuestionsAnswered || 0;
+      
+      // Check if we need to fetch new questions from the database (every 10 answered questions)
+      if (totalQuestionsAnswered > 0 && totalQuestionsAnswered % 10 === 0) {
+        console.log(`[Feed] User has answered ${totalQuestionsAnswered} questions (multiple of 10), fetching new questions from database`);
+        
+        // Create a set of IDs that are already in our feed and local pool
+        const existingIds = new Set([
+          ...personalizedFeed.map(item => item.id),
+          ...feedData.map(item => item.id)
+        ]);
+        
+        // Fetch new questions from the database that aren't in our existing set
+        fetchNewTriviaQuestions(Array.from(existingIds))
+          .then(newQuestions => {
+            if (newQuestions.length > 0) {
+              console.log(`[Feed] Fetched ${newQuestions.length} new questions from database`);
+              
+              // Add the new questions to both the feed data (local pool) and the personalized feed
+              const updatedFeedData = [...feedData, ...newQuestions];
+              setFeedData(updatedFeedData);
+              
+              // Add some of these new questions directly to the personalized feed
+              const currentFeed = [...personalizedFeed];
+              const questionsToAdd = newQuestions.slice(0, 5); // Add up to 5 new questions
+              const updatedFeed = [...currentFeed, ...questionsToAdd];
+              
+              // Create empty explanations for new questions
+              const newExplanations: Record<string, string[]> = {};
+              questionsToAdd.forEach(item => {
+                newExplanations[item.id] = [`Fetched from database after ${totalQuestionsAnswered} answered questions`];
+              });
+              
+              // Update the feed in Redux with combined explanations
+              dispatch(setPersonalizedFeed({
+                items: updatedFeed,
+                explanations: { ...feedExplanations, ...newExplanations },
+                userId: user?.id
+              }));
+              
+              console.log(`[Feed] Added ${questionsToAdd.length} new questions from database to the feed`);
+            } else {
+              console.log('[Feed] No new questions found in database');
+              
+              // Fall back to using existing questions from feedData
+              addQuestionsFromExistingPool();
+            }
+          })
+          .catch(error => {
+            console.error('[Feed] Error fetching new questions from database:', error);
+            
+            // Fall back to using existing questions from feedData
+            addQuestionsFromExistingPool();
+          });
+      } else {
+        // Use existing questions from feedData (original behavior)
+        addQuestionsFromExistingPool();
+      }
+    }
+    
+    // Helper function to add questions from the existing pool (original behavior)
+    function addQuestionsFromExistingPool() {
       // More aggressive - ALWAYS add more questions when this flag is set
       if (feedData.length > personalizedFeed.length) {
-        console.log('[Feed] Adding more questions to feed');
+        console.log('[Feed] Adding more questions from existing pool');
         
         // Create a set of IDs that are already in our feed
         const currentFeed = [...personalizedFeed];
@@ -2188,7 +2251,7 @@ const FeedScreen: React.FC = () => {
         // Get questions that aren't already in our feed
         const availableQuestions = feedData.filter((item: FeedItemType) => !existingIds.has(item.id));
         
-        console.log(`[Feed] Found ${availableQuestions.length} available questions to add`);
+        console.log(`[Feed] Found ${availableQuestions.length} available questions to add from existing pool`);
         
         // Take up to 5 new questions to ensure we have plenty of content
         const newQuestions = availableQuestions.slice(0, 5);
@@ -2213,7 +2276,7 @@ const FeedScreen: React.FC = () => {
         console.log('[Feed] No additional questions available in feedData');
       }
     }
-  }, [needMoreQuestions, personalizedFeed, currentIndex, feedData, dispatch, user?.id, feedExplanations]);
+  }, [needMoreQuestions, personalizedFeed, currentIndex, feedData, dispatch, user?.id, feedExplanations, userProfile]);
 
   // Loading state
   if (isLoading) {
