@@ -93,6 +93,17 @@ export function useQuestionGenerator() {
     console.log(`[GENERATOR_HOOK] Triggering question generation check for user ${userId}`);
     
     try {
+      // First, check if we should generate questions based on interaction count
+      const { shouldGenerateQuestions } = await import('../lib/questionGeneratorService');
+      const shouldGenerate = await shouldGenerateQuestions(userId);
+      
+      if (!shouldGenerate.shouldGenerate) {
+        console.log(`[GENERATOR_HOOK] Generation not needed: ${shouldGenerate.reason}, count: ${shouldGenerate.answerCount}`);
+        return false;
+      }
+      
+      console.log(`[GENERATOR_HOOK] Should generate questions: ${shouldGenerate.reason}, count: ${shouldGenerate.answerCount}`);
+      
       // Extract client-side interaction data for topic generation
       const clientRecentTopics: string[] = [];
       const clientRecentSubtopics: string[] = [];

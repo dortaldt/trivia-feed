@@ -333,8 +333,8 @@ export async function shouldGenerateQuestions(userId: string): Promise<{
     
     console.log('[GENERATOR] Client-side user answer count:', answerCount);
     
-    // Not enough answers yet
-    if (answerCount < 1) {
+    // Not enough answers yet - must have at least 6 interactions before first generation
+    if (answerCount < 6) {
       console.log('[GENERATOR] Not enough questions answered yet:', answerCount);
       return { shouldGenerate: false, reason: 'none', answerCount };
     }
