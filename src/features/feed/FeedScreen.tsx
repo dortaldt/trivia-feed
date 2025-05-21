@@ -63,7 +63,6 @@ import { syncWeightChanges } from '../../lib/syncService';
 import { loadUserDataThunk } from '../../store/thunks';
 import { FeatherIcon } from '@/components/FeatherIcon';
 import { ThemedText } from '@/components/ThemedText';
-import { useColorScheme } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../../lib/supabaseClient';
 import { countries } from '../../data/countries';
@@ -639,14 +638,15 @@ const FeedScreen: React.FC = () => {
       console.log(`[Feed] Topics already in current feed: ${Array.from(topicsInCurrentFeed).join(', ')}`);
       
       // Get questions that aren't already in our feed
-      const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
+      const availableQuestions = feedData.filter((item: FeedItemType) => !existingIds.has(item.id));
       
-      // Force cold start strategy during cold start phase (position <= 20)
+      // MODIFIED: Always use cold start logic to ensure consistent topic filtering regardless of position
+      // This ensures the topic filter from triviaService is respected through the entire question selection pipeline
       const totalInteractions = Object.keys(updatedProfile.interactions || {}).length;
       const totalQuestionsAnswered = updatedProfile.totalQuestionsAnswered || 0;
-      const forceColdStart = checkpointPosition <= 20; // Always use cold start logic for checkpoints <= 20
+      const forceColdStart = true; // MODIFIED: Always use cold start logic for consistent topic filtering
       
-      console.log(`[Feed] Checkpoint ${checkpointPosition}: Using ${forceColdStart ? 'cold start' : 'personalized'} logic`);
+      console.log(`[Feed] Checkpoint ${checkpointPosition}: Using cold start logic with forced phase for consistent topic filtering`);
       console.log(`[Feed] Current state: totalInteractions=${totalInteractions}, totalQuestionsAnswered=${totalQuestionsAnswered}`);
       
       // Set temporary flag to ensure cold start logic is used
@@ -765,7 +765,8 @@ const FeedScreen: React.FC = () => {
           // Log if these are exploration or branching questions
           const isExploration = checkpointPosition === 4; // First checkpoint is exploration
           const isBranching = checkpointPosition > 4 && checkpointPosition <= 20; // 8, 12, 16, 20 are branching
-          console.log(`[Feed] Question type: ${isExploration ? 'Exploration' : isBranching ? 'Branching' : 'Normal'}`);
+          const isNormal = checkpointPosition > 20; // Beyond position 20
+          console.log(`[Feed] Question type: ${isExploration ? 'Exploration' : isBranching ? 'Branching' : isNormal ? 'Normal' : 'Unknown'}`);
         
         // Create a new feed with existing + new questions
         const updatedFeed = [...currentFeed, ...newQuestions];
@@ -777,7 +778,7 @@ const FeedScreen: React.FC = () => {
         newQuestions.forEach((item: FeedItemType) => {
           combinedExplanations[item.id] = [
             ...(personalizedExplanations[item.id] || []),
-            `Added at cold start checkpoint position ${checkpointPosition}`
+            `Added at ${isExploration ? 'cold start exploration' : isBranching ? 'cold start branching' : 'normal phase'} checkpoint position ${checkpointPosition}`
           ];
         });
         
@@ -791,7 +792,8 @@ const FeedScreen: React.FC = () => {
         console.log(`[Feed] No new questions were found to add at checkpoint ${checkpointPosition}`);
         }
       } else {
-        // Use standard personalization logic for positions > 20
+        // This should never execute with the fix above, but keeping as fallback
+        console.log(`[Feed] WARNING: Using getPersonalizedFeed directly (should not happen with single topic mode)`);
         const { items: personalizedItems, explanations: personalizedExplanations } = 
           getPersonalizedFeed(availableQuestions, updatedProfile, 4);
         
@@ -931,7 +933,7 @@ const FeedScreen: React.FC = () => {
         addQuestionsAtCheckpoint(currentPosition, result.updatedProfile);
       } else if (currentPosition > 20) {
         // After position 20 (past cold start) - add 1 question
-        console.log('[Feed] Past cold start, adding one question after skip');
+        console.log(`[FastScroll] Past cold start (position ${currentPosition}), adding 1 question`);
         
         // Only proceed if we have feedData to choose from
         if (feedData.length > personalizedFeed.length) {
@@ -940,19 +942,29 @@ const FeedScreen: React.FC = () => {
           const existingIds = new Set(currentFeed.map(item => item.id));
           
           // Get questions that aren't already in our feed
-          const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
+          const availableQuestions = feedData.filter((item: FeedItemType) => !existingIds.has(item.id));
           
           if (availableQuestions.length > 0) {
-            // Use personalization logic to select new questions
-              // IMPORTANT: Use the UPDATED profile here too
+            // MODIFIED: Use the coldStartStrategy with forced 'normal' phase to ensure topic filtering is maintained
+            // Make a deep copy of the profile to avoid modifying the original
+            const tempProfile = JSON.parse(JSON.stringify(userProfile));
+            
+            // Make sure coldStartComplete is false to trigger cold start logic
+            tempProfile.coldStartComplete = false;
+            
+            // Import getColdStartFeed from the coldStartStrategy
+            const { getColdStartFeed } = require('../../lib/coldStartStrategy');
+            
+            // Use the cold start feed generator with the forced 'normal' phase
             const { items: personalizedItems, explanations: personalizedExplanations } = 
-              getPersonalizedFeed(availableQuestions, result.updatedProfile, 1); // Only get 1 question
-          
-            // Take only the first question
-            const newQuestions = personalizedItems.filter(item => !existingIds.has(item.id)).slice(0, 1);
+                getColdStartFeed(availableQuestions, tempProfile, undefined, 'normal');
+                
+            // Take only the first question since we only want to add one after a skip
+            const newQuestions = personalizedItems.filter((item: FeedItemType) => !existingIds.has(item.id)).slice(0, 1);
         
             if (newQuestions.length > 0) {
-              console.log(`[Feed] Adding 1 personalized question to feed after skip`);
+              console.log(`[FastScroll] Adding 1 question to feed using cold start strategy with normal phase`);
+              console.log(`[FastScroll] Selected topic: ${newQuestions[0].topic}`);
               
               // Create a new feed with existing + new question
               const updatedFeed = [...currentFeed, ...newQuestions];
@@ -964,17 +976,19 @@ const FeedScreen: React.FC = () => {
               newQuestions.forEach((item: FeedItemType) => {
                 combinedExplanations[item.id] = [
                   ...(personalizedExplanations[item.id] || []),
-                  `Added after question skip`
+                  `Added after skip (past cold start)`
                 ];
               });
           
               // Update the feed in Redux - log dispatch for debugging
-              console.log(`[Feed] Dispatching setPersonalizedFeed with ${updatedFeed.length} items`);
+              console.log(`[FastScroll] Dispatching setPersonalizedFeed with ${updatedFeed.length} items`);
               dispatch(setPersonalizedFeed({
                 items: updatedFeed,
                 explanations: combinedExplanations,
-                userId: user?.id || undefined // Handle null user case
+                userId: user?.id || undefined // Handle nullable user
               }));
+            } else {
+              console.log(`[FastScroll] No new questions found to add after fast scroll`);
             }
           }
         }
@@ -1126,7 +1140,7 @@ const FeedScreen: React.FC = () => {
           const existingIds = new Set(currentFeed.map(item => item.id));
           
           // Get questions that aren't already in our feed
-          const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
+          const availableQuestions = feedData.filter((item: FeedItemType) => !existingIds.has(item.id));
           
           if (availableQuestions.length > 0) {
             // Use personalization logic to select new questions
@@ -1134,7 +1148,7 @@ const FeedScreen: React.FC = () => {
               getPersonalizedFeed(availableQuestions, userProfile, 1); // Only get 1 question
           
             // Take only the first question
-            const newQuestions = personalizedItems.filter(item => !existingIds.has(item.id)).slice(0, 1);
+            const newQuestions = personalizedItems.filter((item: FeedItemType) => !existingIds.has(item.id)).slice(0, 1);
         
             if (newQuestions.length > 0) {
               console.log(`[FastScroll] Adding 1 personalized question to feed`);
@@ -1427,13 +1441,13 @@ const FeedScreen: React.FC = () => {
             console.log('[Feed] Pending skip effect: Past cold start, adding one question.');
             const currentFeed = [...personalizedFeed];
             const existingIds = new Set(currentFeed.map(item => item.id));
-            const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
+            const availableQuestions = feedData.filter((item: FeedItemType) => !existingIds.has(item.id));
             
             if (availableQuestions.length > 0) {
               const { items: personalizedItems, explanations: personalizedExplanations } = 
                 getPersonalizedFeed(availableQuestions, userProfile, 1); // userProfile from hook dependency
               
-              const newQuestions = personalizedItems.filter(item => !existingIds.has(item.id)).slice(0, 1);
+              const newQuestions = personalizedItems.filter((item: FeedItemType) => !existingIds.has(item.id)).slice(0, 1);
               
               if (newQuestions.length > 0) {
                 const updatedFeed = [...currentFeed, ...newQuestions];
@@ -1676,14 +1690,14 @@ const FeedScreen: React.FC = () => {
         const existingIds = new Set(currentFeed.map(item => item.id));
         
         // Get questions that aren't already in our feed
-        const availableQuestions = feedData.filter(item => !existingIds.has(item.id));
+        const availableQuestions = feedData.filter((item: FeedItemType) => !existingIds.has(item.id));
         
         // Use personalization logic to select new questions
         const { items: personalizedItems, explanations: personalizedExplanations } = 
           getPersonalizedFeed(availableQuestions, updatedProfile, 1); // Only get 1 question in normal state
           
         // Take only one question
-        const newQuestions = personalizedItems.filter(item => !existingIds.has(item.id)).slice(0, 1);
+        const newQuestions = personalizedItems.filter((item: FeedItemType) => !existingIds.has(item.id)).slice(0, 1);
         
         if (newQuestions.length > 0) {
           console.log(`[Feed] Appending 1 personalized question after interaction`);
@@ -1698,7 +1712,7 @@ const FeedScreen: React.FC = () => {
           newQuestions.forEach((item: FeedItemType) => {
             combinedExplanations[item.id] = [
               ...(personalizedExplanations[item.id] || []),
-              `Added after question interaction`
+              `Added after question skip`
             ];
           });
           
@@ -2135,7 +2149,7 @@ const FeedScreen: React.FC = () => {
   // Add keyboard shortcut for toggling debug mode on web
   useEffect(() => {
     if (Platform.OS === 'web') {
-      const handleKeyDown = (event: KeyboardEvent) => {
+      const handleKeyDown = (event: any) => {
         // Alt+D shortcut to toggle debug mode
         if (event.altKey && event.key === 'd') {
           event.preventDefault();
@@ -2158,21 +2172,26 @@ const FeedScreen: React.FC = () => {
   useEffect(() => {
     if (needMoreQuestions && personalizedFeed.length > 0) {
       console.log('[Feed] Need more questions triggered, fetching...');
+      console.log(`[Feed] Current position: ${currentIndex} of ${personalizedFeed.length} items`);
+      
       // Reset the flag
       setNeedMoreQuestions(false);
       
-      // Logic to add more questions to the feed
-      const remainingQuestions = personalizedFeed.length - currentIndex;
-      if (remainingQuestions < 5 && feedData.length > personalizedFeed.length) {
+      // More aggressive - ALWAYS add more questions when this flag is set
+      if (feedData.length > personalizedFeed.length) {
+        console.log('[Feed] Adding more questions to feed');
+        
         // Create a set of IDs that are already in our feed
         const currentFeed = [...personalizedFeed];
         const existingIds = new Set(currentFeed.map(item => item.id));
         
         // Get questions that aren't already in our feed
-        const availableQuestions = feedData.filter((item) => !existingIds.has(item.id));
+        const availableQuestions = feedData.filter((item: FeedItemType) => !existingIds.has(item.id));
         
-        // Take only a few new questions
-        const newQuestions = availableQuestions.slice(0, 2);
+        console.log(`[Feed] Found ${availableQuestions.length} available questions to add`);
+        
+        // Take up to 5 new questions to ensure we have plenty of content
+        const newQuestions = availableQuestions.slice(0, 5);
         
         if (newQuestions.length > 0) {
           // Create a new feed with existing + new questions
@@ -2186,7 +2205,12 @@ const FeedScreen: React.FC = () => {
           }));
           
           console.log(`[Feed] Added ${newQuestions.length} new questions to the feed`);
+          console.log(`[Feed] Feed now has ${updatedFeed.length} total questions`);
+        } else {
+          console.log('[Feed] No new questions available to add');
         }
+      } else {
+        console.log('[Feed] No additional questions available in feedData');
       }
     }
   }, [needMoreQuestions, personalizedFeed, currentIndex, feedData, dispatch, user?.id, feedExplanations]);
@@ -2328,12 +2352,19 @@ const FeedScreen: React.FC = () => {
           autoscrollToTopThreshold: 10
         }}
         onEndReached={() => {
+          console.log('[Feed] onEndReached triggered at index', currentIndex, 'of', personalizedFeed.length);
+          
           // Preload more when nearing the end
           if (currentIndex < personalizedFeed.length - 3) {
             preloadNextItems(currentIndex + 1);
           }
+          
+          // ALWAYS trigger loading more questions when this handler is called
+          // This ensures we'll have more content ready
+          console.log('[Feed] onEndReached - ALWAYS triggering needMoreQuestions');
+          setNeedMoreQuestions(true);
         }}
-        onEndReachedThreshold={0.5} // Trigger when halfway through the last item
+        onEndReachedThreshold={0.8} // Trigger when 80% through the last item - more aggressive
         directionalLockEnabled={true}
         disableIntervalMomentum={true}
         legacyImplementation={false}
