@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   FlatList,
@@ -19,6 +19,11 @@ import {
   Alert,
   ActivityIndicator,
   GestureResponderEvent,
+  Pressable,
+  Keyboard,
+  KeyboardEvent,
+  StatusBar,
+  useColorScheme
 } from 'react-native';
 import { 
   Text, 
@@ -70,6 +75,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LoadingBar } from '../../components/ui';
 import { QuestionInteraction } from '../../lib/personalizationService';
 import { recordUserAnswer } from '../../lib/leaderboardService';
+import { registerUserAnswer } from '../../lib/questionGeneratorService';
+import { useIsFocused } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
+import { Router } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
 
@@ -1584,10 +1593,34 @@ const FeedScreen: React.FC = () => {
       console.log(`Warning: No start time recorded for answered question ${questionId}`);
     }
     
-    // Get the user ID from auth context
+    // Get the user ID from auth context for logged-in users
     const userId = user?.id;
     
-    // Record the answer for leaderboard tracking if user is logged in
+    // Get a user identifier that works for both guest and logged-in users
+    let userIdentifier: string | undefined = userId;
+    
+    // If no auth user ID (guest mode), use device ID instead
+    if (!userIdentifier) {
+      try {
+        // Get or generate device ID for guest users
+        const deviceId = await AsyncStorage.getItem('mixpanel_device_id');
+        if (deviceId) {
+          userIdentifier = deviceId;
+          console.log('[FEED] Using device ID for guest user:', userIdentifier);
+        } else {
+          console.log('[FEED] No device ID available for guest user');
+        }
+      } catch (error) {
+        console.error('[FEED] Error getting device ID for guest user:', error);
+      }
+    }
+    
+    // Register the answer with our client-side tracking system
+    if (userIdentifier) {
+      registerUserAnswer(userIdentifier);
+    }
+    
+    // Record the answer in the database if user is logged in
     if (userId) {
       try {
         // This directly calls the Supabase database to update leaderboard stats
@@ -1696,7 +1729,7 @@ const FeedScreen: React.FC = () => {
     );
 
     // Track this question interaction in client-side storage for better topic generation
-    if (user?.id) {
+    if (userIdentifier) {
       // Debug: log the full question item to see what properties are available
       console.log('\n\n====================== ANSWER TRACKING LOGS ======================');
       console.log('[FEED] Question properties available:');
@@ -1706,7 +1739,7 @@ const FeedScreen: React.FC = () => {
       
       // Track client-side interaction data for personalized topic generation
       trackQuestionInteraction(
-        user.id, 
+        userIdentifier, 
         questionId, 
         questionItem.topic || 'Unknown',
         // Handle optional properties safely
@@ -1729,12 +1762,12 @@ const FeedScreen: React.FC = () => {
     }
 
     // Use a short timeout to prevent multiple rapid calls
-    console.log('[FEED] Attempting to trigger question generation for user:', user?.id);
+    console.log('[FEED] Attempting to trigger question generation for user:', userIdentifier);
     // Only call once, with a slight delay to ensure Redux state is updated
     setTimeout(() => {
       // This will now use our client-side counter to determine if generation is needed
-      if (user?.id) {
-        triggerQuestionGeneration(user?.id).catch(error => {
+      if (userIdentifier) {
+        triggerQuestionGeneration(userIdentifier).catch(error => {
           console.error('Error triggering question generation:', error);
         });
       }

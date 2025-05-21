@@ -87,27 +87,10 @@ export function useQuestionGenerator() {
       return false;
     }
     
-    // Initialize counter for this user if it doesn't exist
-    if (!answeredQuestionsRef.current[userId]) {
-      answeredQuestionsRef.current[userId] = 0;
-    }
-    
-    // Increment the counter for this user
-    answeredQuestionsRef.current[userId]++;
-    const currentCount = answeredQuestionsRef.current[userId];
-    
-    console.log(`[GENERATOR_HOOK] User ${userId} has answered ${currentCount} questions since last generation`);
-    
-    // Only generate questions every 6 questions
-    if (currentCount % 6 !== 0) {
-      console.log(`[GENERATOR_HOOK] Not yet at a multiple of 6 (count: ${currentCount}), skipping generation`);
-      return false;
-    }
-    
-    // Update last attempt timestamp
+    // Update last attempt timestamp to prevent multiple rapid calls
     lastGenerationAttemptRef.current = now;
     
-    console.log(`[GENERATOR_HOOK] User answered ${currentCount} questions (multiple of 6), triggering generation`);
+    console.log(`[GENERATOR_HOOK] Triggering question generation check for user ${userId}`);
     
     try {
       // Extract client-side interaction data for topic generation

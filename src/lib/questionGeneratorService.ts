@@ -237,6 +237,27 @@ export async function getUserTopTopics(userId: string, scoreThreshold: number = 
 // Track the last generation time for each user
 const lastGenerationTimes: Record<string, { timestamp: number, answerCount: number }> = {};
 
+// Add a client-side tracking system for interactions
+const clientSideAnswerCounts: Record<string, number> = {};
+
+/**
+ * Register an answer with the client-side tracking system
+ * This should be called whenever a user answers a question
+ */
+export function registerUserAnswer(userId: string): number {
+  if (!userId) return 0;
+  
+  // Initialize if needed
+  if (!clientSideAnswerCounts[userId]) {
+    clientSideAnswerCounts[userId] = 0;
+  }
+  
+  // Increment and return the new count
+  clientSideAnswerCounts[userId]++;
+  console.log(`[GENERATOR] Client-side answer count for ${userId}: ${clientSideAnswerCounts[userId]}`);
+  return clientSideAnswerCounts[userId];
+}
+
 /**
  * Simple function to get existing topic-intent combinations from the database
  * This helps prevent generating questions with the same intent for the same topic
@@ -306,23 +327,16 @@ export async function shouldGenerateQuestions(userId: string): Promise<{
       return { shouldGenerate: false, reason: 'none' };
     }
     
-    // Get the total number of questions answered by this user
-    const { count: answerCount, error: countError } = await supabase
-      .from('user_answers')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
+    // Use client-side answer count tracking instead of database query
+    // This will work for both guest and logged-in users
+    const answerCount = clientSideAnswerCounts[userId] || 0;
     
-    console.log('[GENERATOR] Found user answer count:', answerCount);
-    
-    if (countError) {
-      console.error('[GENERATOR] Error checking user answer count:', countError);
-      return { shouldGenerate: false, reason: 'none' };
-    }
+    console.log('[GENERATOR] Client-side user answer count:', answerCount);
     
     // Not enough answers yet
-    if (!answerCount || answerCount < 1) {
+    if (answerCount < 1) {
       console.log('[GENERATOR] Not enough questions answered yet:', answerCount);
-      return { shouldGenerate: false, reason: 'none', answerCount: answerCount || 0 };
+      return { shouldGenerate: false, reason: 'none', answerCount };
     }
     
     // Check if we've recently generated questions for this milestone
@@ -342,22 +356,12 @@ export async function shouldGenerateQuestions(userId: string): Promise<{
       }
     }
     
-    // COMMENT OUT FOR PRODUCTION - DEBUG ONLY
-    // Force question generation for testing purposes
-    // console.log('[GENERATOR] DEBUG: Will generate questions regardless of count');
-    // lastGenerationTimes[userId] = { timestamp: Date.now(), answerCount: answerCount || 0 };
-    // return { 
-    //   shouldGenerate: true, 
-    //   reason: 'question_count', 
-    //   answerCount 
-    // };
-    
     // Generate new questions every 6 questions answered
     if (answerCount > 0 && answerCount % 6 === 0) {
       console.log(`[GENERATOR] User answered ${answerCount} questions (multiple of 6), triggering generation`);
       
       // Record generation time and count
-      lastGenerationTimes[userId] = { timestamp: Date.now(), answerCount: answerCount || 0 };
+      lastGenerationTimes[userId] = { timestamp: Date.now(), answerCount };
       
       return { 
         shouldGenerate: true, 
@@ -974,7 +978,7 @@ export async function runQuestionGeneration(
 
       // Collection of preferred subtopics from client or user profile
       let preferredSubtopics = clientSubtopics || [];
-
+    
       // Try to get preferred subtopics from user profile for exploration questions
       try {
         const { fetchUserProfile } = await import('./syncService');
@@ -1077,8 +1081,8 @@ export async function runQuestionGeneration(
       
       // Generate questions
       console.log('[GENERATOR] Calling OpenAI with preferred subtopics:', preferredSubtopics);
-      const generatedQuestions = await generateQuestions(
-        primaryTopics,
+    const generatedQuestions = await generateQuestions(
+      primaryTopics,
         adjacentTopics,
         6, // primaryCount
         6, // adjacentCount
@@ -1087,19 +1091,19 @@ export async function runQuestionGeneration(
         preferredTags,
         enhancedRecentQuestions,
         avoidIntentsSection
-      );
-
-      // Step 6: Filter out duplicates and save to database
-      const savedCount = await saveUniqueQuestions(generatedQuestions);
+    );
     
-      console.log(`[GENERATOR] Generated ${generatedQuestions.length} questions, saved ${savedCount}`);
+      // Step 6: Filter out duplicates and save to database
+    const savedCount = await saveUniqueQuestions(generatedQuestions);
+    
+    console.log(`[GENERATOR] Generated ${generatedQuestions.length} questions, saved ${savedCount}`);
     
     // Log generation results
     logGeneratorEvent(
       userId,
       primaryTopics,
       adjacentTopics,
-        generatedQuestions.length,
+      generatedQuestions.length,
       savedCount,
       savedCount > 0,
       undefined,
