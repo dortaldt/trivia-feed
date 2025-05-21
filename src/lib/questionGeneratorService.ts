@@ -241,6 +241,16 @@ const lastGenerationTimes: Record<string, { timestamp: number, answerCount: numb
 const clientSideAnswerCounts: Record<string, number> = {};
 
 /**
+ * Get the client-side answer count for a user
+ * @param userId The user ID to get the count for
+ * @returns The number of answers recorded client-side
+ */
+export function getClientSideAnswerCount(userId: string): number {
+  if (!userId) return 0;
+  return clientSideAnswerCounts[userId] || 0;
+}
+
+/**
  * Register an answer with the client-side tracking system
  * This should be called whenever a user answers a question
  */

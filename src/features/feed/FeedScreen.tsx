@@ -74,7 +74,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LoadingBar } from '../../components/ui';
 import { QuestionInteraction } from '../../lib/personalizationService';
 import { recordUserAnswer } from '../../lib/leaderboardService';
-import { registerUserAnswer } from '../../lib/questionGeneratorService';
+import { registerUserAnswer, getClientSideAnswerCount } from '../../lib/questionGeneratorService';
 import { useIsFocused } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { Router } from 'expo-router';
@@ -1632,8 +1632,10 @@ const FeedScreen: React.FC = () => {
     }
     
     // Register the answer with our client-side tracking system
+    let clientSideAnswerCount = 0;
     if (userIdentifier) {
-      registerUserAnswer(userIdentifier);
+      clientSideAnswerCount = registerUserAnswer(userIdentifier);
+      console.log(`[Answer] Client-side answer count: ${clientSideAnswerCount}`);
     }
     
     // Record the answer in the database if user is logged in
@@ -1684,9 +1686,8 @@ const FeedScreen: React.FC = () => {
     
     // Check if user just hit a multiple of 10 questions answered
     // This ensures database fetch is triggered even if FlatList onEndReached doesn't fire
-    const totalQuestionsAnswered = updatedProfile.totalQuestionsAnswered || 0;
-    if (totalQuestionsAnswered > 0 && totalQuestionsAnswered % 10 === 0) {
-      console.log(`\n\n====== MULTIPLE OF 10 QUESTIONS ANSWERED (${totalQuestionsAnswered}) ======`);
+    if (clientSideAnswerCount > 0 && clientSideAnswerCount % 10 === 0) {
+      console.log(`\n\n====== MULTIPLE OF 10 QUESTIONS ANSWERED (${clientSideAnswerCount}) ======`);
       console.log(`Directly triggering database fetch from answer handler`);
       setNeedMoreQuestions(true);
     }
@@ -2193,76 +2194,97 @@ const FeedScreen: React.FC = () => {
       // Reset the flag
       setNeedMoreQuestions(false);
       
-      // Get total answered questions count
-      const totalQuestionsAnswered = userProfile?.totalQuestionsAnswered || 0;
-      console.log(`[Feed] Total questions answered from userProfile: ${totalQuestionsAnswered}`);
-      console.log(`[Feed] Is multiple of 10? ${totalQuestionsAnswered % 10 === 0 ? 'YES' : 'NO'}`);
-      
-      // Check if we need to fetch new questions from the database (every 10 answered questions)
-      if (totalQuestionsAnswered > 0 && totalQuestionsAnswered % 10 === 0) {
-        console.log(`[Feed] User has answered ${totalQuestionsAnswered} questions (multiple of 10), fetching new questions from database`);
-        console.log(`====== FETCHING NEW QUESTIONS FROM DATABASE ======`);
-        console.log(`Trigger: ${totalQuestionsAnswered} questions answered (every 10)`);
+      // Use an async function inside the effect
+      (async () => {
+        // Get total answered questions count
+        const totalQuestionsAnswered = userProfile?.totalQuestionsAnswered || 0;
+        console.log(`[Feed] Total questions answered from userProfile: ${totalQuestionsAnswered}`);
+        console.log(`[Feed] Is multiple of 10? ${totalQuestionsAnswered % 10 === 0 ? 'YES' : 'NO'}`);
         
-        // Create a set of IDs that are already in our feed and local pool
-        const existingIds = new Set([
-          ...personalizedFeed.map(item => item.id),
-          ...feedData.map(item => item.id)
-        ]);
-        console.log(`Excluding ${existingIds.size} existing question IDs from fetch`);
+        // Get client-side answer count for comparison if we have a user identifier
+        let clientSideCount = 0;
+        if (user?.id) {
+          clientSideCount = getClientSideAnswerCount(user.id);
+        } else {
+          // Try to get device ID for guest users
+          const deviceId = await AsyncStorage.getItem('mixpanel_device_id');
+          if (deviceId) {
+            clientSideCount = getClientSideAnswerCount(deviceId);
+          }
+        }
+        console.log(`[Feed] Client-side answer count: ${clientSideCount}`);
+        console.log(`[Feed] Client-side multiple of 10? ${clientSideCount % 10 === 0 ? 'YES' : 'NO'}`);
         
-        // Fetch new questions from the database that aren't in our existing set
-        fetchNewTriviaQuestions(Array.from(existingIds))
-          .then(newQuestions => {
-            if (newQuestions.length > 0) {
-              console.log(`====== DATABASE FETCH RESULTS ======`);
-              console.log(`[Feed] Successfully fetched ${newQuestions.length} new questions from database!`);
-              console.log(`Topics fetched: ${[...new Set(newQuestions.map(q => q.topic))].join(', ')}`);
-              
-              // Add the new questions to both the feed data (local pool) and the personalized feed
-              const updatedFeedData = [...feedData, ...newQuestions];
-              setFeedData(updatedFeedData);
-              
-              // Add some of these new questions directly to the personalized feed
-              const currentFeed = [...personalizedFeed];
-              const questionsToAdd = newQuestions.slice(0, 5); // Add up to 5 new questions
-              const updatedFeed = [...currentFeed, ...questionsToAdd];
-              
-              // Create empty explanations for new questions
-              const newExplanations: Record<string, string[]> = {};
-              questionsToAdd.forEach(item => {
-                newExplanations[item.id] = [`Fetched from database after ${totalQuestionsAnswered} answered questions`];
-              });
-              
-              // Update the feed in Redux with combined explanations
-              dispatch(setPersonalizedFeed({
-                items: updatedFeed,
-                explanations: { ...feedExplanations, ...newExplanations },
-                userId: user?.id
-              }));
-              
-              console.log(`[Feed] Added ${questionsToAdd.length} new questions from database to the feed`);
-            } else {
-              console.log('[Feed] No new questions found in database');
-              console.log(`====== DATABASE FETCH COMPLETE - NO NEW QUESTIONS ======`);
-              console.log(`All ${existingIds.size} existing questions were already in the local pool`);
+        // Check if we need to fetch new questions from the database (every 10 answered questions)
+        // Use EITHER count to determine if we should fetch - gives us two chances to hit the trigger
+        const shouldFetchFromDb = (totalQuestionsAnswered > 0 && totalQuestionsAnswered % 10 === 0) || 
+                                  (clientSideCount > 0 && clientSideCount % 10 === 0);
+        
+        if (shouldFetchFromDb) {
+          console.log(`[Feed] User has answered ${totalQuestionsAnswered} questions (multiple of 10), fetching new questions from database`);
+          console.log(`====== FETCHING NEW QUESTIONS FROM DATABASE ======`);
+          console.log(`Trigger: ${totalQuestionsAnswered} questions answered (every 10)`);
+          
+          // Create a set of IDs that are already in our feed and local pool
+          const existingIds = new Set([
+            ...personalizedFeed.map(item => item.id),
+            ...feedData.map(item => item.id)
+          ]);
+          console.log(`Excluding ${existingIds.size} existing question IDs from fetch`);
+          
+          // Fetch new questions from the database that aren't in our existing set
+          fetchNewTriviaQuestions(Array.from(existingIds))
+            .then(newQuestions => {
+              if (newQuestions.length > 0) {
+                console.log(`====== DATABASE FETCH RESULTS ======`);
+                console.log(`[Feed] Successfully fetched ${newQuestions.length} new questions from database!`);
+                console.log(`Topics fetched: ${[...new Set(newQuestions.map(q => q.topic))].join(', ')}`);
+                
+                // Add the new questions to both the feed data (local pool) and the personalized feed
+                const updatedFeedData = [...feedData, ...newQuestions];
+                setFeedData(updatedFeedData);
+                
+                // Add some of these new questions directly to the personalized feed
+                const currentFeed = [...personalizedFeed];
+                const questionsToAdd = newQuestions.slice(0, 5); // Add up to 5 new questions
+                const updatedFeed = [...currentFeed, ...questionsToAdd];
+                
+                // Create empty explanations for new questions
+                const newExplanations: Record<string, string[]> = {};
+                questionsToAdd.forEach(item => {
+                  newExplanations[item.id] = [`Fetched from database after ${totalQuestionsAnswered} answered questions`];
+                });
+                
+                // Update the feed in Redux with combined explanations
+                dispatch(setPersonalizedFeed({
+                  items: updatedFeed,
+                  explanations: { ...feedExplanations, ...newExplanations },
+                  userId: user?.id
+                }));
+                
+                console.log(`[Feed] Added ${questionsToAdd.length} new questions from database to the feed`);
+              } else {
+                console.log('[Feed] No new questions found in database');
+                console.log(`====== DATABASE FETCH COMPLETE - NO NEW QUESTIONS ======`);
+                console.log(`All ${existingIds.size} existing questions were already in the local pool`);
+                
+                // Fall back to using existing questions from feedData
+                addQuestionsFromExistingPool();
+              }
+            })
+            .catch(error => {
+              console.error('[Feed] Error fetching new questions from database:', error);
+              console.log(`====== DATABASE FETCH FAILED ======`);
+              console.log(`Falling back to existing question pool due to fetch error`);
               
               // Fall back to using existing questions from feedData
               addQuestionsFromExistingPool();
-            }
-          })
-          .catch(error => {
-            console.error('[Feed] Error fetching new questions from database:', error);
-            console.log(`====== DATABASE FETCH FAILED ======`);
-            console.log(`Falling back to existing question pool due to fetch error`);
-            
-            // Fall back to using existing questions from feedData
-            addQuestionsFromExistingPool();
-          });
-      } else {
-        // Use existing questions from feedData (original behavior)
-        addQuestionsFromExistingPool();
-      }
+            });
+        } else {
+          // Use existing questions from feedData (original behavior)
+          addQuestionsFromExistingPool();
+        }
+      })();
     }
     
     // Helper function to add questions from the existing pool (original behavior)
