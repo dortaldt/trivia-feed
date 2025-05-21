@@ -13,9 +13,29 @@
     },
     "production": {
       "autoIncrement": true
+    },
+    "music-development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "APP_TOPIC": "music"
+      }
+    },
+    "music-preview": {
+      "distribution": "internal",
+      "env": {
+        "APP_TOPIC": "music"
+      }
+    },
+    "music-production": {
+      "autoIncrement": true,
+      "env": {
+        "APP_TOPIC": "music"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {},
+    "music-production": {}
   }
 }

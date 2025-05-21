@@ -73,13 +73,36 @@ function getTopicAsset(assetName) {
   return `./assets/images/${assetName}-${activeTopic}.png`;
 }
 
+// Configure app-specific values based on topic
+function getAppSpecificConfig(topic) {
+  const appConfigs = {
+    default: {
+      bundleId: "com.triviafeed",
+      scheme: "trivia-feed",
+      slug: "trivia-feed",
+    },
+    music: {
+      bundleId: "com.triviafeed.music",
+      scheme: "trivia-feed-music",
+      slug: "trivia-feed-music",
+    }
+    // Add more topic-specific configurations as needed
+  };
+  
+  // Return configuration for the specified topic or use default
+  return appConfigs[topic] || appConfigs.default;
+}
+
+// Get configuration for current topic
+const appSpecificConfig = getAppSpecificConfig(activeTopic);
+
 export default {
   expo: {
     name: activeTopic === 'default' 
       ? "Trivia Feed" 
       : `${currentTopic.displayName}`,
-    slug: "trivia-feed",
-    scheme: "trivia-feed",
+    slug: appSpecificConfig.slug,
+    scheme: appSpecificConfig.scheme,
     version: "1.0.0",
     icon: getTopicAsset('app-icon'),
     extra: {
@@ -97,7 +120,9 @@ export default {
       enabled: true,
       checkAutomatically: "ON_LOAD"
     },
-    runtimeVersion: "1.0.0",
+    runtimeVersion: {
+      policy: "sdkVersion"
+    },
     splash: {
       image: getTopicAsset('splash-icon'),
       resizeMode: "contain",
@@ -108,7 +133,7 @@ export default {
     ],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.triviafeed",
+      bundleIdentifier: appSpecificConfig.bundleId,
       icon: getTopicAsset('app-icon'),
       infoPlist: {
         UIAppFonts: [
@@ -124,7 +149,7 @@ export default {
         foregroundImage: getTopicAsset('adaptive-icon'),
         backgroundColor: "#151718"
       },
-      package: "com.triviafeed"
+      package: appSpecificConfig.bundleId
     },
     web: {
       favicon: activeTopic === 'default' 

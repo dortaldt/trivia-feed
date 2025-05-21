@@ -6,11 +6,14 @@
  * the corresponding assets are available.
  */
 
+// Get the topic from environment variables if available (used by EAS builds)
+const envTopic = process.env.APP_TOPIC || process.env.EXPO_PUBLIC_APP_TOPIC || null;
+
 module.exports = {
   // The active topic for this build (default, music, science, etc.)
   // Set to 'default' for the standard multi-topic experience
   // Set to a specific topic name for a focused single-topic experience
-  activeTopic: 'music',
+  activeTopic: envTopic || 'music', // Set to 'music' for the music-themed app
   
   // Whether to filter content based on the active topic
   // When true, only questions matching the active topic will be shown
