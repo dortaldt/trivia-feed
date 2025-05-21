@@ -55,8 +55,31 @@ function initColdStartState(): ColdStartState {
 function groupQuestionsByTopic(allQuestions: FeedItem[]): Map<Topic, Map<Subtopic, FeedItem[]>> {
   const groupedQuestions = new Map<Topic, Map<Subtopic, FeedItem[]>>();
 
+  // Get topic configuration from app config
+  let filterByTopic = false;
+  let topicToFilter: string | undefined;
+  
+  try {
+    const Constants = require('expo-constants');
+    const { activeTopic, filterContentByTopic } = Constants.expoConfig?.extra || {};
+    
+    if (filterContentByTopic && activeTopic && activeTopic !== 'default') {
+      filterByTopic = true;
+      topicToFilter = activeTopic;
+      console.log(`Cold start strategy: Filtering questions by topic: ${topicToFilter}`);
+    }
+  } catch (e) {
+    console.error('Error checking topic config in cold start strategy:', e);
+  }
+
   allQuestions.forEach(question => {
     const topic = question.topic;
+    
+    // Skip questions that don't match the filter topic when filter is enabled
+    if (filterByTopic && topicToFilter && topic !== topicToFilter) {
+      return;
+    }
+    
     const subtopic = question.tags?.[0] || 'General';
     
     if (!groupedQuestions.has(topic)) {
@@ -72,11 +95,46 @@ function groupQuestionsByTopic(allQuestions: FeedItem[]): Map<Topic, Map<Subtopi
     topicMap.get(subtopic)!.push(question);
   });
 
+  // Log how many questions were kept after filtering
+  if (filterByTopic && topicToFilter) {
+    let totalQuestions = 0;
+    groupedQuestions.forEach((subtopicMap) => {
+      subtopicMap.forEach((questions) => {
+        totalQuestions += questions.length;
+      });
+    });
+    console.log(`Cold start strategy: After topic filtering - ${totalQuestions} questions match topic ${topicToFilter}`);
+  }
+
   return groupedQuestions;
 }
 
 // Helper function to check if a topic is allowed based on diversity requirements
 function isTopicAllowedForDiversity(state: ColdStartState, topic: string): boolean {
+  // First check if we're in single topic mode using the flags added to state
+  const isInSingleTopicMode = (state as any).isInSingleTopicMode;
+  const activeTopicName = (state as any).activeTopicName;
+  
+  // If in single topic mode and this matches the active topic, always allow it
+  if (isInSingleTopicMode && activeTopicName === topic) {
+    console.log(`Single topic mode active for ${activeTopicName}, allowing ${topic} regardless of diversity rules`);
+    return true;
+  }
+  
+  // Get topic configuration from app config as backup method - Skip diversity checks in single topic mode
+  try {
+    const Constants = require('expo-constants');
+    const { activeTopic, filterContentByTopic } = Constants.expoConfig?.extra || {};
+    
+    // If we're in single topic mode and this is the active topic, always allow it
+    if (filterContentByTopic && activeTopic && activeTopic !== 'default' && topic === activeTopic) {
+      console.log(`Single topic mode active (${activeTopic}), bypassing diversity checks for ${topic}`);
+      return true;
+    }
+  } catch (e) {
+    console.error('Error checking topic config:', e);
+  }
+  
   // Check if this would be the third consecutive question from the same topic
   if (state.lastSelectedTopics.length >= MAX_CONSECUTIVE_TOPIC) {
     const recentTopics = state.lastSelectedTopics.slice(0, MAX_CONSECUTIVE_TOPIC);
@@ -727,8 +785,17 @@ function getBranchingPhaseQuestions(
       
       // Skip if this topic would violate diversity requirements
       if (!isTopicAllowedForDiversity(state, question.topic)) {
-        console.log(`Skipping random question from topic ${question.topic} for diversity reasons`);
-        continue;
+        // Check if we're in single topic mode first
+        const isInSingleTopicMode = (state as any).isInSingleTopicMode;
+        const activeTopicName = (state as any).activeTopicName;
+        
+        // If in single topic mode and this is the active topic, don't skip it
+        if (isInSingleTopicMode && activeTopicName === question.topic) {
+          console.log(`Overriding diversity check for topic ${question.topic} in single topic mode`);
+        } else {
+          console.log(`Skipping random question from topic ${question.topic} for diversity reasons`);
+          continue;
+        }
       }
       
       explorationQuestions.push(question);
@@ -1109,8 +1176,6 @@ function getNormalPhaseQuestions(
       if (state.recentTopics.length > 5) {
         state.recentTopics.pop();
       }
-    } else {
-      console.log(`NORMAL PHASE: Topic ${topic} has no available questions`);
     }
   }
   
@@ -1328,6 +1393,24 @@ export function getColdStartFeed(
   let state: ColdStartState;
   const explanations: { [questionId: string]: string[] } = {};
   
+  // Check if we're in single topic mode
+  let isInSingleTopicMode = false;
+  let activeTopicName: string | undefined;
+  
+  try {
+    const Constants = require('expo-constants');
+    const { activeTopic, filterContentByTopic } = Constants.expoConfig?.extra || {};
+    
+    if (filterContentByTopic && activeTopic && activeTopic !== 'default') {
+      isInSingleTopicMode = true;
+      activeTopicName = activeTopic;
+      console.log(`🔍 Cold start strategy: Operating in SINGLE TOPIC MODE (${activeTopic})`);
+      console.log(`🔍 Diversity checks will be bypassed for topic ${activeTopic}`);
+    }
+  } catch (e) {
+    console.error('Error checking topic config in cold start feed:', e);
+  }
+  
   // Check if we need to create a new cold start state
   if (!userProfile.coldStartState) {
     console.log("Initializing new cold start state");
@@ -1335,6 +1418,13 @@ export function getColdStartFeed(
   } else {
     console.log("Loading existing cold start state");
     state = deserializeColdStartState(userProfile.coldStartState);
+  }
+  
+  // Add information about single topic mode to the state
+  if (isInSingleTopicMode && activeTopicName) {
+    // Store the info in a temp var to pass to other functions
+    (state as any).isInSingleTopicMode = isInSingleTopicMode;
+    (state as any).activeTopicName = activeTopicName;
   }
   
   // Handle previous question answers if they exist
