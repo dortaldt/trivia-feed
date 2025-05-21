@@ -177,7 +177,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         password,
         options: {
           // Configure email redirect to the auth callback handler for direct processing
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: Platform.OS === 'web' 
+            ? `${window.location.origin}/auth/callback`
+            : makeRedirectUri({
+                scheme: 'trivia-universe-feed',
+                path: 'auth/callback'
+              }),
           data: {
             // Add some basic user metadata that might help with profile creation
             email: email,
@@ -780,7 +785,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         email: email,
         options: {
           // Use the dedicated auth callback handler for more robust processing
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: Platform.OS === 'web'
+            ? `${window.location.origin}/auth/callback`
+            : makeRedirectUri({
+                scheme: 'trivia-universe-feed',
+                path: 'auth/callback'
+              }),
         }
       });
       
