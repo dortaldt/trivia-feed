@@ -78,10 +78,43 @@ import { registerUserAnswer, getClientSideAnswerCount } from '../../lib/question
 import { useIsFocused } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { Router } from 'expo-router';
+// Import the topic configuration
+import { activeTopic, topics } from '../../../app-topic-config';
 
 const { width, height } = Dimensions.get('window');
 
 const FeedScreen: React.FC = () => {
+  // Utility function to load topic-specific images with fallback
+  const getTopicSpecificImage = (baseName: string) => {
+    // Use a static image mapping approach instead of dynamic requires
+    const imageMapping: Record<string, any> = {
+      // Default images
+      'app-icon': require('../../../assets/images/app-icon.png'),
+      'guest-avatar': require('../../../assets/images/guest-avatar.png'),
+      
+      // Music topic images
+      'app-icon-music': require('../../../assets/images/app-icon-music.png'),
+      
+      // Neon theme images
+      'app-icon-neon': require('../../../assets/images/app-icon-neon.png'),
+      
+      // Add more topic-specific images as needed
+      // 'app-icon-science': require('../../../assets/images/app-icon-science.png'),
+    };
+    
+    // Try to get topic-specific image first
+    if (activeTopic !== 'default') {
+      const topicImageKey = `${baseName}-${activeTopic}`;
+      if (imageMapping[topicImageKey]) {
+        return imageMapping[topicImageKey];
+      }
+      console.warn(`Could not load ${topicImageKey}, using default image instead.`);
+    }
+    
+    // Fallback to default image
+    return imageMapping[baseName];
+  };
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showTooltip, setShowTooltip] = useState(false);
   const [isAnimationError, setIsAnimationError] = useState(false);
@@ -2333,8 +2366,8 @@ const FeedScreen: React.FC = () => {
       <Surface style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
           <Image 
-            source={require('../../../assets/images/app-icon.png')} 
-            style={styles.loadingIcon}
+            source={getTopicSpecificImage('app-icon')} 
+            style={[styles.loadingIcon, Platform.OS === 'web' ? { borderRadius: 24 } : null]}
             resizeMode="contain"
           />
         </Animated.View>
@@ -2402,9 +2435,9 @@ const FeedScreen: React.FC = () => {
       >
         <View style={styles.avatarCircle}>
           {isGuest ? (
-            // If in guest mode, use the guest avatar image
+            // If in guest mode, use the guest avatar image, with topic-specific version if available
             <Image 
-              source={require('../../../assets/images/guest-avatar.png')} 
+              source={getTopicSpecificImage('guest-avatar')}
               style={styles.avatar}
               resizeMode="cover"
             />
@@ -2839,6 +2872,8 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     marginBottom: 20,
+    borderRadius: 24, // Add rounded corners
+    overflow: 'hidden', // Required for web to respect borderRadius
   },
   loadingIndicatorContainer: {
     marginBottom: 30,
