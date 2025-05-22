@@ -378,25 +378,25 @@ const FeedItem = React.memo(({
       // Set background color based on answer state
       if (isSelectedCorrect) {
         // Correct answer selected
-        neonStyle.backgroundColor = 'rgba(0, 255, 0, 0.15)';
+        neonStyle.backgroundColor = 'rgba(0, 255, 0, 0.08)';
         neonStyle.borderColor = '#4CAF50';
         neonStyle.shadowColor = '#4CAF50';
-        neonStyle.shadowOpacity = 0.8;
+        neonStyle.shadowOpacity = 0.4;
         if (Platform.OS === 'web') {
           neonStyle.boxShadow = '0 0 10px #4CAF50, 0 0 5px rgba(76, 175, 80, 0.5)';
         }
       } else if (isSelectedIncorrect) {
         // Incorrect answer selected
-        neonStyle.backgroundColor = 'rgba(255, 0, 0, 0.15)';
+        neonStyle.backgroundColor = 'rgba(255, 0, 0, 0.07)';
         neonStyle.borderColor = '#F44336';
         neonStyle.shadowColor = '#F44336';
-        neonStyle.shadowOpacity = 0.8;
+        neonStyle.shadowOpacity = 0.4;
         if (Platform.OS === 'web') {
           neonStyle.boxShadow = '0 0 10px #F44336, 0 0 5px rgba(244, 67, 54, 0.5)';
         }
       } else if (shouldShowCorrectAnswer) {
         // This is the correct answer but user selected a different one
-        neonStyle.backgroundColor = 'rgba(0, 255, 0, 0.15)';
+        neonStyle.backgroundColor = 'rgba(0, 255, 0, 0.05)';
         neonStyle.borderColor = '#4CAF50';
         neonStyle.borderStyle = 'dashed';
         neonStyle.shadowColor = '#4CAF50';

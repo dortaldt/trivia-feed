@@ -117,11 +117,13 @@ const NeonGradientBackground: React.FC<NeonGradientBackgroundProps> = React.memo
           {/* Single optimized gradient for iOS */}
           <LinearGradient
             colors={[
-              topicPrimary, 
-              'rgba(45, 45, 45, 0.38)'
+              topicPrimary,
+              'rgba(36, 36, 36, 0.19)',
+              nextTopicPrimary
             ]}
+            locations={[0,0.8, 1]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            end={{ x: 1 , y: 1 }}
             style={styles.iosOptimizedGradient}
           />
           
