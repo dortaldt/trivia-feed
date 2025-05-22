@@ -37,7 +37,7 @@ interface Country {
 }
 
 const ProfileView: React.FC = () => {
-  const { user, signOut, updateProfile, isLoading: authLoading, isGuest, resendConfirmationEmail } = useAuth();
+  const { user, signOut, updateProfile, isLoading: authLoading, isGuest, resendConfirmationEmail, deleteAccount } = useAuth();
   const [fullName, setFullName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [country, setCountry] = useState('');
@@ -176,49 +176,112 @@ const ProfileView: React.FC = () => {
         console.log('Sign out canceled by user');
       }
     } else {
-      // Original implementation for native platforms
+      // On native, use the Alert API
       Alert.alert(
         'Sign Out',
         'Are you sure you want to sign out?',
         [
-          { text: 'Cancel', style: 'cancel', onPress: () => console.log('Sign out canceled by user') },
-          { 
-            text: 'Sign Out', 
-            style: 'destructive', 
-            onPress: async () => {
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => console.log('Sign out canceled by user'),
+          },
+          {
+            text: 'Sign Out',
+            style: 'destructive',
+            onPress: () => {
               console.log('User confirmed sign out - attempting to sign out');
-              try {
-                // Use the improved signOut function from AuthContext
-                const success = await signOut();
-                console.log('Sign out process completed, success:', success);
-                
-                // If signOut was not successful or we're on a native platform,
-                // use more aggressive cleanup
-                if (!success) {
-                  console.log('Sign out reported failure or on native platform - performing force cleanup');
-                  
-                  // Force reset of auth state
-                  await AsyncStorage.clear();
-                  console.log('AsyncStorage cleared');
-                  
-                  // Show a message to restart the app if needed
-                  Alert.alert(
-                    'Sign Out Status',
-                    'You have been signed out, but the app may need to be restarted to complete the process.',
-                    [{ text: 'OK' }]
-                  );
-                }
-              } catch (error) {
-                console.error('Sign out failed with error:', error);
-                Alert.alert(
-                  'Sign Out Failed',
-                  'There was a problem signing out. Please try again or restart the app.',
-                  [{ text: 'OK' }]
-                );
-              }
-            }
-          }
-        ]
+              signOut()
+                .then(success => {
+                  console.log('Sign out process completed, success:', success);
+                  router.push('/');
+                })
+                .catch(error => {
+                  console.error('Sign out failed with error:', error);
+                  Alert.alert('Sign Out Failed', 'There was a problem signing out. Please try again or restart the app.');
+                });
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    }
+  };
+
+  // Handle delete account
+  const handleDeleteAccount = () => {
+    console.log('Delete account button pressed - showing confirmation dialog');
+    
+    // Warning message
+    const warningMessage = 'This action is permanent and cannot be undone. All your data will be deleted.';
+    
+    if (Platform.OS === 'web') {
+      // On web, use direct confirmation
+      if (confirm(`Are you sure you want to delete your account?\n\n${warningMessage}`)) {
+        console.log('User confirmed account deletion - attempting to delete account');
+        deleteAccount()
+          .then(success => {
+            console.log('Account deletion process completed, success:', success);
+            // Use a small delay before reload to ensure state is updated
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 100);
+          })
+          .catch(error => {
+            console.error('Account deletion failed with error:', error);
+            alert('Delete Account Failed: There was a problem deleting your account. Please try again later.');
+          });
+      } else {
+        console.log('Account deletion canceled by user');
+      }
+    } else {
+      // On native, use the Alert API with double confirmation
+      Alert.alert(
+        'Delete Account',
+        `Are you sure you want to delete your account?\n\n${warningMessage}`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => console.log('Account deletion canceled by user'),
+          },
+          {
+            text: 'Delete Account',
+            style: 'destructive',
+            onPress: () => {
+              // Second confirmation
+              Alert.alert(
+                'Confirm Deletion',
+                'This action cannot be undone. Are you absolutely sure?',
+                [
+                  {
+                    text: 'Cancel',
+                    style: 'cancel',
+                    onPress: () => console.log('Account deletion canceled on second confirmation'),
+                  },
+                  {
+                    text: 'Delete My Account',
+                    style: 'destructive',
+                    onPress: () => {
+                      console.log('User confirmed account deletion - attempting to delete account');
+                      deleteAccount()
+                        .then(success => {
+                          console.log('Account deletion process completed, success:', success);
+                          router.push('/');
+                        })
+                        .catch(error => {
+                          console.error('Account deletion failed with error:', error);
+                          Alert.alert('Delete Account Failed', 'There was a problem deleting your account. Please try again later.');
+                        });
+                    },
+                  },
+                ],
+                { cancelable: true }
+              );
+            },
+          },
+        ],
+        { cancelable: true }
       );
     }
   };
@@ -857,35 +920,31 @@ const ProfileView: React.FC = () => {
       width: '100%',
     },
     pickerModalContent: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
+      width: '100%',
       borderTopLeftRadius: 15,
       borderTopRightRadius: 15,
-      paddingBottom: 20,
     },
     pickerHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: 15,
-      paddingVertical: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(150, 150, 150, 0.2)',
+      paddingVertical: 15,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: 'rgba(150, 150, 150, 0.3)',
     },
     pickerTitle: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: 'bold',
     },
     pickerCancel: {
-      fontSize: 16,
-      color: 'red',
+      fontSize: 17,
+      color: '#FF3B30',
     },
     pickerDone: {
-      fontSize: 16,
-      color: 'blue',
-      fontWeight: 'bold',
+      fontSize: 17,
+      color: '#007AFF',
+      fontWeight: '600',
     },
     modalContainer: {
       position: 'absolute',
@@ -894,7 +953,7 @@ const ProfileView: React.FC = () => {
       right: 0,
       bottom: 0,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
+      justifyContent: 'flex-end',
       alignItems: 'center',
     },
     loadingOverlay: {
@@ -1459,8 +1518,26 @@ const ProfileView: React.FC = () => {
               onPress={handleSignOut}
               accessibilityLabel="Sign out from your account"
               accessibilityHint="Double-tap to sign out from your account"
+              style={{ marginBottom: 12 }}
             >
               Sign Out
+            </Button>
+
+            {/* Delete Account button */}
+            <Button 
+              variant="destructive"
+              size="md"
+              fullWidth
+              leftIcon={<FeatherIcon name="trash-2" size={18} color="#fff" style={{ marginRight: 8 }} />}
+              onPress={handleDeleteAccount}
+              accessibilityLabel="Delete your account permanently"
+              accessibilityHint="Double-tap to permanently delete your account"
+              style={{ 
+                backgroundColor: isDark ? '#5c0606' : '#b30000',
+                borderColor: isDark ? '#8a0c0c' : '#8a0c0c'
+              }}
+            >
+              Delete Account
             </Button>
           </View>
         </View>
@@ -1635,20 +1712,18 @@ const ProfileView: React.FC = () => {
       
       {/* Country Picker Modal for iOS */}
       {Platform.OS === 'ios' && showCountryPicker && (
-        <View style={[
-          profileStyles.modalContainer,
-          { zIndex: 9999 } // Ensure picker appears above bottom sheet
-        ]}>
-          <TouchableOpacity 
-            style={{ flex: 1 }}
-            activeOpacity={1} 
-            onPress={() => setShowCountryPicker(false)}
-          >
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showCountryPicker}
+          onRequestClose={() => setShowCountryPicker(false)}
+        >
+          <View style={profileStyles.modalContainer}>
             <View style={[
               profileStyles.pickerModalContent, 
               { 
                 backgroundColor: isDark ? Colors.dark.background : Colors.light.background,
-                maxHeight: 300 // Constrain height to fit within bottom sheet
+                paddingBottom: 30 // Add safe area padding at the bottom
               }
             ]}>
               <View style={profileStyles.pickerHeader}>
@@ -1662,15 +1737,15 @@ const ProfileView: React.FC = () => {
               </View>
               <Picker
                 selectedValue={country}
-                onValueChange={(itemValue) => setCountry(itemValue as string)}
+                onValueChange={(itemValue) => {
+                  setCountry(itemValue as string);
+                  // Don't auto-close when selecting - let user press Done
+                }}
                 itemStyle={{ 
                   color: isDark ? 'white' : 'black',
-                  height: 44
+                  fontSize: 18,
+                  height: 120 // Better height for iOS wheel picker
                 }}
-                style={[
-                  profileStyles.pickerIOS,
-                  { height: 180 } // Reduced height for picker
-                ]}
               >
                 <Picker.Item label="Select country" value="" />
                 {countries.map((c) => (
@@ -1678,8 +1753,8 @@ const ProfileView: React.FC = () => {
                 ))}
               </Picker>
             </View>
-          </TouchableOpacity>
-        </View>
+          </View>
+        </Modal>
       )}
       
       {isUpdating && (
