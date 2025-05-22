@@ -37,7 +37,7 @@ interface Country {
 }
 
 const ProfileView: React.FC = () => {
-  const { user, signOut, updateProfile, isLoading: authLoading, isGuest, resendConfirmationEmail } = useAuth();
+  const { user, signOut, updateProfile, isLoading: authLoading, isGuest, resendConfirmationEmail, deleteAccount } = useAuth();
   const [fullName, setFullName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [country, setCountry] = useState('');
@@ -176,49 +176,112 @@ const ProfileView: React.FC = () => {
         console.log('Sign out canceled by user');
       }
     } else {
-      // Original implementation for native platforms
+      // On native, use the Alert API
       Alert.alert(
         'Sign Out',
         'Are you sure you want to sign out?',
         [
-          { text: 'Cancel', style: 'cancel', onPress: () => console.log('Sign out canceled by user') },
-          { 
-            text: 'Sign Out', 
-            style: 'destructive', 
-            onPress: async () => {
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => console.log('Sign out canceled by user'),
+          },
+          {
+            text: 'Sign Out',
+            style: 'destructive',
+            onPress: () => {
               console.log('User confirmed sign out - attempting to sign out');
-              try {
-                // Use the improved signOut function from AuthContext
-                const success = await signOut();
-                console.log('Sign out process completed, success:', success);
-                
-                // If signOut was not successful or we're on a native platform,
-                // use more aggressive cleanup
-                if (!success) {
-                  console.log('Sign out reported failure or on native platform - performing force cleanup');
-                  
-                  // Force reset of auth state
-                  await AsyncStorage.clear();
-                  console.log('AsyncStorage cleared');
-                  
-                  // Show a message to restart the app if needed
-                  Alert.alert(
-                    'Sign Out Status',
-                    'You have been signed out, but the app may need to be restarted to complete the process.',
-                    [{ text: 'OK' }]
-                  );
-                }
-              } catch (error) {
-                console.error('Sign out failed with error:', error);
-                Alert.alert(
-                  'Sign Out Failed',
-                  'There was a problem signing out. Please try again or restart the app.',
-                  [{ text: 'OK' }]
-                );
-              }
-            }
-          }
-        ]
+              signOut()
+                .then(success => {
+                  console.log('Sign out process completed, success:', success);
+                  router.push('/');
+                })
+                .catch(error => {
+                  console.error('Sign out failed with error:', error);
+                  Alert.alert('Sign Out Failed', 'There was a problem signing out. Please try again or restart the app.');
+                });
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    }
+  };
+
+  // Handle delete account
+  const handleDeleteAccount = () => {
+    console.log('Delete account button pressed - showing confirmation dialog');
+    
+    // Warning message
+    const warningMessage = 'This action is permanent and cannot be undone. All your data will be deleted.';
+    
+    if (Platform.OS === 'web') {
+      // On web, use direct confirmation
+      if (confirm(`Are you sure you want to delete your account?\n\n${warningMessage}`)) {
+        console.log('User confirmed account deletion - attempting to delete account');
+        deleteAccount()
+          .then(success => {
+            console.log('Account deletion process completed, success:', success);
+            // Use a small delay before reload to ensure state is updated
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 100);
+          })
+          .catch(error => {
+            console.error('Account deletion failed with error:', error);
+            alert('Delete Account Failed: There was a problem deleting your account. Please try again later.');
+          });
+      } else {
+        console.log('Account deletion canceled by user');
+      }
+    } else {
+      // On native, use the Alert API with double confirmation
+      Alert.alert(
+        'Delete Account',
+        `Are you sure you want to delete your account?\n\n${warningMessage}`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => console.log('Account deletion canceled by user'),
+          },
+          {
+            text: 'Delete Account',
+            style: 'destructive',
+            onPress: () => {
+              // Second confirmation
+              Alert.alert(
+                'Confirm Deletion',
+                'This action cannot be undone. Are you absolutely sure?',
+                [
+                  {
+                    text: 'Cancel',
+                    style: 'cancel',
+                    onPress: () => console.log('Account deletion canceled on second confirmation'),
+                  },
+                  {
+                    text: 'Delete My Account',
+                    style: 'destructive',
+                    onPress: () => {
+                      console.log('User confirmed account deletion - attempting to delete account');
+                      deleteAccount()
+                        .then(success => {
+                          console.log('Account deletion process completed, success:', success);
+                          router.push('/');
+                        })
+                        .catch(error => {
+                          console.error('Account deletion failed with error:', error);
+                          Alert.alert('Delete Account Failed', 'There was a problem deleting your account. Please try again later.');
+                        });
+                    },
+                  },
+                ],
+                { cancelable: true }
+              );
+            },
+          },
+        ],
+        { cancelable: true }
       );
     }
   };
@@ -1459,8 +1522,26 @@ const ProfileView: React.FC = () => {
               onPress={handleSignOut}
               accessibilityLabel="Sign out from your account"
               accessibilityHint="Double-tap to sign out from your account"
+              style={{ marginBottom: 12 }}
             >
               Sign Out
+            </Button>
+
+            {/* Delete Account button */}
+            <Button 
+              variant="destructive"
+              size="md"
+              fullWidth
+              leftIcon={<FeatherIcon name="trash-2" size={18} color="#fff" style={{ marginRight: 8 }} />}
+              onPress={handleDeleteAccount}
+              accessibilityLabel="Delete your account permanently"
+              accessibilityHint="Double-tap to permanently delete your account"
+              style={{ 
+                backgroundColor: isDark ? '#5c0606' : '#b30000',
+                borderColor: isDark ? '#8a0c0c' : '#8a0c0c'
+              }}
+            >
+              Delete Account
             </Button>
           </View>
         </View>
