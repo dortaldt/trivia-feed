@@ -120,9 +120,7 @@ export default {
       enabled: true,
       checkAutomatically: "ON_LOAD"
     },
-    runtimeVersion: {
-      policy: "sdkVersion"
-    },
+    runtimeVersion: "1.0.0",
     splash: {
       image: getTopicAsset('splash-icon'),
       resizeMode: "contain",

@@ -100,9 +100,9 @@ const styles = StyleSheet.create({
       web: 'Georgia, Cambria, "Times New Roman", Times, serif',
     }),
     fontSize: 36,
-    lineHeight: 43,
-    letterSpacing: -0.5,
-    fontWeight: '700',
+    lineHeight: 64,
+    letterSpacing: 0,
+    fontWeight: '500',
   },
   link: {
     fontFamily: Platform.select({

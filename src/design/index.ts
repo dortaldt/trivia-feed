@@ -413,9 +413,9 @@ export const textVariants = {
   question: {
     fontFamily: fontFamily.serif,
     fontSize: fontSize['3xl'],
-    lineHeight: lineHeight['3xl'],
-    letterSpacing: letterSpacing.tighter,
-    fontWeight: fontWeight.bold,
+    lineHeight: lineHeight['5xl'],
+    letterSpacing: letterSpacing.normal,
+    fontWeight: fontWeight.medium,
   },
 };
 

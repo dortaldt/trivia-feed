@@ -136,22 +136,22 @@ const FeedItem = React.memo(({
     const lineBreaks = (item.question.match(/\n/g) || []).length;
     
     const isMobileWeb = Platform.OS === 'web' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    let fontSize = isMobileWeb ? 24 : 38;
+    let fontSize = isMobileWeb ? 18 : 24;
     
     if (textLength > 50 || lineBreaks > 1) {
-      fontSize = isMobileWeb ? 20 : 32;
+      fontSize = isMobileWeb ? 18 : 20;
     }
     
     if (textLength > 100 || lineBreaks > 2) {
-      fontSize = isMobileWeb ? 18 : 24;
+      fontSize = isMobileWeb ? 18 : 18;
     }
     
     if (textLength > 130 || lineBreaks > 3) {
-      fontSize = isMobileWeb ? 16 : 20;
+      fontSize = isMobileWeb ? 18 : 18;
     }
     
     if (textLength > 180 || lineBreaks > 4) {
-      fontSize = isMobileWeb ? 14 : 18;
+      fontSize = isMobileWeb ? 16 : 16;
     }
     
     if (textLength > 200 || lineBreaks > 6) {
@@ -162,7 +162,7 @@ const FeedItem = React.memo(({
   }, [item.question]);
   
   const lineHeight = useMemo(() => {
-    return Math.round(calculateFontSize * 1.2);
+    return Math.round(calculateFontSize * 1.3);
   }, [calculateFontSize]);
   
   // Only log in development mode
