@@ -24,6 +24,7 @@ type AuthContextType = {
   continueAsGuest: () => Promise<void>;
   resendConfirmationEmail: (email: string) => Promise<void>;
   forceRefreshAppState: () => Promise<void>;
+  deleteAccount: () => Promise<boolean>;
 };
 
 // Create the context with a default value
@@ -824,6 +825,114 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Delete user account
+  const deleteAccount = async () => {
+    try {
+      setIsLoading(true);
+      console.log('AuthContext: Starting account deletion process');
+
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      console.log('AuthContext: User info:', { 
+        id: user.id,
+        email: user.email
+      });
+
+      // Track account deletion in analytics
+      trackEvent('User Account Deleted', {
+        userId: user.id
+      });
+
+      // Call the server-side RPC function to delete the user from the database
+      // This function will use CASCADE delete rules to remove all user data
+      console.log('AuthContext: Calling server-side delete_user RPC function');
+      const { data, error } = await supabase.rpc('delete_user', { user_id: user.id });
+      
+      console.log('AuthContext: RPC response:', { data, error });
+      
+      if (error) {
+        console.error('Error deleting user account:', error.message, error.details, error.hint);
+        
+        // Handle specific error cases
+        if (error.message.includes('permission denied')) {
+          Alert.alert('Permission Error', 'You do not have permission to delete this account. Please contact support.');
+          return false;
+        }
+        
+        throw error;
+      }
+      
+      // Check if deletion was successful based on the return value
+      if (data !== true) {
+        console.warn('AuthContext: Server-side deletion returned false');
+        
+        // Despite failure, we'll still try to sign the user out
+        console.log('AuthContext: Proceeding with client-side cleanup anyway');
+      } else {
+        console.log('AuthContext: Server-side deletion successful');
+      }
+      
+      // Signal to analytics/tracking that this user should be forgotten
+      try {
+        console.log('AuthContext: Resetting analytics user data');
+        resetUser();
+      } catch (analyticsError) {
+        console.warn('Error resetting analytics:', analyticsError);
+      }
+
+      // Sign out the user (this will automatically transition to guest mode)
+      console.log('AuthContext: Signing user out after account deletion');
+      await signOut();
+
+      // Clear any remaining user data from local storage
+      try {
+        console.log('AuthContext: Clearing user data from AsyncStorage');
+        const keys = await AsyncStorage.getAllKeys();
+        const userKeys = keys.filter(key => 
+          key.includes('user') || 
+          key.includes('profile') || 
+          key.includes('auth') ||
+          key.includes('token') ||
+          key.includes('session')
+        );
+        
+        if (userKeys.length > 0) {
+          console.log('AuthContext: Found user keys to remove:', userKeys);
+          await AsyncStorage.multiRemove(userKeys);
+        }
+      } catch (storageError) {
+        console.warn('AuthContext: Error clearing user data from AsyncStorage:', storageError);
+      }
+
+      // Force a small delay to ensure all async operations complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // If we got here, consider the operation a success from the user's perspective
+      Alert.alert(
+        'Account Deleted', 
+        data === true 
+          ? 'Your account has been permanently deleted.' 
+          : 'Your account has been signed out, but there might have been an issue with complete data removal.'
+      );
+      
+      return true;
+    } catch (error: any) {
+      console.error('AuthContext: Error during account deletion:', error.message, error.stack);
+      
+      // Show a more helpful error message
+      Alert.alert(
+        'Account Deletion Failed', 
+        'There was a problem deleting your account. Please try again later or contact support if the problem persists.'
+      );
+      
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Provide the auth context to children components
   return (
     <AuthContext.Provider
@@ -832,7 +941,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         session,
         isLoading,
         isGuest,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user && !isGuest,
         signUp,
         signIn,
         signOut,
@@ -842,7 +951,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateProfile,
         continueAsGuest,
         resendConfirmationEmail,
-        forceRefreshAppState
+        forceRefreshAppState,
+        deleteAccount,
       }}
     >
       {children}
