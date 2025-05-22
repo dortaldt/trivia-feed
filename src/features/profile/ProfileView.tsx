@@ -920,35 +920,31 @@ const ProfileView: React.FC = () => {
       width: '100%',
     },
     pickerModalContent: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
+      width: '100%',
       borderTopLeftRadius: 15,
       borderTopRightRadius: 15,
-      paddingBottom: 20,
     },
     pickerHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: 15,
-      paddingVertical: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(150, 150, 150, 0.2)',
+      paddingVertical: 15,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: 'rgba(150, 150, 150, 0.3)',
     },
     pickerTitle: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: 'bold',
     },
     pickerCancel: {
-      fontSize: 16,
-      color: 'red',
+      fontSize: 17,
+      color: '#FF3B30',
     },
     pickerDone: {
-      fontSize: 16,
-      color: 'blue',
-      fontWeight: 'bold',
+      fontSize: 17,
+      color: '#007AFF',
+      fontWeight: '600',
     },
     modalContainer: {
       position: 'absolute',
@@ -957,7 +953,7 @@ const ProfileView: React.FC = () => {
       right: 0,
       bottom: 0,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
+      justifyContent: 'flex-end',
       alignItems: 'center',
     },
     loadingOverlay: {
@@ -1716,20 +1712,18 @@ const ProfileView: React.FC = () => {
       
       {/* Country Picker Modal for iOS */}
       {Platform.OS === 'ios' && showCountryPicker && (
-        <View style={[
-          profileStyles.modalContainer,
-          { zIndex: 9999 } // Ensure picker appears above bottom sheet
-        ]}>
-          <TouchableOpacity 
-            style={{ flex: 1 }}
-            activeOpacity={1} 
-            onPress={() => setShowCountryPicker(false)}
-          >
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showCountryPicker}
+          onRequestClose={() => setShowCountryPicker(false)}
+        >
+          <View style={profileStyles.modalContainer}>
             <View style={[
               profileStyles.pickerModalContent, 
               { 
                 backgroundColor: isDark ? Colors.dark.background : Colors.light.background,
-                maxHeight: 300 // Constrain height to fit within bottom sheet
+                paddingBottom: 30 // Add safe area padding at the bottom
               }
             ]}>
               <View style={profileStyles.pickerHeader}>
@@ -1743,15 +1737,15 @@ const ProfileView: React.FC = () => {
               </View>
               <Picker
                 selectedValue={country}
-                onValueChange={(itemValue) => setCountry(itemValue as string)}
+                onValueChange={(itemValue) => {
+                  setCountry(itemValue as string);
+                  // Don't auto-close when selecting - let user press Done
+                }}
                 itemStyle={{ 
                   color: isDark ? 'white' : 'black',
-                  height: 44
+                  fontSize: 18,
+                  height: 120 // Better height for iOS wheel picker
                 }}
-                style={[
-                  profileStyles.pickerIOS,
-                  { height: 180 } // Reduced height for picker
-                ]}
               >
                 <Picker.Item label="Select country" value="" />
                 {countries.map((c) => (
@@ -1759,8 +1753,8 @@ const ProfileView: React.FC = () => {
                 ))}
               </Picker>
             </View>
-          </TouchableOpacity>
-        </View>
+          </View>
+        </Modal>
       )}
       
       {isUpdating && (
