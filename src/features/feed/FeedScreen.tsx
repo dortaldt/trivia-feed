@@ -80,6 +80,7 @@ import * as Haptics from 'expo-haptics';
 import { Router } from 'expo-router';
 // Import the topic configuration
 import { activeTopic, topics } from '../../../app-topic-config';
+import { TopicRings } from '../../components/TopicRings';
 
 const { width, height } = Dimensions.get('window');
 
@@ -2451,6 +2452,30 @@ const FeedScreen: React.FC = () => {
         </View>
       </TouchableOpacity>
 
+      {/* Topic Rings next to profile button */}
+      {(() => {
+        const shouldShowRings = !isGuest && userProfile?.topics && Object.keys(userProfile.topics).length > 0;
+        console.log('TopicRings condition check:', {
+          isGuest,
+          hasUserProfile: !!userProfile,
+          hasTopics: !!(userProfile?.topics),
+          topicsCount: Object.keys(userProfile?.topics || {}).length,
+          shouldShowRings
+        });
+        return shouldShowRings;
+      })() && (
+        <View style={styles.topicRingsContainer}>
+          <TopicRings
+            size={50}
+            userId={user?.id}
+            onRingComplete={(topic, level) => {
+              console.log(`🎉 ${topic} reached level ${level}!`);
+              // You can add celebration effects here
+            }}
+          />
+        </View>
+      )}
+
       {/* Connection error banner */}
       {usingMockData && (
         <Surface style={styles.mockDataBanner}>
@@ -2934,6 +2959,14 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  topicRingsContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 25,
+    left: 78, // Profile button: left 20 + width 50 + small gap 8 = 78
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
 
