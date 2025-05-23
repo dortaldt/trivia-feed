@@ -160,13 +160,9 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
   userId,
   onRingComplete,
 }) => {
-  const [selectedRing, setSelectedRing] = useState<TopicRingProgress | null>(null);
+  const { topRings, onRingComplete: hookOnRingComplete } = useTopicRings({ config, userId });
   const [modalVisible, setModalVisible] = useState(false);
-  
-  const { topRings, onRingComplete: hookOnRingComplete } = useTopicRings({
-    config,
-    userId,
-  });
+  const [selectedRing, setSelectedRing] = useState<TopicRingProgress | null>(null);
 
   // Combine the external callback with the hook's callback
   const handleRingComplete = (topic: string, newLevel: number) => {
@@ -192,7 +188,6 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
 
   // Additional safety filter - only show rings with actual progress
   const validRings = topRings.filter(ring => {
-    // Ensure ring has valid data
     return ring && 
            ring.totalCorrectAnswers > 0 &&
            typeof ring.currentProgress === 'number' && 
