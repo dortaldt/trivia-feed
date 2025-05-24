@@ -247,7 +247,7 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
   });
 
   return (
-    <View style={{ alignItems: 'center' }}>
+    <View style={{ alignItems: 'center', position: 'relative' }}>
       <View style={{ width: size, height: size, position: 'relative' }}>
         <Svg width={size} height={size}>
           {/* Background ring */}
@@ -278,10 +278,10 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
         <View style={{ position: 'absolute', top: 0, left: 0, width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
           <Feather name={icon as any} size={size * 0.32} color={color} />
         </View>
-      </View>
-      {/* Level below */}
-      <View style={{ marginTop: 4 }}>
-        <ThemedText style={{ color, fontWeight: 'bold', fontSize: size * 0.16 }}>L{level}</ThemedText>
+        {/* Level below - positioned absolutely to not affect ring centering */}
+        <View style={{ position: 'absolute', top: size + 4, left: 0, right: 0, alignItems: 'center' }}>
+          <ThemedText style={{ color, fontWeight: 'bold', fontSize: size * 0.16 }}>L{level}</ThemedText>
+        </View>
       </View>
     </View>
   );
@@ -290,12 +290,12 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
+    alignItems: 'center', // Center align rings horizontally
+    justifyContent: 'flex-start',
   },
   ringWrapper: {
     alignItems: 'center',
-    marginBottom: 8,
+    // Remove marginBottom since level text is now absolutely positioned
   },
   singleRingContainer: {
     justifyContent: 'center',

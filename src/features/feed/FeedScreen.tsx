@@ -81,6 +81,7 @@ import { Router } from 'expo-router';
 // Import the topic configuration
 import { activeTopic, topics } from '../../../app-topic-config';
 import { TopicRings } from '../../components/TopicRings';
+import { AllRingsModal } from '../../components/AllRingsModal';
 
 const { width, height } = Dimensions.get('window');
 
@@ -2102,6 +2103,9 @@ const FeedScreen: React.FC = () => {
   const [showDebugToast, setShowDebugToast] = useState(false);
   const debugToastOpacity = useRef(new Animated.Value(0)).current;
   
+  // Add state for all rings modal
+  const [showAllRingsModal, setShowAllRingsModal] = useState(false);
+  
   // Handle 3-finger tap for iOS
   const handleTouchStart = useCallback((event: GestureResponderEvent) => {
     // Check if it's a 3-finger tap on iOS
@@ -2485,6 +2489,25 @@ const FeedScreen: React.FC = () => {
               // You can add celebration effects here
             }}
           />
+          {/* Show All Rings Button */}
+          <TouchableOpacity 
+            style={styles.showAllRingsButton}
+            onPress={() => {
+              // Track button click for analytics
+              import('../../lib/mixpanelAnalytics').then(({ trackButtonClick }) => {
+                trackButtonClick('Show All Rings', {
+                  location: 'FeedScreen',
+                  userId: user?.id,
+                  isGuest: isGuest
+                });
+              }).catch(err => console.error('Failed to track show all rings click:', err));
+              
+              setShowAllRingsModal(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <FeatherIcon name="grid" size={20} color="#ffffff" />
+          </TouchableOpacity>
         </View>
       )}
 
@@ -2565,6 +2588,13 @@ const FeedScreen: React.FC = () => {
 
       {/* Leaderboard Bottom Sheet */}
       <LeaderboardBottomSheet isVisible={showLeaderboard} onClose={toggleLeaderboard} />
+
+      {/* All Rings Bottom Sheet */}
+      <AllRingsModal 
+        visible={showAllRingsModal}
+        onClose={() => setShowAllRingsModal(false)}
+        userId={user?.id}
+      />
 
       {/* Debugging Modal for Personalization Explanations - Only visible when debug panel is enabled */}
       {debugPanelVisible && showExplanationModal && (
@@ -2978,7 +3008,25 @@ const styles = StyleSheet.create({
     left: 78, // Profile button: left 20 + width 50 + small gap 8 = 78
     zIndex: 10,
     flexDirection: 'row',
+    alignItems: 'center', // Center-align the rings with the profile button
+    justifyContent: 'flex-start',
+    height: 50, // Match profile button height to ensure proper alignment
+  },
+  showAllRingsButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
 });
 
