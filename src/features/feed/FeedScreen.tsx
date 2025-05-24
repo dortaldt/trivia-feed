@@ -2481,7 +2481,7 @@ const FeedScreen: React.FC = () => {
 
       {/* Topic Rings next to profile button */}
       {(() => {
-        const shouldShowRings = !isGuest && userProfile?.topics && Object.keys(userProfile.topics).length > 0;
+        const shouldShowRings = userProfile?.topics && Object.keys(userProfile.topics).length > 0;
         console.log('=== TopicRings Visibility Debug ===');
         console.log('TopicRings condition check:', {
           isGuest,
@@ -2532,28 +2532,33 @@ const FeedScreen: React.FC = () => {
               // You can add celebration effects here
             }}
           />
-          {/* Show All Rings Button */}
-          <TouchableOpacity 
-            style={styles.showAllRingsButton}
-            onPress={() => {
-              // Track button click for analytics
-              import('../../lib/mixpanelAnalytics').then(({ trackButtonClick }) => {
-                trackButtonClick('Show All Rings', {
-                  location: 'FeedScreen',
-                  userId: user?.id,
-                  isGuest: isGuest
-                });
-              }).catch(err => console.error('Failed to track show all rings click:', err));
-              
-              setShowAllRingsModal(true);
-            }}
-            activeOpacity={0.7}
-          >
-            <FeatherIcon name="grid" size={20} color="#ffffff" />
-          </TouchableOpacity>
+          
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {/* Show All Rings Button - Only visible in debug mode */}
+            {debugPanelVisible && (
+              <TouchableOpacity 
+                style={styles.showAllRingsButton}
+                onPress={() => {
+                  // Track button click for analytics
+                  import('../../lib/mixpanelAnalytics').then(({ trackButtonClick }) => {
+                    trackButtonClick('Show All Rings', {
+                      location: 'FeedScreen',
+                      userId: user?.id,
+                      isGuest: isGuest
+                    });
+                  }).catch(err => console.error('Failed to track show all rings click:', err));
+                  
+                  setShowAllRingsModal(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <FeatherIcon name="grid" size={20} color="#ffffff" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       )}
-
+      
       {/* Connection error banner */}
       {usingMockData && (
         <Surface style={styles.mockDataBanner}>

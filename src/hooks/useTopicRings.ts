@@ -366,32 +366,81 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     }
   }, [questions, userProfile, isLoaded, persistentTopicMap]);
 
-  // Calculate top 3 topic rings using useMemo to prevent recalculation
+  // Calculate top 3 topic rings + recent ring using useMemo to prevent recalculation
   const topRings = useMemo((): TopicRingProgress[] => {
-    if (!userProfile?.topics) {
-      return [];
+    // Get all rings that have at least 1 correct answer, sorted by progress
+    const ringsWithProgress = Object.values(ringsState.rings)
+      .filter(ring => ring && ring.totalCorrectAnswers > 0)
+      .sort((a, b) => b.totalCorrectAnswers - a.totalCorrectAnswers);
+
+    // Get top 3 rings by progress
+    const top3Rings = ringsWithProgress.slice(0, 3);
+    const top3Topics = new Set(top3Rings.map(ring => ring.topic));
+
+    // Find the most recent ring that's not in top 3
+    let recentRing: TopicRingProgress | null = null;
+    
+    if (ringsWithProgress.length > 3) {
+      // Get all rings not in top 3
+      const nonTop3Rings = ringsWithProgress.filter(ring => !top3Topics.has(ring.topic));
+      
+      if (nonTop3Rings.length > 0) {
+        // Find the most recently answered topic by checking Redux questions
+        let mostRecentTopic: string | null = null;
+        let mostRecentQuestionId: string | null = null;
+        
+        // Get all correct answers for non-top-3 topics
+        const correctAnswersForNonTop3: Array<{topic: string, questionId: string}> = [];
+        
+        Object.entries(questions).forEach(([questionId, questionState]) => {
+          if (questionState.status === 'answered' && questionState.isCorrect) {
+            const questionTopic = feedItemsMap.get(questionId);
+            if (questionTopic && !top3Topics.has(questionTopic)) {
+              correctAnswersForNonTop3.push({topic: questionTopic, questionId});
+            }
+          }
+        });
+        
+        // If we have correct answers for non-top-3 topics, take the last one
+        // (assuming questions are processed in chronological order)
+        if (correctAnswersForNonTop3.length > 0) {
+          const lastCorrectAnswer = correctAnswersForNonTop3[correctAnswersForNonTop3.length - 1];
+          mostRecentTopic = lastCorrectAnswer.topic;
+          mostRecentQuestionId = lastCorrectAnswer.questionId;
+        }
+        
+        // If we found a recent topic, find its ring
+        if (mostRecentTopic) {
+          recentRing = nonTop3Rings.find(ring => ring.topic === mostRecentTopic) || null;
+        }
+        
+        // If no recent topic found from questions, just use the highest progress non-top-3 ring
+        if (!recentRing && nonTop3Rings.length > 0) {
+          recentRing = nonTop3Rings[0];
+        }
+        
+        // Log recent ring selection for debugging
+        if (recentRing) {
+          console.log(`[RECENT RING] Selected "${recentRing.topic}" as recent ring (last correct: ${mostRecentQuestionId || 'unknown'})`);
+        }
+      }
     }
 
-    // Get all topics sorted by weight (highest weight = most interest)
-    const sortedTopics = Object.entries(userProfile.topics)
-      .sort(([, a], [, b]) => b.weight - a.weight)
-      .slice(0, 3)
-      .map(([topic]) => topic);
+    // Combine top 3 + recent ring
+    const finalRings = [...top3Rings];
+    if (recentRing) {
+      finalRings.push(recentRing);
+    }
 
-    // Return existing rings for these topics, but only if they have progress
-    const topicRings: TopicRingProgress[] = [];
-    
-    sortedTopics.forEach(topic => {
-      const ring = ringsState.rings[topic];
-      
-      // Only show rings that have at least 1 correct answer
-      if (ring && ring.totalCorrectAnswers > 0) {
-        topicRings.push(ring);
-      }
-    });
+    console.log(`[RING SELECTION] Progress-based selection (${finalRings.length} rings):`, 
+      finalRings.map((ring, index) => {
+        const label = index < 3 ? `#${index + 1}` : 'recent';
+        return `${label}: ${ring.topic} (${ring.totalCorrectAnswers} correct)`;
+      }).join(', ')
+    );
 
-    return topicRings;
-  }, [userProfile?.topics, ringsState.rings]);
+    return finalRings;
+  }, [ringsState.rings, questions, feedItemsMap]);
 
   // Callback when a ring completes a level
   const onRingComplete = useCallback((topic: string, newLevel: number) => {

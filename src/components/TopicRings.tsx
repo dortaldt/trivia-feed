@@ -14,6 +14,8 @@ import Svg, { Circle, Defs, Filter, FeGaussianBlur, FeMerge, FeMergeNode } from 
 import { Animated as RNAnimated } from 'react-native';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { updateUserProfile } from '../store/triviaSlice';
 
 interface TopicRingsProps {
   config?: RingConfig;
@@ -50,15 +52,55 @@ interface AppleActivityRingProps {
 
 // Ring Details Modal Component
 const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, onClose }) => {
+  // Move null check BEFORE any hooks to avoid hook rule violations
+  if (!ringData) return null;
+
   const colorScheme = useColorScheme() ?? 'light';
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const cardBackground = useThemeColor({}, 'background');
-
-  if (!ringData) return null;
+  const dispatch = useAppDispatch();
+  const userProfile = useAppSelector(state => state.trivia.userProfile);
+  const [buttonsDisabled, setButtonsDisabled] = useState(false);
 
   const progressPercentage = Math.round((ringData.currentProgress / ringData.targetAnswers) * 100);
   const nextLevelAnswers = ringData.targetAnswers - ringData.currentProgress;
+
+  const handleTopicWeightChange = (topic: string, weightChange: number) => {
+    if (!userProfile || buttonsDisabled) return;
+
+    // Update the topic weight in Redux
+    const currentWeight = userProfile.topics[topic]?.weight || 0.5;
+    const newWeight = Math.max(0.1, Math.min(1.0, currentWeight + weightChange));
+    
+    // Create updated profile with new weight
+    const updatedProfile = {
+      ...userProfile,
+      topics: {
+        ...userProfile.topics,
+        [topic]: {
+          ...userProfile.topics[topic],
+          weight: newWeight
+        }
+      },
+      lastRefreshed: Date.now()
+    };
+
+    // Dispatch the update to Redux
+    dispatch(updateUserProfile({ profile: updatedProfile }));
+    
+    // Disable buttons until next question scroll
+    setButtonsDisabled(true);
+    
+    console.log(`[Feed Control] Updated ${topic} weight: ${currentWeight.toFixed(3)} -> ${newWeight.toFixed(3)} (change: ${weightChange > 0 ? '+' : ''}${weightChange})`);
+  };
+
+  // Reset button state when modal opens/closes
+  useEffect(() => {
+    if (visible) {
+      setButtonsDisabled(false);
+    }
+  }, [visible]);
 
   return (
     <Modal
@@ -104,22 +146,61 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
               </ThemedText>
             </View>
 
-            {/* Next Level Info */}
-            {nextLevelAnswers > 0 && (
-              <View style={styles.modalSection}>
-                <ThemedText style={styles.modalSectionTitle}>Next Level</ThemedText>
-                <ThemedText style={styles.modalNextLevelText}>
-                  {nextLevelAnswers} more correct answer{nextLevelAnswers !== 1 ? 's' : ''} to reach Level {ringData.level + 1}
-                </ThemedText>
-              </View>
-            )}
-
             {/* Total Stats */}
             <View style={styles.modalSection}>
               <ThemedText style={styles.modalSectionTitle}>Total Stats</ThemedText>
               <ThemedText style={styles.modalTotalText}>
                 {ringData.totalCorrectAnswers} total correct answers in {ringData.topic}
               </ThemedText>
+            </View>
+
+            {/* Feed Control Buttons */}
+            <View style={styles.modalSection}>
+              <ThemedText style={styles.modalSectionTitle}>Feed Control</ThemedText>
+              <View style={styles.feedControlButtons}>
+                <TouchableOpacity 
+                  style={[
+                    styles.feedControlButton, 
+                    styles.moreButton,
+                    buttonsDisabled && styles.disabledButton
+                  ]}
+                  onPress={() => handleTopicWeightChange(ringData.topic, 0.15)}
+                  activeOpacity={buttonsDisabled ? 1 : 0.7}
+                  disabled={buttonsDisabled}
+                >
+                  <Feather name="plus-circle" size={16} color={buttonsDisabled ? '#999' : 'white'} />
+                  <ThemedText style={[
+                    styles.feedControlButtonText,
+                    buttonsDisabled && styles.disabledButtonText
+                  ]}>
+                    Show more from topic
+                  </ThemedText>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.feedControlButton, 
+                    styles.lessButton,
+                    buttonsDisabled && styles.disabledButton
+                  ]}
+                  onPress={() => handleTopicWeightChange(ringData.topic, -0.1)}
+                  activeOpacity={buttonsDisabled ? 1 : 0.7}
+                  disabled={buttonsDisabled}
+                >
+                  <Feather name="minus-circle" size={16} color={buttonsDisabled ? '#999' : 'white'} />
+                  <ThemedText style={[
+                    styles.feedControlButtonText,
+                    buttonsDisabled && styles.disabledButtonText
+                  ]}>
+                    Show less from topic
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+              {buttonsDisabled && (
+                <ThemedText style={styles.disabledMessage}>
+                  Buttons will re-enable after scrolling to the next question
+                </ThemedText>
+              )}
             </View>
           </Pressable>
         </View>
@@ -439,7 +520,7 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
               textShadowRadius: 2,
             })
           }}>
-            L{level}
+            LVL{level}
           </ThemedText>
         </View>
       </Animated.View>
@@ -527,11 +608,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  modalNextLevelText: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    opacity: 0.8,
-  },
   modalTotalText: {
     fontSize: 14,
     opacity: 0.8,
@@ -549,5 +625,43 @@ const styles = StyleSheet.create({
       shadowRadius: 8,
       elevation: 8,
     }),
+  },
+  feedControlButtons: {
+    flexDirection: 'column',
+    gap: 12,
+  },
+  feedControlButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#007AFF',
+  },
+  feedControlButtonText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'white',
+    textAlign: 'center',
+  },
+  moreButton: {
+    backgroundColor: '#1DE9B6', // Bright neon teal for "more"
+  },
+  lessButton: {
+    backgroundColor: '#FF6B35', // Bright neon orange for "less"
+  },
+  disabledButton: {
+    backgroundColor: '#999',
+  },
+  disabledButtonText: {
+    color: '#666',
+  },
+  disabledMessage: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#666',
+    textAlign: 'center',
   },
 }); 
