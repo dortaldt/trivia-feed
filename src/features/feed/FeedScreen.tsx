@@ -1956,6 +1956,7 @@ const FeedScreen: React.FC = () => {
           }}
           onNextQuestion={handleNextQuestion}
           onToggleLeaderboard={() => toggleLeaderboard(item.id)}
+          debugMode={debugPanelVisible}
         />
       </View>
     );
