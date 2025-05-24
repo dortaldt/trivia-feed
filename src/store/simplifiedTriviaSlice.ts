@@ -315,7 +315,7 @@ const triviaSlice = createSlice({
         
         if (shouldSync) {
           console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via updateUserProfile`);
-          safeSyncUserProfile(action.payload.userId, action.payload.profile);
+        safeSyncUserProfile(action.payload.userId, action.payload.profile);
           state.interactionCount = 0; // Reset counter after sync
           state.firstInteractionProcessed = true;
         } else {

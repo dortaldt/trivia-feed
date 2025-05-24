@@ -23,7 +23,9 @@ import {
   Keyboard,
   KeyboardEvent,
   StatusBar,
-  useColorScheme
+  useColorScheme,
+  AppState,
+  AppStateStatus
 } from 'react-native';
 import { 
   Text, 
@@ -49,7 +51,7 @@ import {
 } from '../../store/triviaSlice';
 import { useIOSAnimations } from '@/hooks/useIOSAnimations';
 // Fix the import path
-import { fetchTriviaQuestions, fetchNewTriviaQuestions, FeedItem as FeedItemType, analyzeCorrectAnswers } from '../../lib/triviaService';
+import { fetchTriviaQuestions, fetchNewTriviaQuestions, FeedItem as FeedItemType, analyzeCorrectAnswers, getLastFetchTimestamp, setLastFetchTimestamp } from '../../lib/triviaService';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { 
   updateUserProfile, 
@@ -80,6 +82,7 @@ import * as Haptics from 'expo-haptics';
 import { Router } from 'expo-router';
 // Import the topic configuration
 import { activeTopic, topics } from '../../../app-topic-config';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -2266,12 +2269,22 @@ const FeedScreen: React.FC = () => {
           console.log(`Excluding ${existingIds.size} existing question IDs from fetch`);
           
           // Fetch new questions from the database that aren't in our existing set
-          fetchNewTriviaQuestions(Array.from(existingIds))
-            .then(newQuestions => {
+          (async () => {
+            try {
+              // Get the last fetch timestamp for optimal querying
+              const lastFetchTimestamp = await getLastFetchTimestamp();
+              console.log(`🕐 Using last fetch timestamp: ${lastFetchTimestamp || 'none (first fetch)'}`);
+              
+              const newQuestions = await fetchNewTriviaQuestions(Array.from(existingIds), lastFetchTimestamp || undefined);
+              
               if (newQuestions.length > 0) {
                 console.log(`====== DATABASE FETCH RESULTS ======`);
                 console.log(`[Feed] Successfully fetched ${newQuestions.length} new questions from database!`);
                 console.log(`Topics fetched: ${[...new Set(newQuestions.map(q => q.topic))].join(', ')}`);
+                
+                // Update the last fetch timestamp to current time
+                await setLastFetchTimestamp();
+                console.log(`💾 Updated last fetch timestamp after successful fetch`);
                 
                 // Add the new questions to both the feed data (local pool) and the personalized feed
                 const updatedFeedData = [...feedData, ...newQuestions];
@@ -2285,7 +2298,7 @@ const FeedScreen: React.FC = () => {
                 // Create empty explanations for new questions
                 const newExplanations: Record<string, string[]> = {};
                 questionsToAdd.forEach(item => {
-                  newExplanations[item.id] = [`Fetched from database after ${totalQuestionsAnswered} answered questions`];
+                  newExplanations[item.id] = [`✨ New question fetched after ${totalQuestionsAnswered} answered questions`];
                 });
                 
                 // Update the feed in Redux with combined explanations
@@ -2299,20 +2312,23 @@ const FeedScreen: React.FC = () => {
               } else {
                 console.log('[Feed] No new questions found in database');
                 console.log(`====== DATABASE FETCH COMPLETE - NO NEW QUESTIONS ======`);
-                console.log(`All ${existingIds.size} existing questions were already in the local pool`);
+                
+                // Update timestamp even when no new questions found to prevent repeated queries
+                await setLastFetchTimestamp();
+                console.log(`💾 Updated last fetch timestamp even though no new questions (prevents repeated queries)`);
                 
                 // Fall back to using existing questions from feedData
                 addQuestionsFromExistingPool();
               }
-            })
-            .catch(error => {
+            } catch (error) {
               console.error('[Feed] Error fetching new questions from database:', error);
               console.log(`====== DATABASE FETCH FAILED ======`);
               console.log(`Falling back to existing question pool due to fetch error`);
               
               // Fall back to using existing questions from feedData
               addQuestionsFromExistingPool();
-            });
+            }
+          })();
         } else {
           // Use existing questions from feedData (original behavior)
           addQuestionsFromExistingPool();
