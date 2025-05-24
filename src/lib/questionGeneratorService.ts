@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { generateQuestions, generateQuestionFingerprint, checkQuestionExists, GeneratedQuestion } from './openaiService';
 import { dbEventEmitter, logGeneratorEvent } from './syncService';
+import { logDbOperation } from './simplifiedSyncService';
 
 // Interface for the question category item from the database
 interface QuestionCategoryItem {
@@ -1283,6 +1284,23 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
           fingerprint: fingerprint // Store the fingerprint for future deduplication
         });
       
+      // Log the insert operation
+      logDbOperation(
+        'sent',
+        'trivia_questions',
+        'insert',
+        1,
+        {
+          question_text: questionText?.substring(0, 50) + '...',
+          topic: category,
+          subtopic: subtopic,
+          difficulty: difficulty || 'medium'
+        },
+        'generator',
+        error ? 'error' : 'success',
+        error?.message
+      );
+      
       if (error) {
         console.error('[GENERATOR] Error saving question:', error);
         
@@ -1311,6 +1329,24 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
               created_at: created_at || new Date().toISOString(),
               updated_at: new Date().toISOString()
             });
+            
+          // Log the retry insert operation  
+          logDbOperation(
+            'sent',
+            'trivia_questions',
+            'insert',
+            1,
+            {
+              question_text: questionText?.substring(0, 50) + '...',
+              topic: category,
+              subtopic: subtopic,
+              difficulty: difficulty || 'medium',
+              retry: true
+            },
+            'generator',
+            retryError ? 'error' : 'success',
+            retryError?.message
+          );
             
           if (retryError) {
             console.error('[GENERATOR] Error in retry save without fingerprint:', retryError);

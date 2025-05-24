@@ -103,11 +103,11 @@ export const SyncManager: React.FC<SyncManagerProps> = ({ children }) => {
             
             // If the remote profile is newer than our local profile, use it
             if (remoteProfile.lastRefreshed > userProfile.lastRefreshed) {
-              dispatch(updateUserProfile({ 
+              dispatch(loadUserDataSuccess({ 
                 profile: remoteProfile,
-                userId: user.id
+                timestamp: Date.now()
               }));
-              console.log('SyncManager: Updated local profile with remote data');
+              console.log('SyncManager: Updated local profile with remote data (no database sync)');
             } else {
               // If our local profile is newer, sync it to the server
               console.log('SyncManager: Local profile is newer, syncing to server');

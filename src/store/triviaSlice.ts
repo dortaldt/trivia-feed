@@ -9,6 +9,10 @@ import { recordUserAnswer } from '../lib/leaderboardService';
 import { syncUserProfile } from '../lib/simplifiedSyncService';
 import { InteractionLog, FeedChange, WeightChange } from '../types/trackerTypes';
 import { RootState } from '../store';
+import { dbEventEmitter } from '../lib/syncService';
+
+// Constants for batching database updates
+const SYNC_INTERACTION_THRESHOLD = 5; // Sync every 5 interactions instead of every one
 
 /**
  * IMPORTANT: Database operations for user weights have been disabled.
@@ -44,6 +48,8 @@ interface TriviaState {
   syncedWeightChanges: WeightChange[];
   lastSyncTime: number; // Track when the last sync with the server was performed
   isSyncing: boolean; // Track whether a sync is in progress
+  interactionCount: number; // Track number of interactions since last sync for batching
+  firstInteractionProcessed: boolean; // Track if the first interaction has been processed
 }
 
 const initialState: TriviaState = {
@@ -58,6 +64,8 @@ const initialState: TriviaState = {
   syncedWeightChanges: [],
   lastSyncTime: 0,
   isSyncing: false,
+  interactionCount: 0,
+  firstInteractionProcessed: false,
 };
 
 /**
@@ -136,10 +144,22 @@ const triviaSlice = createSlice({
         // Add to synced interactions
         state.syncedInteractions.push(interaction);
         
-        // If user is logged in, sync the interaction
+        // If user is logged in, only sync based on interaction threshold (BATCHED)
         if (userId) {
-          // Always use safer version that handles null checking
+          // Increment interaction counter for batching
+          state.interactionCount++;
+          
+          const shouldSync = !state.firstInteractionProcessed || 
+                            state.interactionCount >= SYNC_INTERACTION_THRESHOLD;
+          
+          if (shouldSync) {
+            console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via answerQuestion`);
           safeSyncUserProfile(userId, state.userProfile);
+            state.interactionCount = 0; // Reset counter after sync
+            state.firstInteractionProcessed = true;
+          } else {
+            console.log(`[Redux] Skipping database sync (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
+          }
         }
       }
     },
@@ -325,10 +345,22 @@ const triviaSlice = createSlice({
                 console.error(`[Redux] Error updating profile for skipped question:`, error);
               }
             
-            // If user is logged in, sync the interaction
+            // If user is logged in, only sync based on interaction threshold (BATCHED)
             if (userId && state.userProfile) {
-              // Always use safer version that handles null checking
+              // Increment interaction counter for batching
+              state.interactionCount++;
+              
+              const shouldSync = !state.firstInteractionProcessed || 
+                                state.interactionCount >= SYNC_INTERACTION_THRESHOLD;
+              
+              if (shouldSync) {
+                console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via skipQuestion`);
               safeSyncUserProfile(userId, state.userProfile);
+                state.interactionCount = 0; // Reset counter after sync
+                state.firstInteractionProcessed = true;
+              } else {
+                console.log(`[Redux] Skipping database sync (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
+              }
             }
             } else {
               console.log(`[Redux] Could not find feed item for skipped question ${questionId}`);
@@ -397,101 +429,28 @@ const triviaSlice = createSlice({
         state.syncedFeedChanges.push(...feedChanges);
       }
     },
-    updateUserProfile: (state, action: PayloadAction<{ profile: UserProfile; userId?: string; weightChange?: WeightChange }>) => {
-      const { profile, userId, weightChange } = action.payload;
+    updateUserProfile: (state, action: PayloadAction<{ profile: UserProfile, userId?: string }>) => {
+      state.userProfile = action.payload.profile;
       
-      // Add null check for profile
-      if (!profile) {
-        console.warn('Cannot update user profile: profile is null or undefined');
-        return;
-      }
-      
-      // Log the update
-      console.log('[Redux] Updating user profile with new weights');
-      
-      if (weightChange) {
-        console.log(`[Redux] Weight change received in updateUserProfile: ${weightChange.topic}`);
-        console.log(`[Redux] Old weights: topic=${weightChange.oldWeights.topicWeight.toFixed(4)}, subtopic=${weightChange.oldWeights.subtopicWeight?.toFixed(4) || 'N/A'}`);
-        console.log(`[Redux] New weights: topic=${weightChange.newWeights.topicWeight.toFixed(4)}, subtopic=${weightChange.newWeights.subtopicWeight?.toFixed(4) || 'N/A'}`);
-        
-        // Add to synced weight changes
-        state.syncedWeightChanges.push(weightChange);
-        console.log(`[Redux] Added weight change to syncedWeightChanges (current count: ${state.syncedWeightChanges.length})`);
-        
-        // Apply only the specific weight changes instead of replacing the entire profile
-        const { topic, subtopic, branch } = weightChange;
-        
-        // Ensure topic exists
-        if (!state.userProfile.topics[topic]) {
-          state.userProfile.topics[topic] = {
-            weight: 0.5,
-            subtopics: {},
-            lastViewed: Date.now()
-          };
-        }
-        
-        // Update topic weight
-        state.userProfile.topics[topic].weight = weightChange.newWeights.topicWeight;
-        
-        // Update subtopic if it exists in the weight change
-        if (subtopic && weightChange.newWeights.subtopicWeight !== undefined) {
-          // Ensure subtopic exists
-          if (!state.userProfile.topics[topic].subtopics[subtopic]) {
-            state.userProfile.topics[topic].subtopics[subtopic] = {
-              weight: 0.5,
-              branches: {},
-              lastViewed: Date.now()
-            };
-          }
-          
-          // Update subtopic weight
-          state.userProfile.topics[topic].subtopics[subtopic].weight = weightChange.newWeights.subtopicWeight;
-          
-          // Update branch if it exists in the weight change
-          if (branch && weightChange.newWeights.branchWeight !== undefined) {
-            // Ensure branch exists
-            if (!state.userProfile.topics[topic].subtopics[subtopic].branches[branch]) {
-              state.userProfile.topics[topic].subtopics[subtopic].branches[branch] = {
-                weight: 0.5,
-                lastViewed: Date.now()
-              };
-            }
-            
-            // Update branch weight
-            state.userProfile.topics[topic].subtopics[subtopic].branches[branch].weight = weightChange.newWeights.branchWeight;
-          }
-        }
-        
-        // Update total questions answered counter and lastRefreshed
-        if (profile.totalQuestionsAnswered !== undefined) {
-          state.userProfile.totalQuestionsAnswered = profile.totalQuestionsAnswered;
-        }
-        
-        // Record the interaction in the user profile
-        if (profile.interactions && weightChange.questionId) {
-          state.userProfile.interactions[weightChange.questionId] = profile.interactions[weightChange.questionId];
-        }
-        
-        // Update lastRefreshed timestamp
-        state.userProfile.lastRefreshed = Date.now();
-      } else {
-        // If no weight change information is provided, we have to update the entire profile
-        // This might be the case for initial profile load from server or profile reset
-        state.userProfile = profile;
-      }
-      
-      // Verify key topic weights after update
-      if (state.userProfile.topics) {
-        console.log('[Redux] Updated profile topic weights:');
-        Object.entries(state.userProfile.topics).forEach(([topic, data]) => {
-          console.log(`  ${topic}: ${data.weight.toFixed(4)}`);
-        });
-      }
+      // Log the update action
+      console.log('[Redux] User profile updated');
       
       // Sync user profile with server if user is logged in
-      if (userId) {
-        // Use safer version that handles null checking 
-        safeSyncUserProfile(userId, state.userProfile);
+      if (action.payload.userId) {
+        // DO NOT increment interaction counter here - only count actual user interactions
+        // The counter is incremented in answerQuestion/skipQuestion actions
+        
+        const shouldSync = !state.firstInteractionProcessed || 
+                          state.interactionCount >= SYNC_INTERACTION_THRESHOLD;
+        
+        if (shouldSync) {
+          console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via updateUserProfile`);
+          safeSyncUserProfile(action.payload.userId, state.userProfile);
+          state.interactionCount = 0; // Reset counter after sync
+          state.firstInteractionProcessed = true;
+        } else {
+          console.log(`[Redux] Skipping database sync (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
+        }
       }
     },
     markTooltipAsViewed: (state) => {
@@ -522,7 +481,8 @@ const triviaSlice = createSlice({
       
       // Sync reset profile with server if user is logged in
       if (userId) {
-        // Use safer version that handles null checking
+        // Critical operation: Always sync immediately (no batching)
+        console.log('[Redux] IMMEDIATE sync for resetPersonalization (critical operation)');
         safeSyncUserProfile(userId, state.userProfile);
       }
     },

@@ -44,8 +44,8 @@ const initialState: TriviaState = {
   firstInteractionProcessed: false,
 };
 
-// Number of interactions before syncing again
-const SYNC_INTERACTION_THRESHOLD = 10;
+// Constants for batching database updates
+const SYNC_INTERACTION_THRESHOLD = 5; // Sync every 5 interactions instead of every one
 
 /**
  * Helper function to safely sync user profile with error handling
@@ -305,9 +305,22 @@ const triviaSlice = createSlice({
       // Log the update action
       console.log('[Redux] User profile updated');
       
-      // If user is logged in, sync the updated profile
+      // If user is logged in, only sync based on interaction threshold (BATCHED)
       if (action.payload.userId) {
-        safeSyncUserProfile(action.payload.userId, action.payload.profile);
+        // DO NOT increment interaction counter here - only count actual user interactions
+        // The counter is incremented in answerQuestion/skipQuestion actions
+        
+        const shouldSync = !state.firstInteractionProcessed || 
+                          state.interactionCount >= SYNC_INTERACTION_THRESHOLD;
+        
+        if (shouldSync) {
+          console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via updateUserProfile`);
+          safeSyncUserProfile(action.payload.userId, action.payload.profile);
+          state.interactionCount = 0; // Reset counter after sync
+          state.firstInteractionProcessed = true;
+        } else {
+          console.log(`[Redux] Skipping database sync (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
+        }
       }
     },
     setFeedExplanations: (state, action: PayloadAction<{ [questionId: string]: string[] }>) => {
