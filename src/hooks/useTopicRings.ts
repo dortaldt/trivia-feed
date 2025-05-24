@@ -88,10 +88,33 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     }
   }, [getStorageKey, userId]);
 
-  // Load rings on component mount or user change
+  // Load rings and topic map on component mount or user change
   useEffect(() => {
     loadRingsFromStorage();
-  }, [loadRingsFromStorage]);
+    
+    // Also load the persistent topic map from storage
+    (async () => {
+      try {
+        const storageKey = `${getStorageKey()}_topicMap`;
+        const storedTopicMap = await AsyncStorage.getItem(storageKey);
+        const restoredMap = new Map<string, string>();
+        
+        if (storedTopicMap) {
+          const parsedMap = JSON.parse(storedTopicMap);
+          Object.entries(parsedMap).forEach(([key, value]) => {
+            if (typeof value === 'string') {
+              restoredMap.set(key, value);
+            }
+          });
+        }
+        
+        setPersistentTopicMap(restoredMap);
+        console.log(`[TOPIC MAP] Loaded ${restoredMap.size} question topics from storage`);
+      } catch (error) {
+        console.error('Error loading topic map from storage:', error);
+      }
+    })();
+  }, [loadRingsFromStorage, getStorageKey]);
 
   // Save rings whenever state changes (but only after initial load)
   useEffect(() => {
@@ -105,32 +128,97 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     return Math.floor(config.baseTargetAnswers * Math.pow(config.scalingFactor, level - 1));
   }, [config]);
 
+  // Create a comprehensive lookup map that includes ALL questions we've seen
+  // This will store topic information for questions even after they're no longer in the current feed
+  const [persistentTopicMap, setPersistentTopicMap] = useState<Map<string, string>>(new Map());
+  
+  // Update the persistent map whenever we see new questions in the feed
+  useEffect(() => {
+    let hasUpdates = false;
+    const newMap = new Map(persistentTopicMap);
+    
+    personalizedFeed.forEach(item => {
+      if (!newMap.has(item.id)) {
+        newMap.set(item.id, item.topic);
+        hasUpdates = true;
+      }
+    });
+    
+    if (hasUpdates) {
+      setPersistentTopicMap(newMap);
+      
+      // Save to storage
+      (async () => {
+        try {
+          const storageKey = `${getStorageKey()}_topicMap`;
+          const mapAsObject = Object.fromEntries(newMap);
+          await AsyncStorage.setItem(storageKey, JSON.stringify(mapAsObject));
+        } catch (error) {
+          console.error('Error saving topic map to storage:', error);
+        }
+      })();
+    }
+      }, [personalizedFeed, persistentTopicMap, getStorageKey]);
+  
   // Create a memoized lookup map for feed items by ID for O(1) access
   const feedItemsMap = useMemo(() => {
-    const map = new Map();
-    personalizedFeed.forEach(item => {
-      map.set(item.id, item.topic);
-    });
-    return map;
-  }, [personalizedFeed]);
+    // Use the persistent map that remembers ALL questions we've seen
+    return persistentTopicMap;
+  }, [persistentTopicMap]);
 
   // Get correct answers count for a topic from Redux questions state
-  const getCorrectAnswersForTopic = useCallback((topic: string): number => {
+  const getCorrectAnswersForTopic = (topic: string): number => {
     let correctCount = 0;
+    const matchingQuestions: string[] = [];
+    const allAnsweredQuestions: string[] = [];
+    const missingTopicQuestions: string[] = [];
     
     // Go through all questions in Redux state
     Object.entries(questions).forEach(([questionId, questionState]) => {
-      if (questionState.status === 'answered' && questionState.isCorrect) {
-        // Fast lookup using the map
-        const questionTopic = feedItemsMap.get(questionId);
-        if (questionTopic === topic) {
-          correctCount++;
+      if (questionState.status === 'answered') {
+        allAnsweredQuestions.push(questionId);
+        
+        if (questionState.isCorrect) {
+          // Try to get topic from persistent map
+          let questionTopic = feedItemsMap.get(questionId);
+          
+          if (questionTopic === topic) {
+            correctCount++;
+            matchingQuestions.push(questionId);
+          } else if (!questionTopic) {
+            // Question not found in topic map
+            missingTopicQuestions.push(questionId);
+          }
         }
       }
     });
     
+    // Debug logging for count calculation - always log for Mathematics and Science
+    if (topic === 'Science' || topic === 'Mathematics' || matchingQuestions.length > 0 || missingTopicQuestions.length > 0) {
+      console.log(`[ANSWER CORRECTLY TOPIC ${topic}] COUNT: ${correctCount} (found: ${matchingQuestions.join(', ')}) (missing from map: ${missingTopicQuestions.join(', ')})`);
+      
+      // Additional debugging: show all answered questions and their topics
+      if (topic === 'Mathematics') {
+        console.log(`[MATHEMATICS DEBUG] All answered questions with topics:`);
+        Object.entries(questions).forEach(([qId, qState]) => {
+          if (qState.status === 'answered') {
+            const qTopic = feedItemsMap.get(qId);
+            console.log(`  - ${qId}: status=${qState.status}, isCorrect=${qState.isCorrect}, topic="${qTopic || 'NOT_FOUND'}"`);
+          }
+        });
+        
+        console.log(`[MATHEMATICS DEBUG] Topic map size: ${feedItemsMap.size} items`);
+        // Show all topics in the map
+        const topicsInMap = new Set();
+        feedItemsMap.forEach((topic, questionId) => {
+          topicsInMap.add(topic);
+        });
+        console.log(`[MATHEMATICS DEBUG] Topics in map: [${Array.from(topicsInMap).join(', ')}]`);
+      }
+    }
+    
     return correctCount;
-  }, [questions, feedItemsMap]);
+  };
 
   // Create or update ring progress for a topic - PURE FUNCTION (no state updates)
   const createRingProgress = useCallback((topic: string, correctAnswers: number, existingRing?: TopicRingProgress): TopicRingProgress => {
@@ -191,8 +279,44 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     return updatedRing;
   }, [calculateTargetAnswers, config.maxDisplayLevel]);
 
+  // Reload topic map periodically to catch updates from storeQuestionTopic
+  useEffect(() => {
+    if (!isLoaded) return;
+    
+    const reloadTopicMap = async () => {
+      try {
+        const storageKey = `${getStorageKey()}_topicMap`;
+        const storedTopicMap = await AsyncStorage.getItem(storageKey);
+        const restoredMap = new Map<string, string>();
+        
+        if (storedTopicMap) {
+          const parsedMap = JSON.parse(storedTopicMap);
+          Object.entries(parsedMap).forEach(([key, value]) => {
+            if (typeof value === 'string') {
+              restoredMap.set(key, value);
+            }
+          });
+        }
+        
+        // Only update if the map has actually changed
+        if (restoredMap.size !== persistentTopicMap.size) {
+          setPersistentTopicMap(restoredMap);
+          console.log(`[TOPIC MAP] Reloaded ${restoredMap.size} question topics from storage`);
+        }
+      } catch (error) {
+        console.error('Error reloading topic map from storage:', error);
+      }
+    };
+    
+    // Reload every 2 seconds to catch updates from other sources
+    const interval = setInterval(reloadTopicMap, 2000);
+    return () => clearInterval(interval);
+  }, [isLoaded, getStorageKey, persistentTopicMap.size]);
+
   // Update rings when questions or user profile changes (only after storage is loaded)
   useEffect(() => {
+    console.log(`[RING EFFECT] Triggered - questions count: ${Object.keys(questions).length}, persistentTopicMap size: ${persistentTopicMap.size}, isLoaded: ${isLoaded}`);
+    
     if (userProfile?.topics && isLoaded) {
       let hasChanges = false;
       const newRings = { ...ringsState.rings };
@@ -217,20 +341,30 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
           (existingRing.icon !== updatedRing.icon || existingRing.color !== updatedRing.color);
         
         if (hasDataChanges || hasIconColorChanges) {
+          const oldCount = existingRing ? existingRing.totalCorrectAnswers : 0;
+          if (correctAnswers > oldCount) {
+            console.log(`[ANSWER CORRECTLY TOPIC ${topic}] COUNT UP FROM ${oldCount} to ${correctAnswers}`);
+          }
+          console.log(`[RING UPDATE] "${topic}": ${correctAnswers} correct → Level ${updatedRing.level}, Progress ${updatedRing.currentProgress}/${updatedRing.targetAnswers}`);
           newRings[topic] = updatedRing;
           hasChanges = true;
         }
       });
       
       if (hasChanges) {
+        console.log(`[RING EFFECT] Applying ring state changes`);
         setRingsState(prevState => ({
           ...prevState,
           rings: newRings,
           lastUpdated: Date.now(),
         }));
+      } else {
+        console.log(`[RING EFFECT] No changes detected`);
       }
+    } else {
+      console.log(`[RING EFFECT] Skipping update - userProfile.topics: ${!!userProfile?.topics}, isLoaded: ${isLoaded}`);
     }
-  }, [questions, userProfile, getCorrectAnswersForTopic, createRingProgress, ringsState.rings, isLoaded]);
+  }, [questions, userProfile, isLoaded, persistentTopicMap]);
 
   // Calculate top 3 topic rings using useMemo to prevent recalculation
   const topRings = useMemo((): TopicRingProgress[] => {
@@ -281,6 +415,29 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     }
   }, [getStorageKey, userId]);
 
+  // Function to manually add a question topic mapping
+  const addQuestionTopic = useCallback((questionId: string, topic: string) => {
+    console.log(`[IMMEDIATE UPDATE] Adding question ${questionId} with topic "${topic}" to persistent map`);
+    setPersistentTopicMap(current => {
+      const newMap = new Map(current);
+      newMap.set(questionId, topic);
+      
+      // Save to storage
+      (async () => {
+        try {
+          const storageKey = `${getStorageKey()}_topicMap`;
+          const mapAsObject = Object.fromEntries(newMap);
+          await AsyncStorage.setItem(storageKey, JSON.stringify(mapAsObject));
+          console.log(`[IMMEDIATE UPDATE] Saved to storage, topic map now has ${newMap.size} items`);
+        } catch (error) {
+          console.error('Error saving topic map to storage:', error);
+        }
+      })();
+      
+      return newMap;
+    });
+  }, [getStorageKey]);
+
   return {
     topRings,
     allRings: ringsState.rings,
@@ -288,5 +445,27 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     lastUpdated: ringsState.lastUpdated,
     isLoaded,
     clearStoredRings,
+    addQuestionTopic,
   };
+};
+
+// Standalone function to store question topic mapping
+export const storeQuestionTopic = async (questionId: string, topic: string, userId?: string) => {
+  try {
+    const userKey = userId || 'guest';
+    const storageKey = `topicRings_${userKey}_topicMap`;
+    
+    // Get existing map from AsyncStorage
+    const storedData = await AsyncStorage.getItem(storageKey);
+    const existingMap = storedData ? JSON.parse(storedData) : {};
+    
+    // Add new mapping
+    existingMap[questionId] = topic;
+    
+    // Save back to storage
+    await AsyncStorage.setItem(storageKey, JSON.stringify(existingMap));
+    console.log(`[STORE QUESTION TOPIC] Stored topic "${topic}" for question ${questionId} in storage`);
+  } catch (error) {
+    console.error('Error storing question topic:', error);
+  }
 };

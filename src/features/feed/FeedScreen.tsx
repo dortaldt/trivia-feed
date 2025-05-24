@@ -82,6 +82,7 @@ import { Router } from 'expo-router';
 import { activeTopic, topics } from '../../../app-topic-config';
 import { TopicRings } from '../../components/TopicRings';
 import { AllRingsModal } from '../../components/AllRingsModal';
+import { useTopicRings } from '../../hooks/useTopicRings';
 
 const { width, height } = Dimensions.get('window');
 
@@ -153,6 +154,8 @@ const FeedScreen: React.FC = () => {
   const lastVisibleIndexRef = useRef<number | null>(null);
   // Add ref to prevent duplicate profile button clicks
   const lastProfileClickTime = useRef<number | null>(null);
+  // Add ref to track scroll-based index for active topic detection
+  const scrollBasedIndexRef = useRef<number>(0);
 
   // Get a background color for the loading state
   const backgroundColor = useThemeColor({}, 'background');
@@ -1305,6 +1308,12 @@ const FeedScreen: React.FC = () => {
     const scrollDirection = currentScrollPos > lastScrollPosition.current ? 'down' : 'up';
     lastScrollPosition.current = currentScrollPos;
     
+    // Update scroll-based index for more accurate active topic detection
+    const scrollBasedIndex = Math.round(currentScrollPos / viewportHeight);
+    if (scrollBasedIndex >= 0 && scrollBasedIndex < personalizedFeed.length) {
+      scrollBasedIndexRef.current = scrollBasedIndex;
+    }
+    
     // For iOS, calculate the current index based on scroll position
     // and update if it's significantly different from the current index
     if (isIOS && scrollDirection === 'down' && !isActivelyScrolling) {
@@ -1348,7 +1357,7 @@ const FeedScreen: React.FC = () => {
           const prevIndex = lastVisibleIndexRef.current;
           
           // Enhanced logging to track what's happening
-          console.log(`[ViewableItemsChanged] Moving from index ${prevIndex} to ${newIndex}, item ${currentItemId}`);
+          console.log(`[INDEX UPDATE] ViewableItemsChanged: ${prevIndex} → ${newIndex} (topic: "${currentItem.topic}", id: ${currentItemId})`);
           
           // Special case for first question skip detection
           if (newIndex === 1 && (prevIndex === null || prevIndex === 0)) {
@@ -1385,6 +1394,7 @@ const FeedScreen: React.FC = () => {
             
             // Update currentIndex state to match the visible item
             // This is critical for iOS to correctly detect skipped questions in onMomentumScrollEnd
+            console.log(`[INDEX UPDATE] Setting currentIndex from ${currentIndex} to ${newIndex}`);
             setCurrentIndex(newIndex);
             
             // Start tracking interaction with new question
@@ -1401,7 +1411,7 @@ const FeedScreen: React.FC = () => {
       }
     },
     [personalizedFeed, questions, preloadNextItems, markPreviousAsSkipped, dispatch, 
-     debugPanelVisible, feedExplanations, setCurrentIndex]
+     debugPanelVisible, feedExplanations, setCurrentIndex, currentIndex]
   );
 
   useEffect(() => {
@@ -1554,13 +1564,15 @@ const FeedScreen: React.FC = () => {
       
       const finalScrollPos = event.nativeEvent.contentOffset.y;
       const estimatedIndex = Math.round(finalScrollPos / viewportHeight);
-      console.log(`[onMomentumScrollEnd] iOS: finalScrollPos from event: ${finalScrollPos}, estimatedIndex: ${estimatedIndex}`);
+      console.log(`[INDEX UPDATE] onMomentumScrollEnd iOS: finalScrollPos=${finalScrollPos}, estimatedIndex=${estimatedIndex}`);
 
       if (estimatedIndex >= 0 && estimatedIndex < personalizedFeed.length) {
         // This estimatedIndex is the most accurate representation of where the scroll ended.
         eventCorrectedCurrentIndex = estimatedIndex;
+        const item = personalizedFeed[estimatedIndex];
+        console.log(`[INDEX UPDATE] Using iOS estimated index ${estimatedIndex} (topic: "${item?.topic}", id: ${item?.id})`);
       } else {
-        console.warn(`[onMomentumScrollEnd] iOS: Estimated index ${estimatedIndex} is out of bounds. Falling back to state currentIndex: ${currentIndex}`);
+        console.warn(`[INDEX UPDATE] iOS: Estimated index ${estimatedIndex} is out of bounds. Falling back to state currentIndex: ${currentIndex}`);
         eventCorrectedCurrentIndex = currentIndex; // Fallback if calculation is odd
       }
     } else {
@@ -1704,12 +1716,20 @@ const FeedScreen: React.FC = () => {
     const currentFeed = [...personalizedFeed];
     
     // Dispatch answer action to mark question as answered
+    console.log(`[FeedScreen] 🎯 Dispatching answerQuestion: ${questionId}, correct: ${isCorrect}, topic: ${questionItem.topic}`);
     dispatch(answerQuestion({ 
       questionId, 
       answerIndex, 
       isCorrect,
       userId: user?.id // Pass user ID if available
     }));
+    
+    // Store question topic mapping for ring calculation (important for generated questions)
+    // Use setTimeout to ensure Redux state is updated first
+    setTimeout(() => {
+      addQuestionTopic(questionId, questionItem.topic);
+      console.log(`[ANSWER] Stored topic "${questionItem.topic}" for question ${questionId} (isCorrect: ${isCorrect}) - DELAYED`);
+    }, 50);
     
     // Save updated profile to Redux
     // Let the Redux action handle the syncing with Supabase
@@ -2106,6 +2126,9 @@ const FeedScreen: React.FC = () => {
   // Add state for all rings modal
   const [showAllRingsModal, setShowAllRingsModal] = useState(false);
   
+  // Get addQuestionTopic from the rings hook for immediate updates
+  const { addQuestionTopic } = useTopicRings({ userId: user?.id });
+  
   // Handle 3-finger tap for iOS
   const handleTouchStart = useCallback((event: GestureResponderEvent) => {
     // Check if it's a 3-finger tap on iOS
@@ -2485,11 +2508,23 @@ const FeedScreen: React.FC = () => {
             size={50}
             userId={user?.id}
             activeTopic={(() => {
-              const currentTopic = personalizedFeed.length > 0 && currentIndex < personalizedFeed.length ? personalizedFeed[currentIndex]?.topic : undefined;
-              console.log(`[TopicRings] Current index: ${currentIndex}, Feed length: ${personalizedFeed.length}, Current topic: "${currentTopic}"`);
-              if (personalizedFeed[currentIndex]) {
-                console.log(`[TopicRings] Current question: "${personalizedFeed[currentIndex].question.substring(0, 50)}..."`);
+              // Use the most reliable index source available
+              // Priority: scrollBasedIndex > lastVisibleIndex > currentIndex
+              let bestIndex = currentIndex;
+              
+              if (scrollBasedIndexRef.current >= 0 && scrollBasedIndexRef.current < personalizedFeed.length) {
+                bestIndex = scrollBasedIndexRef.current;
+              } else if (lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
+                bestIndex = lastVisibleIndexRef.current;
               }
+              
+              const currentTopic = personalizedFeed.length > 0 && bestIndex < personalizedFeed.length ? personalizedFeed[bestIndex]?.topic : undefined;
+              const currentQuestion = personalizedFeed[bestIndex];
+              
+              // Log index sources for debugging
+              console.log(`[ACTIVE TOPIC RING] Indices - State: ${currentIndex}, Ref: ${lastVisibleIndexRef.current}, Scroll: ${scrollBasedIndexRef.current}, Using: ${bestIndex}`);
+              console.log(`[ACTIVE TOPIC RING] Topic: "${currentTopic}" - "${currentQuestion?.question?.substring(0, 30)}..."`);
+              
               return currentTopic;
             })()}
             onRingComplete={(topic, level) => {
@@ -2602,11 +2637,11 @@ const FeedScreen: React.FC = () => {
         visible={showAllRingsModal}
         onClose={() => setShowAllRingsModal(false)}
         userId={user?.id}
-        activeTopic={(() => {
-          const currentTopic = personalizedFeed.length > 0 && currentIndex < personalizedFeed.length ? personalizedFeed[currentIndex]?.topic : undefined;
-          console.log(`[AllRingsModal] Current topic: "${currentTopic}"`);
-          return currentTopic;
-        })()}
+                    activeTopic={(() => {
+              const currentTopic = personalizedFeed.length > 0 && currentIndex < personalizedFeed.length ? personalizedFeed[currentIndex]?.topic : undefined;
+              console.log(`[ACTIVE TOPIC RING] Modal - Current topic: "${currentTopic}"`);
+              return currentTopic;
+            })()}
       />
 
       {/* Debugging Modal for Personalization Explanations - Only visible when debug panel is enabled */}

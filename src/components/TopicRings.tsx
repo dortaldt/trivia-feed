@@ -136,8 +136,7 @@ const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, isActive, onPre
   
   const progressPercentage = Math.min(Math.max(safeCurrentProgress / safeTargetAnswers, 0), 1);
 
-  // Add debugging for active state
-  console.log(`[SingleRing] Ring "${ringData.topic}" isActive: ${isActive}`);
+
 
   // Create a gentle pulse animation for active rings
   const pulseAnimation = React.useRef(new RNAnimated.Value(1)).current;
@@ -247,6 +246,9 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
     return null;
   }
 
+  // Log all available rings and active topic for debugging
+  console.log(`[ACTIVE TOPIC RING] Available rings: [${validRings.map(r => `"${r.topic}"`).join(', ')}] vs activeTopic: "${activeTopic}"`);
+
   return (
     <View style={styles.container}>
       {validRings.map((ring, index) => {
@@ -255,7 +257,7 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
         const normalizedActiveTopic = activeTopic?.toLowerCase().trim();
         const isRingActive = normalizedRingTopic === normalizedActiveTopic;
         
-        console.log(`[TopicRings] Checking ring "${ring.topic}" (normalized: "${normalizedRingTopic}") against activeTopic "${activeTopic}" (normalized: "${normalizedActiveTopic}") -> isActive: ${isRingActive}`);
+        console.log(`[ACTIVE TOPIC RING] Ring "${ring.topic}" -> isActive: ${isRingActive}`);
         
         return (
           <View key={ring.topic} style={[styles.ringWrapper, { marginLeft: index > 0 ? 8 : 0 }]}>
@@ -292,8 +294,7 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
   const animatedProgress = React.useRef(new RNAnimated.Value(0)).current;
   const glowAnimation = React.useRef(new RNAnimated.Value(0)).current;
 
-  // Add debug logging for the ring
-  console.log(`[AppleActivityRing] Rendering ring with isActive: ${isActive}, color: ${color}, progress: ${progress}`);
+
 
   React.useEffect(() => {
     RNAnimated.timing(animatedProgress, {
