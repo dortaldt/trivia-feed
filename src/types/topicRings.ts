@@ -27,45 +27,65 @@ export const DEFAULT_RING_CONFIG: RingConfig = {
 };
 
 // Topic to icon mapping (using Feather icon names)
+// Comprehensive mapping for all topics in ALL_TOPICS
 export const TOPIC_ICONS: { [key: string]: string } = {
+  // Core academic topics
   'Science': 'zap',
   'History': 'book',
-  'Sports': 'activity',
   'Geography': 'globe',
   'Mathematics': 'hash',
+  'Math': 'hash', // Alias for Mathematics
   'Literature': 'feather',
   'Art': 'image',
+  'Arts': 'image', // Alias for Art
   'Music': 'music',
   'Technology': 'cpu',
-  'Nature': 'leaf',
+  'Physics': 'zap',
+  'Chemistry': 'droplet',
+  'Biology': 'heart',
+  
+  // Extended academic topics
+  'Ancient History': 'book-open',
+  'Modern History': 'clock',
+  'Astronomy': 'star',
+  'Engineering': 'tool',
+  'Computers': 'monitor',
+  'Language': 'message-circle',
+  'Environment': 'wind',
+  
+  // Culture and entertainment
+  'Entertainment': 'play-circle',
+  'Pop Culture': 'trending-up',
+  'Culture': 'users',
+  'Movies': 'film',
+  'Television': 'tv',
+  'Video Games': 'play',
+  
+  // Geography and places
+  'Countries': 'flag',
+  'Nature': 'wind',
+  'Animals': 'heart', // Since Feather doesn't have animal icons
+  
+  // General categories
+  'Sports': 'activity',
   'Politics': 'users',
   'Economics': 'trending-up',
   'Philosophy': 'eye',
   'Medicine': 'heart',
-  'Physics': 'atom',
-  'Chemistry': 'flask',
-  'Biology': 'dna',
-  'default': 'circle', // Fallback icon
+  'Food': 'coffee',
+  'Food and Drink': 'coffee',
+  'General Knowledge': 'help-circle',
+  'Miscellaneous': 'package',
+  
+  // Business and current affairs
+  'Business': 'briefcase',
+  'Current Events': 'calendar',
+  'Celebrities': 'star',
+  'Religion': 'book',
+  'Mythology': 'shield',
+  
+  // Fallback
+  'default': 'circle',
 };
 
-// Topic colors - can be customized
-export const TOPIC_COLORS: { [key: string]: string } = {
-  'Science': '#00D4FF',
-  'History': '#FF6B35',
-  'Sports': '#32CD32',
-  'Geography': '#4169E1',
-  'Mathematics': '#9370DB',
-  'Literature': '#FF69B4',
-  'Art': '#FFD700',
-  'Music': '#FF1493',
-  'Technology': '#00CED1',
-  'Nature': '#228B22',
-  'Politics': '#DC143C',
-  'Economics': '#DAA520',
-  'Philosophy': '#8A2BE2',
-  'Medicine': '#FF4500',
-  'Physics': '#1E90FF',
-  'Chemistry': '#32CD32',
-  'Biology': '#FF6347',
-  'default': '#999999', // Fallback color
-}; 
+ 

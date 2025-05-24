@@ -8,7 +8,6 @@ import {
   RingConfig,
   DEFAULT_RING_CONFIG,
   TOPIC_ICONS,
-  TOPIC_COLORS,
 } from '../types/topicRings';
 import { useTopicRings } from '../hooks/useTopicRings';
 import Svg, { Circle } from 'react-native-svg';

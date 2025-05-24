@@ -7,8 +7,8 @@ import {
   RingConfig,
   DEFAULT_RING_CONFIG,
   TOPIC_ICONS,
-  TOPIC_COLORS,
 } from '../types/topicRings';
+import { getTopicColor } from '../../constants/NeonColors';
 
 interface UseTopicRingsProps {
   config?: RingConfig;
@@ -143,7 +143,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         currentProgress: Math.min(correctAnswers, targetAnswers),
         targetAnswers,
         totalCorrectAnswers: correctAnswers,
-        color: TOPIC_COLORS[topic] || TOPIC_COLORS.default,
+        color: getTopicColor(topic).hex,
         icon: TOPIC_ICONS[topic] || TOPIC_ICONS.default,
       };
       
@@ -165,22 +165,27 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
       return newRing;
     }
 
-    // Update existing ring only if there are new correct answers
-    if (correctAnswers <= existingRing.totalCorrectAnswers) {
-      return existingRing; // No changes needed
-    }
+    // Update existing ring - ALWAYS refresh icon and color to get latest mappings
+    const updatedRing = { 
+      ...existingRing,
+      // Always update icon and color to ensure latest mappings
+      icon: TOPIC_ICONS[topic] || TOPIC_ICONS.default,
+      color: getTopicColor(topic).hex,
+    };
 
-    const updatedRing = { ...existingRing };
-    const newCorrectAnswers = correctAnswers - existingRing.totalCorrectAnswers;
-    
-    updatedRing.totalCorrectAnswers = correctAnswers;
-    updatedRing.currentProgress += newCorrectAnswers;
+    // Update correct answers only if there are new ones
+    if (correctAnswers > existingRing.totalCorrectAnswers) {
+      const newCorrectAnswers = correctAnswers - existingRing.totalCorrectAnswers;
+      
+      updatedRing.totalCorrectAnswers = correctAnswers;
+      updatedRing.currentProgress += newCorrectAnswers;
 
-    // Check if level should be increased
-    while (updatedRing.currentProgress >= updatedRing.targetAnswers && updatedRing.level < config.maxDisplayLevel) {
-      updatedRing.currentProgress -= updatedRing.targetAnswers;
-      updatedRing.level += 1;
-      updatedRing.targetAnswers = calculateTargetAnswers(updatedRing.level);
+      // Check if level should be increased
+      while (updatedRing.currentProgress >= updatedRing.targetAnswers && updatedRing.level < config.maxDisplayLevel) {
+        updatedRing.currentProgress -= updatedRing.targetAnswers;
+        updatedRing.level += 1;
+        updatedRing.targetAnswers = calculateTargetAnswers(updatedRing.level);
+      }
     }
 
     return updatedRing;
@@ -200,8 +205,18 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         // Create or update ring (will have 0 progress if no correct answers)
         const updatedRing = createRingProgress(topic, correctAnswers, existingRing);
         
-        // Only update if there are actual changes
-        if (!existingRing || JSON.stringify(updatedRing) !== JSON.stringify(existingRing)) {
+        // Check for meaningful changes (not just icon/color updates)
+        const hasDataChanges = !existingRing || 
+          existingRing.level !== updatedRing.level ||
+          existingRing.currentProgress !== updatedRing.currentProgress ||
+          existingRing.totalCorrectAnswers !== updatedRing.totalCorrectAnswers ||
+          existingRing.targetAnswers !== updatedRing.targetAnswers;
+        
+        // Check for icon/color updates (important for cache refresh)
+        const hasIconColorChanges = existingRing &&
+          (existingRing.icon !== updatedRing.icon || existingRing.color !== updatedRing.color);
+        
+        if (hasDataChanges || hasIconColorChanges) {
           newRings[topic] = updatedRing;
           hasChanges = true;
         }
