@@ -10,7 +10,7 @@ import {
   TOPIC_ICONS,
 } from '../types/topicRings';
 import { useTopicRings } from '../hooks/useTopicRings';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Defs, Filter, FeGaussianBlur, FeMerge, FeMergeNode } from 'react-native-svg';
 import { Animated as RNAnimated } from 'react-native';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -19,12 +19,14 @@ interface TopicRingsProps {
   config?: RingConfig;
   size?: number;
   userId?: string;
+  activeTopic?: string;
   onRingComplete?: (topic: string, newLevel: number) => void;
 }
 
 interface SingleRingProps {
   ringData: TopicRingProgress;
   size: number;
+  isActive?: boolean;
   onPress: () => void;
 }
 
@@ -43,6 +45,7 @@ interface AppleActivityRingProps {
   progress: number; // 0 to 1
   icon: string;
   level: number;
+  isActive?: boolean;
 }
 
 // Ring Details Modal Component
@@ -126,29 +129,72 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
 };
 
 // Single Ring Component with Apple Activity style
-const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, onPress }) => {
+const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, isActive, onPress }) => {
   // Ensure all values are valid numbers before calculations
   const safeCurrentProgress = typeof ringData.currentProgress === 'number' && !isNaN(ringData.currentProgress) ? ringData.currentProgress : 0;
   const safeTargetAnswers = typeof ringData.targetAnswers === 'number' && !isNaN(ringData.targetAnswers) && ringData.targetAnswers > 0 ? ringData.targetAnswers : 1;
   
   const progressPercentage = Math.min(Math.max(safeCurrentProgress / safeTargetAnswers, 0), 1);
 
+  // Add debugging for active state
+  console.log(`[SingleRing] Ring "${ringData.topic}" isActive: ${isActive}`);
+
+  // Create a gentle pulse animation for active rings
+  const pulseAnimation = React.useRef(new RNAnimated.Value(1)).current;
+
+  React.useEffect(() => {
+    if (isActive) {
+      // Start pulsing animation
+      const pulse = RNAnimated.sequence([
+        RNAnimated.timing(pulseAnimation, {
+          toValue: 1.03,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        RNAnimated.timing(pulseAnimation, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ]);
+      
+      const loop = RNAnimated.loop(pulse);
+      loop.start();
+      
+      return () => loop.stop();
+    } else {
+      // Reset to normal scale
+      RNAnimated.timing(pulseAnimation, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isActive, pulseAnimation]);
+
   return (
-    <TouchableOpacity 
-      onPress={onPress}
-      style={[styles.singleRingContainer, { width: size, height: size }]}
-      activeOpacity={0.8}
+    <RNAnimated.View
+      style={{
+        transform: [{ scale: pulseAnimation }],
+      }}
     >
-      {/* Use the reliable SVG Apple Activity Ring */}
-      <AppleActivityRing
-        size={size}
-        strokeWidth={Math.max(6, size * 0.12)}
-        color={ringData.color}
-        progress={progressPercentage}
-        icon={ringData.icon}
-        level={ringData.level}
-      />
-    </TouchableOpacity>
+      <TouchableOpacity 
+        onPress={onPress}
+        style={[styles.singleRingContainer, { width: size, height: size }, isActive && styles.activeRing]}
+        activeOpacity={0.8}
+      >
+        {/* Use the reliable SVG Apple Activity Ring */}
+        <AppleActivityRing
+          size={size}
+          strokeWidth={Math.max(6, size * 0.12)}
+          color={ringData.color}
+          progress={progressPercentage}
+          icon={ringData.icon}
+          level={ringData.level}
+          isActive={isActive}
+        />
+      </TouchableOpacity>
+    </RNAnimated.View>
   );
 };
 
@@ -157,6 +203,7 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
   config,
   size = 50,
   userId,
+  activeTopic,
   onRingComplete,
 }) => {
   const { topRings, onRingComplete: hookOnRingComplete } = useTopicRings({ config, userId });
@@ -202,15 +249,25 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
 
   return (
     <View style={styles.container}>
-      {validRings.map((ring, index) => (
-        <View key={ring.topic} style={[styles.ringWrapper, { marginLeft: index > 0 ? 8 : 0 }]}>
-          <SingleRing
-            ringData={ring}
-            size={size}
-            onPress={() => handleRingPress(ring)}
-          />
-        </View>
-      ))}
+      {validRings.map((ring, index) => {
+        // More robust topic matching - normalize case and trim whitespace
+        const normalizedRingTopic = ring.topic.toLowerCase().trim();
+        const normalizedActiveTopic = activeTopic?.toLowerCase().trim();
+        const isRingActive = normalizedRingTopic === normalizedActiveTopic;
+        
+        console.log(`[TopicRings] Checking ring "${ring.topic}" (normalized: "${normalizedRingTopic}") against activeTopic "${activeTopic}" (normalized: "${normalizedActiveTopic}") -> isActive: ${isRingActive}`);
+        
+        return (
+          <View key={ring.topic} style={[styles.ringWrapper, { marginLeft: index > 0 ? 8 : 0 }]}>
+            <SingleRing
+              ringData={ring}
+              size={size}
+              isActive={isRingActive}
+              onPress={() => handleRingPress(ring)}
+            />
+          </View>
+        );
+      })}
       
       <RingDetailsModal
         visible={modalVisible}
@@ -228,10 +285,15 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
   progress = 0.7,
   icon = 'activity',
   level = 1,
+  isActive,
 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const animatedProgress = React.useRef(new RNAnimated.Value(0)).current;
+  const glowAnimation = React.useRef(new RNAnimated.Value(0)).current;
+
+  // Add debug logging for the ring
+  console.log(`[AppleActivityRing] Rendering ring with isActive: ${isActive}, color: ${color}, progress: ${progress}`);
 
   React.useEffect(() => {
     RNAnimated.timing(animatedProgress, {
@@ -241,48 +303,145 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
     }).start();
   }, [progress]);
 
+  // Animate glow effect when isActive changes
+  React.useEffect(() => {
+    if (isActive) {
+      // Start pulsing glow animation
+      const pulseSequence = RNAnimated.sequence([
+        RNAnimated.timing(glowAnimation, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.bezier(0.4, 0, 0.6, 1),
+          useNativeDriver: false,
+        }),
+        RNAnimated.timing(glowAnimation, {
+          toValue: 0.3,
+          duration: 800,
+          easing: Easing.bezier(0.4, 0, 0.6, 1),
+          useNativeDriver: false,
+        }),
+      ]);
+      
+      const loopedAnimation = RNAnimated.loop(pulseSequence);
+      loopedAnimation.start();
+      
+      return () => loopedAnimation.stop();
+    } else {
+      // Fade out glow
+      RNAnimated.timing(glowAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [isActive, glowAnimation]);
+
   const strokeDashoffset = animatedProgress.interpolate({
     inputRange: [0, 1],
     outputRange: [circumference, 0],
   });
 
+  const glowOpacity = glowAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.8],
+  });
+
+  const glowRadius = glowAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 15],
+  });
+
   return (
     <View style={{ alignItems: 'center', position: 'relative' }}>
-      <View style={{ width: size, height: size, position: 'relative' }}>
+      <Animated.View 
+        style={{ 
+          width: size, 
+          height: size, 
+          position: 'relative',
+          ...(isActive && {
+            shadowColor: color,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: glowOpacity,
+            shadowRadius: glowRadius,
+            ...(Platform.OS === 'android' && {
+              elevation: isActive ? 8 : 0,
+            }),
+          })
+        }}
+      >
         <Svg width={size} height={size}>
+          {/* Glow effect for active ring */}
+          {isActive && (
+            <Defs>
+              <Filter id="glow">
+                <FeGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                <FeMerge> 
+                  <FeMergeNode in="coloredBlur"/>
+                  <FeMergeNode in="SourceGraphic"/>
+                </FeMerge>
+              </Filter>
+            </Defs>
+          )}
+          
+          {/* Active ring fill - subtle background fill when active */}
+          {isActive && (
+            <Circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill={color + '15'} // Very subtle fill with 15% opacity
+              stroke="none"
+            />
+          )}
+          
           {/* Background ring */}
           <Circle
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke={color + '33'}
+            stroke={isActive ? color + '66' : color + '33'} // Stronger background when active
             strokeWidth={strokeWidth}
             fill="none"
           />
+          
           {/* Progress ring */}
           <AnimatedCircle
             cx={size / 2}
             cy={size / 2}
             r={radius}
             stroke={color}
-            strokeWidth={strokeWidth}
+            strokeWidth={isActive ? strokeWidth + 1 : strokeWidth} // Slightly thicker when active
             fill="none"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
             rotation="-90"
             origin={`${size / 2}, ${size / 2}`}
+            filter={isActive ? "url(#glow)" : undefined}
           />
         </Svg>
+        
         {/* Center icon */}
         <View style={{ position: 'absolute', top: 0, left: 0, width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
           <Feather name={icon as any} size={size * 0.32} color={color} />
         </View>
+        
         {/* Level below - positioned absolutely to not affect ring centering */}
         <View style={{ position: 'absolute', top: size + 4, left: 0, right: 0, alignItems: 'center' }}>
-          <ThemedText style={{ color, fontWeight: 'bold', fontSize: size * 0.16 }}>L{level}</ThemedText>
+          <ThemedText style={{ 
+            color: isActive ? color : color, 
+            fontWeight: isActive ? '900' : 'bold', 
+            fontSize: size * 0.16,
+            ...(isActive && {
+              textShadowColor: color + '80',
+              textShadowOffset: { width: 0, height: 0 },
+              textShadowRadius: 2,
+            })
+          }}>
+            L{level}
+          </ThemedText>
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 };
@@ -375,5 +534,19 @@ const styles = StyleSheet.create({
   modalTotalText: {
     fontSize: 14,
     opacity: 0.8,
+  },
+  activeRing: {
+    // Enhanced container styling for active ring
+    transform: [{ scale: 1.05 }], // Slightly larger when active
+    ...(Platform.OS === 'web' && {
+      filter: 'drop-shadow(0 0 15px rgba(255, 255, 255, 0.4))',
+    }),
+    ...(Platform.OS !== 'web' && {
+      shadowColor: '#ffffff',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
+    }),
   },
 }); 

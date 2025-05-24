@@ -2484,6 +2484,14 @@ const FeedScreen: React.FC = () => {
           <TopicRings
             size={50}
             userId={user?.id}
+            activeTopic={(() => {
+              const currentTopic = personalizedFeed.length > 0 && currentIndex < personalizedFeed.length ? personalizedFeed[currentIndex]?.topic : undefined;
+              console.log(`[TopicRings] Current index: ${currentIndex}, Feed length: ${personalizedFeed.length}, Current topic: "${currentTopic}"`);
+              if (personalizedFeed[currentIndex]) {
+                console.log(`[TopicRings] Current question: "${personalizedFeed[currentIndex].question.substring(0, 50)}..."`);
+              }
+              return currentTopic;
+            })()}
             onRingComplete={(topic, level) => {
               console.log(`🎉 ${topic} reached level ${level}!`);
               // You can add celebration effects here
@@ -2594,6 +2602,11 @@ const FeedScreen: React.FC = () => {
         visible={showAllRingsModal}
         onClose={() => setShowAllRingsModal(false)}
         userId={user?.id}
+        activeTopic={(() => {
+          const currentTopic = personalizedFeed.length > 0 && currentIndex < personalizedFeed.length ? personalizedFeed[currentIndex]?.topic : undefined;
+          console.log(`[AllRingsModal] Current topic: "${currentTopic}"`);
+          return currentTopic;
+        })()}
       />
 
       {/* Debugging Modal for Personalization Explanations - Only visible when debug panel is enabled */}

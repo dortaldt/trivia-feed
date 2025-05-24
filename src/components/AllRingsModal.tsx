@@ -13,14 +13,16 @@ interface AllRingsModalProps {
   visible: boolean;
   onClose: () => void;
   userId?: string;
+  activeTopic?: string; // Add activeTopic prop for glow effect
 }
 
 interface RingItemProps {
   ring: TopicRingProgress;
   onPress: () => void;
+  isActive?: boolean; // Add isActive prop for glow effect
 }
 
-const RingItem: React.FC<RingItemProps> = ({ ring, onPress }) => {
+const RingItem: React.FC<RingItemProps> = ({ ring, onPress, isActive }) => {
   const progressPercentage = Math.round((ring.currentProgress / ring.targetAnswers) * 100);
   const nextLevelAnswers = ring.targetAnswers - ring.currentProgress;
 
@@ -34,6 +36,7 @@ const RingItem: React.FC<RingItemProps> = ({ ring, onPress }) => {
           progress={ring.currentProgress / ring.targetAnswers}
           icon={ring.icon}
           level={ring.level}
+          isActive={isActive}
         />
       </View>
       
@@ -68,7 +71,7 @@ const RingItem: React.FC<RingItemProps> = ({ ring, onPress }) => {
   );
 };
 
-export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, userId }) => {
+export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, userId, activeTopic }) => {
   const insets = useSafeAreaInsets();
   const { allRings } = useTopicRings({ userId });
 
@@ -129,16 +132,26 @@ export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, 
           {ringsWithProgress.length > 0 && (
             <>
               <ThemedText style={styles.sectionTitle}>Active Rings</ThemedText>
-              {ringsWithProgress.map((ring) => (
-                <RingItem
-                  key={ring.topic}
-                  ring={ring}
-                  onPress={() => {
-                    // Could open detailed ring modal here
-                    console.log(`Tapped on ${ring.topic} ring`);
-                  }}
-                />
-              ))}
+              {ringsWithProgress.map((ring) => {
+                // More robust topic matching - normalize case and trim whitespace
+                const normalizedRingTopic = ring.topic.toLowerCase().trim();
+                const normalizedActiveTopic = activeTopic?.toLowerCase().trim();
+                const isRingActive = normalizedRingTopic === normalizedActiveTopic;
+                
+                console.log(`[AllRingsModal] Checking ring "${ring.topic}" (normalized: "${normalizedRingTopic}") against activeTopic "${activeTopic}" (normalized: "${normalizedActiveTopic}") -> isActive: ${isRingActive}`);
+                
+                return (
+                  <RingItem
+                    key={ring.topic}
+                    ring={ring}
+                    isActive={isRingActive}
+                    onPress={() => {
+                      // Could open detailed ring modal here
+                      console.log(`Tapped on ${ring.topic} ring`);
+                    }}
+                  />
+                );
+              })}
             </>
           )}
 
