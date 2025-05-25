@@ -4,6 +4,7 @@ import { InteractionLog, FeedChange, WeightChange } from '../types/trackerTypes'
 import { Platform } from 'react-native';
 import { EventEmitter } from 'events';
 import { dbEventEmitter } from './syncService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Track pending requests to prevent duplicate calls
 const pendingRequests = new Map<string, Promise<any>>();
@@ -159,6 +160,29 @@ async function deduplicatedRequest<T>(
   return requestPromise;
 }
 
+// Helper function to check if user is in guest mode
+async function isGuestUser(userId?: string): Promise<boolean> {
+  try {
+    // If no userId provided, check AsyncStorage for guest mode
+    if (!userId) {
+      const guestMode = await AsyncStorage.getItem('guestMode');
+      return guestMode === 'true';
+    }
+    
+    // If userId looks like a device ID (guest users use device IDs), treat as guest
+    if (userId.startsWith('device_') || userId.length < 10) {
+      return true;
+    }
+    
+    // Check AsyncStorage as well for safety
+    const guestMode = await AsyncStorage.getItem('guestMode');
+    return guestMode === 'true';
+  } catch (error) {
+    console.error('Error checking guest mode:', error);
+    return false;
+  }
+}
+
 /**
  * Syncs the user profile data with Supabase
  * WRITE-ONLY function - does not perform any reads
@@ -177,6 +201,14 @@ async function _syncUserProfile(userId: string, userProfile: UserProfile): Promi
   try {
     if (!userId) {
       console.log('No user ID provided for sync');
+      return;
+    }
+
+    // Check if user is in guest mode
+    const isGuest = await isGuestUser(userId);
+    if (isGuest) {
+      console.log('🏠 Guest user detected - skipping database sync');
+      console.log('🏠 All data remains client-side only for guest users');
       return;
     }
 
@@ -341,6 +373,14 @@ async function _fetchUserProfile(userId: string, forceLoad: boolean = false): Pr
     
     if (!userId) {
       console.log('No user ID provided for fetch');
+      return null;
+    }
+
+    // Check if user is in guest mode
+    const isGuest = await isGuestUser(userId);
+    if (isGuest) {
+      console.log('🏠 Guest user detected - skipping database fetch');
+      console.log('🏠 All data remains client-side only for guest users');
       return null;
     }
 
@@ -511,6 +551,14 @@ async function _loadUserData(userId: string, forceLoad: boolean = false): Promis
     }
     
     if (!userId) {
+      return { profile: null };
+    }
+
+    // Check if user is in guest mode
+    const isGuest = await isGuestUser(userId);
+    if (isGuest) {
+      console.log('🏠 Guest user detected - skipping database load');
+      console.log('🏠 All data remains client-side only for guest users');
       return { profile: null };
     }
     

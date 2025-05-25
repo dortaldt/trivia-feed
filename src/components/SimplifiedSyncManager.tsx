@@ -18,6 +18,7 @@ import {
 } from '../lib/simplifiedSyncService';
 import { loadQuestionsFromStorageThunk } from '../store/triviaSlice';
 import { AppState, AppStateStatus, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface SyncManagerProps {
   children?: React.ReactNode;
@@ -194,6 +195,19 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
   // Define loadInitialData function
   const loadInitialData = useCallback(async () => {
     if (!user || !user.id || initialDataLoaded) return;
+    
+    // Check if user is in guest mode - skip database operations for guests
+    try {
+      const guestMode = await AsyncStorage.getItem('guestMode');
+      if (guestMode === 'true') {
+        console.log('🏠 Guest user detected in SimplifiedSyncManager - skipping database operations');
+        console.log('🏠 All data remains client-side only for guest users');
+        setInitialDataLoaded(true);
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking guest mode in SimplifiedSyncManager:', error);
+    }
     
     try {
       // Reset module state again here to be sure

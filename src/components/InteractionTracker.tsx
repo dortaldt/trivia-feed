@@ -549,7 +549,7 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
     }
   }, [questions, feedData, interactions]);
   
-  // Track weight changes and create complete weight snapshots
+  // Track weight changes
   useEffect(() => {
     // Check if there are new weight changes
     if (syncedWeightChanges.length > 0) {
@@ -564,28 +564,17 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
         setWeightChanges(prev => [...prev, ...newWeightChanges]);
         
         // Create weight snapshots for each new weight change
-        // Use the weight change data directly instead of trying to read from userProfile
         const newSnapshots: WeightSnapshot[] = newWeightChanges.map(change => {
-          // Use the weights from the weight change record itself - these are the ACTUAL updated weights
+          // Get all current topic weights from userProfile
           const allTopicWeights: { [topic: string]: number } = {};
-          
-          // Start with current userProfile weights
           Object.entries(userProfile.topics || {}).forEach(([topic, data]) => {
             allTopicWeights[topic] = (data as any).weight;
           });
           
-          // Override with the specific weight change for the trigger topic
-          // This ensures we capture the ACTUAL updated weight, not the stale one
-          allTopicWeights[change.topic] = change.newWeights.topicWeight;
-          
           console.log(`[InteractionTracker] Creating weight snapshot for ${change.questionId}:`);
-          console.log(`[InteractionTracker] UserProfile timestamp: ${userProfile.lastRefreshed || 'none'}`);
           console.log(`[InteractionTracker] Trigger topic: ${change.topic}, All topics count: ${Object.keys(allTopicWeights).length}`);
           console.log(`[InteractionTracker] Sample weights: ${Object.entries(allTopicWeights).slice(0, 3).map(([topic, weight]) => `${topic}=${weight.toFixed(2)}`).join(', ')}`);
           console.log(`[InteractionTracker] Trigger topic weight: ${allTopicWeights[change.topic]?.toFixed(2) || 'N/A'}`);
-          console.log(`[InteractionTracker] Geography weight: ${allTopicWeights['Geography']?.toFixed(2) || 'N/A'}`);
-          console.log(`[InteractionTracker] Science weight: ${allTopicWeights['Science']?.toFixed(2) || 'N/A'}`);
-          console.log(`[InteractionTracker] Entertainment weight: ${allTopicWeights['Entertainment']?.toFixed(2) || 'N/A'}`);
           
           return {
             timestamp: change.timestamp,
@@ -603,7 +592,7 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
         console.log(`[InteractionTracker] Added ${newSnapshots.length} weight snapshots, total: ${weightSnapshots.length + newSnapshots.length}`);
       }
     }
-  }, [syncedWeightChanges, userProfile]);
+  }, [syncedWeightChanges]);
   
   // Helper to get question text
   const getQuestionText = (questionId: string): string => {

@@ -121,7 +121,7 @@ export const loadQuestionsFromStorageThunk = createAsyncThunk(
 /**
  * Helper function to safely sync user profile with error handling
  */
-const safeSyncUserProfile = (userId?: string, profile?: UserProfile): void => {
+const safeSyncUserProfile = async (userId?: string, profile?: UserProfile): Promise<void> => {
   try {
     if (!userId) {
       console.log('[SAFE SYNC] No userId provided, skipping sync');
@@ -131,6 +131,18 @@ const safeSyncUserProfile = (userId?: string, profile?: UserProfile): void => {
     if (!profile) {
       console.log('[SAFE SYNC] No profile provided, skipping sync');
       return;
+    }
+
+    // Check if user is in guest mode - skip database operations for guests
+    try {
+      const guestMode = await AsyncStorage.getItem('guestMode');
+      if (guestMode === 'true') {
+        console.log('[SAFE SYNC] 🏠 Guest user detected - skipping database sync');
+        console.log('[SAFE SYNC] 🏠 All data remains client-side only for guest users');
+        return;
+      }
+    } catch (error) {
+      console.error('[SAFE SYNC] Error checking guest mode:', error);
     }
     
     // Deep clone the profile to prevent proxy issues
@@ -177,13 +189,8 @@ const triviaSlice = createSlice({
         console.log(`[Redux] Overriding previous 'skipped' state for question ${questionId} with 'answered' state`);
       }
       
-      // Update user profile with new weight changes
+      // Record interaction for sync (but DON'T update weights here)
       if (state.userProfile) {
-        // Calculate confidence updates
-        if (!state.userProfile.topics) {
-          state.userProfile.topics = {};
-        }
-        
         // Record interaction for sync
         const now = Date.now();
         const interaction: InteractionLog = {
@@ -196,6 +203,8 @@ const triviaSlice = createSlice({
         
         // Add to synced interactions
         state.syncedInteractions.push(interaction);
+        
+        console.log(`[Redux] Added ${isCorrect ? 'correct' : 'incorrect'} interaction for question ${questionId} to syncedInteractions`);
         
         // If user is logged in, only sync based on interaction threshold (BATCHED)
         if (userId) {

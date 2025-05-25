@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface LeaderboardUser {
   id: string;
@@ -129,6 +130,18 @@ export async function recordUserAnswer(
   answerIndex: number
 ): Promise<void> {
   try {
+    // Check if user is in guest mode - skip database operations for guests
+    try {
+      const guestMode = await AsyncStorage.getItem('guestMode');
+      if (guestMode === 'true') {
+        console.log('🏠 Guest user detected - skipping leaderboard recording');
+        console.log('🏠 Leaderboard data remains client-side only for guest users');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking guest mode in recordUserAnswer:', error);
+    }
+
     console.log('Recording user answer to leaderboard:', { userId, questionId, isCorrect });
     
     const { error } = await supabase
