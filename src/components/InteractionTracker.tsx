@@ -1804,6 +1804,14 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
               Redux weight changes: {syncedWeightChanges.map(wc => `${wc.topic}(${wc.interactionType})`).join(', ')}
                           </ThemedText>
             <ThemedText style={{fontSize: 11, color: '#666666'}}>
+              Profile vs Changes: {syncedWeightChanges.map(wc => {
+                const profileWeight = userProfile.topics[wc.topic]?.weight || 0.5;
+                const expectedWeight = wc.newWeights.topicWeight;
+                const match = Math.abs(profileWeight - expectedWeight) < 0.01;
+                return `${wc.topic}(${profileWeight.toFixed(2)}${match ? '✓' : '✗' + expectedWeight.toFixed(2)})`;
+              }).join(', ')}
+                          </ThemedText>
+            <ThemedText style={{fontSize: 11, color: '#666666'}}>
               Default weight value: 0.50
                           </ThemedText>
             <ThemedText style={{fontSize: 11, color: '#666666'}}>
