@@ -485,8 +485,8 @@ const triviaSlice = createSlice({
         state.syncedFeedChanges.push(...feedChanges);
       }
     },
-    updateUserProfile: (state, action: PayloadAction<{ profile: UserProfile, userId?: string }>) => {
-      const { profile } = action.payload;
+    updateUserProfile: (state, action: PayloadAction<{ profile: UserProfile, userId?: string, weightChange?: WeightChange }>) => {
+      const { profile, weightChange } = action.payload;
       
       // Add null check for profile
       if (!profile) {
@@ -494,7 +494,15 @@ const triviaSlice = createSlice({
         return;
       }
       
+      // Simply update the profile without timestamp manipulation
       state.userProfile = profile;
+      
+      // If we have a weight change, add it to the synced weight changes
+      if (weightChange) {
+        state.syncedWeightChanges.push(weightChange);
+        console.log(`[Redux] Added weight change to syncedWeightChanges: ${weightChange.topic} (${weightChange.interactionType})`);
+        console.log(`[Redux] Weight change details: ${weightChange.oldWeights.topicWeight.toFixed(4)} -> ${weightChange.newWeights.topicWeight.toFixed(4)}`);
+      }
       
       // Log the update action
       console.log('[Redux] User profile updated');
@@ -571,28 +579,26 @@ const triviaSlice = createSlice({
       
       // Only update profile if we received one
       if (profile) {
-        // Check if we should use the database profile
-        // MODIFIED: Always prioritize non-default database weights
-        const localHasDefaultWeights = Object.values(state.userProfile.topics).every(
-          (topic: any) => Math.abs(topic.weight - 0.5) < 0.01
-        );
+        // ULTRA-CONSERVATIVE APPROACH: Never overwrite local profile if ANY interactions exist
+        // This prevents weight resets during active sessions
+        const localHasAnyInteractions = state.syncedWeightChanges.length > 0 || 
+                                       state.syncedInteractions.length > 0 ||
+                                       Object.keys(state.questions).length > 0;
         
-        const remoteHasNonDefaultWeights = Object.values(profile.topics).some(
+        const localHasNonDefaultWeights = Object.values(state.userProfile.topics).some(
           (topic: any) => Math.abs(topic.weight - 0.5) >= 0.01
         );
         
-        // ALWAYS use database profile when it has non-default weights but local has defaults
-        if (remoteHasNonDefaultWeights && localHasDefaultWeights) {
-          console.log('PRIORITY: Database profile has non-default weights but local has defaults');
-          console.log('Using database profile to preserve personalization');
-          state.userProfile = profile;
-        }
-        // Otherwise use timestamp comparison
-        else if (profile.lastRefreshed > state.userProfile.lastRefreshed) {
-          console.log('Updating local profile with newer server profile');
-          state.userProfile = profile;
+        // NEVER overwrite if we have any local activity or non-default weights
+        if (localHasAnyInteractions || localHasNonDefaultWeights) {
+          console.log('PRESERVING local profile: has active session data or personalized weights');
+          console.log(`Local interactions: ${state.syncedInteractions.length}, weight changes: ${state.syncedWeightChanges.length}, questions: ${Object.keys(state.questions).length}`);
+          console.log(`Local has non-default weights: ${localHasNonDefaultWeights}`);
+          // Keep the existing local profile - do not overwrite
         } else {
-          console.log('Local profile is newer than server profile, keeping local changes');
+          // Only use database profile if local is completely fresh AND has all default weights
+          console.log('Using database profile: local profile is completely fresh with default weights');
+          state.userProfile = profile;
         }
       }
       

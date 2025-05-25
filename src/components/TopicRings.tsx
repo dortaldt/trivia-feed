@@ -86,8 +86,32 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
       lastRefreshed: Date.now()
     };
 
-    // Dispatch the update to Redux
-    dispatch(updateUserProfile({ profile: updatedProfile }));
+    // Create a weight change record for the manual adjustment
+    const weightChangeRecord = {
+      timestamp: Date.now(),
+      questionId: 'manual-adjustment',
+      interactionType: 'skipped' as const, // Use 'skipped' as closest to manual action
+      questionText: 'Manual topic weight adjustment',
+      topic: topic,
+      subtopic: 'General',
+      branch: 'General',
+      oldWeights: {
+        topicWeight: currentWeight,
+        subtopicWeight: userProfile.topics[topic]?.subtopics?.['General']?.weight || 0.5,
+        branchWeight: userProfile.topics[topic]?.subtopics?.['General']?.branches?.['General']?.weight || 0.5
+      },
+      newWeights: {
+        topicWeight: newWeight,
+        subtopicWeight: userProfile.topics[topic]?.subtopics?.['General']?.weight || 0.5,
+        branchWeight: userProfile.topics[topic]?.subtopics?.['General']?.branches?.['General']?.weight || 0.5
+      }
+    };
+
+    // Dispatch the update to Redux with weight change record
+    dispatch(updateUserProfile({ 
+      profile: updatedProfile,
+      weightChange: weightChangeRecord
+    }));
     
     // Disable buttons until next question scroll
     setButtonsDisabled(true);

@@ -228,24 +228,8 @@ export function updateUserProfile(
   // Log the actual values being used
   console.log(`[WEIGHT UPDATE] Initial weights for ${questionId}: topic=${oldWeights.topicWeight.toFixed(2)}, subtopic=${oldWeights.subtopicWeight.toFixed(2)}, branch=${oldWeights.branchWeight.toFixed(2)}`);
   
-  // Check for suspiciously non-default weights in a new user profile
-  if (Object.keys(updatedProfile.interactions).length <= 1) {
-    if (Math.abs(oldWeights.topicWeight - DEFAULT_TOPIC_WEIGHT) > 0.01) {
-      console.warn(`[WEIGHT UPDATE] Warning: Topic weight ${oldWeights.topicWeight.toFixed(2)} is not default ${DEFAULT_TOPIC_WEIGHT.toFixed(2)} for a new user profile. Resetting to default.`);
-      topicNode.weight = DEFAULT_TOPIC_WEIGHT;
-      oldWeights.topicWeight = DEFAULT_TOPIC_WEIGHT;
-    }
-    if (Math.abs(oldWeights.subtopicWeight - DEFAULT_SUBTOPIC_WEIGHT) > 0.01) {
-      console.warn(`[WEIGHT UPDATE] Warning: Subtopic weight ${oldWeights.subtopicWeight.toFixed(2)} is not default ${DEFAULT_SUBTOPIC_WEIGHT.toFixed(2)} for a new user profile. Resetting to default.`);
-      subtopicNode.weight = DEFAULT_SUBTOPIC_WEIGHT;
-      oldWeights.subtopicWeight = DEFAULT_SUBTOPIC_WEIGHT;
-    }
-    if (Math.abs(oldWeights.branchWeight - DEFAULT_BRANCH_WEIGHT) > 0.01) {
-      console.warn(`[WEIGHT UPDATE] Warning: Branch weight ${oldWeights.branchWeight.toFixed(2)} is not default ${DEFAULT_BRANCH_WEIGHT.toFixed(2)} for a new user profile. Resetting to default.`);
-      branchNode.weight = DEFAULT_BRANCH_WEIGHT;
-      oldWeights.branchWeight = DEFAULT_BRANCH_WEIGHT;
-    }
-  }
+  // REMOVED: Problematic weight reset logic that was causing weights to reset to default
+  // This was preventing weight changes from accumulating properly across interactions
   
   // Update timestamps
   topicNode.lastViewed = currentTime;
