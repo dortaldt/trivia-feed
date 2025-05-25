@@ -139,7 +139,10 @@ export default {
           "Feather.ttf",
           "FontAwesome.ttf",
           "MaterialIcons.ttf"
-        ]
+        ],
+        NSCameraUsageDescription: "This app needs access to your camera to take profile photos and capture images for your avatar.",
+        NSPhotoLibraryUsageDescription: "This app needs access to your photo library to select images for your profile avatar.",
+        NSPhotoLibraryAddUsageDescription: "This app needs permission to save photos to your photo library."
       }
     },
     android: {
@@ -167,6 +170,13 @@ export default {
         {
           imageResizeMode: "contain",
           backgroundColor: "#151718"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          photosPermission: "The app accesses your photos to let you select images for your profile avatar.",
+          cameraPermission: "The app accesses your camera to let you take photos for your profile avatar."
         }
       ]
     ]

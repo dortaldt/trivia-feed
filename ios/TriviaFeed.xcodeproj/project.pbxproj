@@ -9,23 +9,23 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		95D318845C88719E81CF2A0E /* libPods-TriviaFeed.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 859BD7ECD89CEE543438577F /* libPods-TriviaFeed.a */; };
+		70B0995320285FEDA62B2BF8 /* libPods-TriviaFeed.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E8CB9E33141DAEE3B0011C7 /* libPods-TriviaFeed.a */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		C8D96FD6E6C4848DAA20124A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6BD016D98D8E660865C14844 /* PrivacyInfo.xcprivacy */; };
+		CFBD01D2461D9E8B3FEDEA34 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9223CCF6C1DF0974CC2E1418 /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
-		FA0471807B135F70C7D97F1C /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0F2FA9553AE2573616E265 /* ExpoModulesProvider.swift */; };
+		F19BBD46CE0A6A6C9159AF1C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 221A552D3F2DB297DA583C82 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* TriviaFeed.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TriviaFeed.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = TriviaFeed/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = TriviaFeed/Info.plist; sourceTree = "<group>"; };
-		2DC4AE757966FC62AC1DD768 /* Pods-TriviaFeed.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TriviaFeed.release.xcconfig"; path = "Target Support Files/Pods-TriviaFeed/Pods-TriviaFeed.release.xcconfig"; sourceTree = "<group>"; };
-		6BD016D98D8E660865C14844 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = TriviaFeed/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		7C0F2FA9553AE2573616E265 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-TriviaFeed/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		859BD7ECD89CEE543438577F /* libPods-TriviaFeed.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-TriviaFeed.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1D90F4F7F5FDAEAE21ED2AFC /* Pods-TriviaFeed.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TriviaFeed.debug.xcconfig"; path = "Target Support Files/Pods-TriviaFeed/Pods-TriviaFeed.debug.xcconfig"; sourceTree = "<group>"; };
+		1E8CB9E33141DAEE3B0011C7 /* libPods-TriviaFeed.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-TriviaFeed.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		221A552D3F2DB297DA583C82 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = TriviaFeed/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		9223CCF6C1DF0974CC2E1418 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-TriviaFeed/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = TriviaFeed/SplashScreen.storyboard; sourceTree = "<group>"; };
-		B1137A8DC2E4979E4C82CECA /* Pods-TriviaFeed.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TriviaFeed.debug.xcconfig"; path = "Target Support Files/Pods-TriviaFeed/Pods-TriviaFeed.debug.xcconfig"; sourceTree = "<group>"; };
+		B950E0B12089C822BC2E2EBA /* Pods-TriviaFeed.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TriviaFeed.release.xcconfig"; path = "Target Support Files/Pods-TriviaFeed/Pods-TriviaFeed.release.xcconfig"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = TriviaFeed/AppDelegate.swift; sourceTree = "<group>"; };
@@ -37,7 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				95D318845C88719E81CF2A0E /* libPods-TriviaFeed.a in Frameworks */,
+				70B0995320285FEDA62B2BF8 /* libPods-TriviaFeed.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,43 +53,26 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				6BD016D98D8E660865C14844 /* PrivacyInfo.xcprivacy */,
+				221A552D3F2DB297DA583C82 /* PrivacyInfo.xcprivacy */,
 			);
 			name = TriviaFeed;
-			sourceTree = "<group>";
-		};
-		1E4A5720B08BCCEB71C865A9 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				483C41EA7EAF1E37573A5377 /* TriviaFeed */,
-			);
-			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				859BD7ECD89CEE543438577F /* libPods-TriviaFeed.a */,
+				1E8CB9E33141DAEE3B0011C7 /* libPods-TriviaFeed.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		467C58495930C3EFBCBEACFD /* Pods */ = {
+		5C732A2607ACAD8412646728 /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				B1137A8DC2E4979E4C82CECA /* Pods-TriviaFeed.debug.xcconfig */,
-				2DC4AE757966FC62AC1DD768 /* Pods-TriviaFeed.release.xcconfig */,
+				D747937247D0CAB0561AE136 /* TriviaFeed */,
 			);
-			path = Pods;
-			sourceTree = "<group>";
-		};
-		483C41EA7EAF1E37573A5377 /* TriviaFeed */ = {
-			isa = PBXGroup;
-			children = (
-				7C0F2FA9553AE2573616E265 /* ExpoModulesProvider.swift */,
-			);
-			name = TriviaFeed;
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -106,8 +89,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				467C58495930C3EFBCBEACFD /* Pods */,
-				1E4A5720B08BCCEB71C865A9 /* ExpoModulesProviders */,
+				C42324CAB66A529688CE8401 /* Pods */,
+				5C732A2607ACAD8412646728 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -131,6 +114,23 @@
 			path = TriviaFeed/Supporting;
 			sourceTree = "<group>";
 		};
+		C42324CAB66A529688CE8401 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				1D90F4F7F5FDAEAE21ED2AFC /* Pods-TriviaFeed.debug.xcconfig */,
+				B950E0B12089C822BC2E2EBA /* Pods-TriviaFeed.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		D747937247D0CAB0561AE136 /* TriviaFeed */ = {
+			isa = PBXGroup;
+			children = (
+				9223CCF6C1DF0974CC2E1418 /* ExpoModulesProvider.swift */,
+			);
+			name = TriviaFeed;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -139,13 +139,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "TriviaFeed" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				B0AEBFD29406767118FD8D21 /* [Expo] Configure project */,
+				285013B53157C3F5E03BA01B /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				3E8009539EF113DA29C58C3D /* [CP] Embed Pods Frameworks */,
+				55DA845409DBB13CA587F57D /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -195,7 +195,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				C8D96FD6E6C4848DAA20124A /* PrivacyInfo.xcprivacy in Resources */,
+				F19BBD46CE0A6A6C9159AF1C /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -239,7 +239,26 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		3E8009539EF113DA29C58C3D /* [CP] Embed Pods Frameworks */ = {
+		285013B53157C3F5E03BA01B /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-TriviaFeed/expo-configure-project.sh\"\n";
+		};
+		55DA845409DBB13CA587F57D /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -343,25 +362,6 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-TriviaFeed/Pods-TriviaFeed-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		B0AEBFD29406767118FD8D21 /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-TriviaFeed/expo-configure-project.sh\"\n";
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -370,7 +370,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				FA0471807B135F70C7D97F1C /* ExpoModulesProvider.swift in Sources */,
+				CFBD01D2461D9E8B3FEDEA34 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -379,7 +379,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B1137A8DC2E4979E4C82CECA /* Pods-TriviaFeed.debug.xcconfig */;
+			baseConfigurationReference = 1D90F4F7F5FDAEAE21ED2AFC /* Pods-TriviaFeed.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -416,7 +416,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 2DC4AE757966FC62AC1DD768 /* Pods-TriviaFeed.release.xcconfig */;
+			baseConfigurationReference = B950E0B12089C822BC2E2EBA /* Pods-TriviaFeed.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
