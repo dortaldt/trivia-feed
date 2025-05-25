@@ -503,6 +503,13 @@ const triviaSlice = createSlice({
         return;
       }
       
+      // Debug: Log profile update details
+      if (weightChange) {
+        const currentWeight = state.userProfile.topics[weightChange.topic]?.weight || 0.5;
+        const newWeight = profile.topics[weightChange.topic]?.weight || 0.5;
+        console.log(`[Redux] Profile update: ${weightChange.topic} ${currentWeight.toFixed(2)} -> ${newWeight.toFixed(2)} (expected: ${weightChange.newWeights.topicWeight.toFixed(2)})`);
+      }
+      
       // Simply update the profile without timestamp manipulation
       state.userProfile = profile;
       
@@ -600,13 +607,13 @@ const triviaSlice = createSlice({
         
         // NEVER overwrite if we have any local activity or non-default weights
         if (localHasAnyInteractions || localHasNonDefaultWeights) {
-          console.log('PRESERVING local profile: has active session data or personalized weights');
-          console.log(`Local interactions: ${state.syncedInteractions.length}, weight changes: ${state.syncedWeightChanges.length}, questions: ${Object.keys(state.questions).length}`);
-          console.log(`Local has non-default weights: ${localHasNonDefaultWeights}`);
+          console.log('[Redux] PRESERVING local profile: has active session data or personalized weights');
+          console.log(`[Redux] Local interactions: ${state.syncedInteractions.length}, weight changes: ${state.syncedWeightChanges.length}, questions: ${Object.keys(state.questions).length}`);
+          console.log(`[Redux] Local has non-default weights: ${localHasNonDefaultWeights}`);
           // Keep the existing local profile - do not overwrite
         } else {
           // Only use database profile if local is completely fresh AND has all default weights
-          console.log('Using database profile: local profile is completely fresh with default weights');
+          console.log('[Redux] Using database profile: local profile is completely fresh with default weights');
           state.userProfile = profile;
         }
       }
