@@ -171,6 +171,7 @@ const FeedScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const hasViewedTooltip = useAppSelector(state => state.trivia.hasViewedTooltip);
   const questions = useAppSelector(state => state.trivia.questions);
+  const questionsLoaded = useAppSelector(state => state.trivia.questionsLoaded);
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   const personalizedFeed = useAppSelector(state => state.trivia.personalizedFeed);
   const feedExplanations = useAppSelector(state => state.trivia.feedExplanations);
@@ -401,8 +402,20 @@ const FeedScreen: React.FC = () => {
   // Update effect to prevent reordering of feed after initial load
   useEffect(() => {
     // Only refresh personalized feed when userProfile changes and we don't have a feed yet
-    if (feedData.length > 0 && personalizedFeed.length === 0) {
-      const { items, explanations } = getPersonalizedFeed(feedData, userProfile);
+    // AND after questions have been loaded from storage
+    if (feedData.length > 0 && personalizedFeed.length === 0 && questionsLoaded) {
+      // Filter out questions that have already been answered or skipped from Redux state
+      const answeredQuestionIds = new Set(
+        Object.keys(questions).filter(id => 
+          questions[id] && (questions[id].status === 'answered' || questions[id].status === 'skipped')
+        )
+      );
+      
+      const unansweredQuestions = feedData.filter(item => !answeredQuestionIds.has(item.id));
+      
+      console.log(`[Feed] Initial feed generation: ${feedData.length} total questions, ${answeredQuestionIds.size} already answered/skipped, ${unansweredQuestions.length} available for feed`);
+      
+      const { items, explanations } = getPersonalizedFeed(unansweredQuestions, userProfile);
       
       // Filter out any duplicate questions by ID
       const uniqueItems = items.filter((item, index, self) => 
@@ -423,7 +436,7 @@ const FeedScreen: React.FC = () => {
       }));
       console.log('Initial personalized feed with', uniqueItems.length, 'unique items');
     }
-  }, [userProfile, feedData, personalizedFeed.length, dispatch]);
+  }, [userProfile, feedData, personalizedFeed.length, dispatch, questions, questionsLoaded]);
 
   // Add effect to refresh feed during cold start phase when userProfile changes
   useEffect(() => {
@@ -441,9 +454,22 @@ const FeedScreen: React.FC = () => {
     
     // Only use this effect for initial feed generation
     // Skip if we already have a feed and have answered questions
-    if (inColdStart && feedData.length > 0 && personalizedFeed.length === 0) {
+    // AND only run after questions have been loaded from storage
+    if (inColdStart && feedData.length > 0 && personalizedFeed.length === 0 && questionsLoaded) {
       console.log('Initial feed creation during cold start phase');
-      const { items, explanations } = getPersonalizedFeed(feedData, userProfile);
+      
+      // Filter out questions that have already been answered or skipped from Redux state
+      const answeredQuestionIds = new Set(
+        Object.keys(questions).filter(id => 
+          questions[id] && (questions[id].status === 'answered' || questions[id].status === 'skipped')
+        )
+      );
+      
+      const unansweredQuestions = feedData.filter(item => !answeredQuestionIds.has(item.id));
+      
+      console.log(`[Feed] Cold start feed generation: ${feedData.length} total questions, ${answeredQuestionIds.size} already answered/skipped, ${unansweredQuestions.length} available for feed`);
+      
+      const { items, explanations } = getPersonalizedFeed(unansweredQuestions, userProfile);
       
       // Filter out any duplicate questions by ID
       const uniqueItems = items.filter((item, index, self) => 
@@ -467,7 +493,7 @@ const FeedScreen: React.FC = () => {
     
     // Update ref with current userProfile
     previousUserProfileRef.current = userProfile;
-  }, [userProfile, feedData, dispatch, personalizedFeed.length]); // Added personalizedFeed.length to dependencies
+  }, [userProfile, feedData, dispatch, personalizedFeed.length, questions, questionsLoaded]); // Added questions to dependencies
 
   const fingerPosition = useRef(new Animated.Value(0)).current;
   const phoneFrame = useRef(new Animated.Value(0)).current;
@@ -671,12 +697,23 @@ const FeedScreen: React.FC = () => {
       const currentFeed = [...personalizedFeed];
       const existingIds = new Set(currentFeed.map(item => item.id));
       
+      // ADDED: Filter out questions that have already been answered or skipped from Redux state
+      const answeredQuestionIds = new Set(
+        Object.keys(questions).filter(id => 
+          questions[id] && (questions[id].status === 'answered' || questions[id].status === 'skipped')
+        )
+      );
+      
+      // Get questions that aren't already in our feed AND haven't been answered/skipped
+      const availableQuestions = feedData.filter((item: FeedItemType) => 
+        !existingIds.has(item.id) && !answeredQuestionIds.has(item.id)
+      );
+      
+      console.log(`[Feed] Checkpoint filtering: ${feedData.length} total, ${existingIds.size} in feed, ${answeredQuestionIds.size} answered/skipped, ${availableQuestions.length} available`);
+      
       // NEW: Track topics already in the feed to ensure diversity
       const topicsInCurrentFeed = new Set(currentFeed.map(item => item.topic));
       console.log(`[Feed] Topics already in current feed: ${Array.from(topicsInCurrentFeed).join(', ')}`);
-      
-      // Get questions that aren't already in our feed
-      const availableQuestions = feedData.filter((item: FeedItemType) => !existingIds.has(item.id));
       
       // MODIFIED: Always use cold start logic to ensure consistent topic filtering regardless of position
       // This ensures the topic filter from triviaService is respected through the entire question selection pipeline
@@ -868,7 +905,7 @@ const FeedScreen: React.FC = () => {
     } else {
       console.log('[Feed] No additional questions available in feedData for checkpoint');
     }
-  }, [feedData, personalizedFeed, feedExplanations, dispatch, user, userProfile]);
+  }, [feedData, personalizedFeed, feedExplanations, dispatch, user, userProfile, questions]);
 
   // Add debug logs to markPreviousAsSkipped to identify if it's being called correctly
   const markPreviousAsSkipped = useCallback((prevIndex: number, newIndex: number) => {
@@ -979,8 +1016,19 @@ const FeedScreen: React.FC = () => {
           const currentFeed = [...personalizedFeed];
           const existingIds = new Set(currentFeed.map(item => item.id));
           
-          // Get questions that aren't already in our feed
-          const availableQuestions = feedData.filter((item: FeedItemType) => !existingIds.has(item.id));
+          // ADDED: Filter out questions that have already been answered or skipped from Redux state
+          const answeredQuestionIds = new Set(
+            Object.keys(questions).filter(id => 
+              questions[id] && (questions[id].status === 'answered' || questions[id].status === 'skipped')
+            )
+          );
+          
+          // Get questions that aren't already in our feed AND haven't been answered/skipped
+          const availableQuestions = feedData.filter((item: FeedItemType) => 
+            !existingIds.has(item.id) && !answeredQuestionIds.has(item.id)
+          );
+          
+          console.log(`[FastScroll] Post-skip filtering: ${feedData.length} total, ${existingIds.size} in feed, ${answeredQuestionIds.size} answered/skipped, ${availableQuestions.length} available`);
           
           if (availableQuestions.length > 0) {
             // MODIFIED: Use the coldStartStrategy with forced 'normal' phase to ensure topic filtering is maintained
@@ -1755,8 +1803,19 @@ const FeedScreen: React.FC = () => {
         // Create a set of IDs that are already in our feed
         const existingIds = new Set(currentFeed.map(item => item.id));
         
-        // Get questions that aren't already in our feed
-        const availableQuestions = feedData.filter((item: FeedItemType) => !existingIds.has(item.id));
+        // ADDED: Filter out questions that have already been answered or skipped from Redux state
+        const answeredQuestionIds = new Set(
+          Object.keys(questions).filter(id => 
+            questions[id] && (questions[id].status === 'answered' || questions[id].status === 'skipped')
+          )
+        );
+        
+        // Get questions that aren't already in our feed AND haven't been answered/skipped
+        const availableQuestions = feedData.filter((item: FeedItemType) => 
+          !existingIds.has(item.id) && !answeredQuestionIds.has(item.id)
+        );
+        
+        console.log(`[Feed] Post-answer filtering: ${feedData.length} total, ${existingIds.size} in feed, ${answeredQuestionIds.size} answered/skipped, ${availableQuestions.length} available`);
         
         // Use personalization logic to select new questions
         const { items: personalizedItems, explanations: personalizedExplanations } = 
@@ -1834,7 +1893,7 @@ const FeedScreen: React.FC = () => {
         });
       }
     }, 300);
-  }, [dispatch, personalizedFeed, userProfile, interactionStartTimes, feedData, feedExplanations, user, triggerQuestionGeneration, trackQuestionInteraction, addQuestionsAtCheckpoint, shouldAddQuestionsAtPosition]);
+  }, [dispatch, personalizedFeed, userProfile, interactionStartTimes, feedData, feedExplanations, user, triggerQuestionGeneration, trackQuestionInteraction, addQuestionsAtCheckpoint, shouldAddQuestionsAtPosition, questions]);
 
   // Modify handleNextQuestion to be more controlled and prevent unexpected scrolling
   const handleNextQuestion = useCallback(() => {
@@ -2336,10 +2395,19 @@ const FeedScreen: React.FC = () => {
         const currentFeed = [...personalizedFeed];
         const existingIds = new Set(currentFeed.map(item => item.id));
         
-        // Get questions that aren't already in our feed
-        const availableQuestions = feedData.filter((item: FeedItemType) => !existingIds.has(item.id));
+        // ADDED: Filter out questions that have already been answered or skipped from Redux state
+        const answeredQuestionIds = new Set(
+          Object.keys(questions).filter(id => 
+            questions[id] && (questions[id].status === 'answered' || questions[id].status === 'skipped')
+          )
+        );
         
-        console.log(`[Feed] Found ${availableQuestions.length} available questions to add from existing pool`);
+        // Get questions that aren't already in our feed AND haven't been answered/skipped
+        const availableQuestions = feedData.filter((item: FeedItemType) => 
+          !existingIds.has(item.id) && !answeredQuestionIds.has(item.id)
+        );
+        
+        console.log(`[Feed] Existing pool filtering: ${feedData.length} total, ${existingIds.size} in feed, ${answeredQuestionIds.size} answered/skipped, ${availableQuestions.length} available`);
         
         // Take up to 5 new questions to ensure we have plenty of content
         const newQuestions = availableQuestions.slice(0, 5);
@@ -2364,7 +2432,7 @@ const FeedScreen: React.FC = () => {
         console.log('[Feed] No additional questions available in feedData');
       }
     }
-  }, [needMoreQuestions, personalizedFeed, currentIndex, feedData, dispatch, user?.id, feedExplanations, userProfile]);
+  }, [needMoreQuestions, personalizedFeed, currentIndex, feedData, dispatch, user?.id, feedExplanations, userProfile, questions]);
 
   // Loading state
   if (isLoading) {
