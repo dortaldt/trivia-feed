@@ -8,7 +8,6 @@ import {
   Animated,
   Platform,
   TextStyle,
-  SafeAreaView,
   Modal,
   ScrollView,
   Image,
@@ -510,7 +509,7 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
   } : {};
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <View 
         style={styles.container}
         {...rasterizationProps}
@@ -753,7 +752,7 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
           </Animated.View>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function for React.memo
