@@ -200,6 +200,16 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
     };
   }, [pulseAnim, visible]);
   
+  // Debug: Log when component mounts and Redux state
+  useEffect(() => {
+    console.log(`[InteractionTracker] Component mounted/updated. Redux syncedWeightChanges: ${syncedWeightChanges.length}`);
+  }, []);
+  
+  // Debug: Log current state periodically
+  useEffect(() => {
+    console.log(`[InteractionTracker] State update - Local weightChanges: ${weightChanges.length}, Redux syncedWeightChanges: ${syncedWeightChanges.length}`);
+  }, [weightChanges.length, syncedWeightChanges.length]);
+  
   // Get auth context
   const { user } = useAuth();
   const dispatch = useAppDispatch();
@@ -540,6 +550,8 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
   
   // Track weight changes
   useEffect(() => {
+    console.log(`[InteractionTracker] syncedWeightChanges updated: ${syncedWeightChanges.length} total changes`);
+    
     // Check if there are new weight changes
     if (syncedWeightChanges.length > 0) {
       const existingIds = new Set(weightChanges.map(wc => `${wc.timestamp}-${wc.questionId}`));
@@ -549,7 +561,12 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
         wc => !existingIds.has(`${wc.timestamp}-${wc.questionId}`)
       );
       
+      console.log(`[InteractionTracker] Found ${newWeightChanges.length} new weight changes to add`);
+      
       if (newWeightChanges.length > 0) {
+        console.log(`[InteractionTracker] Adding new weight changes:`, newWeightChanges.map(wc => 
+          `${wc.questionId} (${wc.topic}): ${wc.oldWeights.topicWeight.toFixed(2)} -> ${wc.newWeights.topicWeight.toFixed(2)}`
+        ));
         setWeightChanges(prev => [...prev, ...newWeightChanges]);
       }
     }
@@ -1793,6 +1810,9 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
               Debug Info
                     </ThemedText>
             <ThemedText style={{fontSize: 11, color: '#666666'}}>
+              Local weightChanges: {weightChanges.length} | Redux syncedWeightChanges: {syncedWeightChanges.length}
+                          </ThemedText>
+            <ThemedText style={{fontSize: 11, color: '#666666'}}>
               Default weight value: 0.50
                           </ThemedText>
             <ThemedText style={{fontSize: 11, color: '#666666'}}>
@@ -1806,6 +1826,9 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
           {weightChanges.length === 0 ? (
             <View style={styles.emptyState}>
               <ThemedText style={styles.emptyText}>No weight changes recorded yet</ThemedText>
+              <ThemedText style={{fontSize: 10, color: '#999', marginTop: 5}}>
+                Local: {weightChanges.length}, Redux: {syncedWeightChanges.length}
+              </ThemedText>
             </View>
           ) : (
             weightChanges.slice().reverse().map((change, index) => (
