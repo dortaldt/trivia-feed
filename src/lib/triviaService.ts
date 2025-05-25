@@ -527,97 +527,141 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
       return [];
     }
     
-    // Handle large ID sets with batched exclusions for better performance
+    // Determine the query strategy based on available parameters
     let data;
     let error;
     
-    if (existingIds.length > 100) {
-      console.log(`Large exclusion list (${existingIds.length} IDs), using batched approach`);
-      
-      // Split IDs into chunks of 100 to avoid query size limits
-      const chunkSize = 100;
-      const chunks: string[][] = [];
-      for (let i = 0; i < existingIds.length; i += chunkSize) {
-        chunks.push(existingIds.slice(i, i + chunkSize));
-      }
-      
-      console.log(`Split into ${chunks.length} chunks of max ${chunkSize} IDs each`);
-      
-      let allNewQuestions: TriviaQuestion[] = [];
-      const allExistingIds = new Set(existingIds); // For final filtering
-      
-      // Process each chunk with database-side exclusion
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        console.log(`Processing chunk ${i + 1}/${chunks.length} with ${chunk.length} IDs`);
-        
-        try {
-          // Build query for this chunk - exclude this specific chunk of IDs
-          let query = supabase
-            .from('trivia_questions')
-            .select('*')
-            .not('id', 'in', `(${chunk.join(',')})`);
-          
-          // Apply topic filter if configured (preserving existing logic)
-          if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
-            console.log(`DEBUG: Filtering chunk ${i + 1} by topic: ${topicDbName}`);
-            query = query.eq('topic', topicDbName);
-          }
-          
-          const { data: chunkData, error: chunkError } = await query;
-          
-          if (chunkError) {
-            console.error(`Error in chunk ${i + 1}:`, chunkError);
-            continue; // Skip this chunk, try others
-          }
-          
-          if (chunkData && chunkData.length > 0) {
-            // Filter out questions that appear in ANY of the existing IDs
-            // (since each query excludes only one chunk, we need to filter against all IDs)
-            const filteredChunkData = chunkData.filter((q: TriviaQuestion) => !allExistingIds.has(q.id));
-            
-            allNewQuestions.push(...filteredChunkData);
-            console.log(`Chunk ${i + 1} contributed ${filteredChunkData.length} new questions`);
-          }
-        } catch (chunkError) {
-          console.error(`Error processing chunk ${i + 1}:`, chunkError);
-          continue; // Continue with other chunks
-        }
-      }
-      
-      data = allNewQuestions;
-      error = null;
-      
-      // Remove any duplicates that might occur between chunks
-      const seenIds = new Set<string>();
-      data = data.filter(question => {
-        if (seenIds.has(question.id)) {
-          console.log(`Removing duplicate question ID: ${question.id}`);
-          return false;
-        }
-        seenIds.add(question.id);
-        return true;
-      });
-      
-      console.log(`Total new questions after batched exclusion: ${data.length}`);
-      
-    } else {
-      // For smaller sets, use the original efficient single query approach
-      console.log(`Small exclusion list (${existingIds.length} IDs), using single query approach`);
+    if (lastFetchTimestamp && existingIds.length === 0) {
+      // Timestamp-only filtering (most efficient for subsequent fetches)
+      console.log(`🚀 Using timestamp-only filtering - fetching questions created after ${new Date(lastFetchTimestamp).toISOString()}`);
       
       let query = supabase
         .from('trivia_questions')
         .select('*')
-        .not('id', 'in', `(${existingIds.join(',')})`);
+        .gt('created_at', new Date(lastFetchTimestamp).toISOString());
       
-      // Apply topic filter if configured (preserving existing logic)
+      // Apply topic filter if configured
       if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
-        console.log(`DEBUG: Filtering new questions by topic: ${topicDbName}`);
+        console.log(`DEBUG: Filtering timestamp query by topic: ${topicDbName}`);
         query = query.eq('topic', topicDbName);
       }
       
       const response = await query;
+      data = response.data;
+      error = response.error;
       
+      console.log(`Timestamp query returned ${data?.length || 0} questions`);
+      
+    } else if (existingIds.length > 0) {
+      // ID exclusion filtering (for first fetch or when timestamp not available)
+      console.log(`🆕 Using ID exclusion filtering for ${existingIds.length} existing IDs`);
+      
+      // Handle large ID sets with batched exclusions for better performance
+      if (existingIds.length > 100) {
+        console.log(`Large exclusion list (${existingIds.length} IDs), using batched approach`);
+        
+        // Split IDs into chunks of 100 to avoid query size limits
+        const chunkSize = 100;
+        const chunks: string[][] = [];
+        for (let i = 0; i < existingIds.length; i += chunkSize) {
+          chunks.push(existingIds.slice(i, i + chunkSize));
+        }
+        
+        console.log(`Split into ${chunks.length} chunks of max ${chunkSize} IDs each`);
+        
+        let allNewQuestions: TriviaQuestion[] = [];
+        const allExistingIds = new Set(existingIds); // For final filtering
+        
+        // Process each chunk with database-side exclusion
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          console.log(`Processing chunk ${i + 1}/${chunks.length} with ${chunk.length} IDs`);
+          
+          try {
+            // Build query for this chunk - exclude this specific chunk of IDs
+            let query = supabase
+              .from('trivia_questions')
+              .select('*')
+              .not('id', 'in', `(${chunk.join(',')})`);
+            
+            // Apply topic filter if configured (preserving existing logic)
+            if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
+              console.log(`DEBUG: Filtering chunk ${i + 1} by topic: ${topicDbName}`);
+              query = query.eq('topic', topicDbName);
+            }
+            
+            const { data: chunkData, error: chunkError } = await query;
+            
+            if (chunkError) {
+              console.error(`Error in chunk ${i + 1}:`, chunkError);
+              continue; // Skip this chunk, try others
+            }
+            
+            if (chunkData && chunkData.length > 0) {
+              // Filter out questions that appear in ANY of the existing IDs
+              // (since each query excludes only one chunk, we need to filter against all IDs)
+              const filteredChunkData = chunkData.filter((q: TriviaQuestion) => !allExistingIds.has(q.id));
+              
+              allNewQuestions.push(...filteredChunkData);
+              console.log(`Chunk ${i + 1} contributed ${filteredChunkData.length} new questions`);
+            }
+          } catch (chunkError) {
+            console.error(`Error processing chunk ${i + 1}:`, chunkError);
+            continue; // Continue with other chunks
+          }
+        }
+        
+        data = allNewQuestions;
+        error = null;
+        
+        // Remove any duplicates that might occur between chunks
+        const seenIds = new Set<string>();
+        data = data.filter(question => {
+          if (seenIds.has(question.id)) {
+            console.log(`Removing duplicate question ID: ${question.id}`);
+            return false;
+          }
+          seenIds.add(question.id);
+          return true;
+        });
+        
+        console.log(`Total new questions after batched exclusion: ${data.length}`);
+        
+      } else {
+        // For smaller sets, use the original efficient single query approach
+        console.log(`Small exclusion list (${existingIds.length} IDs), using single query approach`);
+        
+        let query = supabase
+          .from('trivia_questions')
+          .select('*')
+          .not('id', 'in', `(${existingIds.join(',')})`);
+        
+        // Apply topic filter if configured (preserving existing logic)
+        if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
+          console.log(`DEBUG: Filtering new questions by topic: ${topicDbName}`);
+          query = query.eq('topic', topicDbName);
+        }
+        
+        const response = await query;
+        
+        data = response.data;
+        error = response.error;
+      }
+    } else {
+      // No timestamp and no IDs to exclude - fetch all questions (fallback)
+      console.log(`⚠️ No filtering criteria provided - fetching all questions`);
+      
+      let query = supabase
+        .from('trivia_questions')
+        .select('*');
+      
+      // Apply topic filter if configured
+      if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
+        console.log(`DEBUG: Filtering fallback query by topic: ${topicDbName}`);
+        query = query.eq('topic', topicDbName);
+      }
+      
+      const response = await query;
       data = response.data;
       error = response.error;
     }

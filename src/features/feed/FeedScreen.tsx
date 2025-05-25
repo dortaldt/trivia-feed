@@ -2261,13 +2261,6 @@ const FeedScreen: React.FC = () => {
           console.log(`====== FETCHING NEW QUESTIONS FROM DATABASE ======`);
           console.log(`Trigger: ${totalQuestionsAnswered} questions answered (every 10)`);
           
-          // Create a set of IDs that are already in our feed and local pool
-          const existingIds = new Set([
-            ...personalizedFeed.map(item => item.id),
-            ...feedData.map(item => item.id)
-          ]);
-          console.log(`Excluding ${existingIds.size} existing question IDs from fetch`);
-          
           // Fetch new questions from the database that aren't in our existing set
           (async () => {
             try {
@@ -2275,7 +2268,22 @@ const FeedScreen: React.FC = () => {
               const lastFetchTimestamp = await getLastFetchTimestamp();
               console.log(`🕐 Using last fetch timestamp: ${lastFetchTimestamp || 'none (first fetch)'}`);
               
-              const newQuestions = await fetchNewTriviaQuestions(Array.from(existingIds), lastFetchTimestamp || undefined);
+              let newQuestions: FeedItemType[];
+              
+              if (lastFetchTimestamp) {
+                // Subsequent fetches: Use ONLY timestamp filtering (more efficient)
+                console.log(`🚀 Using timestamp-only filtering (subsequent fetch)`);
+                newQuestions = await fetchNewTriviaQuestions([], lastFetchTimestamp);
+              } else {
+                // First fetch: Use ID exclusion since no timestamp exists yet
+                console.log(`🆕 Using ID exclusion filtering (first fetch)`);
+                const existingIds = new Set([
+                  ...personalizedFeed.map(item => item.id),
+                  ...feedData.map(item => item.id)
+                ]);
+                console.log(`Excluding ${existingIds.size} existing question IDs from fetch`);
+                newQuestions = await fetchNewTriviaQuestions(Array.from(existingIds));
+              }
               
               if (newQuestions.length > 0) {
                 console.log(`====== DATABASE FETCH RESULTS ======`);
