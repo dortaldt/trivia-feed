@@ -129,7 +129,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Track theme changes for analytics
   useEffect(() => {
     // Log theme changes to analytics
-    console.log(`Theme changed to: ${currentTheme}, color scheme: ${colorScheme}`);
+    // console.log(`Theme changed to: ${currentTheme}, color scheme: ${colorScheme}`);
     
     // Additional analytics tracking could be added here
   }, [currentTheme, colorScheme]);
