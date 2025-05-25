@@ -200,16 +200,6 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
     };
   }, [pulseAnim, visible]);
   
-  // Debug: Log when component mounts and Redux state
-  useEffect(() => {
-    console.log(`[InteractionTracker] Component mounted/updated. Redux syncedWeightChanges: ${syncedWeightChanges.length}`);
-  }, []);
-  
-  // Debug: Log current state periodically
-  useEffect(() => {
-    console.log(`[InteractionTracker] State update - Local weightChanges: ${weightChanges.length}, Redux syncedWeightChanges: ${syncedWeightChanges.length}`);
-  }, [weightChanges.length, syncedWeightChanges.length]);
-  
   // Get auth context
   const { user } = useAuth();
   const dispatch = useAppDispatch();
@@ -221,6 +211,16 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
   const feedExplanations = useAppSelector(state => state.trivia.feedExplanations);
   const syncedWeightChanges = useAppSelector(state => state.trivia.syncedWeightChanges);
   const lastSyncTime = useAppSelector(state => state.trivia.lastSyncTime);
+  
+  // Debug: Log when component mounts and Redux state
+  useEffect(() => {
+    console.log(`[InteractionTracker] Component mounted/updated. Redux syncedWeightChanges: ${syncedWeightChanges.length}`);
+  }, []);
+  
+  // Debug: Log current state periodically
+  useEffect(() => {
+    console.log(`[InteractionTracker] State update - Local weightChanges: ${weightChanges.length}, Redux syncedWeightChanges: ${syncedWeightChanges.length}`);
+  }, [weightChanges.length, syncedWeightChanges.length]);
   
   // Store previous profile and feed to track changes
   const prevProfileRef = useRef(userProfile);
