@@ -16,6 +16,7 @@ import {
   fetchProfileWithDefaultCheck,
   isWriteOnlyMode
 } from '../lib/simplifiedSyncService';
+import { loadQuestionsFromStorageThunk } from '../store/triviaSlice';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 
 interface SyncManagerProps {
@@ -26,20 +27,9 @@ interface SyncManagerProps {
 // This ensures that we always get a fresh module state on component mount
 // by adding this here, we prevent any other component from setting the flag first
 const resetModuleState = () => {
-  // This is a direct call to reset any module-level state in simplifiedSyncService
-  try {
-    // Use dynamic import to get a fresh instance of the module and reset its state
-    import('../lib/simplifiedSyncService').then(module => {
-      if (typeof module.markInitialDataLoadComplete === 'function') {
-        // This is a hack to reset the initialDataLoadComplete flag
-        // It works by setting a property on the module's exported function
-        (module.markInitialDataLoadComplete as any).reset = true;
-        console.log('FORCE RESET: Module state reset requested');
-      }
-    });
-  } catch (error) {
-    console.error('Failed to reset module state:', error);
-  }
+  // console.log('FORCE RESET: Module state reset requested');
+  
+  // Use the reset function from the sync service
 };
 
 /**
@@ -532,9 +522,16 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
   
   // Run diagnostic check and reset on mount - this must run first
   useEffect(() => {
-    console.log('🔥 SimplifiedSyncManager MOUNTED - FORCING MODULE STATE RESET 🔥');
+    // console.log('🔥 SimplifiedSyncManager MOUNTED - FORCING MODULE STATE RESET 🔥');
+    
+    // Force reset the sync service state when component mounts
     resetModuleState();
     logSyncStatus();
+    
+    // Load questions from storage for the current user
+    const userId = user?.id || undefined;
+    console.log(`[REDUX PERSIST] Loading questions from storage for user: ${userId || 'guest'}`);
+    dispatch(loadQuestionsFromStorageThunk(userId));
     
     // Force immediate data load when the component mounts
     if (user && user.id && !initialDataLoaded) {
@@ -553,6 +550,13 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
       userIdRef.current = null;
     }
   }, [user]);
+  
+  // Load questions from storage when user changes (e.g., login/logout/guest mode)
+  useEffect(() => {
+    const userId = user?.id || undefined;
+    console.log(`[REDUX PERSIST] User changed, reloading questions for: ${userId || 'guest'}`);
+    dispatch(loadQuestionsFromStorageThunk(userId));
+  }, [user?.id, dispatch]);
   
   // Check for default weights and load from database if needed - DISABLED until after initial load
   useEffect(() => {

@@ -61,15 +61,17 @@ type FeedItemProps = {
   showExplanation?: () => void;
   onNextQuestion?: () => void;
   onToggleLeaderboard?: () => void;
+  debugMode?: boolean; // Add debug mode prop
 };
 
-const FeedItem = React.memo(({ 
+const FeedItem: React.FC<FeedItemProps> = React.memo(({
   item, 
   nextTopic, 
   onAnswer, 
   showExplanation, 
   onNextQuestion, 
-  onToggleLeaderboard 
+  onToggleLeaderboard,
+  debugMode = false // Add debugMode with default value
 }: FeedItemProps) => {
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
   const [isLiked, setIsLiked] = useState(false);
@@ -168,7 +170,8 @@ const FeedItem = React.memo(({
   // Only log in development mode
   if (process.env.NODE_ENV !== 'production') {
     useEffect(() => {
-      console.log(`[DEBUG] FeedItem component render #${renderCount.current} for item ${item.id}`);
+      // Debug: Log each render
+      // console.log(`[DEBUG] FeedItem component render #${renderCount.current} for item ${item.id}`);
     });
   }
   
@@ -614,6 +617,12 @@ const FeedItem = React.memo(({
                       
                       {/* Reserve space for the icon with a fixed width */}
                       <View style={{width: 32, alignItems: 'center', justifyContent: 'center'}}>
+                        {/* Show debug mark for correct answers when debug mode is on and question is not answered */}
+                        {debugMode && !isAnswered() && answer.isCorrect && (
+                          <FeatherIcon name="star" size={18} color="#FFD700" />
+                        )}
+                        
+                        {/* Show regular answer feedback after question is answered */}
                         {(isAnswered() && questionState?.answerIndex === index && (
                           answer.isCorrect ? 
                           <FeatherIcon name="check-square" size={24} color="#4CAF50" /> : 
@@ -748,10 +757,11 @@ const FeedItem = React.memo(({
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function for React.memo
-  // Add subtopic and tags to comparison for re-rendering
+  // Add subtopic, tags, and debugMode to comparison for re-rendering
   return prevProps.item.id === nextProps.item.id && 
          prevProps.nextTopic === nextProps.nextTopic &&
          prevProps.item.subtopic === nextProps.item.subtopic &&
+         prevProps.debugMode === nextProps.debugMode &&
          JSON.stringify(prevProps.item.tags) === JSON.stringify(nextProps.item.tags);
 });
 

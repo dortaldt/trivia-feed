@@ -68,6 +68,27 @@ The app follows a feature-based structure:
 - `src/lib` - Utilities and service functions
 - `scripts` - Database utilities and import tools
 
+## Development Features
+
+### Debug Mode
+The application includes a debug mode that provides additional development tools and visual aids:
+
+**How to enable Debug Mode:**
+- **Web**: Add `?debug=trivia-debug-panel` to the URL or use the keyboard shortcut `Alt + D`
+- **iOS**: Use a 3-finger tap gesture on the screen
+
+**Debug Mode Features:**
+- **Correct Answer Marks**: When debug mode is enabled, correct answers are marked with a golden star (⭐) icon before the user answers the question
+- **Debug Panel**: Access to interaction tracking, feed status, database logs, and weight changes
+- **Show All Rings Button**: Additional button to view all topic rings at once
+- **Question Selection Logic**: View explanations for why specific questions were selected
+
+**Debug Answer Marks:**
+- Only visible when debug mode is ON and the question has NOT been answered yet
+- Shows a small golden star icon next to correct answers
+- Disappears once the user selects an answer (replaced by normal feedback icons)
+- Helps with testing and development by quickly identifying correct answers
+
 ## Contributing
 
 1. Fork the repository

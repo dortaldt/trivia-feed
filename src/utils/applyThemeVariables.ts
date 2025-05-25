@@ -16,17 +16,17 @@ import { updateFavicon, updateSocialMetaTags } from './themeIcons';
  * @param colorScheme Current color scheme (light or dark)
  */
 export function applyThemeVariables(theme: ThemeDefinition, colorScheme: ColorSchemeType): void {
-  console.log(`[DEBUG] applyThemeVariables: Starting for theme ${theme.id}, colorScheme ${colorScheme}`);
+  // console.log(`[DEBUG] applyThemeVariables: Starting for theme ${theme.id}, colorScheme ${colorScheme}`);
   
   // Only run on web platform
   if (Platform.OS !== 'web') {
-    console.log('[DEBUG] applyThemeVariables: Not web platform, skipping');
+    // console.log('[DEBUG] applyThemeVariables: Not web platform, skipping');
     return;
   }
   
   // Get the document root element
   const root = document.documentElement;
-  console.log(`[DEBUG] applyThemeVariables: Got document root element: ${root.tagName}`);
+  // console.log(`[DEBUG] applyThemeVariables: Got document root element: ${root.tagName}`);
   
   try {
     // Get the colors for the current color scheme
@@ -37,8 +37,8 @@ export function applyThemeVariables(theme: ThemeDefinition, colorScheme: ColorSc
       return;
     }
     
-    console.log(`[DEBUG] applyThemeVariables: Applying color variables for ${colorScheme} mode`);
-    console.log(`[DEBUG] applyThemeVariables: Sample colors - primary: ${colors.primary}, background: ${colors.background}`);
+    // console.log(`[DEBUG] applyThemeVariables: Applying color variables for ${colorScheme} mode`);
+    // console.log(`[DEBUG] applyThemeVariables: Sample colors - primary: ${colors.primary}, background: ${colors.background}`);
     
     // Apply all colors as CSS variables
     Object.entries(colors).forEach(([key, value]) => {
@@ -47,36 +47,36 @@ export function applyThemeVariables(theme: ThemeDefinition, colorScheme: ColorSc
       
       // Verify a few key colors to make sure they're being set
       if (key === 'primary' || key === 'background' || key === 'text') {
-        console.log(`[DEBUG] applyThemeVariables: Set ${cssVarName} = ${value}`);
+        // console.log(`[DEBUG] applyThemeVariables: Set ${cssVarName} = ${value}`);
       }
     });
     
     // Apply spacing values
-    console.log(`[DEBUG] applyThemeVariables: Applying spacing variables`);
+    // console.log(`[DEBUG] applyThemeVariables: Applying spacing variables`);
     Object.entries(theme.spacing).forEach(([key, value]) => {
       root.style.setProperty(`--spacing-${key}`, `${value}px`);
     });
     
     // Apply border radius values
-    console.log(`[DEBUG] applyThemeVariables: Applying border radius variables`);
+    // console.log(`[DEBUG] applyThemeVariables: Applying border radius variables`);
     Object.entries(theme.borderRadius).forEach(([key, value]) => {
       root.style.setProperty(`--radius-${key}`, `${value}px`);
     });
     
     // Apply typography values
-    console.log(`[DEBUG] applyThemeVariables: Applying typography variables`);
+    // console.log(`[DEBUG] applyThemeVariables: Applying typography variables`);
     Object.entries(theme.typography.fontSize).forEach(([key, value]) => {
       root.style.setProperty(`--font-size-${key}`, `${value}px`);
     });
     
     // Apply animation durations
-    console.log(`[DEBUG] applyThemeVariables: Applying animation duration variables`);
+    // console.log(`[DEBUG] applyThemeVariables: Applying animation duration variables`);
     Object.entries(theme.animations.duration).forEach(([key, value]) => {
       root.style.setProperty(`--duration-${key}`, `${value}ms`);
     });
     
     // Set some meta properties to help with theme detection in CSS
-    console.log(`[DEBUG] applyThemeVariables: Setting theme meta variables`);
+    // console.log(`[DEBUG] applyThemeVariables: Setting theme meta variables`);
     root.style.setProperty('--theme-id', theme.id);
     root.style.setProperty('--color-scheme', colorScheme);
     
@@ -87,12 +87,12 @@ export function applyThemeVariables(theme: ThemeDefinition, colorScheme: ColorSc
     root.dataset.theme = theme.id;
     root.dataset.colorScheme = colorScheme;
     
-    console.log(`[DEBUG] applyThemeVariables: Updated data attributes:`);
-    console.log(`  - data-theme: ${prevDataTheme || 'none'} -> ${root.dataset.theme}`);
-    console.log(`  - data-color-scheme: ${prevDataColorScheme || 'none'} -> ${root.dataset.colorScheme}`);
+    // console.log(`[DEBUG] applyThemeVariables: Updated data attributes:`);
+    // console.log(`  - data-theme: ${prevDataTheme || 'none'} -> ${root.dataset.theme}`);
+    // console.log(`  - data-color-scheme: ${prevDataColorScheme || 'none'} -> ${root.dataset.colorScheme}`);
     
     // Add appropriate web animations based on theme
-    console.log(`[DEBUG] applyThemeVariables: Applying theme animations for ${theme.id}`);
+    // console.log(`[DEBUG] applyThemeVariables: Applying theme animations for ${theme.id}`);
     applyThemeAnimations(theme.id);
     
     // Verify some CSS variables to make sure they're set
@@ -102,10 +102,10 @@ export function applyThemeVariables(theme: ThemeDefinition, colorScheme: ColorSc
       background: getComputedStyle(root).getPropertyValue('--color-background').trim()
     };
     
-    console.log(`[DEBUG] applyThemeVariables: Verification of CSS variables after setting:`);
-    console.log(`  - --theme-id: ${verification.themeId} (expected: ${theme.id})`);
-    console.log(`  - --color-primary: ${verification.primary} (expected: ${colors.primary})`);
-    console.log(`  - --color-background: ${verification.background} (expected: ${colors.background})`);
+    // console.log(`[DEBUG] applyThemeVariables: Verification of CSS variables after setting:`);
+    // console.log(`  - --theme-id: ${verification.themeId} (expected: ${theme.id})`);
+    // console.log(`  - --color-primary: ${verification.primary} (expected: ${colors.primary})`);
+    // console.log(`  - --color-background: ${verification.background} (expected: ${colors.background})`);
     
     // Check for issues
     if (verification.themeId !== theme.id) {
@@ -118,7 +118,7 @@ export function applyThemeVariables(theme: ThemeDefinition, colorScheme: ColorSc
       console.error(`[ERROR] applyThemeVariables: Background color CSS variable doesn't match expected value`);
     }
     
-    console.log(`[DEBUG] applyThemeVariables: Successfully applied theme ${theme.id}`);
+    // console.log(`[DEBUG] applyThemeVariables: Successfully applied theme ${theme.id}`);
   } catch (error) {
     console.error('[ERROR] applyThemeVariables: Error applying theme variables:', error);
   }

@@ -40,20 +40,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Initialize auth state when the provider mounts
   useEffect(() => {
     const initAuth = async () => {
-      // Check if user is in guest mode from AsyncStorage
-      try {
-        console.log('Checking for guest mode in AsyncStorage...');
-        const guestMode = await AsyncStorage.getItem('guestMode');
-        console.log('Guest mode AsyncStorage value:', guestMode);
-        
-        if (guestMode === 'true') {
-          console.log('Found guest mode flag, initializing as guest');
-          setIsGuest(true);
-          setIsLoading(false);
-          return; // Skip Supabase auth check for guest users
-        }
-      } catch (error) {
-        console.error('Error checking guest mode:', error);
+      // Check for guest mode
+      // console.log('Checking for guest mode in AsyncStorage...');
+      const guestMode = await AsyncStorage.getItem('guestMode');
+      // console.log('Guest mode AsyncStorage value:', guestMode);
+      
+      if (guestMode === 'true') {
+        // console.log('Found guest mode flag, initializing as guest');
+        setIsGuest(true);
+        setIsLoading(false);
+        return; // Skip Supabase auth check for guest users
       }
       
       // Normal auth flow for non-guest users

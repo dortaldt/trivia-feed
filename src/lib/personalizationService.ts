@@ -177,30 +177,40 @@ export function updateUserProfile(
   const branch = question.tags?.[1] || 'General';
   
   // Ensure topic tree structure exists - use explicit default values
-  if (!updatedProfile.topics[topic]) {
-    console.log(`[WEIGHT UPDATE] Creating new topic ${topic} with default weight ${DEFAULT_TOPIC_WEIGHT}`);
-    updatedProfile.topics[topic] = {
+  let topicData = updatedProfile.topics[topic];
+  if (!topicData) {
+    topicData = { 
       weight: DEFAULT_TOPIC_WEIGHT,
       subtopics: {},
       lastViewed: currentTime
     };
+    updatedProfile.topics[topic] = topicData;
+    // console.log(`[WEIGHT UPDATE] Creating new topic ${topic} with default weight ${DEFAULT_TOPIC_WEIGHT}`);
   }
   
-  if (!updatedProfile.topics[topic].subtopics[subtopic]) {
-    console.log(`[WEIGHT UPDATE] Creating new subtopic ${subtopic} with default weight ${DEFAULT_SUBTOPIC_WEIGHT}`);
-    updatedProfile.topics[topic].subtopics[subtopic] = {
+  // Ensure subtopic exists with default weight
+  if (!topicData.subtopics) {
+    topicData.subtopics = {};
+  }
+  if (!topicData.subtopics[subtopic]) {
+    topicData.subtopics[subtopic] = { 
       weight: DEFAULT_SUBTOPIC_WEIGHT,
       branches: {},
       lastViewed: currentTime
     };
+    // console.log(`[WEIGHT UPDATE] Creating new subtopic ${subtopic} with default weight ${DEFAULT_SUBTOPIC_WEIGHT}`);
   }
   
-  if (!updatedProfile.topics[topic].subtopics[subtopic].branches[branch]) {
-    console.log(`[WEIGHT UPDATE] Creating new branch ${branch} with default weight ${DEFAULT_BRANCH_WEIGHT}`);
-    updatedProfile.topics[topic].subtopics[subtopic].branches[branch] = {
+  // Ensure branch exists with default weight
+  if (!topicData.subtopics[subtopic].branches) {
+    topicData.subtopics[subtopic].branches = {};
+  }
+  if (!topicData.subtopics[subtopic].branches![branch]) {
+    topicData.subtopics[subtopic].branches![branch] = { 
       weight: DEFAULT_BRANCH_WEIGHT,
       lastViewed: currentTime
     };
+    // console.log(`[WEIGHT UPDATE] Creating new branch ${branch} with default weight ${DEFAULT_BRANCH_WEIGHT}`);
   }
   
   // Update weights

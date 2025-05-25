@@ -3215,10 +3215,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     padding: 2,
   },
-  selectedTableFilterText: {
-    color: '#3498db',
-    fontWeight: 'bold',
-  },
   clearFilterButton: {
     marginTop: 8,
     paddingVertical: 4,
@@ -3317,25 +3313,25 @@ const styles = StyleSheet.create({
     color: '#333333',
     marginBottom: 4,
   },
-  tableStatDataContainer: {
+  tableStatDataContainerUnique: {
     marginTop: 2,
   },
-  tableStatBarContainer: {
+  tableStatBarContainerUnique: {
     height: 4,
     backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 2,
     marginTop: 2,
     marginBottom: 2,
   },
-  tableStatBar: {
+  tableStatBarUnique: {
     height: 4,
     borderRadius: 2,
   },
-  tableStatValue: {
+  tableStatValueUnique: {
     fontSize: 11,
     color: '#333333',
   },
-  statsDistributionCard: {
+  statsDistributionCardUnique: {
     padding: 12,
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
@@ -3347,39 +3343,39 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  operationStatItem: {
+  operationStatItemUnique: {
     flexDirection: 'column',
     marginBottom: 8,
   },
-  operationStatLabelContainer: {
+  operationStatLabelContainerUnique: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  operationStatDot: {
+  operationStatDotUnique: {
     width: 8,
     height: 8,
     borderRadius: 4,
     marginRight: 5,
   },
-  operationStatLabel: {
+  operationStatLabelUnique: {
     fontSize: 12,
     color: '#333333',
   },
-  operationStatDataContainer: {
+  operationStatDataContainerUnique: {
     marginTop: 2,
   },
-  operationStatBarContainer: {
+  operationStatBarContainerUnique: {
     height: 4,
     backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 2,
     marginTop: 2,
     marginBottom: 2,
   },
-  operationStatBar: {
+  operationStatBarUnique: {
     height: 4,
     borderRadius: 2,
   },
-  operationStatValue: {
+  operationStatValueUnique: {
     fontSize: 11,
     color: '#333333',
   },

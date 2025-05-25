@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction , createAsyncThunk } from '@reduxjs/toolkit';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { 
   UserProfile, 
   createInitialUserProfile, 
@@ -26,6 +27,44 @@ const SYNC_INTERACTION_THRESHOLD = 5; // Sync every 5 interactions instead of ev
  * retrieved from the database for these operations.
  */
 
+// Storage key for persisting questions data
+const QUESTIONS_STORAGE_KEY = 'redux_questions_';
+
+// Helper function to get storage key for current user
+const getQuestionsStorageKey = (userId?: string): string => {
+  const userKey = userId || 'guest';
+  return `${QUESTIONS_STORAGE_KEY}${userKey}`;
+};
+
+// Helper function to save questions to AsyncStorage
+const saveQuestionsToStorage = async (questions: { [questionId: string]: QuestionState }, userId?: string): Promise<void> => {
+  try {
+    const storageKey = getQuestionsStorageKey(userId);
+    await AsyncStorage.setItem(storageKey, JSON.stringify(questions));
+    console.log(`[REDUX PERSIST] Saved ${Object.keys(questions).length} questions to storage`);
+  } catch (error) {
+    console.error('[REDUX PERSIST] Error saving questions to storage:', error);
+  }
+};
+
+// Helper function to load questions from AsyncStorage
+const loadQuestionsFromStorage = async (userId?: string): Promise<{ [questionId: string]: QuestionState }> => {
+  try {
+    const storageKey = getQuestionsStorageKey(userId);
+    const storedData = await AsyncStorage.getItem(storageKey);
+    
+    if (storedData) {
+      const parsedQuestions = JSON.parse(storedData);
+      console.log(`[REDUX PERSIST] Loaded ${Object.keys(parsedQuestions).length} questions from storage`);
+      return parsedQuestions;
+    }
+  } catch (error) {
+    console.error('[REDUX PERSIST] Error loading questions from storage:', error);
+  }
+  
+  return {};
+};
+
 // Define a type for possible question states
 export type QuestionState = {
   status: 'unanswered' | 'skipped' | 'answered';
@@ -50,6 +89,7 @@ interface TriviaState {
   isSyncing: boolean; // Track whether a sync is in progress
   interactionCount: number; // Track number of interactions since last sync for batching
   firstInteractionProcessed: boolean; // Track if the first interaction has been processed
+  questionsLoaded: boolean; // Track whether questions have been loaded from storage
 }
 
 const initialState: TriviaState = {
@@ -66,7 +106,17 @@ const initialState: TriviaState = {
   isSyncing: false,
   interactionCount: 0,
   firstInteractionProcessed: false,
+  questionsLoaded: false,
 };
+
+// Async thunk to load questions from storage
+export const loadQuestionsFromStorageThunk = createAsyncThunk(
+  'trivia/loadQuestionsFromStorage',
+  async (userId?: string) => {
+    const questions = await loadQuestionsFromStorage(userId);
+    return questions;
+  }
+);
 
 /**
  * Helper function to safely sync user profile with error handling
@@ -118,6 +168,9 @@ const triviaSlice = createSlice({
         isCorrect,
         timeSpent
       };
+      
+      // Save questions to storage after update
+      saveQuestionsToStorage(state.questions, userId);
       
       // If this was previously skipped, let's log that we're overriding it
       if (previousState === 'skipped') {
@@ -187,6 +240,9 @@ const triviaSlice = createSlice({
             status: 'skipped',
             timeSpent
           };
+          
+          // Save questions to storage after update
+          saveQuestionsToStorage(state.questions, userId);
           
           // Record interaction for sync
           const now = Date.now();
@@ -430,7 +486,15 @@ const triviaSlice = createSlice({
       }
     },
     updateUserProfile: (state, action: PayloadAction<{ profile: UserProfile, userId?: string }>) => {
-      state.userProfile = action.payload.profile;
+      const { profile } = action.payload;
+      
+      // Add null check for profile
+      if (!profile) {
+        console.warn('Cannot update user profile: profile is null or undefined');
+        return;
+      }
+      
+      state.userProfile = profile;
       
       // Log the update action
       console.log('[Redux] User profile updated');
@@ -539,6 +603,22 @@ const triviaSlice = createSlice({
     loadUserDataFailure: (state) => {
       state.isSyncing = false;
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(loadQuestionsFromStorageThunk.pending, (state) => {
+        console.log('[REDUX PERSIST] Loading questions from storage...');
+      })
+      .addCase(loadQuestionsFromStorageThunk.fulfilled, (state, action) => {
+        const loadedQuestions = action.payload;
+        state.questions = loadedQuestions;
+        state.questionsLoaded = true;
+        console.log(`[REDUX PERSIST] Successfully loaded ${Object.keys(loadedQuestions).length} questions from storage`);
+      })
+      .addCase(loadQuestionsFromStorageThunk.rejected, (state, action) => {
+        console.error('[REDUX PERSIST] Failed to load questions from storage:', action.error);
+        state.questionsLoaded = true; // Mark as loaded even if failed to prevent infinite loading
+      });
   },
 });
 

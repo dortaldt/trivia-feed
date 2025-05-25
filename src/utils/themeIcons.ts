@@ -28,7 +28,7 @@ export const getAppIcon = (theme: ThemeName): string => {
 
 // Get favicon based on theme
 export const getFavicon = (theme: ThemeName): string => {
-  console.log(`Getting favicon for theme: ${theme}`);
+  // console.log(`Getting favicon for theme: ${theme}`);
   return faviconMap[theme] || faviconMap.default;
 };
 
@@ -46,12 +46,12 @@ export const getSocialPreviewImage = (theme: ThemeName): string => {
 export const updateFavicon = (theme: ThemeName): void => {
   if (Platform.OS !== 'web') return;
   
-  console.log(`Updating favicon for theme: ${theme}`);
+  // console.log(`Updating favicon for theme: ${theme}`);
   
   try {
     // Get the proper favicon path for this theme
     const faviconPath = getFavicon(theme);
-    console.log(`Using favicon path: ${faviconPath}`);
+    // console.log(`Using favicon path: ${faviconPath}`);
     
     // Force reload by adding a cache-busting parameter
     const cacheBuster = `?v=${Date.now()}`;
@@ -64,7 +64,7 @@ export const updateFavicon = (theme: ThemeName): void => {
     if (mainFavicon) {
       // Use absolute path without %PUBLIC_URL%
       const newPath = `${faviconPath.replace('%PUBLIC_URL%', '')}${cacheBuster}`;
-      console.log(`Setting main favicon to: ${newPath}`);
+      // console.log(`Setting main favicon to: ${newPath}`);
       mainFavicon.setAttribute('href', newPath);
     } else {
       console.warn('Main favicon element not found');
@@ -116,7 +116,7 @@ export const updateFavicon = (theme: ThemeName): void => {
       document.head.removeChild(testLink);
     }, 100);
     
-    console.log('Favicon update completed successfully');
+    // console.log('Favicon update completed successfully');
   } catch (error) {
     console.error('Error updating favicon:', error);
   }
@@ -159,7 +159,7 @@ export const updateSocialMetaTags = (title?: string, description?: string): void
     createOrUpdateMetaTag('name', 'twitter:description', finalDescription);
     createOrUpdateMetaTag('name', 'twitter:image', imageUrl);
     
-    console.log('Social meta tags updated successfully');
+    // console.log('Social meta tags updated successfully');
   } catch (error) {
     console.error('Error updating social meta tags:', error);
   }

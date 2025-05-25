@@ -592,22 +592,19 @@ async function _loadUserData(userId: string, forceLoad: boolean = false): Promis
 }
 
 /**
- * Diagnostic function to check and log sync status
+ * Log current sync status for debugging
  * This can be called from anywhere to see the current state of sync
  */
-export function logSyncStatus() {
-  console.log('---------------------------------------------');
-  console.log('🔍 SYNC STATUS REPORT');
-  console.log(`🔍 Write-only mode: ${initialDataLoadComplete ? 'ENABLED' : 'DISABLED'}`);
-  console.log(`🔍 Pending requests: ${pendingRequests.size}`);
-  console.log(`🔍 Request cooldown active: ${pendingRequests.size > 0 ? 'YES' : 'NO'}`);
+export function logSyncStatus(): void {
+  // console.log('---------------------------------------------');
+  // console.log('🔍 SYNC STATUS REPORT');
+  // console.log(`🔍 Write-only mode: ${state.writeOnlyMode ? 'ENABLED' : 'DISABLED'}`);
+  // console.log(`🔍 Pending requests: ${state.pendingRequests.size}`);
+  // console.log(`🔍 Request cooldown active: ${state.requestCooldownUntil > Date.now() ? 'YES' : 'NO'}`);
   
   if (pendingRequests.size > 0) {
-    console.log('🔍 Pending request keys:');
-    Array.from(pendingRequests.keys()).forEach(key => {
-      console.log(`   - ${key}`);
-    });
+    // console.log('🔍 Pending request types:', Array.from(state.pendingRequests));
   }
   
-  console.log('---------------------------------------------');
+  // console.log('---------------------------------------------');
 } 
