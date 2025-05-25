@@ -548,29 +548,17 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
     }
   }, [questions, feedData, interactions]);
   
-  // Track weight changes
+  // Track weight changes - simplified approach
   useEffect(() => {
     console.log(`[InteractionTracker] syncedWeightChanges updated: ${syncedWeightChanges.length} total changes`);
     
-    // Check if there are new weight changes
-    if (syncedWeightChanges.length > 0) {
-      const existingIds = new Set(weightChanges.map(wc => `${wc.timestamp}-${wc.questionId}`));
-      
-      // Filter only new weight changes
-      const newWeightChanges = syncedWeightChanges.filter(
-        wc => !existingIds.has(`${wc.timestamp}-${wc.questionId}`)
-      );
-      
-      console.log(`[InteractionTracker] Found ${newWeightChanges.length} new weight changes to add`);
-      
-      if (newWeightChanges.length > 0) {
-        console.log(`[InteractionTracker] Adding new weight changes:`, newWeightChanges.map(wc => 
-          `${wc.questionId} (${wc.topic}): ${wc.oldWeights.topicWeight.toFixed(2)} -> ${wc.newWeights.topicWeight.toFixed(2)}`
-        ));
-        setWeightChanges(prev => [...prev, ...newWeightChanges]);
-      }
+    // Simply sync all weight changes from Redux to local state
+    // This ensures we always have the latest data
+    if (syncedWeightChanges.length !== weightChanges.length) {
+      console.log(`[InteractionTracker] Syncing all weight changes from Redux (${syncedWeightChanges.length}) to local state (${weightChanges.length})`);
+      setWeightChanges([...syncedWeightChanges]);
     }
-  }, [syncedWeightChanges]);
+  }, [syncedWeightChanges, weightChanges.length]);
   
   // Helper to get question text
   const getQuestionText = (questionId: string): string => {
@@ -1811,6 +1799,9 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
                     </ThemedText>
             <ThemedText style={{fontSize: 11, color: '#666666'}}>
               Local weightChanges: {weightChanges.length} | Redux syncedWeightChanges: {syncedWeightChanges.length}
+                          </ThemedText>
+            <ThemedText style={{fontSize: 11, color: '#666666'}}>
+              Redux weight changes: {syncedWeightChanges.map(wc => `${wc.topic}(${wc.interactionType})`).join(', ')}
                           </ThemedText>
             <ThemedText style={{fontSize: 11, color: '#666666'}}>
               Default weight value: 0.50
