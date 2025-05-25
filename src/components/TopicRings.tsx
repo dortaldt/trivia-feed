@@ -48,6 +48,7 @@ interface AppleActivityRingProps {
   icon: string;
   level: number;
   isActive?: boolean;
+  glowOpacity?: Animated.Value;
 }
 
 // Ring Details Modal Component
@@ -241,23 +242,54 @@ const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, isActive, onPre
   
   const progressPercentage = Math.min(Math.max(safeCurrentProgress / safeTargetAnswers, 0), 1);
 
-  // Remove breathing animation - just return static view
+  // Animation values for smooth transitions
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+  const glowOpacity = React.useRef(new Animated.Value(isActive ? 1 : 0)).current;
+
+  // Animate on active state change
+  React.useEffect(() => {
+    // Parallel animations for scale and glow
+    Animated.parallel([
+      // Scale animation
+      Animated.spring(scaleAnim, {
+        toValue: isActive ? 1.05 : 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      // Glow opacity animation
+      Animated.timing(glowOpacity, {
+        toValue: isActive ? 1 : 0,
+        duration: 300,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [isActive]);
+
   return (
     <TouchableOpacity 
       onPress={onPress}
       style={[styles.singleRingContainer, { width: size, height: size }]}
       activeOpacity={0.8}
     >
-      {/* Use the reliable SVG Apple Activity Ring */}
-      <AppleActivityRing
-        size={size}
-        strokeWidth={Math.max(6, size * 0.12)}
-        color={ringData.color}
-        progress={progressPercentage}
-        icon={ringData.icon}
-        level={ringData.level}
-        isActive={isActive}
-      />
+      <Animated.View
+        style={{
+          transform: [{ scale: scaleAnim }],
+        }}
+      >
+        {/* Use the reliable SVG Apple Activity Ring */}
+        <AppleActivityRing
+          size={size}
+          strokeWidth={Math.max(6, size * 0.12)}
+          color={ringData.color}
+          progress={progressPercentage}
+          icon={ringData.icon}
+          level={ringData.level}
+          isActive={isActive}
+          glowOpacity={glowOpacity}
+        />
+      </Animated.View>
     </TouchableOpacity>
   );
 };
@@ -353,6 +385,7 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
   icon = 'activity',
   level = 1,
   isActive,
+  glowOpacity,
 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -371,63 +404,127 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
     outputRange: [circumference, 0],
   });
 
+  // Create internal animations for ring properties
+  const ringOpacity = React.useRef(new RNAnimated.Value(isActive ? 1 : 0.7)).current;
+  const ringStrokeWidth = React.useRef(new RNAnimated.Value(isActive ? strokeWidth + 1 : strokeWidth)).current;
+
+  React.useEffect(() => {
+    RNAnimated.parallel([
+      RNAnimated.timing(ringOpacity, {
+        toValue: isActive ? 1 : 0.7,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      RNAnimated.timing(ringStrokeWidth, {
+        toValue: isActive ? strokeWidth + 1 : strokeWidth,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [isActive, strokeWidth]);
+
   return (
     <View style={{ alignItems: 'center', position: 'relative' }}>
-      {/* Enhanced glow container with overflow visible */}
+      {/* Container sized exactly to the ring - no overflow */}
       <View 
         style={{ 
-          width: size + 40, // Add extra space for glow
-          height: size + 40,
+          width: size,
+          height: size,
           position: 'relative',
           alignItems: 'center',
           justifyContent: 'center',
-          overflow: 'visible', // Ensure glow isn't clipped
-          margin: -20, // Compensate for extra size
         }}
       >
-        {/* Platform-specific glow effect for active ring */}
-        {isActive && Platform.OS === 'web' && (
-          <View 
+        {/* iOS-specific glow effect - properly sized and subtle */}
+        {Platform.OS === 'ios' && glowOpacity && (
+          <>
+            {/* Outer glow layer */}
+            <Animated.View 
+              style={{
+                position: 'absolute',
+                width: size * 0.9,
+                height: size * 0.9,
+                borderRadius: (size * 0.9) / 2,
+                backgroundColor: color,
+                opacity: glowOpacity.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 0.15],
+                }),
+                shadowColor: color,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.6,
+                shadowRadius: 8,
+              }}
+            />
+            {/* Inner glow layer */}
+            <Animated.View 
+              style={{
+                position: 'absolute',
+                width: size * 0.8,
+                height: size * 0.8,
+                borderRadius: (size * 0.8) / 2,
+                backgroundColor: color,
+                opacity: glowOpacity.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 0.1],
+                }),
+                shadowColor: color,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.4,
+                shadowRadius: 4,
+              }}
+            />
+          </>
+        )}
+        
+        {/* Web glow effect with animation */}
+        {Platform.OS === 'web' && glowOpacity && (
+          <Animated.View 
             style={{
               position: 'absolute',
-              width: size,
-              height: size,
-              borderRadius: size / 2,
+              width: size * 0.9,
+              height: size * 0.9,
+              borderRadius: (size * 0.9) / 2,
               backgroundColor: color,
-              filter: 'blur(20px)',
-              opacity: 0.5,
-              transform: [{ scale: 1.2 }],
+              filter: 'blur(12px)',
+              opacity: glowOpacity.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 0.4],
+              }),
             }}
           />
         )}
         
-        {isActive && Platform.OS !== 'web' && (
-          <View 
+        {/* Android glow effect - keep existing approach */}
+        {Platform.OS === 'android' && glowOpacity && (
+          <Animated.View 
             style={{
               position: 'absolute',
-              width: size,
-              height: size,
-              borderRadius: size / 2,
+              width: size * 0.9,
+              height: size * 0.9,
+              borderRadius: (size * 0.9) / 2,
               backgroundColor: color,
-              opacity: 0.3,
-              transform: [{ scale: 1.4 }],
+              opacity: glowOpacity.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 0.2],
+              }),
               shadowColor: color,
               shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.8,
-              shadowRadius: 20,
-              elevation: 10,
+              shadowOpacity: 0.6,
+              shadowRadius: 12,
+              elevation: 8,
             }}
           />
         )}
         
-        <Svg width={size} height={size} style={{ overflow: 'visible' }}>
+        <Svg width={size} height={size}>
           {/* Active ring fill - subtle background fill when active */}
           {isActive && (
             <Circle
               cx={size / 2}
               cy={size / 2}
               r={radius}
-              fill={color + '15'} // Very subtle fill with 15% opacity
+              fill={color + '10'} // Very subtle fill with 10% opacity
               stroke="none"
             />
           )}
@@ -442,46 +539,64 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
             fill="none"
           />
           
-          {/* Progress ring */}
+          {/* Progress ring with animated opacity */}
           <AnimatedCircle
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke={isActive ? color : color + 'B3'} // Full opacity for active, 70% for inactive
-            strokeWidth={isActive ? strokeWidth + 1 : strokeWidth} // Slightly thicker when active
+            stroke={color}
+            strokeWidth={strokeWidth}
             fill="none"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
             rotation="-90"
             origin={`${size / 2}, ${size / 2}`}
+            opacity={ringOpacity}
           />
         </Svg>
         
-        {/* Center icon */}
-        <View style={{ position: 'absolute', top: 20, left: 20, width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-          <Feather name={icon as any} size={size * 0.32} color={isActive ? color : color + 'B3'} />
-        </View>
-        
-        {/* Level below - positioned absolutely to not affect ring centering */}
-        <View style={{ position: 'absolute', top: size + 24, left: 0, right: 0, alignItems: 'center' }}>
-          <ThemedText style={{ 
-            color: isActive ? color : color + 'B3', 
-            fontWeight: isActive ? '900' : 'bold', 
-            fontSize: size * 0.16,
-            ...(isActive && Platform.OS === 'web' && {
-              textShadow: `0 0 10px ${color}80`,
-            }),
-            ...(isActive && Platform.OS !== 'web' && {
-              textShadowColor: color + '80',
-              textShadowOffset: { width: 0, height: 0 },
-              textShadowRadius: 4,
-            })
-          }}>
-            LVL{level}
-          </ThemedText>
-        </View>
+        {/* Center icon with animated opacity */}
+        <Animated.View style={{ 
+          position: 'absolute', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          opacity: ringOpacity 
+        }}>
+          <Feather name={icon as any} size={size * 0.32} color={color} />
+        </Animated.View>
       </View>
+      
+      {/* Level below with animated properties */}
+      <Animated.View style={{ 
+        position: 'absolute', 
+        top: size + 4, 
+        left: 0, 
+        right: 0, 
+        alignItems: 'center',
+        opacity: ringOpacity
+      }}>
+        <ThemedText style={{ 
+          color: color, 
+          fontWeight: isActive ? '900' : 'bold', 
+          fontSize: size * 0.16,
+          ...(isActive && Platform.OS === 'web' && {
+            textShadow: `0 0 8px ${color}60`,
+          }),
+          ...(isActive && Platform.OS === 'ios' && {
+            textShadowColor: color + '60',
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 3,
+          }),
+          ...(isActive && Platform.OS === 'android' && {
+            textShadowColor: color + '80',
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 4,
+          })
+        }}>
+          LVL{level}
+        </ThemedText>
+      </Animated.View>
     </View>
   );
 };
@@ -496,7 +611,11 @@ const styles = StyleSheet.create({
   ringWrapper: {
     alignItems: 'center',
     overflow: 'visible', // Ensure glow effects aren't clipped
-    // Remove marginBottom since level text is now absolutely positioned
+    // Add padding to accommodate glow effects on iOS
+    ...(Platform.OS === 'ios' && {
+      paddingHorizontal: 4,
+      paddingVertical: 4,
+    }),
   },
   singleRingContainer: {
     justifyContent: 'center',
