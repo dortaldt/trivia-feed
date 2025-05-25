@@ -69,17 +69,7 @@ interface GeneratorEvent {
   status?: string; // Add status field for 'starting', etc.
 }
 
-// Add new interface for complete weight snapshots
-interface WeightSnapshot {
-  timestamp: number;
-  questionId: string;
-  interactionType: 'correct' | 'incorrect' | 'skipped';
-  questionText: string;
-  allTopicWeights: { [topic: string]: number };
-  triggerTopic: string; // The topic that was actually interacted with
-  triggerSubtopic?: string;
-  triggerBranch?: string;
-}
+
 
 interface InteractionTrackerProps {
   feedData?: FeedItem[];
@@ -176,8 +166,7 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
   const [showCopyUI, setShowCopyUI] = useState(false);
   const [copyText, setCopyText] = useState("");
   
-  // Add new state for weight snapshots
-  const [weightSnapshots, setWeightSnapshots] = useState<WeightSnapshot[]>([]);
+
   
   // Helper to check if a weight value is the default (0.5)
   const isDefaultWeight = (value: number): boolean => {
@@ -562,34 +551,6 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
       
       if (newWeightChanges.length > 0) {
         setWeightChanges(prev => [...prev, ...newWeightChanges]);
-        
-        // Create weight snapshots for each new weight change
-        const newSnapshots: WeightSnapshot[] = newWeightChanges.map(change => {
-          // Get all current topic weights from userProfile
-          const allTopicWeights: { [topic: string]: number } = {};
-          Object.entries(userProfile.topics || {}).forEach(([topic, data]) => {
-            allTopicWeights[topic] = (data as any).weight;
-          });
-          
-          console.log(`[InteractionTracker] Creating weight snapshot for ${change.questionId}:`);
-          console.log(`[InteractionTracker] Trigger topic: ${change.topic}, All topics count: ${Object.keys(allTopicWeights).length}`);
-          console.log(`[InteractionTracker] Sample weights: ${Object.entries(allTopicWeights).slice(0, 3).map(([topic, weight]) => `${topic}=${weight.toFixed(2)}`).join(', ')}`);
-          console.log(`[InteractionTracker] Trigger topic weight: ${allTopicWeights[change.topic]?.toFixed(2) || 'N/A'}`);
-          
-          return {
-            timestamp: change.timestamp,
-            questionId: change.questionId,
-            interactionType: change.interactionType,
-            questionText: change.questionText || `Question ${change.questionId.substring(0, 8)}...`,
-            allTopicWeights,
-            triggerTopic: change.topic,
-            triggerSubtopic: change.subtopic,
-            triggerBranch: change.branch
-          };
-        });
-        
-        setWeightSnapshots(prev => [...prev, ...newSnapshots]);
-        console.log(`[InteractionTracker] Added ${newSnapshots.length} weight snapshots, total: ${weightSnapshots.length + newSnapshots.length}`);
       }
     }
   }, [syncedWeightChanges]);
@@ -1739,13 +1700,7 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
               Total Topics: {Object.keys(userProfile.topics || {}).length}
             </ThemedText>
             
-            <ThemedText style={styles.debugWeightsInfo}>
-              Synced Weight Changes: {syncedWeightChanges.length}
-            </ThemedText>
-            
-            <ThemedText style={styles.debugWeightsInfo}>
-              Weight Snapshots: {weightSnapshots.length}
-            </ThemedText>
+
             
             <ThemedText style={styles.debugWeightsInfo}>
               Weights Distribution: {
@@ -1828,93 +1783,152 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
               )}
             </ThemedView>
         
-        {/* Complete Weight State After Each Interaction */}
+        {/* Rest of the existing weights display */}
         <ThemedView style={styles.weightChangesContainer}>
-          <ThemedText style={styles.sectionTitle}>Complete Weight State After Each Interaction</ThemedText>
+          <ThemedText style={styles.sectionTitle}>Recent Weight Changes</ThemedText>
           
-          {/* Info about the new display */}
-          <ThemedView style={{backgroundColor: 'rgba(76, 175, 80, 0.1)', padding: 10, borderRadius: 5, marginBottom: 10}}>
+          {/* Debug info for weight changes */}
+          <ThemedView style={{backgroundColor: 'rgba(255, 215, 0, 0.1)', padding: 10, borderRadius: 5, marginBottom: 10}}>
             <ThemedText style={{fontSize: 12, color: '#333333', fontWeight: 'bold'}}>
-              Complete State View
-            </ThemedText>
+              Debug Info
+                    </ThemedText>
             <ThemedText style={{fontSize: 11, color: '#666666'}}>
-              Shows ALL topic weights after each interaction, not just the changed ones
-            </ThemedText>
+              Default weight value: 0.50
+                          </ThemedText>
             <ThemedText style={{fontSize: 11, color: '#666666'}}>
-              The highlighted topic is the one that was directly affected by the interaction
-            </ThemedText>
-          </ThemedView>
+              Displayed weights might not match actual values due to display formatting
+                                  </ThemedText>
+            <ThemedText style={{fontSize: 11, color: '#666666'}}>
+              The 'Debug Raw Weights' panel above shows the actual current weights
+          </ThemedText>
+        </ThemedView>
         
-          {weightSnapshots.length === 0 ? (
+          {weightChanges.length === 0 ? (
             <View style={styles.emptyState}>
-              <ThemedText style={styles.emptyText}>No weight snapshots recorded yet</ThemedText>
+              <ThemedText style={styles.emptyText}>No weight changes recorded yet</ThemedText>
             </View>
           ) : (
-            weightSnapshots.slice().reverse().map((snapshot, index) => (
+            weightChanges.slice().reverse().map((change, index) => (
               <View key={index} style={styles.weightChangeItem}>
                 <View style={styles.weightChangeHeader}>
                   <ThemedText style={styles.weightChangeCategory}>
-                    Interaction #{weightSnapshots.length - index}: {snapshot.triggerTopic}
-                    {snapshot.triggerSubtopic ? ` > ${snapshot.triggerSubtopic}` : ''}
-                    {snapshot.triggerBranch ? ` > ${snapshot.triggerBranch}` : ''}
+                    {change.topic} {change.subtopic ? `> ${change.subtopic}` : ''}
+                    {change.branch ? `> ${change.branch}` : ''}
                   </ThemedText>
                   <View style={styles.weightChangeInfo}>
                     <ThemedText style={[
                       styles.weightChangeType, 
-                      snapshot.interactionType === 'correct' ? styles.correctText : 
-                      snapshot.interactionType === 'incorrect' ? styles.incorrectText : 
-                      snapshot.interactionType === 'skipped' ? styles.skippedText : 
+                      change.interactionType === 'correct' ? styles.correctText : 
+                      change.interactionType === 'incorrect' ? styles.incorrectText : 
+                      change.interactionType === 'skipped' ? styles.skippedText : 
                       styles.skippedText
                     ]}>
-                      {snapshot.interactionType.toUpperCase()}
+                      {change.interactionType.toUpperCase()}
                     </ThemedText>
                     <ThemedText style={styles.weightChangeTime}>
-                      {new Date(snapshot.timestamp).toLocaleTimeString()}
+                      {new Date(change.timestamp).toLocaleTimeString()}
                     </ThemedText>
                   </View>
                 </View>
                 
                 <ThemedText style={styles.weightChangeQuestion}>
-                  {snapshot.questionText}
+                  {change.questionText || `Question ${change.questionId.substring(0, 8)}...`}
                 </ThemedText>
                 
-                {/* Display all topic weights at this point in time */}
                 <View style={styles.weightTable}>
                   <View style={styles.weightTableHeader}>
-                    <ThemedText style={[styles.weightTableCell, styles.weightTableHeaderText]}>Topic</ThemedText>
-                    <ThemedText style={[styles.weightTableCell, styles.weightTableHeaderText]}>Weight</ThemedText>
-                    <ThemedText style={[styles.weightTableCell, styles.weightTableHeaderText]}>Status</ThemedText>
+                    <ThemedText style={[styles.weightTableCell, styles.weightTableHeaderText]}>Weight Type</ThemedText>
+                    <ThemedText style={[styles.weightTableCell, styles.weightTableHeaderText]}>Before</ThemedText>
+                    <ThemedText style={[styles.weightTableCell, styles.weightTableHeaderText]}>After</ThemedText>
+                    <ThemedText style={[styles.weightTableCell, styles.weightTableHeaderText]}>Change</ThemedText>
                   </View>
                   
-                  {Object.entries(snapshot.allTopicWeights)
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .map(([topic, weight]) => (
-                    <View key={topic} style={[
-                      styles.weightTableRow,
-                      topic === snapshot.triggerTopic ? {backgroundColor: 'rgba(76, 175, 80, 0.1)'} : {}
+                  <View style={styles.weightTableRow}>
+                    <ThemedText style={styles.weightTableCell}>Topic</ThemedText>
+                    <ThemedText style={[
+                      styles.weightTableCell,
+                      isDefaultWeight(change.oldWeights.topicWeight) ? {fontStyle: 'italic'} : {}
                     ]}>
+                      {formatWeight(change.oldWeights.topicWeight)}
+                    </ThemedText>
+                    <ThemedText style={[
+                      styles.weightTableCell,
+                      isDefaultWeight(change.newWeights.topicWeight) ? {fontStyle: 'italic'} : {}
+                    ]}>
+                      {formatWeight(change.newWeights.topicWeight)}
+                    </ThemedText>
+                    <ThemedText 
+                      style={[
+                        styles.weightTableCell, 
+                        change.newWeights.topicWeight > change.oldWeights.topicWeight 
+                          ? styles.weightIncreaseText 
+                          : styles.weightDecreaseText
+                      ]}
+                    >
+                      {(change.newWeights.topicWeight - change.oldWeights.topicWeight) > 0 ? '+' : ''}
+                      {(change.newWeights.topicWeight - change.oldWeights.topicWeight).toFixed(2)}
+                    </ThemedText>
+                  </View>
+                  
+                  {change.oldWeights.subtopicWeight !== undefined && 
+                   change.newWeights.subtopicWeight !== undefined && (
+                    <View style={styles.weightTableRow}>
+                      <ThemedText style={styles.weightTableCell}>Subtopic</ThemedText>
                       <ThemedText style={[
                         styles.weightTableCell,
-                        topic === snapshot.triggerTopic ? {fontWeight: 'bold'} : {}
+                        isDefaultWeight(change.oldWeights.subtopicWeight) ? {fontStyle: 'italic'} : {}
                       ]}>
-                        {topic} {topic === snapshot.triggerTopic ? '⭐' : ''}
+                        {formatWeight(change.oldWeights.subtopicWeight)}
                       </ThemedText>
                       <ThemedText style={[
                         styles.weightTableCell,
-                        isDefaultWeight(weight) ? {fontStyle: 'italic', color: '#FFD700'} : 
-                        weight > 0.5 ? {color: '#4CAF50'} : {color: '#FF5252'}
+                        isDefaultWeight(change.newWeights.subtopicWeight) ? {fontStyle: 'italic'} : {}
                       ]}>
-                        {weight.toFixed(2)}
+                        {formatWeight(change.newWeights.subtopicWeight)}
                       </ThemedText>
-                      <ThemedText style={[
-                        styles.weightTableCell,
-                        {fontSize: 10}
-                      ]}>
-                        {isDefaultWeight(weight) ? 'DEFAULT' : 
-                         weight > 0.5 ? 'INCREASED' : 'DECREASED'}
+                      <ThemedText 
+                        style={[
+                          styles.weightTableCell, 
+                          change.newWeights.subtopicWeight > change.oldWeights.subtopicWeight 
+                            ? styles.weightIncreaseText 
+                            : styles.weightDecreaseText
+                        ]}
+                      >
+                        {(change.newWeights.subtopicWeight - change.oldWeights.subtopicWeight) > 0 ? '+' : ''}
+                        {(change.newWeights.subtopicWeight - change.oldWeights.subtopicWeight).toFixed(2)}
                       </ThemedText>
                     </View>
-                                     ))}
+                  )}
+                  
+                  {change.oldWeights.branchWeight !== undefined && 
+                   change.newWeights.branchWeight !== undefined && (
+                    <View style={styles.weightTableRow}>
+                      <ThemedText style={styles.weightTableCell}>Branch</ThemedText>
+                      <ThemedText style={[
+                        styles.weightTableCell,
+                        isDefaultWeight(change.oldWeights.branchWeight) ? {fontStyle: 'italic'} : {}
+                      ]}>
+                        {formatWeight(change.oldWeights.branchWeight)}
+                      </ThemedText>
+                      <ThemedText style={[
+                        styles.weightTableCell,
+                        isDefaultWeight(change.newWeights.branchWeight) ? {fontStyle: 'italic'} : {}
+                      ]}>
+                        {formatWeight(change.newWeights.branchWeight)}
+                      </ThemedText>
+                      <ThemedText 
+                        style={[
+                          styles.weightTableCell, 
+                          change.newWeights.branchWeight > change.oldWeights.branchWeight 
+                            ? styles.weightIncreaseText 
+                            : styles.weightDecreaseText
+                        ]}
+                      >
+                        {(change.newWeights.branchWeight - change.oldWeights.branchWeight) > 0 ? '+' : ''}
+                        {(change.newWeights.branchWeight - change.oldWeights.branchWeight).toFixed(2)}
+                      </ThemedText>
+                    </View>
+                  )}
                 </View>
               </View>
             ))
