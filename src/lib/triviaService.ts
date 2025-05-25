@@ -2,6 +2,8 @@ import { supabase } from './supabaseClient';
 import { getTopicColor } from './colors';
 import { getStandardizedTopicName } from '../constants/topics';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 // Get topic configuration from app config
 const { activeTopic, filterContentByTopic, topicDbName } = Constants.expoConfig?.extra || {};
@@ -775,5 +777,35 @@ export async function fetchNewTriviaQuestions(existingIds: string[]): Promise<Fe
   } catch (error) {
     console.error('Error fetching new trivia questions:', error);
     return [];
+  }
+}
+
+/**
+ * Get the last fetch timestamp for optimized database queries
+ * This helps prevent fetching the same questions repeatedly
+ */
+export async function getLastFetchTimestamp(): Promise<number | null> {
+  try {
+    // For now, we'll use a simple approach - you can enhance this later
+    // to store in AsyncStorage or a database table
+    const stored = await AsyncStorage.getItem('lastFetchTimestamp');
+    return stored ? parseInt(stored, 10) : null;
+  } catch (error) {
+    console.error('Error getting last fetch timestamp:', error);
+    return null;
+  }
+}
+
+/**
+ * Set the last fetch timestamp after a successful database fetch
+ * This helps optimize future queries
+ */
+export async function setLastFetchTimestamp(timestamp?: number): Promise<void> {
+  try {
+    const timestampToSet = timestamp || Date.now();
+    await AsyncStorage.setItem('lastFetchTimestamp', timestampToSet.toString());
+    console.log(`Set last fetch timestamp to: ${new Date(timestampToSet).toISOString()}`);
+  } catch (error) {
+    console.error('Error setting last fetch timestamp:', error);
   }
 } 
