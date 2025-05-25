@@ -16,6 +16,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { updateUserProfile } from '../store/triviaSlice';
+import { useTheme } from '@/src/context/ThemeContext';
 import Reanimated, { 
   Layout, 
   FadeInLeft, 
@@ -74,9 +75,45 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
   const dispatch = useAppDispatch();
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   const [buttonsDisabled, setButtonsDisabled] = useState(false);
+  const { isNeonTheme } = useTheme();
 
   const progressPercentage = Math.round((ringData.currentProgress / ringData.targetAnswers) * 100);
   const nextLevelAnswers = ringData.targetAnswers - ringData.currentProgress;
+
+  // Add CSS for web hover effects when component mounts
+  useEffect(() => {
+    if (Platform.OS === 'web' && isNeonTheme) {
+      const styleId = 'neon-button-hover-styles';
+      if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.innerHTML = `
+          .neon-more-button:hover:not(:disabled) {
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.8), inset 0 0 15px rgba(0, 255, 136, 0.2) !important;
+            transform: scale(1.02);
+            border-color: #00FF88;
+          }
+          .neon-less-button:hover:not(:disabled) {
+            box-shadow: 0 0 20px rgba(255, 0, 128, 0.8), inset 0 0 15px rgba(255, 0, 128, 0.2) !important;
+            transform: scale(1.02);
+            border-color: #FF0080;
+          }
+          .neon-button-disabled {
+            cursor: not-allowed !important;
+            opacity: 0.5;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      return () => {
+        const style = document.getElementById(styleId);
+        if (style && document.head.contains(style)) {
+          document.head.removeChild(style);
+        }
+      };
+    }
+  }, [isNeonTheme]);
 
   const handleTopicWeightChange = (topic: string, weightChange: number) => {
     if (!userProfile || buttonsDisabled) return;
@@ -203,11 +240,14 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
                   onPress={() => handleTopicWeightChange(ringData.topic, 0.15)}
                   activeOpacity={buttonsDisabled ? 1 : 0.7}
                   disabled={buttonsDisabled}
+                  {...(Platform.OS === 'web' && isNeonTheme ? { 
+                    className: buttonsDisabled ? 'neon-button-disabled' : 'neon-more-button' 
+                  } : {}) as any}
                 >
-                  <Feather name="plus-circle" size={16} color={buttonsDisabled ? '#999' : 'white'} />
+                  <Feather name="plus-circle" size={16} color={buttonsDisabled ? '#666' : '#00FF88'} />
                   <ThemedText style={[
                     styles.feedControlButtonText,
-                    buttonsDisabled && styles.disabledButtonText
+                    { color: buttonsDisabled ? '#666' : '#00FF88' }
                   ]}>
                     Show more from topic
                   </ThemedText>
@@ -222,11 +262,14 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
                   onPress={() => handleTopicWeightChange(ringData.topic, -0.1)}
                   activeOpacity={buttonsDisabled ? 1 : 0.7}
                   disabled={buttonsDisabled}
+                  {...(Platform.OS === 'web' && isNeonTheme ? { 
+                    className: buttonsDisabled ? 'neon-button-disabled' : 'neon-less-button' 
+                  } : {}) as any}
                 >
-                  <Feather name="minus-circle" size={16} color={buttonsDisabled ? '#999' : 'white'} />
+                  <Feather name="minus-circle" size={16} color={buttonsDisabled ? '#666' : '#FF0080'} />
                   <ThemedText style={[
                     styles.feedControlButtonText,
-                    buttonsDisabled && styles.disabledButtonText
+                    { color: buttonsDisabled ? '#666' : '#FF0080' }
                   ]}>
                     Show less from topic
                   </ThemedText>
@@ -728,24 +771,79 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
-    borderRadius: 12,
-    backgroundColor: '#007AFF',
+    borderRadius: 25,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    // Add shadow/glow effects for all platforms
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 0 },
+        shadowRadius: 8,
+        shadowOpacity: 0.6,
+      },
+      android: {
+        elevation: 6,
+      },
+      web: {
+        transition: 'all 0.3s ease',
+      }
+    }),
   },
   feedControlButtonText: {
     marginLeft: 8,
     fontSize: 14,
-    fontWeight: '600',
-    color: 'white',
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
   moreButton: {
-    backgroundColor: '#1DE9B6', // Bright neon teal for "more"
+    borderColor: '#00FF88',
+    // Platform-specific glow
+    ...Platform.select({
+      ios: {
+        shadowColor: '#00FF88',
+      },
+      android: {
+        // Android doesn't support colored elevation, so we use borderColor
+      },
+      web: {
+        boxShadow: '0 0 15px rgba(0, 255, 136, 0.6), inset 0 0 10px rgba(0, 255, 136, 0.1)',
+        '&:hover': {
+          boxShadow: '0 0 20px rgba(0, 255, 136, 0.8), inset 0 0 15px rgba(0, 255, 136, 0.2)',
+          transform: 'scale(1.02)',
+        } as any,
+      }
+    }),
   },
   lessButton: {
-    backgroundColor: '#FF6B35', // Bright neon orange for "less"
+    borderColor: '#FF0080',
+    // Platform-specific glow
+    ...Platform.select({
+      ios: {
+        shadowColor: '#FF0080',
+      },
+      android: {
+        // Android doesn't support colored elevation, so we use borderColor
+      },
+      web: {
+        boxShadow: '0 0 15px rgba(255, 0, 128, 0.6), inset 0 0 10px rgba(255, 0, 128, 0.1)',
+        '&:hover': {
+          boxShadow: '0 0 20px rgba(255, 0, 128, 0.8), inset 0 0 15px rgba(255, 0, 128, 0.2)',
+          transform: 'scale(1.02)',
+        } as any,
+      }
+    }),
   },
   disabledButton: {
-    backgroundColor: '#999',
+    backgroundColor: 'rgba(50, 50, 50, 0.3)',
+    borderColor: '#666',
+    shadowOpacity: 0,
+    elevation: 0,
+    ...Platform.select({
+      web: {
+        boxShadow: 'none',
+      } as any
+    }),
   },
   disabledButtonText: {
     color: '#666',
