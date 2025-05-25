@@ -1266,7 +1266,7 @@ const FeedScreen: React.FC = () => {
     for (let i = startIdx; i <= endIdx; i++) {
       const itemId = personalizedFeed[i].id;
       if (!preRenderedItems.current.has(itemId)) {
-        console.log(`Preloading item ${i} (${itemId})`);
+        // console.log(`Preloading item ${i} (${itemId})`);
         preRenderedItems.current.add(itemId);
       }
     }
@@ -1356,9 +1356,6 @@ const FeedScreen: React.FC = () => {
           const currentItemId = currentItem.id;
           const prevIndex = lastVisibleIndexRef.current;
           
-          // Enhanced logging to track what's happening
-          console.log(`[INDEX UPDATE] ViewableItemsChanged: ${prevIndex} → ${newIndex} (topic: "${currentItem.topic}", id: ${currentItemId})`);
-          
           // Special case for first question skip detection
           if (newIndex === 1 && (prevIndex === null || prevIndex === 0)) {
             // We've moved directly to the second question - check if first question was processed
@@ -1367,10 +1364,10 @@ const FeedScreen: React.FC = () => {
             
             // Only mark as skipped if it hasn't been processed yet
             if (!firstQuestionState || firstQuestionState.status === 'unanswered') {
-              console.log(`[ViewableItemsChanged] First question not yet processed, marking as skipped`);
+              // console.log(`[ViewableItemsChanged] First question not yet processed, marking as skipped`);
               markPreviousAsSkipped(0, 1);
             } else {
-              console.log(`[ViewableItemsChanged] First question already processed as ${firstQuestionState?.status}`);
+              // console.log(`[ViewableItemsChanged] First question already processed as ${firstQuestionState?.status}`);
             }
           }
           
@@ -1378,14 +1375,14 @@ const FeedScreen: React.FC = () => {
           if (prevIndex !== newIndex) {
             // Check if we're moving forward AND if prevIndex is not null (handles first question case)
             if (prevIndex !== null && newIndex > prevIndex) {
-              console.log(`[ViewableItemsChanged] Skipping detected: ${prevIndex} → ${newIndex}`);
+              // console.log(`[ViewableItemsChanged] Skipping detected: ${prevIndex} → ${newIndex}`);
               markPreviousAsSkipped(prevIndex, newIndex);
             } else if (prevIndex === null && newIndex > 0) {
               // Handle case where first question was skipped and prevIndex hasn't been set yet
-              console.log(`[ViewableItemsChanged] First question possibly skipped, marking index 0`);
+              // console.log(`[ViewableItemsChanged] First question possibly skipped, marking index 0`);
               markPreviousAsSkipped(0, newIndex);
             } else {
-              console.log(`[ViewableItemsChanged] Moving backwards or special case, not marking as skipped`);
+              // console.log(`[ViewableItemsChanged] Moving backwards or special case, not marking as skipped`);
             }
             
             // Update last visible index
@@ -1394,7 +1391,7 @@ const FeedScreen: React.FC = () => {
             
             // Update currentIndex state to match the visible item
             // This is critical for iOS to correctly detect skipped questions in onMomentumScrollEnd
-            console.log(`[INDEX UPDATE] Setting currentIndex from ${currentIndex} to ${newIndex}`);
+            // console.log(`[INDEX UPDATE] Setting currentIndex from ${currentIndex} to ${newIndex}`);
             setCurrentIndex(newIndex);
             
             // Start tracking interaction with new question
@@ -1405,7 +1402,7 @@ const FeedScreen: React.FC = () => {
               setCurrentExplanation(feedExplanations[currentItemId]);
             }
           } else {
-            console.log(`[ViewableItemsChanged] Index didn't change, not marking as skipped`);
+            // console.log(`[ViewableItemsChanged] Index didn't change, not marking as skipped`);
           }
         }
       }
@@ -1421,7 +1418,7 @@ const FeedScreen: React.FC = () => {
       lastVisibleIndexRef.current = 0; // Explicitly initialize this ref to 0
       
       // Start tracking interaction with first question
-      console.log(`Starting initial interaction tracking for question ${firstQuestionId}`);
+      // console.log(`Starting initial interaction tracking for question ${firstQuestionId}`);
       
       // Dispatch action to start tracking this question's interaction time
       dispatch(startInteraction({ questionId: firstQuestionId }));
@@ -1433,7 +1430,7 @@ const FeedScreen: React.FC = () => {
   useEffect(() => {
     // When currentIndex changes, also update lastVisibleIndexRef if needed
     if (currentIndex !== lastVisibleIndexRef.current) {
-      console.log(`[Sync] Updating lastVisibleIndexRef from ${lastVisibleIndexRef.current} to match currentIndex ${currentIndex}`);
+      // console.log(`[Sync] Updating lastVisibleIndexRef from ${lastVisibleIndexRef.current} to match currentIndex ${currentIndex}`);
       lastVisibleIndexRef.current = currentIndex;
     }
   }, [currentIndex]);
@@ -1447,7 +1444,7 @@ const FeedScreen: React.FC = () => {
       // Verify after a short delay
       const timer = setTimeout(() => {
         if (interactionStartTimes[firstQuestionId]) {
-          console.log(`Confirmed initial interaction tracking for ${firstQuestionId}, start time: ${new Date(interactionStartTimes[firstQuestionId]).toISOString()}`);
+          // console.log(`Confirmed initial interaction tracking for ${firstQuestionId}, start time: ${new Date(interactionStartTimes[firstQuestionId]).toISOString()}`);
         } else {
           console.warn(`Failed to start initial interaction tracking for ${firstQuestionId}`);
         }
@@ -1564,13 +1561,13 @@ const FeedScreen: React.FC = () => {
       
       const finalScrollPos = event.nativeEvent.contentOffset.y;
       const estimatedIndex = Math.round(finalScrollPos / viewportHeight);
-      console.log(`[INDEX UPDATE] onMomentumScrollEnd iOS: finalScrollPos=${finalScrollPos}, estimatedIndex=${estimatedIndex}`);
+      // console.log(`[INDEX UPDATE] onMomentumScrollEnd iOS: finalScrollPos=${finalScrollPos}, estimatedIndex=${estimatedIndex}`);
 
       if (estimatedIndex >= 0 && estimatedIndex < personalizedFeed.length) {
         // This estimatedIndex is the most accurate representation of where the scroll ended.
         eventCorrectedCurrentIndex = estimatedIndex;
         const item = personalizedFeed[estimatedIndex];
-        console.log(`[INDEX UPDATE] Using iOS estimated index ${estimatedIndex} (topic: "${item?.topic}", id: ${item?.id})`);
+        // console.log(`[INDEX UPDATE] Using iOS estimated index ${estimatedIndex} (topic: "${item?.topic}", id: ${item?.id})`);
       } else {
         console.warn(`[INDEX UPDATE] iOS: Estimated index ${estimatedIndex} is out of bounds. Falling back to state currentIndex: ${currentIndex}`);
         eventCorrectedCurrentIndex = currentIndex; // Fallback if calculation is odd
@@ -1582,14 +1579,12 @@ const FeedScreen: React.FC = () => {
       eventCorrectedCurrentIndex = currentIndex;
     }
 
-    console.log(`[onMomentumScrollEnd] Effective currentIndex for this event: ${eventCorrectedCurrentIndex}. Previous index was: ${previousIndex.current}. Scroll time: ${scrollTime}ms.`);
-
     // Perform skip logic using the eventCorrectedCurrentIndex
     if (previousIndex.current !== eventCorrectedCurrentIndex && previousIndex.current < eventCorrectedCurrentIndex) {
-      console.log(`[onMomentumScrollEnd] Skip condition met: previousIndex=${previousIndex.current}, newIndex=${eventCorrectedCurrentIndex}. Calling handleFastScroll.`);
+      // console.log(`[onMomentumScrollEnd] Skip condition met: previousIndex=${previousIndex.current}, newIndex=${eventCorrectedCurrentIndex}. Calling handleFastScroll.`);
       handleFastScroll(previousIndex.current, eventCorrectedCurrentIndex);
     } else {
-      console.log(`[onMomentumScrollEnd] Skip condition NOT met: previousIndex=${previousIndex.current}, newIndex=${eventCorrectedCurrentIndex}.`);
+      // console.log(`[onMomentumScrollEnd] Skip condition NOT met: previousIndex=${previousIndex.current}, newIndex=${eventCorrectedCurrentIndex}.`);
     }
 
     // Update previousIndex.current to reflect the index used for THIS event's logic.
@@ -1597,7 +1592,7 @@ const FeedScreen: React.FC = () => {
 
     // If the eventCorrectedCurrentIndex is different from the actual current state, or other refs are out of sync, update.
     if (eventCorrectedCurrentIndex !== currentIndex || lastVisibleIndexRef.current !== eventCorrectedCurrentIndex) {
-      console.log(`[onMomentumScrollEnd] Updating state: currentIndex from ${currentIndex} to ${eventCorrectedCurrentIndex}.`);
+      // console.log(`[onMomentumScrollEnd] Updating state: currentIndex from ${currentIndex} to ${eventCorrectedCurrentIndex}.`);
       setCurrentIndex(eventCorrectedCurrentIndex);
       
       if (personalizedFeed[eventCorrectedCurrentIndex]) {
@@ -1605,7 +1600,7 @@ const FeedScreen: React.FC = () => {
         if (lastVisibleItemId.current !== currentItemId) { // Avoid redundant dispatches
             lastVisibleItemId.current = currentItemId;
             dispatch(startInteraction({ questionId: currentItemId }));
-            console.log(`[onMomentumScrollEnd] Dispatched startInteraction for item ${currentItemId} at index ${eventCorrectedCurrentIndex}.`);
+            // console.log(`[onMomentumScrollEnd] Dispatched startInteraction for item ${currentItemId} at index ${eventCorrectedCurrentIndex}.`);
         }
         lastVisibleIndexRef.current = eventCorrectedCurrentIndex; // Sync ref
       } else {
@@ -1616,7 +1611,7 @@ const FeedScreen: React.FC = () => {
        if (personalizedFeed[eventCorrectedCurrentIndex]) {
         const currentItemId = personalizedFeed[eventCorrectedCurrentIndex].id;
         if (lastVisibleItemId.current !== currentItemId) {
-             console.log(`[onMomentumScrollEnd] currentIndex matches, but dispatching startInteraction for new item ${currentItemId}.`);
+             // console.log(`[onMomentumScrollEnd] currentIndex matches, but dispatching startInteraction for new item ${currentItemId}.`);
              lastVisibleItemId.current = currentItemId;
              lastVisibleIndexRef.current = eventCorrectedCurrentIndex;
              dispatch(startInteraction({ questionId: currentItemId }));
@@ -1815,14 +1810,7 @@ const FeedScreen: React.FC = () => {
 
     // Track this question interaction in client-side storage for better topic generation
     if (userIdentifier) {
-      // Debug: log the full question item to see what properties are available
-      console.log('\n\n====================== ANSWER TRACKING LOGS ======================');
-      console.log('[FEED] Question properties available:');
-      Object.keys(questionItem).forEach(key => {
-        console.log(`  - ${key}: ${JSON.stringify((questionItem as any)[key])}`);
-      });
-      
-      // Track client-side interaction data for personalized topic generation
+      // Track the interaction data for client-side analytics
       trackQuestionInteraction(
         userIdentifier, 
         questionId, 
@@ -1833,17 +1821,6 @@ const FeedScreen: React.FC = () => {
         questionItem.tags || [],
         questionItem.question // Pass the question text
       );
-      
-      // Log the client-side data being tracked
-      console.log('[FEED] Tracked client-side interaction data:', {
-        questionId,
-        topic: questionItem.topic || 'Unknown',
-        subtopic: (questionItem as any).subtopic || undefined,
-        branch: (questionItem as any).branch || undefined,
-        tags: questionItem.tags || [],
-        questionText: questionItem.question
-      });
-      console.log('====================== END ANSWER TRACKING LOGS ======================\n\n');
     }
 
     // Use a short timeout to prevent multiple rapid calls
@@ -1933,8 +1910,8 @@ const FeedScreen: React.FC = () => {
 
   const renderItem = ({ item, index }: { item: FeedItemType; index: number }) => {
     // Add debug logging for duplicate detection and feed stability
-    console.log(`Rendering item ${index}: ${item.id} - "${item.question.substring(0, 30)}..."`, 
-      questions[item.id] ? `(Question status: ${questions[item.id].status})` : '(No status yet)');
+    // console.log(`Rendering item ${index}: ${item.id} - "${item.question.substring(0, 30)}..."`, 
+    //   questions[item.id] ? `(Question status: ${questions[item.id].status})` : '(No status yet)');
     
     // Get the next item's topic for gradient transition (if any)
     const nextItemTopic = index < personalizedFeed.length - 1 ? personalizedFeed[index + 1].topic : undefined;
@@ -2483,25 +2460,25 @@ const FeedScreen: React.FC = () => {
       {/* Topic Rings next to profile button */}
       {(() => {
         const shouldShowRings = userProfile?.topics && Object.keys(userProfile.topics).length > 0;
-        console.log('=== TopicRings Visibility Debug ===');
-        console.log('TopicRings condition check:', {
-          isGuest,
-          hasUserProfile: !!userProfile,
-          hasTopics: !!(userProfile?.topics),
-          topicsCount: Object.keys(userProfile?.topics || {}).length,
-          shouldShowRings,
-          platform: Platform.OS,
-          userId: user?.id
-        });
+        // console.log('=== TopicRings Visibility Debug ===');
+        // console.log('TopicRings condition check:', {
+        //   isGuest,
+        //   hasUserProfile: !!userProfile,
+        //   hasTopics: !!(userProfile?.topics),
+        //   topicsCount: Object.keys(userProfile?.topics || {}).length,
+        //   shouldShowRings,
+        //   platform: Platform.OS,
+        //   userId: user?.id
+        // });
         
         if (userProfile?.topics) {
-          console.log('User profile topics:', Object.keys(userProfile.topics));
-          console.log('Topic weights:', Object.entries(userProfile.topics).map(([topic, data]) => 
-            `${topic}: ${data.weight}`
-          ));
+          // console.log('User profile topics:', Object.keys(userProfile.topics));
+          // console.log('Topic weights:', Object.entries(userProfile.topics).map(([topic, data]) => 
+          //   `${topic}: ${data.weight}`
+          // ));
         }
         
-        console.log('==============================');
+        // console.log('==============================');
         return shouldShowRings;
       })() && (
         <View style={styles.topicRingsContainer}>
@@ -2523,8 +2500,8 @@ const FeedScreen: React.FC = () => {
               const currentQuestion = personalizedFeed[bestIndex];
               
               // Log index sources for debugging
-              console.log(`[ACTIVE TOPIC RING] Indices - State: ${currentIndex}, Ref: ${lastVisibleIndexRef.current}, Scroll: ${scrollBasedIndexRef.current}, Using: ${bestIndex}`);
-              console.log(`[ACTIVE TOPIC RING] Topic: "${currentTopic}" - "${currentQuestion?.question?.substring(0, 30)}..."`);
+              // console.log(`[ACTIVE TOPIC RING] Indices - State: ${currentIndex}, Ref: ${lastVisibleIndexRef.current}, Scroll: ${scrollBasedIndexRef.current}, Using: ${bestIndex}`);
+              // console.log(`[ACTIVE TOPIC RING] Topic: "${currentTopic}" - "${currentQuestion?.question?.substring(0, 30)}..."`);
               
               return currentTopic;
             })()}
@@ -2645,7 +2622,7 @@ const FeedScreen: React.FC = () => {
         userId={user?.id}
                     activeTopic={(() => {
               const currentTopic = personalizedFeed.length > 0 && currentIndex < personalizedFeed.length ? personalizedFeed[currentIndex]?.topic : undefined;
-              console.log(`[ACTIVE TOPIC RING] Modal - Current topic: "${currentTopic}"`);
+              // console.log(`[ACTIVE TOPIC RING] Modal - Current topic: "${currentTopic}"`);
               return currentTopic;
             })()}
       />

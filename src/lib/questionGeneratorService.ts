@@ -264,7 +264,7 @@ export function registerUserAnswer(userId: string): number {
   
   // Increment and return the new count
   clientSideAnswerCounts[userId]++;
-  console.log(`[GENERATOR] Client-side answer count for ${userId}: ${clientSideAnswerCounts[userId]}`);
+  // console.log(`[GENERATOR] Client-side answer count for ${userId}: ${clientSideAnswerCounts[userId]}`);
   return clientSideAnswerCounts[userId];
 }
 

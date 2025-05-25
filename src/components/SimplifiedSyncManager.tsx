@@ -26,20 +26,9 @@ interface SyncManagerProps {
 // This ensures that we always get a fresh module state on component mount
 // by adding this here, we prevent any other component from setting the flag first
 const resetModuleState = () => {
-  // This is a direct call to reset any module-level state in simplifiedSyncService
-  try {
-    // Use dynamic import to get a fresh instance of the module and reset its state
-    import('../lib/simplifiedSyncService').then(module => {
-      if (typeof module.markInitialDataLoadComplete === 'function') {
-        // This is a hack to reset the initialDataLoadComplete flag
-        // It works by setting a property on the module's exported function
-        (module.markInitialDataLoadComplete as any).reset = true;
-        console.log('FORCE RESET: Module state reset requested');
-      }
-    });
-  } catch (error) {
-    console.error('Failed to reset module state:', error);
-  }
+  // console.log('FORCE RESET: Module state reset requested');
+  
+  // Use the reset function from the sync service
 };
 
 /**
@@ -532,7 +521,9 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
   
   // Run diagnostic check and reset on mount - this must run first
   useEffect(() => {
-    console.log('🔥 SimplifiedSyncManager MOUNTED - FORCING MODULE STATE RESET 🔥');
+    // console.log('🔥 SimplifiedSyncManager MOUNTED - FORCING MODULE STATE RESET 🔥');
+    
+    // Force reset the sync service state when component mounts
     resetModuleState();
     logSyncStatus();
     

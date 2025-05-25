@@ -65,7 +65,7 @@ const Leaderboard = forwardRef<LeaderboardRef, LeaderboardProps>(({ limit = 10, 
     const checkGuestMode = async () => {
       try {
         const guestMode = await AsyncStorage.getItem('guestMode');
-        console.log('Leaderboard - Guest mode in AsyncStorage:', guestMode);
+        // console.log('Leaderboard - Guest mode in AsyncStorage:', guestMode);
       } catch (e) {
         console.error('Error checking guest mode in Leaderboard:', e);
       }
@@ -265,7 +265,7 @@ const Leaderboard = forwardRef<LeaderboardRef, LeaderboardProps>(({ limit = 10, 
         try {
           const guestMode = await AsyncStorage.getItem('guestMode');
           const isGuestMode = guestMode === 'true';
-          console.log('Leaderboard banner - Guest mode check:', isGuestMode);
+          // console.log('Leaderboard banner - Guest mode check:', isGuestMode);
           setLocalIsGuest(isGuestMode || isGuest);
         } catch (e) {
           console.error('Error in local guest mode check:', e);

@@ -189,7 +189,7 @@ function trackTopicForDiversity(state: ColdStartState, topic: string): void {
   const currentCount = state.topicCountInCurrentBatch.get(topic) || 0;
   state.topicCountInCurrentBatch.set(topic, currentCount + 1);
   
-  console.log(`Topic diversity tracking updated: ${topic} now has count ${currentCount + 1}, last topics: [${state.lastSelectedTopics.join(', ')}]`);
+  // console.log(`Topic diversity tracking updated: ${topic} now has count ${currentCount + 1}, last topics: [${state.lastSelectedTopics.join(', ')}]`);
 }
 
 // Get questions for the exploration phase (1-5)
@@ -240,7 +240,7 @@ function getExplorationPhaseQuestions(
     const availableQuestions = Array.from(topicMap.values()).flat()
       .filter(q => !state.shownQuestionIds.has(q.id));
       
-    console.log(`Topic ${topic} has ${availableQuestions.length} available questions`);
+    // console.log(`Topic ${topic} has ${availableQuestions.length} available questions`);
       
     if (availableQuestions.length > 0) {
       // Randomly select a question from this topic
@@ -258,7 +258,7 @@ function getExplorationPhaseQuestions(
       // Track this topic for diversity
       trackTopicForDiversity(state, topic);
       
-      console.log(`Added question from initial topic: ${topic} (weight: ${state.topicWeights.get(topic)?.toFixed(2) || 'default'})`);
+      // console.log(`Added question from initial topic: ${topic} (weight: ${state.topicWeights.get(topic)?.toFixed(2) || 'default'})`);
       
       // Add to recent topics for diversity tracking
       state.recentTopics.unshift(topic);
@@ -381,10 +381,10 @@ function getExplorationPhaseQuestions(
     }
   }
   
-  console.log(`Selected ${selectedQuestions.length} exploration questions from ${selectedTopics.size} different topics`);
-  console.log(`Topics used: ${Array.from(selectedTopics).join(', ')}`);
-  console.log(`Topics now shown: ${Array.from(state.topicsShown).join(', ')}`);
-  console.log(`Topic distribution: ${Array.from(state.topicCountInCurrentBatch.entries()).map(([topic, count]) => `${topic}: ${count}`).join(', ')}`);
+  // console.log(`Selected ${selectedQuestions.length} exploration questions from ${selectedTopics.size} different topics`);
+  // console.log(`Topics used: ${Array.from(selectedTopics).join(', ')}`);
+  // console.log(`Topics now shown: ${Array.from(state.topicsShown).join(', ')}`);
+  // console.log(`Topic distribution: ${Array.from(state.topicCountInCurrentBatch.entries()).map(([topic, count]) => `${topic}: ${count}`).join(', ')}`);
 
   return selectedQuestions;
 }
@@ -442,10 +442,10 @@ function getBranchingPhaseQuestions(
   initializeTopicWeights(state, userProfile, Array.from(groupedQuestions.keys()));
   
   // Log in-session weights
-  console.log("Current in-session topic weights:");
-  Array.from(state.topicWeights.entries()).forEach(([topic, weight]) => {
-    console.log(`  ${topic}: ${weight.toFixed(2)}`);
-  });
+  // console.log("Current in-session topic weights for normal phase:");
+  // Array.from(state.topicWeights.entries()).forEach(([topic, weight]) => {
+  //   console.log(`  ${topic}: ${weight.toFixed(2)}`);
+  // });
   console.log("===========================================");
 
   console.log("Getting Initial Branching phase questions (6-20)");
@@ -549,7 +549,7 @@ function getBranchingPhaseQuestions(
       const availableQuestions = Array.from(topicMap.values()).flat()
         .filter(q => !state.shownQuestionIds.has(q.id));
       
-      console.log(`Topic ${topic} has ${availableQuestions.length} available questions (weight: ${state.topicWeights.get(topic)?.toFixed(2) || 'default'})`);
+      // console.log(`Topic ${topic} has ${availableQuestions.length} available questions (weight: ${state.topicWeights.get(topic)?.toFixed(2) || 'default'})`);
         
       if (availableQuestions.length > 0) {
         // Randomly select a question from this topic
@@ -581,7 +581,7 @@ function getBranchingPhaseQuestions(
     const allUnusedTopics = Array.from(groupedQuestions.keys())
       .filter(topic => !state.topicsShown.has(topic));
     
-    console.log(`Found ${allUnusedTopics.length} unused topics: ${allUnusedTopics.join(', ')}`);
+    // console.log(`Found ${allUnusedTopics.length} unused topics: ${allUnusedTopics.join(', ')}`);
     
     if (allUnusedTopics.length > 0) {
       // NEW: Prioritize topics that are not in the last used topics
@@ -603,24 +603,24 @@ function getBranchingPhaseQuestions(
       // Sort by adjusted weight (descending)
       topicsWithDiversityScore.sort((a, b) => b.adjustedWeight - a.adjustedWeight);
       
-      console.log("Unused topics with adjusted weights for diversity:");
-      topicsWithDiversityScore.forEach(({ topic, weight, adjustedWeight }) => {
-        console.log(`  ${topic}: ${weight.toFixed(2)} (adjusted: ${adjustedWeight.toFixed(2)})`);
-      });
+      // console.log("Unused topics with adjusted weights for diversity:");
+      // topicsWithDiversityScore.forEach(({ topic, weight, adjustedWeight }) => {
+      //   console.log(`  ${topic}: ${weight.toFixed(2)} (adjusted: ${adjustedWeight.toFixed(2)})`);
+      // });
       
       // Get preferred topics (weight > 0.5)
       const preferredUnusedTopics = topicsWithDiversityScore
         .filter(({ weight }) => weight > PREFERRED_TOPIC_THRESHOLD)
         .map(({ topic }) => topic);
       
-      console.log(`Found ${preferredUnusedTopics.length} unused preferred topics (weight > ${PREFERRED_TOPIC_THRESHOLD})`);
+      // console.log(`Found ${preferredUnusedTopics.length} unused preferred topics (weight > ${PREFERRED_TOPIC_THRESHOLD})`);
           
       // If we have preferred topics, use them, otherwise use all sorted by weight
       let sortedUnusedTopics = preferredUnusedTopics.length > 0 
         ? preferredUnusedTopics 
         : topicsWithDiversityScore.map(t => t.topic);
       
-      console.log(`Final sorted unused topics: ${sortedUnusedTopics.join(', ')}`);
+      // console.log(`Final sorted unused topics: ${sortedUnusedTopics.join(', ')}`);
       
       // Try to select 2 questions from preferred unused topics
       for (const topic of sortedUnusedTopics) {
@@ -642,7 +642,7 @@ function getBranchingPhaseQuestions(
         const availableQuestions = Array.from(topicMap.values()).flat()
           .filter(q => !state.shownQuestionIds.has(q.id));
         
-        console.log(`Unused topic ${topic} has ${availableQuestions.length} available questions (weight: ${state.topicWeights.get(topic)?.toFixed(2) || 'default'})`);
+        // console.log(`Unused topic ${topic} has ${availableQuestions.length} available questions (weight: ${state.topicWeights.get(topic)?.toFixed(2) || 'default'})`);
           
         if (availableQuestions.length > 0) {
           // Randomly select a question from this topic
@@ -684,7 +684,7 @@ function getBranchingPhaseQuestions(
     !state.lastSelectedTopics.includes(topic)
   );
   
-  console.log(`EXPLORATION IMPROVEMENT: Found ${completelyNewTopics.length} completely new topics: ${completelyNewTopics.join(', ')}`);
+  // console.log(`EXPLORATION IMPROVEMENT: Found ${completelyNewTopics.length} completely new topics: ${completelyNewTopics.join(', ')}`);
   
   // Fallback to topics that haven't been shown but may have been skipped
   const unusedButMaybeSkippedTopics = allAvailableTopics.filter(topic => 
@@ -693,7 +693,7 @@ function getBranchingPhaseQuestions(
     !state.lastSelectedTopics.includes(topic)
   );
   
-  console.log(`Unused but maybe skipped topics: ${unusedButMaybeSkippedTopics.length} topics: ${unusedButMaybeSkippedTopics.join(', ')}`);
+  // console.log(`Unused but maybe skipped topics: ${unusedButMaybeSkippedTopics.length} topics: ${unusedButMaybeSkippedTopics.join(', ')}`);
   
   // Fall back to any topic not recently used if needed
   const notRecentlyUsedTopics = allAvailableTopics.filter(topic => 
@@ -701,7 +701,7 @@ function getBranchingPhaseQuestions(
     !userPreferredQuestions.some(q => q.topic === topic)
   );
   
-  console.log(`Not recently used topics: ${notRecentlyUsedTopics.length} topics: ${notRecentlyUsedTopics.join(', ')}`);
+  // console.log(`Not recently used topics: ${notRecentlyUsedTopics.length} topics: ${notRecentlyUsedTopics.join(', ')}`);
   
   // Prioritize in this order: completely new > unused but skipped > not recently used
   const prioritizedExplorationTopics = [
@@ -716,7 +716,7 @@ function getBranchingPhaseQuestions(
   // Add some randomness to avoid always picking the same topics
   shuffleArray(prioritizedExplorationTopics);
   
-  console.log(`Final prioritized exploration topics (after shuffle): ${prioritizedExplorationTopics.slice(0, 10).join(', ')}${prioritizedExplorationTopics.length > 10 ? '...' : ''}`);
+  // console.log(`Final prioritized exploration topics (after shuffle): ${prioritizedExplorationTopics.slice(0, 10).join(', ')}${prioritizedExplorationTopics.length > 10 ? '...' : ''}`);
   
   // First try to get questions from prioritized exploration topics
   for (const topic of prioritizedExplorationTopics) {
@@ -744,7 +744,7 @@ function getBranchingPhaseQuestions(
     const availableQuestions = Array.from(topicMap.values()).flat()
       .filter(q => !state.shownQuestionIds.has(q.id));
     
-    console.log(`Exploration topic ${topic} has ${availableQuestions.length} available questions (weight: ${state.topicWeights.get(topic)?.toFixed(2) || 'default'})`);
+    // console.log(`Exploration topic ${topic} has ${availableQuestions.length} available questions (weight: ${state.topicWeights.get(topic)?.toFixed(2) || 'default'})`);
       
     if (availableQuestions.length > 0) {
       // Randomly select a question from this topic
@@ -821,10 +821,10 @@ function getBranchingPhaseQuestions(
   selectedQuestions.push(...userPreferredQuestions, ...explorationQuestions);
   
   // Log comprehensive info about the selection
-  console.log(`Returning ${userPreferredQuestions.length} user preferred questions and ${explorationQuestions.length} exploration questions`);
-  console.log(`Selected topics: ${selectedQuestions.map(q => q.topic).join(', ')}`);
-  console.log(`Topics now shown: ${Array.from(state.topicsShown).join(', ')}`);
-  console.log(`Topic distribution in this batch: ${Array.from(state.topicCountInCurrentBatch.entries()).map(([topic, count]) => `${topic}: ${count}`).join(', ')}`);
+  // console.log(`Returning ${userPreferredQuestions.length} user preferred questions and ${explorationQuestions.length} exploration questions`);
+  // console.log(`Selected topics: ${selectedQuestions.map(q => q.topic).join(', ')}`);
+  // console.log(`Topics now shown: ${Array.from(state.topicsShown).join(', ')}`);
+  // console.log(`Topic distribution in this batch: ${Array.from(state.topicCountInCurrentBatch.entries()).map(([topic, count]) => `${topic}: ${count}`).join(', ')}`);
   
   return selectedQuestions;
 }
@@ -842,10 +842,10 @@ function getNormalPhaseQuestions(
   initializeTopicWeights(state, userProfile, Array.from(groupedQuestions.keys()));
   
   // Log in-session weights
-  console.log("Current in-session topic weights for normal phase:");
-  Array.from(state.topicWeights.entries()).forEach(([topic, weight]) => {
-    console.log(`  ${topic}: ${weight.toFixed(2)}`);
-  });
+  // console.log("Current in-session topic weights for normal phase:");
+  // Array.from(state.topicWeights.entries()).forEach(([topic, weight]) => {
+  //   console.log(`  ${topic}: ${weight.toFixed(2)}`);
+  // });
 
   const selectedQuestions: FeedItem[] = [];
   
@@ -866,7 +866,7 @@ function getNormalPhaseQuestions(
     }
   }
   
-  console.log(`Found ${preferredTopics.length} preferred topics (weight > ${PREFERRED_TOPIC_THRESHOLD}): ${preferredTopics.map(t => t.topic).join(', ')}`);
+  // console.log(`Found ${preferredTopics.length} preferred topics (weight > ${PREFERRED_TOPIC_THRESHOLD}): ${preferredTopics.map(t => t.topic).join(', ')}`);
   
   // Calculate selection probability based on weight
   const totalPreferredWeight = preferredTopics.reduce((sum, t) => sum + (t.weight - PREFERRED_TOPIC_THRESHOLD), 0);
@@ -876,10 +876,10 @@ function getNormalPhaseQuestions(
     return {topic, weight, normalizedWeight};
   });
   
-  console.log("Preferred topics with normalized weights for proportional selection:");
-  normalizedPreferredTopics.forEach(({topic, weight, normalizedWeight}) => {
-    console.log(`  ${topic}: Weight ${weight.toFixed(2)}, Selection Probability: ${(normalizedWeight * 100).toFixed(1)}%`);
-  });
+  // console.log("Preferred topics with normalized weights for proportional selection:");
+  // normalizedPreferredTopics.forEach(({topic, weight, normalizedWeight}) => {
+  //   console.log(`  ${topic}: Weight ${weight.toFixed(2)}, Selection Probability: ${(normalizedWeight * 100).toFixed(1)}%`);
+  // });
   
   // If we don't have enough preferred topics, add the top 3 topics by weight
   if (preferredTopics.length < 3) {
@@ -896,7 +896,7 @@ function getNormalPhaseQuestions(
     
     normalizedPreferredTopics.push(...additionalTopics);
     
-    console.log(`Added ${additionalTopics.length} additional topics to reach minimum 3 preferred topics: ${additionalTopics.map(t => t.topic).join(', ')}`);
+    // console.log(`Added ${additionalTopics.length} additional topics to reach minimum 3 preferred topics: ${additionalTopics.map(t => t.topic).join(', ')}`);
   }
   
   // Get questions from preferred topics (70%)
@@ -1033,7 +1033,7 @@ function getNormalPhaseQuestions(
         state.recentTopics.pop();
       }
     } else {
-      console.log(`Topic ${selectedTopic} has no available questions, skipping`);
+      // console.log(`Topic ${selectedTopic} has no available questions, skipping`);
     }
   }
   
@@ -1107,7 +1107,7 @@ function getNormalPhaseQuestions(
     !preferredQuestions.some(q => q.topic === topic)
   );
   
-  console.log(`NORMAL PHASE: Found ${completelyNewTopics.length} completely new topics: ${completelyNewTopics.join(', ')}`);
+  // console.log(`NORMAL PHASE: Found ${completelyNewTopics.length} completely new topics: ${completelyNewTopics.join(', ')}`);
   
   // Get topics with low weights (≤ PREFERRED_TOPIC_THRESHOLD) for exploration
   const lowWeightTopics = Array.from(state.topicWeights.entries())
@@ -1118,7 +1118,7 @@ function getNormalPhaseQuestions(
     )
     .map(([topic, _]) => topic);
     
-  console.log(`NORMAL PHASE: Found ${lowWeightTopics.length} low-weight exploration candidates: ${lowWeightTopics.join(', ')}`);
+  // console.log(`NORMAL PHASE: Found ${lowWeightTopics.length} low-weight exploration candidates: ${lowWeightTopics.join(', ')}`);
   
   // Prioritize in this order: completely new topics > low weight topics > any unused topic
   const prioritizedExplorationTopics = [
@@ -1135,7 +1135,7 @@ function getNormalPhaseQuestions(
   // Add randomness to exploration topics to prevent always picking the same ones
   shuffleArray(prioritizedExplorationTopics);
   
-  console.log(`NORMAL PHASE: Prioritized exploration topics: ${prioritizedExplorationTopics.slice(0, 10).join(', ')}${prioritizedExplorationTopics.length > 10 ? '...' : ''}`);
+  // console.log(`NORMAL PHASE: Prioritized exploration topics: ${prioritizedExplorationTopics.slice(0, 10).join(', ')}${prioritizedExplorationTopics.length > 10 ? '...' : ''}`);
   
   // First try to get questions from prioritized exploration topics
   for (const topic of prioritizedExplorationTopics) {
@@ -1169,7 +1169,7 @@ function getNormalPhaseQuestions(
       // Track this topic for diversity
       trackTopicForDiversity(state, topic);
       
-      console.log(`NORMAL PHASE: Selected exploration question from topic ${topic} (weight: ${state.topicWeights.get(topic)?.toFixed(2) || 'default'})`);
+      // console.log(`NORMAL PHASE: Selected exploration question from topic ${topic} (weight: ${state.topicWeights.get(topic)?.toFixed(2) || 'default'})`);
       
       // Add to recent topics for diversity tracking
       state.recentTopics.unshift(topic);
@@ -1181,7 +1181,7 @@ function getNormalPhaseQuestions(
   
   // If we still don't have enough exploration questions, pick from any remaining topic
   if (explorationQuestions.length < explorationCount) {
-    console.log("NORMAL PHASE: Still need more exploration questions, using any remaining questions");
+    // console.log("NORMAL PHASE: Still need more exploration questions, using any remaining questions");
     
     // Get all remaining questions that aren't in shown question IDs or selected questions
     const remainingQuestions = allQuestions
@@ -1189,7 +1189,7 @@ function getNormalPhaseQuestions(
       .filter(q => !preferredQuestions.some(pq => pq.id === q.id))
       .filter(q => !explorationQuestions.some(eq => eq.id === q.id));
       
-    console.log(`NORMAL PHASE: Found ${remainingQuestions.length} remaining questions for exploration`);
+    // console.log(`NORMAL PHASE: Found ${remainingQuestions.length} remaining questions for exploration`);
       
     // Add randomness to prevent always picking the same fallback questions
     shuffleArray(remainingQuestions);
@@ -1228,54 +1228,15 @@ function getNormalPhaseQuestions(
         state.recentTopics.pop();
       }
     }
-    
-    // Last resort - if we still need questions and can't find topics not yet used in this batch
-    if (explorationQuestions.length < explorationCount) {
-      console.log("NORMAL PHASE: LAST RESORT - using any available question for remaining slots");
-      
-      // Reset and use any question not already selected, even if from a used topic
-      const anyRemainingQuestions = allQuestions
-        .filter(q => !state.shownQuestionIds.has(q.id))
-        .filter(q => !preferredQuestions.some(pq => pq.id === q.id))
-        .filter(q => !explorationQuestions.some(eq => eq.id === q.id));
-        
-      shuffleArray(anyRemainingQuestions);
-      
-      for (const question of anyRemainingQuestions) {
-        if (explorationQuestions.length >= explorationCount) break;
-        
-        // Only check diversity to avoid same topic appearing too often
-        if (!isTopicAllowedForDiversity(state, question.topic)) {
-          console.log(`NORMAL PHASE: Skipping last-resort question from topic ${question.topic} for diversity reasons`);
-          continue;
-        }
-        
-        explorationQuestions.push(question);
-        
-        // Mark as shown AND as an exploration question
-        state.shownQuestionIds.add(question.id);
-        state.isExplorationQuestion.add(question.id);
-        
-        // Track this topic for diversity
-        trackTopicForDiversity(state, question.topic);
-        
-        console.log(`NORMAL PHASE: Selected absolute last-resort question from topic ${question.topic}`);
-        
-        // Add to recent topics for diversity tracking
-        state.recentTopics.unshift(question.topic);
-        if (state.recentTopics.length > 5) {
-          state.recentTopics.pop();
-        }
-      }
-    }
   }
   
   // Combine the preferred and exploration questions
   selectedQuestions.push(...preferredQuestions, ...explorationQuestions);
   
-  console.log(`NORMAL PHASE: Returning ${preferredQuestions.length} preferred questions and ${explorationQuestions.length} exploration questions`);
-  console.log(`NORMAL PHASE: Selected topics: ${selectedQuestions.map(q => q.topic).join(', ')}`);
-  console.log(`NORMAL PHASE: Topic distribution in this batch: ${Array.from(state.topicCountInCurrentBatch.entries()).map(([topic, count]) => `${topic}: ${count}`).join(', ')}`);
+  // Log comprehensive info about the selection
+  // console.log(`NORMAL PHASE: Returning ${preferredQuestions.length} preferred questions and ${explorationQuestions.length} exploration questions`);
+  // console.log(`NORMAL PHASE: Selected topics: ${selectedQuestions.map(q => q.topic).join(', ')}`);
+  // console.log(`NORMAL PHASE: Topic distribution in this batch: ${Array.from(state.topicCountInCurrentBatch.entries()).map(([topic, count]) => `${topic}: ${count}`).join(', ')}`);
   
   return selectedQuestions;
 }

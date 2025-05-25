@@ -170,7 +170,8 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
   // Only log in development mode
   if (process.env.NODE_ENV !== 'production') {
     useEffect(() => {
-      console.log(`[DEBUG] FeedItem component render #${renderCount.current} for item ${item.id}`);
+      // Debug: Log each render
+      // console.log(`[DEBUG] FeedItem component render #${renderCount.current} for item ${item.id}`);
     });
   }
   

@@ -68,7 +68,7 @@ const ProfileView: React.FC = () => {
     const checkGuestMode = async () => {
       try {
         const guestMode = await AsyncStorage.getItem('guestMode');
-        console.log('ProfileView - Guest mode in AsyncStorage:', guestMode);
+        // console.log('ProfileView - Guest mode in AsyncStorage:', guestMode);
       } catch (e) {
         console.error('Error checking guest mode in ProfileView:', e);
       }

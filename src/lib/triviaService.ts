@@ -393,7 +393,7 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
             });
             
             // Log for debugging
-            console.log(`Question "${questionText}" - correct answer from DB: "${question.correct_answer}"`);
+            // console.log(`Question "${questionText}" - correct answer from DB: "${question.correct_answer}"`);
             
             // Check if we successfully marked any answer as correct
             const hasCorrectAnswer = answers.some(a => a.isCorrect);
@@ -413,12 +413,12 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
                 // Reset all to false, then set only the exact match
                 answers.forEach(a => a.isCorrect = false);
                 exactMatches[0].isCorrect = true;
-                console.log(`Selected exact match: "${exactMatches[0].text}"`);
+                // console.log(`Selected exact match: "${exactMatches[0].text}"`);
               } else {
                 // Just keep the first correct answer we found
                 const firstCorrectIndex = answers.findIndex(a => a.isCorrect);
                 answers.forEach((a, i) => a.isCorrect = i === firstCorrectIndex);
-                console.log(`Selected first matching answer: "${answers[firstCorrectIndex].text}"`);
+                // console.log(`Selected first matching answer: "${answers[firstCorrectIndex].text}"`);
               }
             }
           }
@@ -428,7 +428,7 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
               text: String(choice),
               isCorrect: index === 0 // Assume first answer is correct if no correct_answer specified
             }));
-            console.log(`Question "${questionText}" - assuming first answer is correct (no correct_answer field)`);
+            // console.log(`Question "${questionText}" - assuming first answer is correct (no correct_answer field)`);
           }
         }
         // Case 3: Fallback to dummy answers

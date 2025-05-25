@@ -109,7 +109,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         }
         
         setPersistentTopicMap(restoredMap);
-        console.log(`[TOPIC MAP] Loaded ${restoredMap.size} question topics from storage`);
+        // console.log(`[TOPIC MAP] Loaded ${restoredMap.size} question topics from storage`);
       } catch (error) {
         console.error('Error loading topic map from storage:', error);
       }
@@ -195,25 +195,25 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     
     // Debug logging for count calculation - always log for Mathematics and Science
     if (topic === 'Science' || topic === 'Mathematics' || matchingQuestions.length > 0 || missingTopicQuestions.length > 0) {
-      console.log(`[ANSWER CORRECTLY TOPIC ${topic}] COUNT: ${correctCount} (found: ${matchingQuestions.join(', ')}) (missing from map: ${missingTopicQuestions.join(', ')})`);
+      // console.log(`[ANSWER CORRECTLY TOPIC ${topic}] COUNT: ${correctCount} (found: ${matchingQuestions.join(', ')}) (missing from map: ${missingTopicQuestions.join(', ')})`);
       
       // Additional debugging: show all answered questions and their topics
       if (topic === 'Mathematics') {
-        console.log(`[MATHEMATICS DEBUG] All answered questions with topics:`);
+        // console.log(`[MATHEMATICS DEBUG] All answered questions with topics:`);
         Object.entries(questions).forEach(([qId, qState]) => {
           if (qState.status === 'answered') {
             const qTopic = feedItemsMap.get(qId);
-            console.log(`  - ${qId}: status=${qState.status}, isCorrect=${qState.isCorrect}, topic="${qTopic || 'NOT_FOUND'}"`);
+            // console.log(`  - ${qId}: status=${qState.status}, isCorrect=${qState.isCorrect}, topic="${qTopic || 'NOT_FOUND'}"`);
           }
         });
         
-        console.log(`[MATHEMATICS DEBUG] Topic map size: ${feedItemsMap.size} items`);
+        // console.log(`[MATHEMATICS DEBUG] Topic map size: ${feedItemsMap.size} items`);
         // Show all topics in the map
         const topicsInMap = new Set();
         feedItemsMap.forEach((topic, questionId) => {
           topicsInMap.add(topic);
         });
-        console.log(`[MATHEMATICS DEBUG] Topics in map: [${Array.from(topicsInMap).join(', ')}]`);
+        // console.log(`[MATHEMATICS DEBUG] Topics in map: [${Array.from(topicsInMap).join(', ')}]`);
       }
     }
     
@@ -301,7 +301,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         // Only update if the map has actually changed
         if (restoredMap.size !== persistentTopicMap.size) {
           setPersistentTopicMap(restoredMap);
-          console.log(`[TOPIC MAP] Reloaded ${restoredMap.size} question topics from storage`);
+          // console.log(`[TOPIC MAP] Reloaded ${restoredMap.size} question topics from storage`);
         }
       } catch (error) {
         console.error('Error reloading topic map from storage:', error);
@@ -315,7 +315,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
 
   // Update rings when questions or user profile changes (only after storage is loaded)
   useEffect(() => {
-    console.log(`[RING EFFECT] Triggered - questions count: ${Object.keys(questions).length}, persistentTopicMap size: ${persistentTopicMap.size}, isLoaded: ${isLoaded}`);
+    // console.log(`[RING EFFECT] Triggered - questions count: ${Object.keys(questions).length}, persistentTopicMap size: ${persistentTopicMap.size}, isLoaded: ${isLoaded}`);
     
     if (userProfile?.topics && isLoaded) {
       let hasChanges = false;
@@ -343,26 +343,26 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         if (hasDataChanges || hasIconColorChanges) {
           const oldCount = existingRing ? existingRing.totalCorrectAnswers : 0;
           if (correctAnswers > oldCount) {
-            console.log(`[ANSWER CORRECTLY TOPIC ${topic}] COUNT UP FROM ${oldCount} to ${correctAnswers}`);
+            // console.log(`[ANSWER CORRECTLY TOPIC ${topic}] COUNT UP FROM ${oldCount} to ${correctAnswers}`);
           }
-          console.log(`[RING UPDATE] "${topic}": ${correctAnswers} correct → Level ${updatedRing.level}, Progress ${updatedRing.currentProgress}/${updatedRing.targetAnswers}`);
+          // console.log(`[RING UPDATE] "${topic}": ${correctAnswers} correct → Level ${updatedRing.level}, Progress ${updatedRing.currentProgress}/${updatedRing.targetAnswers}`);
           newRings[topic] = updatedRing;
           hasChanges = true;
         }
       });
       
       if (hasChanges) {
-        console.log(`[RING EFFECT] Applying ring state changes`);
+        // console.log(`[RING EFFECT] Applying ring state changes`);
         setRingsState(prevState => ({
           ...prevState,
           rings: newRings,
           lastUpdated: Date.now(),
         }));
       } else {
-        console.log(`[RING EFFECT] No changes detected`);
+        // console.log(`[RING EFFECT] No changes detected`);
       }
     } else {
-      console.log(`[RING EFFECT] Skipping update - userProfile.topics: ${!!userProfile?.topics}, isLoaded: ${isLoaded}`);
+      // console.log(`[RING EFFECT] Skipping update - userProfile.topics: ${!!userProfile?.topics}, isLoaded: ${isLoaded}`);
     }
   }, [questions, userProfile, isLoaded, persistentTopicMap]);
 
@@ -421,7 +421,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         
         // Log recent ring selection for debugging
         if (recentRing) {
-          console.log(`[RECENT RING] Selected "${recentRing.topic}" as recent ring (last correct: ${mostRecentQuestionId || 'unknown'})`);
+          // console.log(`[RECENT RING] Selected "${recentRing.topic}" as recent ring (last correct: ${mostRecentQuestionId || 'unknown'})`);
         }
       }
     }
@@ -432,19 +432,19 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
       finalRings.push(recentRing);
     }
 
-    console.log(`[RING SELECTION] Progress-based selection (${finalRings.length} rings):`, 
-      finalRings.map((ring, index) => {
-        const label = index < 3 ? `#${index + 1}` : 'recent';
-        return `${label}: ${ring.topic} (${ring.totalCorrectAnswers} correct)`;
-      }).join(', ')
-    );
+    // console.log(`[RING SELECTION] Progress-based selection (${finalRings.length} rings):`, 
+    //   finalRings.map((ring, index) => {
+    //     const label = index < 3 ? `#${index + 1}` : 'recent';
+    //     return `${label}: ${ring.topic} (${ring.totalCorrectAnswers} correct)`;
+    //   }).join(', ')
+    // );
 
     return finalRings;
   }, [ringsState.rings, questions, feedItemsMap]);
 
   // Callback when a ring completes a level
   const onRingComplete = useCallback((topic: string, newLevel: number) => {
-    console.log(`🎉 Level up! ${topic} reached level ${newLevel}`);
+    // console.log(`🎉 Level up! ${topic} reached level ${newLevel}`);
     // You can add celebration effects, notifications, etc. here
   }, []);
 
@@ -466,7 +466,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
 
   // Function to manually add a question topic mapping
   const addQuestionTopic = useCallback((questionId: string, topic: string) => {
-    console.log(`[IMMEDIATE UPDATE] Adding question ${questionId} with topic "${topic}" to persistent map`);
+    // console.log(`[IMMEDIATE UPDATE] Adding question ${questionId} with topic "${topic}" to persistent map`);
     setPersistentTopicMap(current => {
       const newMap = new Map(current);
       newMap.set(questionId, topic);
@@ -477,7 +477,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
           const storageKey = `${getStorageKey()}_topicMap`;
           const mapAsObject = Object.fromEntries(newMap);
           await AsyncStorage.setItem(storageKey, JSON.stringify(mapAsObject));
-          console.log(`[IMMEDIATE UPDATE] Saved to storage, topic map now has ${newMap.size} items`);
+          // console.log(`[IMMEDIATE UPDATE] Saved to storage, topic map now has ${newMap.size} items`);
         } catch (error) {
           console.error('Error saving topic map to storage:', error);
         }
@@ -513,7 +513,7 @@ export const storeQuestionTopic = async (questionId: string, topic: string, user
     
     // Save back to storage
     await AsyncStorage.setItem(storageKey, JSON.stringify(existingMap));
-    console.log(`[STORE QUESTION TOPIC] Stored topic "${topic}" for question ${questionId} in storage`);
+    // console.log(`[STORE QUESTION TOPIC] Stored topic "${topic}" for question ${questionId} in storage`);
   } catch (error) {
     console.error('Error storing question topic:', error);
   }

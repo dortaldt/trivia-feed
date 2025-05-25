@@ -41,7 +41,7 @@ export function getTopicColor(category: string): string {
   );
   
   if (partialMatch) {
-    console.log(`Using color for "${partialMatch}" as a match for "${category}"`);
+    // console.log(`Using color for "${partialMatch}" as a match for "${category}"`);
     return topicColors[partialMatch];
   }
   

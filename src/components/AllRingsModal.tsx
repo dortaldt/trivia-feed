@@ -138,7 +138,7 @@ export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, 
                 const normalizedActiveTopic = activeTopic?.toLowerCase().trim();
                 const isRingActive = normalizedRingTopic === normalizedActiveTopic;
                 
-                console.log(`[AllRingsModal] Checking ring "${ring.topic}" (normalized: "${normalizedRingTopic}") against activeTopic "${activeTopic}" (normalized: "${normalizedActiveTopic}") -> isActive: ${isRingActive}`);
+                // console.log(`[AllRingsModal] Checking ring "${ring.topic}" (normalized: "${normalizedRingTopic}") against activeTopic "${activeTopic}" (normalized: "${normalizedActiveTopic}") -> isActive: ${isRingActive}`);
                 
                 return (
                   <RingItem

@@ -328,7 +328,7 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
   }
 
   // Log all available rings and active topic for debugging
-  console.log(`[ACTIVE TOPIC RING] Available rings: [${validRings.map(r => `"${r.topic}"`).join(', ')}] vs activeTopic: "${activeTopic}"`);
+  // console.log(`[ACTIVE TOPIC RING] Available rings: [${validRings.map(r => `"${r.topic}"`).join(', ')}] vs activeTopic: "${activeTopic}"`);
 
   return (
     <View style={styles.container}>
@@ -338,7 +338,7 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
         const normalizedActiveTopic = activeTopic?.toLowerCase().trim();
         const isRingActive = normalizedRingTopic === normalizedActiveTopic;
         
-        console.log(`[ACTIVE TOPIC RING] Ring "${ring.topic}" -> isActive: ${isRingActive}`);
+        // console.log(`[ACTIVE TOPIC RING] Ring "${ring.topic}" -> isActive: ${isRingActive}`);
         
         return (
           <View key={ring.topic} style={[styles.ringWrapper, { marginLeft: index > 0 ? 8 : 0 }]}>

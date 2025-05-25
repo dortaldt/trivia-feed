@@ -482,10 +482,10 @@ const triviaSlice = createSlice({
       
       // Verify key topic weights after update
       if (state.userProfile.topics) {
-        console.log('[Redux] Updated profile topic weights:');
-        Object.entries(state.userProfile.topics).forEach(([topic, data]) => {
-          console.log(`  ${topic}: ${data.weight.toFixed(4)}`);
-        });
+        // console.log('[Redux] Updated profile topic weights:');
+        // Object.entries(state.userProfile.topics).forEach(([topic, data]) => {
+        //   console.log(`  ${topic}: ${data.weight.toFixed(4)}`);
+        // });
       }
       
       // Sync user profile with server if user is logged in
