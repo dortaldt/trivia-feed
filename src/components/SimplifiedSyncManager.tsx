@@ -16,6 +16,7 @@ import {
   fetchProfileWithDefaultCheck,
   isWriteOnlyMode
 } from '../lib/simplifiedSyncService';
+import { loadQuestionsFromStorageThunk } from '../store/triviaSlice';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 
 interface SyncManagerProps {
@@ -527,6 +528,11 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
     resetModuleState();
     logSyncStatus();
     
+    // Load questions from storage for the current user
+    const userId = user?.id || undefined;
+    console.log(`[REDUX PERSIST] Loading questions from storage for user: ${userId || 'guest'}`);
+    dispatch(loadQuestionsFromStorageThunk(userId));
+    
     // Force immediate data load when the component mounts
     if (user && user.id && !initialDataLoaded) {
       // Force immediate database fetch on component mount
@@ -544,6 +550,13 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
       userIdRef.current = null;
     }
   }, [user]);
+  
+  // Load questions from storage when user changes (e.g., login/logout/guest mode)
+  useEffect(() => {
+    const userId = user?.id || undefined;
+    console.log(`[REDUX PERSIST] User changed, reloading questions for: ${userId || 'guest'}`);
+    dispatch(loadQuestionsFromStorageThunk(userId));
+  }, [user?.id, dispatch]);
   
   // Check for default weights and load from database if needed - DISABLED until after initial load
   useEffect(() => {
