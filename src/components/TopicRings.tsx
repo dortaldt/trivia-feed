@@ -640,7 +640,7 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
       {/* Level below with animated properties */}
       <Animated.View style={{ 
         position: 'absolute', 
-        top: size + 4, 
+        top: size + 2,
         left: 0, 
         right: 0, 
         alignItems: 'center',
@@ -648,7 +648,7 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
       }}>
         <ThemedText style={{ 
           color: color, 
-          fontWeight: isActive ? '900' : 'bold', 
+          fontWeight: 'bold',
           fontSize: size * 0.16,
           ...(isActive && Platform.OS === 'web' && {
             textShadow: `0 0 8px ${color}60`,

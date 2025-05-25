@@ -2702,38 +2702,41 @@ const FeedScreen: React.FC = () => {
         debugEnabled={debugPanelVisible}
       />
 
-      {/* Profile Bottom Sheet */}
-      <ProfileBottomSheet isVisible={showProfile} onClose={toggleProfile} />
+      {/* Bottom Sheets Container - High z-index to ensure they appear above all UI */}
+      <View style={styles.bottomSheetsContainer} pointerEvents="box-none">
+        {/* Profile Bottom Sheet */}
+        <ProfileBottomSheet isVisible={showProfile} onClose={toggleProfile} />
 
-      {/* Leaderboard Bottom Sheet */}
-      <LeaderboardBottomSheet isVisible={showLeaderboard} onClose={toggleLeaderboard} />
+        {/* Leaderboard Bottom Sheet */}
+        <LeaderboardBottomSheet isVisible={showLeaderboard} onClose={toggleLeaderboard} />
 
-      {/* All Rings Bottom Sheet */}
-      <AllRingsModal 
-        visible={showAllRingsModal}
-        onClose={() => setShowAllRingsModal(false)}
-        userId={user?.id}
-                    activeTopic={(() => {
-              // Use the same iOS-optimized logic for consistency
-              let bestIndex = currentIndex;
-              
-              // On iOS, prioritize lastVisibleIndexRef as it's updated immediately when items become visible
-              if (isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
-                bestIndex = lastVisibleIndexRef.current;
-              } 
-              // For non-iOS or when lastVisibleIndexRef is not available, use scrollBasedIndex
-              else if (scrollBasedIndexRef.current >= 0 && scrollBasedIndexRef.current < personalizedFeed.length) {
-                bestIndex = scrollBasedIndexRef.current;
-              }
-              // Fallback to lastVisibleIndexRef for non-iOS platforms
-              else if (!isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
-                bestIndex = lastVisibleIndexRef.current;
-              }
-              
-              const currentTopic = personalizedFeed.length > 0 && bestIndex < personalizedFeed.length ? personalizedFeed[bestIndex]?.topic : undefined;
-              return currentTopic;
-            })()}
-      />
+        {/* All Rings Bottom Sheet */}
+        <AllRingsModal 
+          visible={showAllRingsModal}
+          onClose={() => setShowAllRingsModal(false)}
+          userId={user?.id}
+          activeTopic={(() => {
+            // Use the same iOS-optimized logic for consistency
+            let bestIndex = currentIndex;
+            
+            // On iOS, prioritize lastVisibleIndexRef as it's updated immediately when items become visible
+            if (isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
+              bestIndex = lastVisibleIndexRef.current;
+            } 
+            // For non-iOS or when lastVisibleIndexRef is not available, use scrollBasedIndex
+            else if (scrollBasedIndexRef.current >= 0 && scrollBasedIndexRef.current < personalizedFeed.length) {
+              bestIndex = scrollBasedIndexRef.current;
+            }
+            // Fallback to lastVisibleIndexRef for non-iOS platforms
+            else if (!isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
+              bestIndex = lastVisibleIndexRef.current;
+            }
+            
+            const currentTopic = personalizedFeed.length > 0 && bestIndex < personalizedFeed.length ? personalizedFeed[bestIndex]?.topic : undefined;
+            return currentTopic;
+          })()}
+        />
+      </View>
 
       {/* Debugging Modal for Personalization Explanations - Only visible when debug panel is enabled */}
       {debugPanelVisible && showExplanationModal && (
@@ -3040,7 +3043,7 @@ const styles = StyleSheet.create({
   // Update profile button styles
   profileButton: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 25,
+    top: Platform.OS === 'ios' ? 66 : 41,
     left: 20,
     width: 50,
     height: 50,
@@ -3095,7 +3098,7 @@ const styles = StyleSheet.create({
   // Add debug button styles
   debugButton: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 25,
+    top: Platform.OS === 'ios' ? 66 : 41,
     right: 20,
     width: 60,
     height: 30,
@@ -3143,7 +3146,7 @@ const styles = StyleSheet.create({
   },
   topicRingsContainer: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 25,
+    top: Platform.OS === 'ios' ? 66 : 41,
     left: 78, // Profile button: left 20 + width 50 + small gap 8 = 78
     zIndex: 10,
     flexDirection: 'row',
@@ -3166,6 +3169,16 @@ const styles = StyleSheet.create({
     elevation: 5,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  bottomSheetsContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10000, // Highest z-index to ensure bottom sheets appear above all content
+    elevation: 10000, // For Android
+    pointerEvents: 'box-none', // Allow touch events to pass through to underlying content
   },
 });
 
