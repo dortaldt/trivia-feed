@@ -189,7 +189,7 @@ const triviaSlice = createSlice({
         console.log(`[Redux] Overriding previous 'skipped' state for question ${questionId} with 'answered' state`);
       }
       
-      // Record interaction for sync (but DON'T update weights here)
+      // Record interaction for sync AND update weights (same as skipQuestion)
       if (state.userProfile) {
         // Record interaction for sync
         const now = Date.now();
@@ -205,6 +205,115 @@ const triviaSlice = createSlice({
         state.syncedInteractions.push(interaction);
         
         console.log(`[Redux] Added ${isCorrect ? 'correct' : 'incorrect'} interaction for question ${questionId} to syncedInteractions`);
+        
+        // Get the feed item for this question to update user profile (same as skipQuestion)
+        const feedItem = state.personalizedFeed.find(item => item.id === questionId);
+        if (feedItem) {
+          // Extract topic information for better logging
+          const topic = feedItem.topic;
+          const subtopic = feedItem.tags?.[0] || 'General';
+          const branch = feedItem.tags?.[1] || 'General';
+          
+          console.log(`[Redux] Processing weight changes for answered question: topic=${topic}, subtopic=${subtopic}, branch=${branch}`);
+          
+          // Store original weights before any changes
+          const originalTopicWeight = state.userProfile.topics?.[topic]?.weight || 0.5;
+          const originalSubtopicWeight = state.userProfile.topics?.[topic]?.subtopics?.[subtopic]?.weight || 0.5;
+          const originalBranchWeight = state.userProfile.topics?.[topic]?.subtopics?.[subtopic]?.branches?.[branch]?.weight || 0.5;
+          
+          console.log(`[Redux] Original weights before answer - Topic: ${originalTopicWeight.toFixed(4)}, Subtopic: ${originalSubtopicWeight.toFixed(4)}, Branch: ${originalBranchWeight.toFixed(4)}`);
+          
+          // Create the interaction object
+          const interactionObj = { 
+            wasCorrect: isCorrect,
+            timeSpent 
+          };
+          
+          try {
+            // Update the user profile
+            const result = updateUserProfileFn(
+              state.userProfile,
+              questionId,
+              interactionObj,
+              feedItem
+            );
+            
+            // Deep clone the result to avoid reference issues
+            const updatedProfile = JSON.parse(JSON.stringify(result.updatedProfile));
+            
+            // Use the updated profile
+            state.userProfile = updatedProfile;
+            
+            // Ensure topic structure exists after update
+            if (!state.userProfile.topics[topic]) {
+              console.error(`[Redux] ERROR: Topic ${topic} is missing after profile update!`);
+              state.userProfile.topics[topic] = {
+                weight: isCorrect ? 0.55 : 0.55, // Increase for both correct and incorrect
+                subtopics: {},
+                lastViewed: Date.now()
+              };
+            }
+            
+            if (!state.userProfile.topics[topic].subtopics[subtopic]) {
+              console.error(`[Redux] ERROR: Subtopic ${subtopic} is missing after profile update!`);
+              state.userProfile.topics[topic].subtopics[subtopic] = {
+                weight: isCorrect ? 0.57 : 0.57, // Increase for both correct and incorrect
+                branches: {},
+                lastViewed: Date.now()
+              };
+            }
+            
+            if (!state.userProfile.topics[topic].subtopics[subtopic].branches[branch]) {
+              console.error(`[Redux] ERROR: Branch ${branch} is missing after profile update!`);
+              state.userProfile.topics[topic].subtopics[subtopic].branches[branch] = {
+                weight: isCorrect ? 0.60 : 0.60, // Increase for both correct and incorrect
+                lastViewed: Date.now()
+              };
+            }
+            
+            // Get the updated weights from state after the update
+            const updatedTopicWeight = state.userProfile.topics[topic].weight;
+            const updatedSubtopicWeight = state.userProfile.topics[topic].subtopics[subtopic].weight;
+            const updatedBranchWeight = state.userProfile.topics[topic].subtopics[subtopic].branches[branch].weight;
+            
+            // Log the actual changes
+            console.log(`[Redux] Updated weights after answer - Topic: ${updatedTopicWeight.toFixed(4)}, Subtopic: ${updatedSubtopicWeight.toFixed(4)}, Branch: ${updatedBranchWeight.toFixed(4)}`);
+            console.log(`[Redux] Weight changes - Topic: ${(updatedTopicWeight - originalTopicWeight).toFixed(4)}, Subtopic: ${(updatedSubtopicWeight - originalSubtopicWeight).toFixed(4)}, Branch: ${(updatedBranchWeight - originalBranchWeight).toFixed(4)}`);
+            
+            console.log(`[Redux] Successfully updated user profile for answered question ${questionId}`);
+            
+            // Create a weight change record
+            const weightChange: WeightChange = {
+              timestamp: now,
+              questionId,
+              interactionType: isCorrect ? 'correct' : 'incorrect',
+              questionText: feedItem.question || `Question ${questionId.substring(0, 5)}...`,
+              topic,
+              subtopic,
+              branch,
+              oldWeights: {
+                topicWeight: originalTopicWeight,
+                subtopicWeight: originalSubtopicWeight,
+                branchWeight: originalBranchWeight
+              },
+              newWeights: {
+                topicWeight: updatedTopicWeight,
+                subtopicWeight: updatedSubtopicWeight,
+                branchWeight: updatedBranchWeight
+              }
+            };
+            
+            // Add to synced weight changes
+            state.syncedWeightChanges.push(weightChange);
+            console.log(`[Redux] Added weight change to syncedWeightChanges: ${weightChange.topic} (${weightChange.interactionType})`);
+            console.log(`[Redux] Weight change details: ${weightChange.oldWeights.topicWeight.toFixed(4)} -> ${weightChange.newWeights.topicWeight.toFixed(4)}`);
+            
+          } catch (error) {
+            console.error(`[Redux] Error updating profile for answered question:`, error);
+          }
+        } else {
+          console.log(`[Redux] Could not find feed item for answered question ${questionId}`);
+        }
         
         // If user is logged in, only sync based on interaction threshold (BATCHED)
         if (userId) {

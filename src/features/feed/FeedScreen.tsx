@@ -1777,13 +1777,8 @@ const FeedScreen: React.FC = () => {
       console.log(`[ANSWER] Stored topic "${questionItem.topic}" for question ${questionId} (isCorrect: ${isCorrect}) - DELAYED`);
     }, 50);
     
-    // Save updated profile to Redux
-    // Let the Redux action handle the syncing with Supabase
-    dispatch(updateUserProfileAction({ 
-      profile: updatedProfile, 
-      userId: user?.id,
-      weightChange: weightChange || undefined // Convert null to undefined to match expected type
-    }));
+    // NOTE: Weight updates are now handled directly in the answerQuestion Redux action
+    // No need to dispatch updateUserProfileAction separately as it would overwrite the weights
     
     // Check if user just hit a multiple of 10 questions answered
     // This ensures database fetch is triggered even if FlatList onEndReached doesn't fire
