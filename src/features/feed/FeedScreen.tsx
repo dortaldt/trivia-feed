@@ -2573,22 +2573,28 @@ const FeedScreen: React.FC = () => {
             size={50}
             userId={user?.id}
             activeTopic={(() => {
-              // Use the most reliable index source available
-              // Priority: scrollBasedIndex > lastVisibleIndex > currentIndex
+              // Use the same iOS-optimized logic for consistency
               let bestIndex = currentIndex;
               
-              if (scrollBasedIndexRef.current >= 0 && scrollBasedIndexRef.current < personalizedFeed.length) {
+              // On iOS, prioritize lastVisibleIndexRef as it's updated immediately when items become visible
+              if (isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
+                bestIndex = lastVisibleIndexRef.current;
+              } 
+              // For non-iOS or when lastVisibleIndexRef is not available, use scrollBasedIndex
+              else if (scrollBasedIndexRef.current >= 0 && scrollBasedIndexRef.current < personalizedFeed.length) {
                 bestIndex = scrollBasedIndexRef.current;
-              } else if (lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
+              }
+              // Fallback to lastVisibleIndexRef for non-iOS platforms
+              else if (!isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
                 bestIndex = lastVisibleIndexRef.current;
               }
               
               const currentTopic = personalizedFeed.length > 0 && bestIndex < personalizedFeed.length ? personalizedFeed[bestIndex]?.topic : undefined;
-              const currentQuestion = personalizedFeed[bestIndex];
               
-              // Log index sources for debugging
-              // console.log(`[ACTIVE TOPIC RING] Indices - State: ${currentIndex}, Ref: ${lastVisibleIndexRef.current}, Scroll: ${scrollBasedIndexRef.current}, Using: ${bestIndex}`);
-              // console.log(`[ACTIVE TOPIC RING] Topic: "${currentTopic}" - "${currentQuestion?.question?.substring(0, 30)}..."`);
+              // Enhanced logging for iOS debugging
+              if (isIOS) {
+                console.log(`[iOS ACTIVE TOPIC] Indices - State: ${currentIndex}, LastVisible: ${lastVisibleIndexRef.current}, Scroll: ${scrollBasedIndexRef.current}, Using: ${bestIndex}, Topic: "${currentTopic}"`);
+              }
               
               return currentTopic;
             })()}
@@ -2708,8 +2714,23 @@ const FeedScreen: React.FC = () => {
         onClose={() => setShowAllRingsModal(false)}
         userId={user?.id}
                     activeTopic={(() => {
-              const currentTopic = personalizedFeed.length > 0 && currentIndex < personalizedFeed.length ? personalizedFeed[currentIndex]?.topic : undefined;
-              // console.log(`[ACTIVE TOPIC RING] Modal - Current topic: "${currentTopic}"`);
+              // Use the same iOS-optimized logic for consistency
+              let bestIndex = currentIndex;
+              
+              // On iOS, prioritize lastVisibleIndexRef as it's updated immediately when items become visible
+              if (isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
+                bestIndex = lastVisibleIndexRef.current;
+              } 
+              // For non-iOS or when lastVisibleIndexRef is not available, use scrollBasedIndex
+              else if (scrollBasedIndexRef.current >= 0 && scrollBasedIndexRef.current < personalizedFeed.length) {
+                bestIndex = scrollBasedIndexRef.current;
+              }
+              // Fallback to lastVisibleIndexRef for non-iOS platforms
+              else if (!isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
+                bestIndex = lastVisibleIndexRef.current;
+              }
+              
+              const currentTopic = personalizedFeed.length > 0 && bestIndex < personalizedFeed.length ? personalizedFeed[bestIndex]?.topic : undefined;
               return currentTopic;
             })()}
       />

@@ -40,10 +40,35 @@ const getQuestionsStorageKey = (userId?: string): string => {
 const saveQuestionsToStorage = async (questions: { [questionId: string]: QuestionState }, userId?: string): Promise<void> => {
   try {
     const storageKey = getQuestionsStorageKey(userId);
-    await AsyncStorage.setItem(storageKey, JSON.stringify(questions));
-    console.log(`[REDUX PERSIST] Saved ${Object.keys(questions).length} questions to storage`);
+    
+    // Deep clone the questions object to avoid Proxy handler issues on iOS
+    const safeQuestions = JSON.parse(JSON.stringify(questions));
+    
+    await AsyncStorage.setItem(storageKey, JSON.stringify(safeQuestions));
+    console.log(`[REDUX PERSIST] Saved ${Object.keys(safeQuestions).length} questions to storage`);
   } catch (error) {
     console.error('[REDUX PERSIST] Error saving questions to storage:', error);
+    
+    // Try alternative serialization approach for iOS
+    try {
+      const storageKey = getQuestionsStorageKey(userId);
+      const safeQuestions: { [questionId: string]: QuestionState } = {};
+      
+      // Manually serialize each question to avoid proxy issues
+      Object.entries(questions).forEach(([questionId, questionState]) => {
+        safeQuestions[questionId] = {
+          status: questionState.status,
+          answerIndex: questionState.answerIndex,
+          timeSpent: questionState.timeSpent,
+          isCorrect: questionState.isCorrect,
+        };
+      });
+      
+      await AsyncStorage.setItem(storageKey, JSON.stringify(safeQuestions));
+      console.log(`[REDUX PERSIST] Saved ${Object.keys(safeQuestions).length} questions to storage (fallback method)`);
+    } catch (fallbackError) {
+      console.error('[REDUX PERSIST] Fallback save method also failed:', fallbackError);
+    }
   }
 };
 
@@ -145,8 +170,60 @@ const safeSyncUserProfile = async (userId?: string, profile?: UserProfile): Prom
       console.error('[SAFE SYNC] Error checking guest mode:', error);
     }
     
-    // Deep clone the profile to prevent proxy issues
-    const safeProfile = JSON.parse(JSON.stringify(profile));
+    // Deep clone the profile to prevent proxy issues - with fallback for iOS
+    let safeProfile: UserProfile;
+    try {
+      safeProfile = JSON.parse(JSON.stringify(profile));
+    } catch (serializationError) {
+      console.warn('[SAFE SYNC] JSON serialization failed, using manual clone:', serializationError);
+      
+      // Manual deep clone for iOS compatibility
+      safeProfile = {
+        topics: {},
+        interactions: {},
+        lastRefreshed: profile.lastRefreshed,
+        coldStartComplete: profile.coldStartComplete,
+        totalQuestionsAnswered: profile.totalQuestionsAnswered,
+        coldStartState: profile.coldStartState,
+        lastQuestionAnswered: profile.lastQuestionAnswered,
+      };
+      
+      // Manually clone topics to avoid proxy issues
+      Object.entries(profile.topics).forEach(([topicName, topicData]) => {
+        safeProfile.topics[topicName] = {
+          weight: topicData.weight,
+          lastViewed: topicData.lastViewed,
+          subtopics: {},
+        };
+        
+        // Clone subtopics
+        Object.entries(topicData.subtopics || {}).forEach(([subtopicName, subtopicData]) => {
+          safeProfile.topics[topicName].subtopics[subtopicName] = {
+            weight: subtopicData.weight,
+            lastViewed: subtopicData.lastViewed,
+            branches: {},
+          };
+          
+          // Clone branches
+          Object.entries(subtopicData.branches || {}).forEach(([branchName, branchData]) => {
+            safeProfile.topics[topicName].subtopics[subtopicName].branches[branchName] = {
+              weight: branchData.weight,
+              lastViewed: branchData.lastViewed,
+            };
+          });
+        });
+      });
+      
+      // Manually clone interactions to avoid proxy issues
+      Object.entries(profile.interactions).forEach(([questionId, interaction]) => {
+        safeProfile.interactions[questionId] = {
+          timeSpent: interaction.timeSpent,
+          wasSkipped: interaction.wasSkipped,
+          wasCorrect: interaction.wasCorrect,
+          viewedAt: interaction.viewedAt,
+        };
+      });
+    }
     
     // Now call the actual sync function with safe data
     void syncUserProfile(userId, safeProfile);
@@ -325,7 +402,7 @@ const triviaSlice = createSlice({
           
           if (shouldSync) {
             console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via answerQuestion`);
-          safeSyncUserProfile(userId, state.userProfile);
+            safeSyncUserProfile(userId, state.userProfile);
             state.interactionCount = 0; // Reset counter after sync
             state.firstInteractionProcessed = true;
           } else {
@@ -529,7 +606,7 @@ const triviaSlice = createSlice({
               
               if (shouldSync) {
                 console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via skipQuestion`);
-              safeSyncUserProfile(userId, state.userProfile);
+                safeSyncUserProfile(userId, state.userProfile);
                 state.interactionCount = 0; // Reset counter after sync
                 state.firstInteractionProcessed = true;
               } else {

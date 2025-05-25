@@ -241,64 +241,24 @@ const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, isActive, onPre
   
   const progressPercentage = Math.min(Math.max(safeCurrentProgress / safeTargetAnswers, 0), 1);
 
-
-
-  // Create a gentle pulse animation for active rings
-  const pulseAnimation = React.useRef(new RNAnimated.Value(1)).current;
-
-  React.useEffect(() => {
-    if (isActive) {
-      // Start pulsing animation
-      const pulse = RNAnimated.sequence([
-        RNAnimated.timing(pulseAnimation, {
-          toValue: 1.03,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        RNAnimated.timing(pulseAnimation, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ]);
-      
-      const loop = RNAnimated.loop(pulse);
-      loop.start();
-      
-      return () => loop.stop();
-    } else {
-      // Reset to normal scale
-      RNAnimated.timing(pulseAnimation, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [isActive, pulseAnimation]);
-
+  // Remove breathing animation - just return static view
   return (
-    <RNAnimated.View
-      style={{
-        transform: [{ scale: pulseAnimation }],
-      }}
+    <TouchableOpacity 
+      onPress={onPress}
+      style={[styles.singleRingContainer, { width: size, height: size }]}
+      activeOpacity={0.8}
     >
-      <TouchableOpacity 
-        onPress={onPress}
-        style={[styles.singleRingContainer, { width: size, height: size }, isActive && styles.activeRing]}
-        activeOpacity={0.8}
-      >
-        {/* Use the reliable SVG Apple Activity Ring */}
-        <AppleActivityRing
-          size={size}
-          strokeWidth={Math.max(6, size * 0.12)}
-          color={ringData.color}
-          progress={progressPercentage}
-          icon={ringData.icon}
-          level={ringData.level}
-          isActive={isActive}
-        />
-      </TouchableOpacity>
-    </RNAnimated.View>
+      {/* Use the reliable SVG Apple Activity Ring */}
+      <AppleActivityRing
+        size={size}
+        strokeWidth={Math.max(6, size * 0.12)}
+        color={ringData.color}
+        progress={progressPercentage}
+        icon={ringData.icon}
+        level={ringData.level}
+        isActive={isActive}
+      />
+    </TouchableOpacity>
   );
 };
 
@@ -397,9 +357,6 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const animatedProgress = React.useRef(new RNAnimated.Value(0)).current;
-  const glowAnimation = React.useRef(new RNAnimated.Value(0)).current;
-
-
 
   React.useEffect(() => {
     RNAnimated.timing(animatedProgress, {
@@ -409,86 +366,61 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
     }).start();
   }, [progress]);
 
-  // Animate glow effect when isActive changes
-  React.useEffect(() => {
-    if (isActive) {
-      // Start pulsing glow animation
-      const pulseSequence = RNAnimated.sequence([
-        RNAnimated.timing(glowAnimation, {
-          toValue: 1,
-          duration: 800,
-          easing: Easing.bezier(0.4, 0, 0.6, 1),
-          useNativeDriver: false,
-        }),
-        RNAnimated.timing(glowAnimation, {
-          toValue: 0.3,
-          duration: 800,
-          easing: Easing.bezier(0.4, 0, 0.6, 1),
-          useNativeDriver: false,
-        }),
-      ]);
-      
-      const loopedAnimation = RNAnimated.loop(pulseSequence);
-      loopedAnimation.start();
-      
-      return () => loopedAnimation.stop();
-    } else {
-      // Fade out glow
-      RNAnimated.timing(glowAnimation, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [isActive, glowAnimation]);
-
   const strokeDashoffset = animatedProgress.interpolate({
     inputRange: [0, 1],
     outputRange: [circumference, 0],
   });
 
-  const glowOpacity = glowAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 0.8],
-  });
-
-  const glowRadius = glowAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 15],
-  });
-
   return (
     <View style={{ alignItems: 'center', position: 'relative' }}>
-      <Animated.View 
+      {/* Enhanced glow container with overflow visible */}
+      <View 
         style={{ 
-          width: size, 
-          height: size, 
+          width: size + 40, // Add extra space for glow
+          height: size + 40,
           position: 'relative',
-          ...(isActive && {
-            shadowColor: color,
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: glowOpacity,
-            shadowRadius: glowRadius,
-            ...(Platform.OS === 'android' && {
-              elevation: isActive ? 8 : 0,
-            }),
-          })
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'visible', // Ensure glow isn't clipped
+          margin: -20, // Compensate for extra size
         }}
       >
-        <Svg width={size} height={size}>
-          {/* Glow effect for active ring */}
-          {isActive && (
-            <Defs>
-              <Filter id="glow">
-                <FeGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                <FeMerge> 
-                  <FeMergeNode in="coloredBlur"/>
-                  <FeMergeNode in="SourceGraphic"/>
-                </FeMerge>
-              </Filter>
-            </Defs>
-          )}
-          
+        {/* Platform-specific glow effect for active ring */}
+        {isActive && Platform.OS === 'web' && (
+          <View 
+            style={{
+              position: 'absolute',
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              backgroundColor: color,
+              filter: 'blur(20px)',
+              opacity: 0.5,
+              transform: [{ scale: 1.2 }],
+            }}
+          />
+        )}
+        
+        {isActive && Platform.OS !== 'web' && (
+          <View 
+            style={{
+              position: 'absolute',
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              backgroundColor: color,
+              opacity: 0.3,
+              transform: [{ scale: 1.4 }],
+              shadowColor: color,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.8,
+              shadowRadius: 20,
+              elevation: 10,
+            }}
+          />
+        )}
+        
+        <Svg width={size} height={size} style={{ overflow: 'visible' }}>
           {/* Active ring fill - subtle background fill when active */}
           {isActive && (
             <Circle
@@ -500,12 +432,12 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
             />
           )}
           
-          {/* Background ring */}
+          {/* Background ring - more transparent for inactive rings */}
           <Circle
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke={isActive ? color + '66' : color + '33'} // Stronger background when active
+            stroke={isActive ? color + '40' : color + '1A'} // 25% opacity for active, 10% for inactive
             strokeWidth={strokeWidth}
             fill="none"
           />
@@ -515,7 +447,7 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke={color}
+            stroke={isActive ? color : color + 'B3'} // Full opacity for active, 70% for inactive
             strokeWidth={isActive ? strokeWidth + 1 : strokeWidth} // Slightly thicker when active
             fill="none"
             strokeDasharray={circumference}
@@ -523,31 +455,33 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
             strokeLinecap="round"
             rotation="-90"
             origin={`${size / 2}, ${size / 2}`}
-            filter={isActive ? "url(#glow)" : undefined}
           />
         </Svg>
         
         {/* Center icon */}
-        <View style={{ position: 'absolute', top: 0, left: 0, width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-          <Feather name={icon as any} size={size * 0.32} color={color} />
+        <View style={{ position: 'absolute', top: 20, left: 20, width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+          <Feather name={icon as any} size={size * 0.32} color={isActive ? color : color + 'B3'} />
         </View>
         
         {/* Level below - positioned absolutely to not affect ring centering */}
-        <View style={{ position: 'absolute', top: size + 4, left: 0, right: 0, alignItems: 'center' }}>
+        <View style={{ position: 'absolute', top: size + 24, left: 0, right: 0, alignItems: 'center' }}>
           <ThemedText style={{ 
-            color: isActive ? color : color, 
+            color: isActive ? color : color + 'B3', 
             fontWeight: isActive ? '900' : 'bold', 
             fontSize: size * 0.16,
-            ...(isActive && {
+            ...(isActive && Platform.OS === 'web' && {
+              textShadow: `0 0 10px ${color}80`,
+            }),
+            ...(isActive && Platform.OS !== 'web' && {
               textShadowColor: color + '80',
               textShadowOffset: { width: 0, height: 0 },
-              textShadowRadius: 2,
+              textShadowRadius: 4,
             })
           }}>
             LVL{level}
           </ThemedText>
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 };
@@ -557,15 +491,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center', // Center align rings horizontally
     justifyContent: 'flex-start',
+    overflow: 'visible', // Ensure glow effects aren't clipped
   },
   ringWrapper: {
     alignItems: 'center',
+    overflow: 'visible', // Ensure glow effects aren't clipped
     // Remove marginBottom since level text is now absolutely positioned
   },
   singleRingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    overflow: 'visible', // Ensure glow effects aren't clipped
   },
   modalOverlay: {
     flex: 1,
@@ -635,20 +572,6 @@ const styles = StyleSheet.create({
   modalTotalText: {
     fontSize: 14,
     opacity: 0.8,
-  },
-  activeRing: {
-    // Enhanced container styling for active ring
-    transform: [{ scale: 1.05 }], // Slightly larger when active
-    ...(Platform.OS === 'web' && {
-      filter: 'drop-shadow(0 0 15px rgba(255, 255, 255, 0.4))',
-    }),
-    ...(Platform.OS !== 'web' && {
-      shadowColor: '#ffffff',
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
-    }),
   },
   feedControlButtons: {
     flexDirection: 'column',

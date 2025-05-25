@@ -83,9 +83,40 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
   const saveRingsToStorage = useCallback(async (ringsData: TopicRingsState) => {
     try {
       const storageKey = getStorageKey();
-      await AsyncStorage.setItem(storageKey, JSON.stringify(ringsData));
+      
+      // Deep clone the rings data to avoid Proxy handler issues on iOS
+      const safeRingsData = JSON.parse(JSON.stringify(ringsData));
+      
+      await AsyncStorage.setItem(storageKey, JSON.stringify(safeRingsData));
     } catch (error) {
       console.error('Error saving rings to storage:', error);
+      
+      // Try alternative serialization approach for iOS
+      try {
+        const storageKey = getStorageKey();
+        const safeRingsData: TopicRingsState = {
+          rings: {},
+          lastUpdated: ringsData.lastUpdated,
+        };
+        
+        // Manually serialize each ring to avoid proxy issues
+        Object.entries(ringsData.rings).forEach(([topic, ring]) => {
+          safeRingsData.rings[topic] = {
+            topic: ring.topic,
+            level: ring.level,
+            currentProgress: ring.currentProgress,
+            targetAnswers: ring.targetAnswers,
+            totalCorrectAnswers: ring.totalCorrectAnswers,
+            color: ring.color,
+            icon: ring.icon,
+          };
+        });
+        
+        await AsyncStorage.setItem(storageKey, JSON.stringify(safeRingsData));
+        console.log('Rings saved to storage using fallback method');
+      } catch (fallbackError) {
+        console.error('Fallback rings save method also failed:', fallbackError);
+      }
     }
   }, [getStorageKey, userId]);
 
