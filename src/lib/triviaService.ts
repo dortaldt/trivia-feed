@@ -505,9 +505,12 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
 }
 
 // Function to fetch only new trivia questions that aren't in the provided IDs list
-export async function fetchNewTriviaQuestions(existingIds: string[]): Promise<FeedItem[]> {
+export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTimestamp?: number): Promise<FeedItem[]> {
   try {
     console.log(`Fetching new questions, excluding ${existingIds.length} existing IDs`);
+    if (lastFetchTimestamp) {
+      console.log(`🕐 Using last fetch timestamp: ${new Date(lastFetchTimestamp).toISOString()}`);
+    }
     
     // First check if we can connect
     try {
@@ -652,7 +655,7 @@ export async function fetchNewTriviaQuestions(existingIds: string[]): Promise<Fe
     }
     
     // Transform the data same as in fetchTriviaQuestions
-    return data.map((question: TriviaQuestion) => {
+    const transformedQuestions = data.map((question: TriviaQuestion) => {
       // Determine the question text
       const questionText = question.question_text || question.question || 'Unknown question';
       
@@ -774,6 +777,14 @@ export async function fetchNewTriviaQuestions(existingIds: string[]): Promise<Fe
         tags
       };
     });
+    
+    // Update the last fetch timestamp after successful fetch
+    if (transformedQuestions.length > 0) {
+      await setLastFetchTimestamp();
+      console.log(`🕐 Updated last fetch timestamp after fetching ${transformedQuestions.length} new questions`);
+    }
+    
+    return transformedQuestions;
   } catch (error) {
     console.error('Error fetching new trivia questions:', error);
     return [];
