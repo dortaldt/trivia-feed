@@ -482,7 +482,9 @@ export const zIndex = {
   auto: 'auto',
   modal: 1000,
   tooltip: 1100,
-  toast: 1200,
+  toast: 9999,
+  bottomSheet: 10000,
+  criticalModal: 10001, // For modals that must appear above everything else
 };
 
 // Layout values

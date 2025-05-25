@@ -28,6 +28,7 @@ import NeonGradientBackground from '../../components/NeonGradientBackground';
 import { NeonTopicColors, getTopicColor } from '@/constants/NeonColors';
 import { trackEvent } from '../../lib/mixpanelAnalytics';
 import Constants from 'expo-constants';
+import { zIndex } from '@/src/design';
 
 const { width, height } = Dimensions.get('window');
 
@@ -952,7 +953,7 @@ const styles = StyleSheet.create({
   },
   learningCapsule: {
     position: 'absolute',
-    top: 100,
+    top: Platform.OS === 'ios' ? 140 : 124, // iOS: 40px down, others: 24px down from original position
     alignSelf: 'center',
     width: '90%',
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
@@ -966,7 +967,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     maxHeight: '40%',
-    zIndex: 1000,
+    zIndex: zIndex.criticalModal, // Highest z-index to ensure it appears above all other elements including rings, bottom sheets, and toasts
     ...(Platform.OS === 'web' ? {
       maxWidth: 600,
       width: '80%',
