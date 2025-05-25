@@ -8,6 +8,12 @@ import { TopicRingProgress } from '../types/topicRings';
 import { AppleActivityRing } from './TopicRings';
 import BottomSheet from './BottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Reanimated, { 
+  Layout, 
+  FadeInDown, 
+  FadeOutUp,
+  LinearTransition
+} from 'react-native-reanimated';
 
 interface AllRingsModalProps {
   visible: boolean;
@@ -20,54 +26,64 @@ interface RingItemProps {
   ring: TopicRingProgress;
   onPress: () => void;
   isActive?: boolean; // Add isActive prop for glow effect
+  index?: number;
 }
 
-const RingItem: React.FC<RingItemProps> = ({ ring, onPress, isActive }) => {
+const RingItem: React.FC<RingItemProps> = ({ ring, onPress, isActive, index = 0 }) => {
   const progressPercentage = Math.round((ring.currentProgress / ring.targetAnswers) * 100);
   const nextLevelAnswers = ring.targetAnswers - ring.currentProgress;
 
   return (
-    <TouchableOpacity style={styles.ringItem} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.ringItemLeft}>
-        <AppleActivityRing
-          size={60}
-          strokeWidth={7}
-          color={ring.color}
-          progress={ring.currentProgress / ring.targetAnswers}
-          icon={ring.icon}
-          level={ring.level}
-          isActive={isActive}
-        />
-      </View>
-      
-      <View style={styles.ringItemRight}>
-        <View style={styles.ringItemHeader}>
-          <ThemedText style={[styles.topicName, { color: ring.color }]}>
-            {ring.topic.charAt(0).toUpperCase() + ring.topic.slice(1)}
-          </ThemedText>
-          <ThemedText style={styles.levelText}>Level {ring.level}</ThemedText>
+    <Reanimated.View
+      layout={LinearTransition.springify()
+        .stiffness(200)
+        .damping(20)
+        .mass(1)}
+      entering={FadeInDown.duration(300).delay(index * 50)}
+      exiting={FadeOutUp.duration(300)}
+    >
+      <TouchableOpacity style={styles.ringItem} onPress={onPress} activeOpacity={0.7}>
+        <View style={styles.ringItemLeft}>
+          <AppleActivityRing
+            size={60}
+            strokeWidth={7}
+            color={ring.color}
+            progress={ring.currentProgress / ring.targetAnswers}
+            icon={ring.icon}
+            level={ring.level}
+            isActive={isActive}
+          />
         </View>
         
-        <View style={styles.progressInfo}>
-          <ThemedText style={styles.progressText}>
-            {ring.currentProgress} / {ring.targetAnswers} answers
-          </ThemedText>
-          <ThemedText style={[styles.percentageText, { color: ring.color }]}>
-            {progressPercentage}% complete
+        <View style={styles.ringItemRight}>
+          <View style={styles.ringItemHeader}>
+            <ThemedText style={[styles.topicName, { color: ring.color }]}>
+              {ring.topic.charAt(0).toUpperCase() + ring.topic.slice(1)}
+            </ThemedText>
+            <ThemedText style={styles.levelText}>Level {ring.level}</ThemedText>
+          </View>
+          
+          <View style={styles.progressInfo}>
+            <ThemedText style={styles.progressText}>
+              {ring.currentProgress} / {ring.targetAnswers} answers
+            </ThemedText>
+            <ThemedText style={[styles.percentageText, { color: ring.color }]}>
+              {progressPercentage}% complete
+            </ThemedText>
+          </View>
+          
+          {nextLevelAnswers > 0 && (
+            <ThemedText style={styles.nextLevelText}>
+              {nextLevelAnswers} more to Level {ring.level + 1}
+            </ThemedText>
+          )}
+          
+          <ThemedText style={styles.totalAnswersText}>
+            {ring.totalCorrectAnswers} total correct
           </ThemedText>
         </View>
-        
-        {nextLevelAnswers > 0 && (
-          <ThemedText style={styles.nextLevelText}>
-            {nextLevelAnswers} more to Level {ring.level + 1}
-          </ThemedText>
-        )}
-        
-        <ThemedText style={styles.totalAnswersText}>
-          {ring.totalCorrectAnswers} total correct
-        </ThemedText>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Reanimated.View>
   );
 };
 
@@ -132,7 +148,7 @@ export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, 
           {ringsWithProgress.length > 0 && (
             <>
               <ThemedText style={styles.sectionTitle}>Active Rings</ThemedText>
-              {ringsWithProgress.map((ring) => {
+              {ringsWithProgress.map((ring, index) => {
                 // More robust topic matching - normalize case and trim whitespace
                 const normalizedRingTopic = ring.topic.toLowerCase().trim();
                 const normalizedActiveTopic = activeTopic?.toLowerCase().trim();
@@ -145,6 +161,7 @@ export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, 
                     key={ring.topic}
                     ring={ring}
                     isActive={isRingActive}
+                    index={index}
                     onPress={() => {
                       // Could open detailed ring modal here
                       console.log(`Tapped on ${ring.topic} ring`);
@@ -157,22 +174,19 @@ export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, 
 
           {ringsWithoutProgress.length > 0 && (
             <>
-              <ThemedText style={[styles.sectionTitle, { marginTop: 24 }]}>
-                Available Topics
-              </ThemedText>
-              <ThemedText style={styles.sectionSubtitle}>
-                Answer questions in these topics to start your rings
-              </ThemedText>
-              {ringsWithoutProgress.map((ring) => (
-                <View key={ring.topic} style={styles.inactiveRingItem}>
-                  <View style={styles.inactiveRingIcon}>
-                    <Feather name={ring.icon as any} size={20} color={ring.color} />
+              <ThemedText style={styles.sectionTitle}>Other Topics</ThemedText>
+              <View style={styles.inactiveRingsContainer}>
+                {ringsWithoutProgress.map((ring, index) => (
+                  <View key={ring.topic} style={styles.inactiveRingItem}>
+                    <View style={[styles.inactiveRingIcon, { backgroundColor: `${ring.color}20` }]}>
+                      <Feather name={ring.icon as any} size={18} color={ring.color} />
+                    </View>
+                    <ThemedText style={styles.inactiveRingText}>
+                      {ring.topic.charAt(0).toUpperCase() + ring.topic.slice(1)}
+                    </ThemedText>
                   </View>
-                  <ThemedText style={styles.inactiveRingText}>
-                    {ring.topic.charAt(0).toUpperCase() + ring.topic.slice(1)}
-                  </ThemedText>
-                </View>
-              ))}
+                ))}
+              </View>
             </>
           )}
         </ScrollView>
@@ -294,5 +308,9 @@ const styles = StyleSheet.create({
   inactiveRingText: {
     fontSize: 14,
     opacity: 0.6,
+  },
+  inactiveRingsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
 }); 

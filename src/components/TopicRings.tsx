@@ -16,6 +16,16 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { updateUserProfile } from '../store/triviaSlice';
+import Reanimated, { 
+  Layout, 
+  FadeInLeft, 
+  FadeOutRight,
+  LinearTransition,
+  Easing as REasing,
+  SharedTransition,
+  withSpring,
+  withTiming
+} from 'react-native-reanimated';
 
 interface TopicRingsProps {
   config?: RingConfig;
@@ -30,6 +40,7 @@ interface SingleRingProps {
   size: number;
   isActive?: boolean;
   onPress: () => void;
+  index?: number;
 }
 
 interface RingDetailsModalProps {
@@ -235,7 +246,7 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
 };
 
 // Single Ring Component with Apple Activity style
-const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, isActive, onPress }) => {
+const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, isActive, onPress, index = 0 }) => {
   // Ensure all values are valid numbers before calculations
   const safeCurrentProgress = typeof ringData.currentProgress === 'number' && !isNaN(ringData.currentProgress) ? ringData.currentProgress : 0;
   const safeTargetAnswers = typeof ringData.targetAnswers === 'number' && !isNaN(ringData.targetAnswers) && ringData.targetAnswers > 0 ? ringData.targetAnswers : 1;
@@ -268,29 +279,39 @@ const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, isActive, onPre
   }, [isActive]);
 
   return (
-    <TouchableOpacity 
-      onPress={onPress}
-      style={[styles.singleRingContainer, { width: size, height: size }]}
-      activeOpacity={0.8}
+    <Reanimated.View
+      layout={LinearTransition.springify()
+        .stiffness(200)
+        .damping(20)
+        .mass(1)}
+      entering={FadeInLeft.duration(300).delay(index * 50)}
+      exiting={FadeOutRight.duration(300)}
+      style={[styles.ringWrapper, { marginLeft: index > 0 ? 8 : 0 }]}
     >
-      <Animated.View
-        style={{
-          transform: [{ scale: scaleAnim }],
-        }}
+      <TouchableOpacity 
+        onPress={onPress}
+        style={[styles.singleRingContainer, { width: size, height: size }]}
+        activeOpacity={0.8}
       >
-        {/* Use the reliable SVG Apple Activity Ring */}
-        <AppleActivityRing
-          size={size}
-          strokeWidth={Math.max(6, size * 0.12)}
-          color={ringData.color}
-          progress={progressPercentage}
-          icon={ringData.icon}
-          level={ringData.level}
-          isActive={isActive}
-          glowOpacity={glowOpacity}
-        />
-      </Animated.View>
-    </TouchableOpacity>
+        <Animated.View
+          style={{
+            transform: [{ scale: scaleAnim }],
+          }}
+        >
+          {/* Use the reliable SVG Apple Activity Ring */}
+          <AppleActivityRing
+            size={size}
+            strokeWidth={Math.max(6, size * 0.12)}
+            color={ringData.color}
+            progress={progressPercentage}
+            icon={ringData.icon}
+            level={ringData.level}
+            isActive={isActive}
+            glowOpacity={glowOpacity}
+          />
+        </Animated.View>
+      </TouchableOpacity>
+    </Reanimated.View>
   );
 };
 
@@ -347,7 +368,13 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
   // console.log(`[ACTIVE TOPIC RING] Available rings: [${validRings.map(r => `"${r.topic}"`).join(', ')}] vs activeTopic: "${activeTopic}"`);
 
   return (
-    <View style={styles.container}>
+    <Reanimated.View 
+      style={styles.container}
+      layout={LinearTransition.springify()
+        .stiffness(250)
+        .damping(25)
+        .mass(0.8)}
+    >
       {validRings.map((ring, index) => {
         // More robust topic matching - normalize case and trim whitespace
         const normalizedRingTopic = ring.topic.toLowerCase().trim();
@@ -357,14 +384,14 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
         // console.log(`[ACTIVE TOPIC RING] Ring "${ring.topic}" -> isActive: ${isRingActive}`);
         
         return (
-          <View key={ring.topic} style={[styles.ringWrapper, { marginLeft: index > 0 ? 8 : 0 }]}>
-            <SingleRing
-              ringData={ring}
-              size={size}
-              isActive={isRingActive}
-              onPress={() => handleRingPress(ring)}
-            />
-          </View>
+          <SingleRing
+            key={ring.topic}
+            ringData={ring}
+            size={size}
+            isActive={isRingActive}
+            onPress={() => handleRingPress(ring)}
+            index={index}
+          />
         );
       })}
       
@@ -373,7 +400,7 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
         ringData={selectedRing}
         onClose={handleCloseModal}
       />
-    </View>
+    </Reanimated.View>
   );
 };
 
