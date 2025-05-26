@@ -20,7 +20,7 @@ export const logDbOperation = (
   error?: string
 ) => {
   // Only log in development mode
-  if (!__DEV__) return;
+  // if (!__DEV__) return;
   
   try {
     // Safe copy of data to prevent proxy handler errors
