@@ -12,6 +12,7 @@ import {
   ScrollView,
   Image,
   Pressable,
+  InteractionManager,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -29,6 +30,7 @@ import { NeonTopicColors, getTopicColor } from '@/constants/NeonColors';
 import { trackEvent } from '../../lib/mixpanelAnalytics';
 import Constants from 'expo-constants';
 import { zIndex } from '@/src/design';
+import { monitorTapResponse, measurePerformance } from '../../utils/performanceMonitor';
 
 const { width, height } = Dimensions.get('window');
 
@@ -62,6 +64,39 @@ type FeedItemProps = {
   onNextQuestion?: () => void;
   onToggleLeaderboard?: () => void;
   debugMode?: boolean; // Add debug mode prop
+};
+
+// Simple debounce utility
+const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  wait: number,
+  options: { leading?: boolean; trailing?: boolean } = {}
+): T => {
+  let timeout: NodeJS.Timeout | null = null;
+  let lastCallTime = 0;
+  const { leading = false, trailing = true } = options;
+
+  return ((...args: Parameters<T>) => {
+    const now = Date.now();
+    const callNow = leading && (!timeout || now - lastCallTime >= wait);
+
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+
+    if (callNow) {
+      lastCallTime = now;
+      return func(...args);
+    }
+
+    if (trailing) {
+      timeout = setTimeout(() => {
+        lastCallTime = Date.now();
+        func(...args);
+        timeout = null;
+      }, wait);
+    }
+  }) as T;
 };
 
 const FeedItem: React.FC<FeedItemProps> = React.memo(({
@@ -177,68 +212,119 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
   
   const textColor = useThemeColor({}, 'text');
 
-  const selectAnswer = (index: number) => {
-    // Trigger gentle haptic feedback when selecting an answer
+  // Helper functions - moved before selectAnswerCore to fix dependencies
+  const isAnswered = useCallback(() => {
+    return questionState?.status === 'answered' && questionState?.answerIndex !== undefined;
+  }, [questionState?.status, questionState?.answerIndex]);
+  
+  const isSkipped = useCallback(() => {
+    return questionState?.status === 'skipped';
+  }, [questionState?.status]);
+
+  const isSelectedAnswerCorrect = useCallback(() => {
+    if (!isAnswered() || questionState?.answerIndex === undefined) {
+      return false;
+    }
+    return item.answers[questionState.answerIndex].isCorrect;
+  }, [isAnswered, questionState?.answerIndex, item.answers]);
+
+  // Optimized selectAnswer function with performance improvements
+  const selectAnswerCore = useCallback((index: number) => {
+    // Early return if already answered
+    if (isAnswered()) return;
+
+    // Immediate UI feedback - run haptics asynchronously without blocking
     if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-        .catch(err => console.log('Haptics not supported', err));
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     
+    // Immediate visual feedback with optimized animations
     if (isIOS) {
       springAnimation();
     }
 
-    // Animate selected answer with a bounce effect
-    Animated.sequence([
-      Animated.timing(answerAnimations[index], {
-        toValue: 0.96,
-        duration: 100,
-        useNativeDriver: true
-      }),
-      Animated.spring(answerAnimations[index], {
-        toValue: 1,
-        friction: 5,
-        tension: 40,
-        useNativeDriver: true
-      })
-    ]).start();
+    // Batch animations for better performance
+    const scaleDown = Animated.timing(answerAnimations[index], {
+      toValue: 0.96,
+      duration: 100,
+      useNativeDriver: true,
+    });
     
-    if (onAnswer && !isAnswered()) {
+    const scaleUp = Animated.spring(answerAnimations[index], {
+      toValue: 1,
+      friction: 5,
+      tension: 40,
+      useNativeDriver: true,
+    });
+
+    // Run animations in parallel where possible
+    Animated.sequence([scaleDown, scaleUp]).start();
+    
+    // Critical state update - do this immediately
+    if (onAnswer) {
       const isCorrect = item.answers[index].isCorrect;
       onAnswer(index, isCorrect);
       
-      // Get the current total questions answered (before this one)
-      const currentTotalAnswered = userProfile?.totalQuestionsAnswered || 0;
-      const newTotalAnswered = currentTotalAnswered + 1; // Add 1 to include the current answer
-      
-      // Track answer event in Mixpanel
-      trackEvent('Question Answered', {
-        questionId: item.id,
-        isCorrect,
-        answerIndex: index + 1, // Use 1-indexed for better readability (1,2,3,4 instead of 0,1,2,3)
-        selectedAnswer: `Option ${index + 1}`, // Add human-readable answer option
-        topic: item.topic,
-        difficulty: item.difficulty,
-        totalAnswered: newTotalAnswered,
+      // Defer non-critical operations using InteractionManager
+      InteractionManager.runAfterInteractions(() => {
+        // Analytics tracking - deferred to not block UI
+        const currentTotalAnswered = userProfile?.totalQuestionsAnswered || 0;
+        const newTotalAnswered = currentTotalAnswered + 1;
+        
+        trackEvent('Question Answered', {
+          questionId: item.id,
+          isCorrect,
+          answerIndex: index + 1,
+          selectedAnswer: `Option ${index + 1}`,
+          topic: item.topic,
+          difficulty: item.difficulty,
+          totalAnswered: newTotalAnswered,
+        });
+        
+        // Track milestone events
+        if (newTotalAnswered === 1 || newTotalAnswered % 50 === 0) {
+          trackEvent('Question Milestone Reached', {
+            milestone: newTotalAnswered === 1 ? 'First Question' : `${newTotalAnswered} Questions`,
+            totalAnswered: newTotalAnswered,
+            isCorrect,
+          });
+        }
       });
       
-      // Track milestone events (first question, 50, 100, 150, etc.)
-      if (newTotalAnswered === 1 || newTotalAnswered % 50 === 0) {
-        trackEvent('Question Milestone Reached', {
-          milestone: newTotalAnswered === 1 ? 'First Question' : `${newTotalAnswered} Questions`,
-          totalAnswered: newTotalAnswered,
-          isCorrect,
+      // Learning capsule logic - also deferred
+      if (!isCorrect) {
+        InteractionManager.runAfterInteractions(() => {
+          setShowLearningCapsule(true);
+          setTimeout(() => {
+            animateIn();
+          }, 10);
         });
       }
-      
-      if (!isCorrect) {
-        setShowLearningCapsule(true);
-        setTimeout(() => {
-          animateIn();
-        }, 10);
-      }
     }
-  };
+  }, [
+    isAnswered, 
+    isIOS, 
+    springAnimation, 
+    answerAnimations, 
+    onAnswer, 
+    item.answers, 
+    item.id, 
+    item.topic, 
+    item.difficulty, 
+    userProfile?.totalQuestionsAnswered,
+    animateIn
+  ]);
+
+  // Debounced version to prevent rapid taps
+  const selectAnswer = useMemo(() => {
+    const wrappedSelectAnswer = (index: number) => {
+      measurePerformance('FeedItem_Answer_Tap', () => {
+        selectAnswerCore(index);
+      });
+    };
+    
+    return debounce(wrappedSelectAnswer, 300, { leading: true, trailing: false });
+  }, [selectAnswerCore]);
 
   const toggleLike = () => {
     // Add subtle haptic for like button too
@@ -287,21 +373,6 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
       onToggleLeaderboard();
     }
   }, [onToggleLeaderboard, item.id, item.topic]);
-
-  const isAnswered = () => {
-    return questionState?.status === 'answered' && questionState?.answerIndex !== undefined;
-  };
-  
-  const isSkipped = () => {
-    return questionState?.status === 'skipped';
-  };
-
-  const isSelectedAnswerCorrect = () => {
-    if (!isAnswered() || questionState?.answerIndex === undefined) {
-      return false;
-    }
-    return item.answers[questionState.answerIndex].isCorrect;
-  };
 
   // Memoize handler functions to prevent recreating them on each render
   const handleMouseEnter = useCallback((index: number) => {
@@ -365,6 +436,8 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
       isNotSelected && styles.nonSelectedAnswerOption,
       Platform.OS === 'web' && hoveredAnswerIndex === index && styles.hoveredAnswerOption,
       isSkipped() && styles.skippedAnswerOption,
+      // Add smooth transitions for web using conditional styling
+      Platform.OS === 'web' && ({ transition: 'all 0.2s ease-in-out' } as any),
     ];
     
     // Add neon-specific styles when neon theme is active
@@ -387,6 +460,7 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
         neonStyle.shadowOpacity = 0.4;
         if (Platform.OS === 'web') {
           neonStyle.boxShadow = '0 0 10px #4CAF50, 0 0 5px rgba(76, 175, 80, 0.5)';
+          neonStyle.transition = 'all 0.2s ease-in-out';
         }
       } else if (isSelectedIncorrect) {
         // Incorrect answer selected
@@ -396,6 +470,7 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
         neonStyle.shadowOpacity = 0.4;
         if (Platform.OS === 'web') {
           neonStyle.boxShadow = '0 0 10px #F44336, 0 0 5px rgba(244, 67, 54, 0.5)';
+          neonStyle.transition = 'all 0.2s ease-in-out';
         }
       } else if (shouldShowCorrectAnswer) {
         // This is the correct answer but user selected a different one
@@ -406,6 +481,7 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
         neonStyle.shadowOpacity = 0.5;
         if (Platform.OS === 'web') {
           neonStyle.boxShadow = '0 0 8px rgba(76, 175, 80, 0.5)';
+          neonStyle.transition = 'all 0.2s ease-in-out';
         }
       } else {
         // Default neon style for unanswered or non-relevant answers
@@ -422,7 +498,8 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
           neonStyle.boxShadow = hoveredAnswerIndex === index 
             ? `0 0 10px ${topicNeonColor}, 0 0 5px ${rgbaColor}` 
             : `0 0 5px ${rgbaColor}`;
-          neonStyle.transition = 'all 0.2s ease';
+          // Add smooth transition for web
+          neonStyle.transition = 'all 0.2s ease-in-out';
         }
       }
       
@@ -514,6 +591,10 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
       <View 
         style={styles.container}
         {...rasterizationProps}
+        // iOS touch optimizations to prevent touch delay
+        {...(Platform.OS === 'ios' && {
+          pointerEvents: 'box-none',
+        })}
       >
         {backgroundComponent}
         
@@ -583,9 +664,18 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
                         pressed && styles.pressedAnswerOption
                       ]}
                       onPress={() => selectAnswer(index)}
-                      onPressIn={() => animateAnswerPress(index, true)}
-                      onPressOut={() => animateAnswerPress(index, false)}
                       disabled={isAnswered()}
+                      // iOS touch optimizations
+                      {...(Platform.OS === 'ios' && {
+                        delayPressIn: 0,
+                        delayPressOut: 0,
+                        delayLongPress: 500,
+                      })}
+                      // Remove onPressIn/Out animations on iOS to reduce lag
+                      {...(Platform.OS !== 'ios' && {
+                        onPressIn: () => animateAnswerPress(index, true),
+                        onPressOut: () => animateAnswerPress(index, false),
+                      })}
                       {...(Platform.OS === 'web' ? {
                         onMouseEnter: () => handleMouseEnter(index),
                         onMouseLeave: handleMouseLeave
@@ -659,6 +749,11 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
                   })
                 }
               ]}
+              // iOS touch optimizations
+              {...(Platform.OS === 'ios' && {
+                delayPressIn: 0,
+                delayPressOut: 0,
+              })}
               {...(Platform.OS === 'web' ? {
                 onMouseEnter: () => handleActionMouseEnter('like'),
                 onMouseLeave: handleActionMouseLeave
@@ -702,6 +797,11 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
                   })
                 }
               ]}
+              // iOS touch optimizations
+              {...(Platform.OS === 'ios' && {
+                delayPressIn: 0,
+                delayPressOut: 0,
+              })}
               {...(Platform.OS === 'web' ? {
                 onMouseEnter: () => handleActionMouseEnter('leaderboard'),
                 onMouseLeave: handleActionMouseLeave
@@ -869,6 +969,9 @@ const styles = StyleSheet.create({
   hoveredAnswerOption: {
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     transform: [{scale: 1.02}],
+    ...(Platform.OS === 'web' ? {
+      transition: 'all 0.2s ease-in-out',
+    } as any : {}),
   },
   skippedAnswerOption: {
     opacity: 0.7,
@@ -917,6 +1020,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 10,
     borderRadius: 20,
+    ...(Platform.OS === 'web' ? {
+      transition: 'all 0.2s ease-in-out',
+    } as any : {}),
   },
   neonActionButton: {
     backgroundColor: 'transparent',
@@ -934,6 +1040,9 @@ const styles = StyleSheet.create({
   },
   hoveredActionButton: {
     backgroundColor: 'transparent',
+    ...(Platform.OS === 'web' ? {
+      transform: 'scale(1.05)',
+    } as any : {}),
   },
   icon: {
     marginRight: 5,

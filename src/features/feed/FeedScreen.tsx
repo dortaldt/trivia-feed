@@ -2659,18 +2659,18 @@ const FeedScreen: React.FC = () => {
         viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
         onMomentumScrollBegin={onMomentumScrollBegin}
         onMomentumScrollEnd={onMomentumScrollEnd}
-        onScroll={handleScroll}
-        scrollEventThrottle={isIOS ? 16 : 16} // Lower for more responsive tracking (16 = 60fps)
+        onScroll={Platform.OS === 'ios' ? undefined : handleScroll} // Disable scroll handler on iOS for better performance
+        scrollEventThrottle={Platform.OS === 'ios' ? 32 : 16} // Reduce frequency on iOS (30fps vs 60fps)
         snapToAlignment="start"
         decelerationRate={getOptimalDecelerationRate()}
         snapToInterval={viewportHeight}
         style={styles.flatList}
         contentContainerStyle={styles.flatListContent}
-        removeClippedSubviews={false} // Keep for iOS to prevent rendering issues
-        maxToRenderPerBatch={isIOS ? 2 : 2} // Render 2 items per batch on iOS for smooth transitions
-        windowSize={RENDER_WINDOW} // Keep 5 items in memory (current + 2 before + 2 after)
-        initialNumToRender={3} // Render 3 items initially (current + 2 next)
-        updateCellsBatchingPeriod={isIOS ? 50 : 100} // More frequent updates on iOS
+        removeClippedSubviews={Platform.OS === 'ios'} // Enable on iOS for better memory management
+        maxToRenderPerBatch={Platform.OS === 'ios' ? 1 : 2} // Render fewer items per batch on iOS
+        windowSize={Platform.OS === 'ios' ? 3 : RENDER_WINDOW} // Keep minimal items in memory on iOS
+        initialNumToRender={Platform.OS === 'ios' ? 2 : 3} // Render fewer items initially on iOS
+        updateCellsBatchingPeriod={Platform.OS === 'ios' ? 100 : 50} // Less frequent updates on iOS
         maintainVisibleContentPosition={{
           minIndexForVisible: 0,
           autoscrollToTopThreshold: 10
@@ -2694,6 +2694,15 @@ const FeedScreen: React.FC = () => {
         legacyImplementation={false}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
+        // iOS-specific optimizations
+        {...(Platform.OS === 'ios' && {
+          scrollIndicatorInsets: { right: 1 }, // Minimal scroll indicator
+          automaticallyAdjustContentInsets: false,
+          bounces: true,
+          bouncesZoom: false,
+          alwaysBounceVertical: false,
+          showsHorizontalScrollIndicator: false,
+        })}
       />
 
       {/* InteractionTracker Component */}
