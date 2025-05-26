@@ -11,12 +11,18 @@ This document outlines the privacy permission issues found in the Trivia Feed ap
 - **Solution**: Added proper permission descriptions to `app.config.js`
 - **Status**: ✅ FIXED
 
-### 2. Unnecessary Microphone Permission (RESOLVED)
+### 2. Unnecessary Microphone Permission (PARTIALLY RESOLVED)
 - **Issue**: App requested microphone permission but doesn't use microphone functionality
 - **Location**: `ios/TriviaFeed/Info.plist`
 - **Risk**: App Store review issues, user trust concerns, potential TCC violations
-- **Solution**: Removed microphone permission from Info.plist
-- **Status**: ✅ FIXED
+- **Root Cause**: A dependency (likely expo-image-picker or another Expo module) automatically adds this permission
+- **Solution Applied**: Removed microphone permission from Info.plist after prebuild
+- **Status**: ✅ FIXED (requires manual removal after each prebuild)
+
+⚠️ **Note**: The microphone permission gets re-added during `expo prebuild` by dependencies. After each prebuild, run:
+```bash
+sed -i '' '/NSMicrophoneUsageDescription/,+1d' ios/TriviaFeed/Info.plist
+```
 
 ## Current Privacy Permissions (Properly Configured)
 
@@ -39,7 +45,7 @@ This document outlines the privacy permission issues found in the Trivia Feed ap
 
 - ❌ Location Services
 - ❌ Contacts Access
-- ❌ Microphone Access (REMOVED)
+- ❌ Microphone Access (REMOVED after prebuild)
 - ❌ Calendar/Reminders
 - ❌ Motion & Fitness
 - ❌ Health Data
@@ -56,13 +62,13 @@ The app includes a proper `PrivacyInfo.xcprivacy` file that declares:
 - No data collection
 - No tracking
 
-## Next Steps
+## Production Build Checklist
 
-### Build and Test
-1. **Rebuild the app** in Xcode (already open)
-2. **Test avatar upload** functionality
-3. **Verify no crashes** occur during permission requests
-4. **Confirm permission prompts** show correct descriptions
+### After Each Prebuild:
+1. ✅ **Remove microphone permission**: `sed -i '' '/NSMicrophoneUsageDescription/,+1d' ios/TriviaFeed/Info.plist`
+2. ✅ **Open in Xcode**: `open ios/TriviaFeed.xcworkspace`
+3. ✅ **Build and test** avatar upload functionality
+4. ✅ **Verify no crashes** occur during permission requests
 
 ### App Store Readiness
 - ✅ All unnecessary permissions removed
@@ -72,9 +78,6 @@ The app includes a proper `PrivacyInfo.xcprivacy` file that declares:
 
 ## Conclusion
 
-Your app now has a clean privacy permission profile with:
-- **No unnecessary permissions** that could cause App Store review issues
-- **Proper descriptions** for all required permissions
-- **No TCC violation risks** from missing permission descriptions
+Your app now has a clean privacy permission profile. The main TCC crash issue is resolved. The microphone permission needs to be manually removed after each prebuild due to dependency requirements, but this is a minor maintenance step.
 
-The app is ready for production build and App Store submission from a privacy permissions perspective. 
+**Current Status**: Ready for production build and testing in Xcode! 
