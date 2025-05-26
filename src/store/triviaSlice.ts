@@ -773,6 +773,19 @@ const triviaSlice = createSlice({
     loadUserDataStart: (state) => {
       state.isSyncing = true;
     },
+    // IMPORTANT: This reducer handles loading user profile data from the database
+    // 
+    // HISTORICAL CONTEXT: There was a previous issue where weights were being reset to defaults
+    // during active sessions. An "ULTRA-CONSERVATIVE" approach was added to prevent this, but it
+    // was too aggressive and prevented legitimate weight loading from the database on fresh sessions.
+    //
+    // CURRENT LOGIC: We now use smart logic that distinguishes between:
+    // 1. Fresh sessions with default weights → Load from database (allows personalization to persist)
+    // 2. Active sessions with personalized weights + unsaved changes → Preserve local (prevents data loss)
+    //
+    // This ensures that:
+    // - Users don't lose their personalized weights between sessions (the original issue)
+    // - Users don't lose unsaved changes during active sessions (the protection we need)
     loadUserDataSuccess: (state, action: PayloadAction<{
       profile: UserProfile | null;
       timestamp: number;
@@ -781,25 +794,49 @@ const triviaSlice = createSlice({
       
       // Only update profile if we received one
       if (profile) {
-        // ULTRA-CONSERVATIVE APPROACH: Never overwrite local profile if ANY interactions exist
-        // This prevents weight resets during active sessions
-        const localHasAnyInteractions = state.syncedWeightChanges.length > 0 || 
-                                       state.syncedInteractions.length > 0 ||
-                                       Object.keys(state.questions).length > 0;
-        
+        // Check if local profile has actual personalized weights (not just defaults)
         const localHasNonDefaultWeights = Object.values(state.userProfile.topics).some(
           (topic: any) => Math.abs(topic.weight - 0.5) >= 0.01
         );
         
-        // NEVER overwrite if we have any local activity or non-default weights
-        if (localHasAnyInteractions || localHasNonDefaultWeights) {
-          console.log('[Redux] PRESERVING local profile: has active session data or personalized weights');
-          console.log(`[Redux] Local interactions: ${state.syncedInteractions.length}, weight changes: ${state.syncedWeightChanges.length}, questions: ${Object.keys(state.questions).length}`);
-          console.log(`[Redux] Local has non-default weights: ${localHasNonDefaultWeights}`);
+        // Check if we have unsaved local changes that would be lost
+        const hasUnsavedChanges = state.syncedWeightChanges.length > 0 || 
+                                 state.syncedInteractions.length > 0;
+        
+        // Check if this is an active session with recent interactions
+        const hasRecentActivity = Object.keys(state.questions).length > 0;
+        
+        // SMART LOGIC: Only preserve local weights if they are personalized AND we have unsaved changes
+        // This allows loading database weights on fresh sessions while protecting active sessions
+        if (localHasNonDefaultWeights && hasUnsavedChanges) {
+          console.log('[Redux] PRESERVING local profile: has personalized weights with unsaved changes');
+          console.log(`[Redux] Local has non-default weights: ${localHasNonDefaultWeights}, unsaved changes: ${hasUnsavedChanges}`);
+          console.log(`[Redux] Unsaved interactions: ${state.syncedInteractions.length}, weight changes: ${state.syncedWeightChanges.length}`);
           // Keep the existing local profile - do not overwrite
         } else {
-          // Only use database profile if local is completely fresh AND has all default weights
-          console.log('[Redux] Using database profile: local profile is completely fresh with default weights');
+          // Use database profile in these cases:
+          // 1. Local has default weights (fresh session)
+          // 2. Local has personalized weights but no unsaved changes (safe to update)
+          // 3. No recent activity (fresh session)
+          const reason = !localHasNonDefaultWeights ? 'local has default weights' :
+                        !hasUnsavedChanges ? 'no unsaved changes' : 'no recent activity';
+          
+          console.log(`[Redux] Using database profile: ${reason}`);
+          console.log(`[Redux] Local non-default weights: ${localHasNonDefaultWeights}, unsaved changes: ${hasUnsavedChanges}, recent activity: ${hasRecentActivity}`);
+          
+          // Log weight comparison for debugging
+          const localTopicCount = Object.keys(state.userProfile.topics).length;
+          const remoteTopicCount = Object.keys(profile.topics).length;
+          console.log(`[Redux] Weight comparison - Local topics: ${localTopicCount}, Remote topics: ${remoteTopicCount}`);
+          
+          // Sample a few weights for comparison
+          const sampleTopics = Object.keys(profile.topics).slice(0, 3);
+          sampleTopics.forEach(topic => {
+            const localWeight = state.userProfile.topics[topic]?.weight || 0.5;
+            const remoteWeight = profile.topics[topic]?.weight || 0.5;
+            console.log(`[Redux] ${topic}: local=${localWeight.toFixed(3)}, remote=${remoteWeight.toFixed(3)}`);
+          });
+          
           state.userProfile = profile;
         }
       }
