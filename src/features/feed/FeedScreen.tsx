@@ -86,6 +86,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { TopicRings } from '../../components/TopicRings';
 import { AllRingsModal } from '../../components/AllRingsModal';
 import { useTopicRings } from '../../hooks/useTopicRings';
+import { useWebScrollPrevention } from '../../hooks/useWebScrollPrevention';
 
 const { width, height } = Dimensions.get('window');
 
@@ -550,6 +551,14 @@ const FeedScreen: React.FC = () => {
       };
     }
   }, []);
+
+  // Use the DOM scroll prevention hook for web platforms
+  useWebScrollPrevention({
+    flatListRef,
+    currentIndex,
+    viewportHeight,
+    personalizedFeedLength: personalizedFeed.length
+  });
 
   const createTikTokAnimation = () => {
     try {
@@ -2659,7 +2668,7 @@ const FeedScreen: React.FC = () => {
         viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
         onMomentumScrollBegin={onMomentumScrollBegin}
         onMomentumScrollEnd={onMomentumScrollEnd}
-        onScroll={Platform.OS === 'ios' ? undefined : handleScroll} // Disable scroll handler on iOS for better performance
+        onScroll={Platform.OS === 'web' ? undefined : handleScroll} // Disable React scroll handler on web - using DOM prevention instead
         scrollEventThrottle={Platform.OS === 'ios' ? 32 : 16} // Reduce frequency on iOS (30fps vs 60fps)
         snapToAlignment="start"
         decelerationRate={getOptimalDecelerationRate()}

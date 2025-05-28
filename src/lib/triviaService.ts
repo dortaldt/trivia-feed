@@ -538,7 +538,8 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
       let query = supabase
         .from('trivia_questions')
         .select('*')
-        .gt('created_at', new Date(lastFetchTimestamp).toISOString());
+        .gt('created_at', new Date(lastFetchTimestamp).toISOString())
+        .limit(100);
       
       // Apply topic filter if configured
       if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
@@ -570,7 +571,7 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
         console.log(`Split into ${chunks.length} chunks of max ${chunkSize} IDs each`);
         
         let allNewQuestions: TriviaQuestion[] = [];
-        const allExistingIds = new Set(existingIds); // For final filtering
+        const allExistingIds = new Set(existingIds);
         
         // Process each chunk with database-side exclusion
         for (let i = 0; i < chunks.length; i++) {
@@ -582,7 +583,8 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
             let query = supabase
               .from('trivia_questions')
               .select('*')
-              .not('id', 'in', `(${chunk.join(',')})`);
+              .not('id', 'in', `(${chunk.join(',')})`)
+              .limit(100);
             
             // Apply topic filter if configured (preserving existing logic)
             if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
@@ -604,6 +606,12 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
               
               allNewQuestions.push(...filteredChunkData);
               console.log(`Chunk ${i + 1} contributed ${filteredChunkData.length} new questions`);
+              
+              // Stop if we've collected enough questions
+              if (allNewQuestions.length >= 100) {
+                console.log(`Reached 100 question limit, stopping chunk processing`);
+                break;
+              }
             }
           } catch (chunkError) {
             console.error(`Error processing chunk ${i + 1}:`, chunkError);
@@ -611,7 +619,8 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
           }
         }
         
-        data = allNewQuestions;
+        // Limit to 100 questions total
+        data = allNewQuestions.slice(0, 100);
         error = null;
         
         // Remove any duplicates that might occur between chunks
@@ -634,7 +643,8 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
         let query = supabase
           .from('trivia_questions')
           .select('*')
-          .not('id', 'in', `(${existingIds.join(',')})`);
+          .not('id', 'in', `(${existingIds.join(',')})`)
+          .limit(100);
         
         // Apply topic filter if configured (preserving existing logic)
         if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
@@ -653,7 +663,8 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
       
       let query = supabase
         .from('trivia_questions')
-        .select('*');
+        .select('*')
+        .limit(100);
       
       // Apply topic filter if configured
       if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {

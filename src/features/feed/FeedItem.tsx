@@ -323,7 +323,7 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
       });
     };
     
-    return debounce(wrappedSelectAnswer, 300, { leading: true, trailing: false });
+    return debounce(wrappedSelectAnswer, 100, { leading: true, trailing: false });
   }, [selectAnswerCore]);
 
   const toggleLike = () => {

@@ -198,58 +198,26 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     return persistentTopicMap;
   }, [persistentTopicMap]);
 
-  // Get correct answers count for a topic from Redux questions state
-  const getCorrectAnswersForTopic = (topic: string): number => {
-    let correctCount = 0;
-    const matchingQuestions: string[] = [];
-    const allAnsweredQuestions: string[] = [];
-    const missingTopicQuestions: string[] = [];
+  // Create a memoized count of correct answers by topic to prevent unnecessary ring updates
+  const correctAnswersByTopic = useMemo(() => {
+    const counts: { [topic: string]: number } = {};
     
-    // Go through all questions in Redux state
+    // Only count questions that are answered correctly
     Object.entries(questions).forEach(([questionId, questionState]) => {
-      if (questionState.status === 'answered') {
-        allAnsweredQuestions.push(questionId);
-        
-        if (questionState.isCorrect) {
-          // Try to get topic from persistent map
-          let questionTopic = feedItemsMap.get(questionId);
-          
-          if (questionTopic === topic) {
-            correctCount++;
-            matchingQuestions.push(questionId);
-          } else if (!questionTopic) {
-            // Question not found in topic map
-            missingTopicQuestions.push(questionId);
-          }
+      if (questionState.status === 'answered' && questionState.isCorrect) {
+        const questionTopic = feedItemsMap.get(questionId);
+        if (questionTopic) {
+          counts[questionTopic] = (counts[questionTopic] || 0) + 1;
         }
       }
     });
     
-    // Debug logging for count calculation - always log for Mathematics and Science
-    if (topic === 'Science' || topic === 'Mathematics' || matchingQuestions.length > 0 || missingTopicQuestions.length > 0) {
-      // console.log(`[ANSWER CORRECTLY TOPIC ${topic}] COUNT: ${correctCount} (found: ${matchingQuestions.join(', ')}) (missing from map: ${missingTopicQuestions.join(', ')})`);
-      
-      // Additional debugging: show all answered questions and their topics
-      if (topic === 'Mathematics') {
-        // console.log(`[MATHEMATICS DEBUG] All answered questions with topics:`);
-        Object.entries(questions).forEach(([qId, qState]) => {
-          if (qState.status === 'answered') {
-            const qTopic = feedItemsMap.get(qId);
-            // console.log(`  - ${qId}: status=${qState.status}, isCorrect=${qState.isCorrect}, topic="${qTopic || 'NOT_FOUND'}"`);
-          }
-        });
-        
-        // console.log(`[MATHEMATICS DEBUG] Topic map size: ${feedItemsMap.size} items`);
-        // Show all topics in the map
-        const topicsInMap = new Set();
-        feedItemsMap.forEach((topic, questionId) => {
-          topicsInMap.add(topic);
-        });
-        // console.log(`[MATHEMATICS DEBUG] Topics in map: [${Array.from(topicsInMap).join(', ')}]`);
-      }
-    }
-    
-    return correctCount;
+    return counts;
+  }, [questions, feedItemsMap]);
+
+  // Get correct answers count for a topic from the memoized counts
+  const getCorrectAnswersForTopic = (topic: string): number => {
+    return correctAnswersByTopic[topic] || 0;
   };
 
   // Create or update ring progress for a topic - PURE FUNCTION (no state updates)
@@ -354,10 +322,8 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     return () => clearInterval(interval);
   }, [isLoaded, getStorageKey, persistentTopicMap.size]);
 
-  // Update rings when questions or user profile changes (only after storage is loaded)
+  // Update rings when correct answers change - OPTIMIZED to prevent spam
   useEffect(() => {
-    // console.log(`[RING EFFECT] Triggered - questions count: ${Object.keys(questions).length}, persistentTopicMap size: ${persistentTopicMap.size}, isLoaded: ${isLoaded}, questionsLoaded: ${questionsLoaded}`);
-    
     if (userProfile?.topics && isLoaded && questionsLoaded) {
       let hasChanges = false;
       const newRings = { ...ringsState.rings };
@@ -376,8 +342,8 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
           // Use the cached count and only add new Redux answers
           console.log(`[RING CACHE PRESERVE] ${topic}: Using cached count ${existingRing.totalCorrectAnswers} instead of Redux count ${reduxCorrectCount}`);
           correctAnswersToUse = existingRing.totalCorrectAnswers;
-        } else if (reduxCorrectCount > 0) {
-          // Redux has new progress, use it
+        } else if (reduxCorrectCount > 0 && (!existingRing || reduxCorrectCount > existingRing.totalCorrectAnswers)) {
+          // Only log when Redux count is actually higher than existing count (real progress)
           console.log(`[RING PROGRESS UPDATE] ${topic}: Using Redux count ${reduxCorrectCount} (cached: ${existingRing?.totalCorrectAnswers || 0})`);
         }
         
@@ -419,7 +385,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     } else {
       // console.log(`[RING EFFECT] Skipping update - userProfile.topics: ${!!userProfile?.topics}, isLoaded: ${isLoaded}, questionsLoaded: ${questionsLoaded}`);
     }
-  }, [questions, userProfile, isLoaded, questionsLoaded, persistentTopicMap]);
+  }, [correctAnswersByTopic, userProfile, isLoaded, questionsLoaded, persistentTopicMap]);
 
   // Calculate top 3 topic rings + recent ring using useMemo to prevent recalculation
   const topRings = useMemo((): TopicRingProgress[] => {
@@ -445,7 +411,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         let mostRecentQuestionId: string | null = null;
         
         // Get all correct answers for non-top-3 topics
-        const correctAnswersForNonTop3: Array<{topic: string, questionId: string}> = [];
+        const correctAnswersForNonTop3: {topic: string, questionId: string}[] = [];
         
         Object.entries(questions).forEach(([questionId, questionState]) => {
           if (questionState.status === 'answered' && questionState.isCorrect) {

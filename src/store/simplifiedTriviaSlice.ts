@@ -171,75 +171,53 @@ const triviaSlice = createSlice({
     skipQuestion: (state, action: PayloadAction<{ questionId: string; userId?: string }>) => {
       const { questionId, userId } = action.payload;
       
-      // Log more detail about the question being skipped
-      console.log(`[Redux] Processing skip action for question: ${questionId}`);
+      // Early return if already processed to avoid redundant work
+      if (state.questions[questionId]?.status === 'skipped') {
+        console.log(`[Redux] Question ${questionId} already skipped, skipping duplicate processing`);
+        return;
+      }
       
       // Only mark as skipped if it hasn't been answered yet
       if (!state.questions[questionId] || state.questions[questionId].status !== 'answered') {
-        // Get previous state for logging
-        const previousState = state.questions[questionId]?.status || 'unanswered';
-        
         // Calculate time spent
         const startTime = state.interactionStartTimes[questionId] || Date.now();
         const timeSpent = Date.now() - startTime;
         
-        // Skip logging if already marked as skipped (avoids duplicate log entries)
-        if (previousState !== 'skipped') {
-          // Log the skipped question and timing information
-          console.log(`[Redux] Skipping question ${questionId}: time spent = ${timeSpent}ms, previous state=${previousState}`);
+        console.log(`[Redux] Skipping question ${questionId}: time spent = ${timeSpent}ms`);
+        
+        state.questions[questionId] = { 
+          status: 'skipped',
+          timeSpent
+        };
+        
+        // Increment interaction counter
+        state.interactionCount++;
+        
+        // Record interaction in the user profile (optimized)
+        const now = Date.now();
+        const questionInteraction = {
+          timeSpent,
+          wasSkipped: true,
+          viewedAt: now
+        };
+        
+        // Update interactions directly in the profile
+        if (!state.userProfile.interactions) {
+          state.userProfile.interactions = {};
+        }
+        
+        state.userProfile.interactions[questionId] = questionInteraction;
+        
+        // Optimize: Only sync based on interaction threshold to reduce database calls
+        if (userId) {
+          const shouldSync = !state.firstInteractionProcessed || 
+                          state.interactionCount >= SYNC_INTERACTION_THRESHOLD;
           
-          state.questions[questionId] = { 
-            status: 'skipped',
-            timeSpent
-          };
-          
-          // Increment interaction counter
-          state.interactionCount++;
-          
-          // Record interaction in the user profile
-          const now = Date.now();
-          const questionInteraction = {
-            timeSpent,
-            wasSkipped: true,
-            viewedAt: now
-          };
-          
-          // Update interactions directly in the profile
-          if (!state.userProfile.interactions) {
-            state.userProfile.interactions = {};
-          }
-          
-          state.userProfile.interactions[questionId] = questionInteraction;
-          
-          // Get the feed item for this question to update user profile
-          const feedItem = state.personalizedFeed.find(item => item.id === questionId);
-          
-          if (feedItem && state.userProfile) {
-            // Update the profile weights
-            const result = updateUserProfileFn(
-              state.userProfile,
-              questionId,
-              questionInteraction,
-              feedItem
-            );
-            
-            // Apply the updated profile
-            state.userProfile = result.updatedProfile;
-            
-            // If user is logged in, sync the profile based on interaction count (WRITE-ONLY)
-            if (userId) {
-              const shouldSync = !state.firstInteractionProcessed || 
-                              state.interactionCount >= SYNC_INTERACTION_THRESHOLD;
-              
-              if (shouldSync) {
-                console.log(`[Redux] WRITE-ONLY profile update after ${state.interactionCount} interactions`);
-                safeSyncUserProfile(userId, state.userProfile);
-                state.interactionCount = 0; // Reset counter after sync
-                state.firstInteractionProcessed = true;
-              } else {
-                console.log(`[Redux] Skipping update (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
-              }
-            }
+          if (shouldSync) {
+            console.log(`[Redux] BATCHED profile sync after ${state.interactionCount} interactions`);
+            safeSyncUserProfile(userId, state.userProfile);
+            state.interactionCount = 0; // Reset counter after sync
+            state.firstInteractionProcessed = true;
           }
         }
       }

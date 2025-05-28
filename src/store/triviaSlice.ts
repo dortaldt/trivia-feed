@@ -744,8 +744,7 @@ const triviaSlice = createSlice({
       
       // Log the fresh profile to verify weights
       console.log('[Redux] Fresh profile topic weights:', 
-        Object.entries(freshProfile.topics).map(([topic, data]) => 
-          `${topic}: ${data.weight.toFixed(2)}`).join(', ')
+        `${Object.keys(freshProfile.topics).length} topics initialized with default weights (0.50)`
       );
       
       // Set the state with deep clone to ensure no references are shared

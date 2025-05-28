@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator , Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/lib/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 // This is a dedicated callback handler for Supabase authentication

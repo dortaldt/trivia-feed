@@ -56,27 +56,59 @@ async function removeDuplicateQuestions() {
       console.log(`FILTER APPLIED: Only showing groups containing '${CONFIG.FILTER_KEYWORD}'`);
     }
     
-    // Get all questions with their answers and metadata
-    const { data: questions, error } = await supabase
+    // First, get the total count of questions
+    const { count: totalCount, error: countError } = await supabase
       .from('trivia_questions')
-      .select('id, question_text, answer_choices, correct_answer, topic, subtopic, tags, difficulty, language, created_at')
-      .order('created_at', { ascending: true }); // Order by creation date
+      .select('*', { count: 'exact', head: true });
     
-    if (error) {
-      console.error('Error fetching questions:', error);
+    if (countError) {
+      console.error('Error getting question count:', countError);
       process.exit(1);
     }
     
-    if (!questions || questions.length === 0) {
+    console.log(`Total questions in database: ${totalCount}`);
+    
+    // Fetch all questions in batches to overcome Supabase limits
+    const batchSize = 1000; // Supabase's default limit
+    const allQuestions = [];
+    let offset = 0;
+    
+    while (offset < totalCount) {
+      console.log(`Fetching batch ${Math.floor(offset / batchSize) + 1}/${Math.ceil(totalCount / batchSize)} (${offset + 1}-${Math.min(offset + batchSize, totalCount)} of ${totalCount})...`);
+      
+      const { data: batchQuestions, error: batchError } = await supabase
+        .from('trivia_questions')
+        .select('id, question_text, answer_choices, correct_answer, topic, subtopic, tags, difficulty, language, created_at')
+        .order('created_at', { ascending: true })
+        .range(offset, offset + batchSize - 1);
+      
+      if (batchError) {
+        console.error(`Error fetching batch at offset ${offset}:`, batchError);
+        process.exit(1);
+      }
+      
+      if (!batchQuestions || batchQuestions.length === 0) {
+        console.log(`No more questions found at offset ${offset}`);
+        break;
+      }
+      
+      allQuestions.push(...batchQuestions);
+      offset += batchSize;
+      
+      // Add a small delay between batches to be nice to the database
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    console.log(`Successfully fetched ${allQuestions.length} questions total.`);
+    
+    if (allQuestions.length === 0) {
       console.log('No questions found in the database.');
       return;
     }
     
-    console.log(`Found ${questions.length} questions to analyze...`);
-    
     // If filter is "amazon", show a count of how many amazon questions exist
     if (CONFIG.FILTER_KEYWORD.toLowerCase() === 'amazon') {
-      const amazonQuestions = questions.filter(q => 
+      const amazonQuestions = allQuestions.filter(q => 
         (q.question_text && q.question_text.toLowerCase().includes('amazon')) ||
         (q.correct_answer && q.correct_answer.toLowerCase().includes('amazon'))
       );
@@ -85,7 +117,8 @@ async function removeDuplicateQuestions() {
     }
     
     // Preprocess questions with enhanced metadata
-    const processedQuestions = questions.map(q => ({
+    console.log('Preprocessing questions with enhanced metadata...');
+    const processedQuestions = allQuestions.map(q => ({
       ...q,
       fingerprint: generateEnhancedFingerprint(q.question_text),
       normalizedAnswer: q.correct_answer ? q.correct_answer.toLowerCase().trim() : '',

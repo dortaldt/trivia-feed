@@ -1,8 +1,7 @@
 import React from 'react';
-import { StyleProp, ViewStyle, TextStyle, ImageStyle, StyleSheet } from 'react-native';
+import { StyleProp, ViewStyle, TextStyle, ImageStyle, StyleSheet , Platform } from 'react-native';
 import { useDesignSystem } from '@/src/hooks/useDesignSystem';
 import { useTheme } from '@/src/context/ThemeContext';
-import { Platform } from 'react-native';
 
 type AnyStyle = ViewStyle | TextStyle | ImageStyle;
 

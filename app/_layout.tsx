@@ -12,6 +12,7 @@ import * as Font from 'expo-font';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Analytics } from '@vercel/analytics/react';
 import { initMixpanel } from '../src/lib/mixpanelAnalytics';
+import { suppressWebWarnings } from '../src/utils/webCompatibility';
 
 // Import icons - use default imports instead of named imports
 // This can help resolve some naming conflicts
@@ -30,6 +31,9 @@ import { SimplifiedSyncManager } from '@/src/components/SimplifiedSyncManager';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
+
+// Initialize web compatibility fixes
+suppressWebWarnings();
 
 // Auth protection component to redirect users based on auth state
 function AuthWrapper({ children }: { children: React.ReactNode }) {

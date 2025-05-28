@@ -470,7 +470,7 @@ async function _fetchUserProfile(userId: string, forceLoad: boolean = false): Pr
     if (Platform.OS === 'ios') {
       console.log('🍎 iOS: Validating fetched data structure');
       if (!data.topics || typeof data.topics !== 'object' || Object.keys(data.topics).length === 0) {
-        console.log('🍎 iOS: Warning - topics data is empty or invalid:', data.topics);
+        console.log('🍎 iOS: Warning - topics data is empty or invalid. Type:', typeof data.topics, 'Keys:', Object.keys(data.topics || {}).length);
       }
     }
     
@@ -490,7 +490,7 @@ async function _fetchUserProfile(userId: string, forceLoad: boolean = false): Pr
         console.log(`Sample topic "${sampleTopicKey}": `, JSON.stringify(data.topics[sampleTopicKey]).substring(0, 100) + '...');
       }
     } else {
-      console.log('WARNING: Topics data is not an object:', typeof data.topics);
+      console.log('WARNING: Topics data is not an object. Type:', typeof data.topics, 'Keys:', Object.keys(data.topics || {}).length);
     }
     
     return {
