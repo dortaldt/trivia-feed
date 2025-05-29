@@ -3,6 +3,30 @@ import { getColdStartFeed } from './coldStartStrategy';
 import { WeightChange } from '../types/trackerTypes';
 import { ALL_TOPICS } from '../constants/topics';
 
+// Simple cache for question score calculations
+const scoreCache = new Map<string, { score: number; explanations: string[]; profileHash: string }>();
+
+// Cache statistics tracking
+let cacheStats = { hits: 0, misses: 0 };
+
+// Helper function to create a hash of relevant user profile parts for a question
+function getProfileHashForQuestion(userProfile: UserProfile, question: FeedItem): string {
+  const topic = question.topic;
+  const subtopic = question.tags?.[0] || 'General';
+  const branch = question.tags?.[1] || 'General';
+  
+  const topicData = userProfile.topics[topic];
+  const interaction = userProfile.interactions[question.id];
+  
+  return JSON.stringify({
+    topicWeight: topicData?.weight,
+    subtopicWeight: topicData?.subtopics[subtopic]?.weight,
+    branchWeight: topicData?.subtopics[subtopic]?.branches[branch]?.weight,
+    interaction: interaction,
+    lastRefreshed: userProfile.lastRefreshed
+  });
+}
+
 // Types for user interaction metrics
 export type QuestionInteraction = {
   timeSpent: number;
@@ -81,6 +105,20 @@ export function calculateQuestionScore(
   question: FeedItem,
   userProfile: UserProfile
 ): { score: number; explanations: string[] } {
+  // Check cache first
+  const cacheKey = question.id;
+  const profileHash = getProfileHashForQuestion(userProfile, question);
+  const cached = scoreCache.get(cacheKey);
+  
+  if (cached && cached.profileHash === profileHash) {
+    cacheStats.hits++;
+    console.log(`🎯 [CACHE HIT] ${question.id.substring(0, 8)}... (${cacheStats.hits}H/${cacheStats.misses}M - ${((cacheStats.hits / (cacheStats.hits + cacheStats.misses)) * 100).toFixed(1)}% hit rate)`);
+    return { score: cached.score, explanations: cached.explanations };
+  }
+
+  cacheStats.misses++;
+  console.log(`🔄 [CACHE MISS] ${question.id.substring(0, 8)}... calculating... (${cacheStats.hits}H/${cacheStats.misses}M)`);
+
   // Performance tracker ⏱️ - Personalization Score Calculation START
   const scoreCalculationStart = performance.now();
   console.log(`[Performance tracker ⏱️] Personalization Score Calculation - Started: ${scoreCalculationStart.toFixed(2)}ms`);
@@ -139,6 +177,17 @@ export function calculateQuestionScore(
     // 3. Novelty bonus for unseen questions
     score += WEIGHTS.novelty;
     explanations.push(`Novelty bonus: +${WEIGHTS.novelty.toFixed(2)} (never seen)`);
+  }
+  
+  // Cache the result before returning
+  scoreCache.set(cacheKey, { score, explanations, profileHash });
+  
+  // Optional: Limit cache size to prevent memory leaks
+  if (scoreCache.size > 1000) {
+    const firstKey = scoreCache.keys().next().value;
+    if (firstKey) {
+      scoreCache.delete(firstKey);
+    }
   }
   
   // Performance tracker ⏱️ - Personalization Score Calculation END
