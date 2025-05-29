@@ -6,9 +6,6 @@ import { ALL_TOPICS } from '../constants/topics';
 // Simple cache for question score calculations
 const scoreCache = new Map<string, { score: number; explanations: string[]; profileHash: string }>();
 
-// Cache statistics tracking
-let cacheStats = { hits: 0, misses: 0 };
-
 // Helper function to create a hash of relevant user profile parts for a question
 function getProfileHashForQuestion(userProfile: UserProfile, question: FeedItem): string {
   const topic = question.topic;
@@ -111,18 +108,9 @@ export function calculateQuestionScore(
   const cached = scoreCache.get(cacheKey);
   
   if (cached && cached.profileHash === profileHash) {
-    cacheStats.hits++;
-    console.log(`🎯 [CACHE HIT] ${question.id.substring(0, 8)}... (${cacheStats.hits}H/${cacheStats.misses}M - ${((cacheStats.hits / (cacheStats.hits + cacheStats.misses)) * 100).toFixed(1)}% hit rate)`);
     return { score: cached.score, explanations: cached.explanations };
   }
 
-  cacheStats.misses++;
-  console.log(`🔄 [CACHE MISS] ${question.id.substring(0, 8)}... calculating... (${cacheStats.hits}H/${cacheStats.misses}M)`);
-
-  // Performance tracker ⏱️ - Personalization Score Calculation START
-  const scoreCalculationStart = performance.now();
-  console.log(`[Performance tracker ⏱️] Personalization Score Calculation - Started: ${scoreCalculationStart.toFixed(2)}ms`);
-  
   const explanations: string[] = [];
   let score = 0;
   
@@ -182,17 +170,13 @@ export function calculateQuestionScore(
   // Cache the result before returning
   scoreCache.set(cacheKey, { score, explanations, profileHash });
   
-  // Optional: Limit cache size to prevent memory leaks
+  // Limit cache size to prevent memory leaks
   if (scoreCache.size > 1000) {
     const firstKey = scoreCache.keys().next().value;
     if (firstKey) {
       scoreCache.delete(firstKey);
     }
   }
-  
-  // Performance tracker ⏱️ - Personalization Score Calculation END
-  const scoreCalculationEnd = performance.now();
-  console.log(`[Performance tracker ⏱️] Personalization Score Calculation - Ended: ${scoreCalculationEnd.toFixed(2)}ms | Duration: ${(scoreCalculationEnd - scoreCalculationStart).toFixed(2)}ms`);
   
   return { score, explanations };
 }
@@ -206,10 +190,6 @@ export function updateUserProfile(
   interaction: Partial<QuestionInteraction>,
   question: FeedItem
 ): { updatedProfile: UserProfile; weightChange: WeightChange | null } {
-  // Performance tracker ⏱️ - Weight Update Calculation START
-  const weightUpdateStart = performance.now();
-  console.log(`[Performance tracker ⏱️] Weight Update Calculation - Started: ${weightUpdateStart.toFixed(2)}ms`);
-  
   // Use JSON parse/stringify for a full deep clone to avoid extensibility issues
   const updatedProfile = JSON.parse(JSON.stringify(userProfile)) as UserProfile;
   
@@ -246,7 +226,6 @@ export function updateUserProfile(
       lastViewed: currentTime
     };
     updatedProfile.topics[topic] = topicData;
-    // console.log(`[WEIGHT UPDATE] Creating new topic ${topic} with default weight ${DEFAULT_TOPIC_WEIGHT}`);
   }
   
   // Ensure subtopic exists with default weight
@@ -259,7 +238,6 @@ export function updateUserProfile(
       branches: {},
       lastViewed: currentTime
     };
-    // console.log(`[WEIGHT UPDATE] Creating new subtopic ${subtopic} with default weight ${DEFAULT_SUBTOPIC_WEIGHT}`);
   }
   
   // Ensure branch exists with default weight
@@ -271,7 +249,6 @@ export function updateUserProfile(
       weight: DEFAULT_BRANCH_WEIGHT,
       lastViewed: currentTime
     };
-    // console.log(`[WEIGHT UPDATE] Creating new branch ${branch} with default weight ${DEFAULT_BRANCH_WEIGHT}`);
   }
   
   // Update weights
@@ -285,9 +262,6 @@ export function updateUserProfile(
     subtopicWeight: subtopicNode.weight,
     branchWeight: branchNode.weight
   };
-  
-  // REMOVED: Problematic weight reset logic that was causing weights to reset to default
-  // This was preventing weight changes from accumulating properly across interactions
   
   // Update timestamps
   topicNode.lastViewed = currentTime;
@@ -423,10 +397,6 @@ export function updateUserProfile(
     skipCompensation: skipCompensation.applied ? skipCompensation : undefined
   };
   
-  // Performance tracker ⏱️ - Weight Update Calculation END
-  const weightUpdateEnd = performance.now();
-  console.log(`[Performance tracker ⏱️] Weight Update Calculation - Ended: ${weightUpdateEnd.toFixed(2)}ms | Duration: ${(weightUpdateEnd - weightUpdateStart).toFixed(2)}ms`);
-  
   return { updatedProfile, weightChange };
 }
 
@@ -434,10 +404,6 @@ export function updateUserProfile(
  * Applies weight decay to inactive topics/subtopics/branches
  */
 export function applyWeightDecay(userProfile: UserProfile): UserProfile {
-  // Performance tracker ⏱️ - Weight Decay Calculation START
-  const weightDecayStart = performance.now();
-  console.log(`[Performance tracker ⏱️] Weight Decay Calculation - Started: ${weightDecayStart.toFixed(2)}ms`);
-  
   const updatedProfile = JSON.parse(JSON.stringify(userProfile)) as UserProfile;
   const currentTime = Date.now();
   const oneDayMs = 24 * 60 * 60 * 1000;
@@ -472,10 +438,6 @@ export function applyWeightDecay(userProfile: UserProfile): UserProfile {
     }
   });
   
-  // Performance tracker ⏱️ - Weight Decay Calculation END
-  const weightDecayEnd = performance.now();
-  console.log(`[Performance tracker ⏱️] Weight Decay Calculation - Ended: ${weightDecayEnd.toFixed(2)}ms | Duration: ${(weightDecayEnd - weightDecayStart).toFixed(2)}ms`);
-  
   return updatedProfile;
 }
 
@@ -488,28 +450,17 @@ export function getPersonalizedFeed(
   userProfile: UserProfile,
   count: number = 20
 ): { items: FeedItem[], explanations: { [questionId: string]: string[] } } {
-  // Performance tracker ⏱️ - Personalized Feed Generation START
-  const feedGenerationStart = performance.now();
-  console.log(`[Performance tracker ⏱️] Personalized Feed Generation - Started: ${feedGenerationStart.toFixed(2)}ms`);
-  
   // Check if we should use cold start strategy
   const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
   const shouldUseColdStart = !userProfile.coldStartComplete && totalQuestionsAnswered < 20;
   
   if (shouldUseColdStart) {
-    console.log('Using Cold Start Strategy for feed');
-    const { getColdStartFeed } = require('./coldStartStrategy');
     const result = getColdStartFeed(allItems, userProfile, count);
-    
-    // Performance tracker ⏱️ - Personalized Feed Generation END (Cold Start)
-    const feedGenerationEnd = performance.now();
-    console.log(`[Performance tracker ⏱️] Personalized Feed Generation (Cold Start) - Ended: ${feedGenerationEnd.toFixed(2)}ms | Duration: ${(feedGenerationEnd - feedGenerationStart).toFixed(2)}ms`);
     
     return result;
   }
   
   // Otherwise, continue with normal personalization logic
-  console.log('Using Normal Personalization Strategy for feed');
   
   // Apply weight decay to inactive topics/subtopics/branches
   const updatedProfile = applyWeightDecay(userProfile);
@@ -724,10 +675,6 @@ export function getPersonalizedFeed(
     }
     i++;
   }
-  
-  // Performance tracker ⏱️ - Personalized Feed Generation END
-  const feedGenerationEnd = performance.now();
-  console.log(`[Performance tracker ⏱️] Personalized Feed Generation - Ended: ${feedGenerationEnd.toFixed(2)}ms | Duration: ${(feedGenerationEnd - feedGenerationStart).toFixed(2)}ms`);
   
   return { items: selectedItems, explanations };
 }
