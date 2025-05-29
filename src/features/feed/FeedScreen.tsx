@@ -703,8 +703,8 @@ const FeedScreen: React.FC = () => {
   // Helper function to add questions at checkpoints
   const addQuestionsAtCheckpoint = useCallback((checkpointPosition: number, updatedProfile: UserProfile) => {
     if (feedData.length > personalizedFeed.length) {
-      console.log(`[Feed] Adding questions at checkpoint position ${checkpointPosition}`);
-      console.log(`[Feed] Current user profile state:`, JSON.stringify(updatedProfile.topics, null, 2));
+      // console.log(`[Feed] Adding questions at checkpoint position ${checkpointPosition}`);
+      // console.log(`[Feed] Current user profile state:`, JSON.stringify(updatedProfile.topics, null, 2));
       
       // Create a set of IDs that are already in our feed
       const currentFeed = [...personalizedFeed];
@@ -722,11 +722,12 @@ const FeedScreen: React.FC = () => {
         !existingIds.has(item.id) && !answeredQuestionIds.has(item.id)
       );
       
-      console.log(`[Feed] Checkpoint filtering: ${feedData.length} total, ${existingIds.size} in feed, ${answeredQuestionIds.size} answered/skipped, ${availableQuestions.length} available`);
+      // Remove verbose checkpoint filtering log
+      // console.log(`[Feed] Checkpoint filtering: ${feedData.length} total, ${existingIds.size} in feed, ${answeredQuestionIds.size} answered/skipped, ${availableQuestions.length} available`);
       
       // NEW: Track topics already in the feed to ensure diversity
       const topicsInCurrentFeed = new Set(currentFeed.map(item => item.topic));
-      console.log(`[Feed] Topics already in current feed: ${Array.from(topicsInCurrentFeed).join(', ')}`);
+      // console.log(`[Feed] Topics already in current feed: ${Array.from(topicsInCurrentFeed).join(', ')}`);
       
       // MODIFIED: Always use cold start logic to ensure consistent topic filtering regardless of position
       // This ensures the topic filter from triviaService is respected through the entire question selection pipeline
@@ -734,8 +735,8 @@ const FeedScreen: React.FC = () => {
       const totalQuestionsAnswered = updatedProfile.totalQuestionsAnswered || 0;
       const forceColdStart = true; // MODIFIED: Always use cold start logic for consistent topic filtering
       
-      console.log(`[Feed] Checkpoint ${checkpointPosition}: Using cold start logic with forced phase for consistent topic filtering`);
-      console.log(`[Feed] Current state: totalInteractions=${totalInteractions}, totalQuestionsAnswered=${totalQuestionsAnswered}`);
+      // console.log(`[Feed] Checkpoint ${checkpointPosition}: Using cold start logic with forced phase for consistent topic filtering`);
+      // console.log(`[Feed] Current state: totalInteractions=${totalInteractions}, totalQuestionsAnswered=${totalQuestionsAnswered}`);
       
       // Set temporary flag to ensure cold start logic is used
       if (forceColdStart) {
@@ -799,10 +800,10 @@ const FeedScreen: React.FC = () => {
         // Force the client-side weights to be used instead of any potentially stale weights
         // Ensure the topics from Redux userProfile are properly included
         if (userProfile && userProfile.topics) {
-          console.log(`[Feed] Using latest client-side weights from userProfile`);
-          // Log each topic weight for debugging
+          // console.log(`[Feed] Using latest client-side weights from userProfile`);
+          // Log each topic weight for debugging - REMOVED for cleaner console
           Object.entries(userProfile.topics).forEach(([topic, data]) => {
-            console.log(`[Feed] Topic '${topic}' weight: ${data.weight}`);
+            // console.log(`[Feed] Topic '${topic}' weight: ${data.weight}`);
             // Ensure tempProfile has the latest weights from redux store
             if (!tempProfile.topics[topic]) {
               tempProfile.topics[topic] = { ...data };
@@ -813,7 +814,7 @@ const FeedScreen: React.FC = () => {
         }
         
         // Log the complete profile for debugging
-        console.log(`[Feed] Final profile for question selection: ${JSON.stringify(tempProfile.topics, null, 2)}`);
+        // console.log(`[Feed] Final profile for question selection: ${JSON.stringify(tempProfile.topics, null, 2)}`);
         
         // Determine the correct phase based on checkpoint position
         let forcedPhase: 'exploration' | 'branching' | 'normal' | undefined;
