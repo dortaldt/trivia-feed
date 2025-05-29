@@ -470,7 +470,7 @@ export async function runQuestionGeneration(
           
           const { data: questionData, error: questionError } = await supabase
             .from('trivia_questions')
-            .select('id, question_text, question, topic, subtopic, branch, tags')
+            .select('id, question_text, topic, subtopic, branch, tags')
             .in('id', questionIds);
             
           if (questionError) {
@@ -485,7 +485,7 @@ export async function runQuestionGeneration(
             // Map to correct format
             validRecentQuestions = questionData.map((q: any) => ({
               id: q.id,
-              questionText: q.question_text || q.question || '',
+              questionText: q.question_text || '',
               topic: q.topic,
               subtopic: q.subtopic,
               branch: q.branch,
