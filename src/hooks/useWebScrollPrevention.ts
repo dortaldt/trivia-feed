@@ -29,7 +29,6 @@ export const useWebScrollPrevention = ({
       if (flatListRef.current?.getScrollableNode) {
         const element = flatListRef.current.getScrollableNode() as HTMLElement;
         if (element) {
-          console.log('[WEB PREVENT] Found scroll element via getScrollableNode');
           return element;
         }
       }
@@ -47,7 +46,6 @@ export const useWebScrollPrevention = ({
 
       for (const candidate of candidates) {
         if (candidate && candidate instanceof HTMLElement) {
-          console.log('[WEB PREVENT] Found scroll element via fallback method');
           return candidate;
         }
       }
@@ -58,13 +56,9 @@ export const useWebScrollPrevention = ({
     const setupEventListeners = () => {
       scrollElement = findScrollElement();
       if (!scrollElement) {
-        console.log('[WEB PREVENT] Scroll element not found, retrying...');
         setTimeout(setupEventListeners, 100);
         return;
       }
-
-      console.log('[WEB PREVENT] Setting up ultra-aggressive scroll prevention');
-      console.log('[WEB PREVENT] Current index:', currentIndex, 'Viewport height:', viewportHeight);
 
       const maxAllowedScrollTop = (currentIndex + 1) * viewportHeight;
       const minAllowedScrollTop = currentIndex * viewportHeight;
@@ -90,7 +84,6 @@ export const useWebScrollPrevention = ({
         // Check if we would exceed boundaries
         if (futurePos < strictMinAllowed || futurePos > strictMaxAllowed) {
           // Completely block - don't allow any movement beyond boundaries
-          console.log(`[WEB PREVENT] BLOCKED: ${Math.round(currentPos/viewportHeight)} would go to ${Math.round(futurePos/viewportHeight)}, boundaries [${currentIndex}, ${currentIndex + 1}]`);
           return; // Don't move at all
         }
         
@@ -129,7 +122,6 @@ export const useWebScrollPrevention = ({
         // Check if we would exceed boundaries
         if (futurePos < strictMinAllowed || futurePos > strictMaxAllowed) {
           // Completely block - don't allow any movement beyond boundaries
-          console.log(`[WEB PREVENT] TOUCH BLOCKED: ${Math.round(touchStartScrollTop/viewportHeight)} would go to ${Math.round(futurePos/viewportHeight)}, boundaries [${currentIndex}, ${currentIndex + 1}]`);
           return; // Don't move at all
         }
         
@@ -148,7 +140,6 @@ export const useWebScrollPrevention = ({
         const currentPos = scrollElement!.scrollTop;
         
         if (currentPos < minAllowedScrollTop || currentPos > maxAllowedScrollTop) {
-          console.log(`[WEB PREVENT] SAFETY: correcting ${Math.round(currentPos/viewportHeight)} to bounds`);
           isBlocking = true;
           const correctedPos = Math.max(minAllowedScrollTop, Math.min(maxAllowedScrollTop, currentPos));
           scrollElement!.scrollTop = correctedPos;
@@ -165,8 +156,6 @@ export const useWebScrollPrevention = ({
       // Also add to window for extra coverage
       window.addEventListener('wheel', wheelHandler, { passive: false, capture: true });
       window.addEventListener('touchmove', touchMoveHandler, { passive: false, capture: true });
-      
-      console.log('[WEB PREVENT] Ultra-aggressive prevention active');
     };
 
     // Start immediately
@@ -181,7 +170,6 @@ export const useWebScrollPrevention = ({
         scrollElement.removeEventListener('scroll', scrollHandler!);
         window.removeEventListener('wheel', wheelHandler);
         window.removeEventListener('touchmove', touchMoveHandler!);
-        console.log('[WEB PREVENT] Removed all listeners');
       }
     };
   }, [currentIndex, viewportHeight, personalizedFeedLength, flatListRef]);

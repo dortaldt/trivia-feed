@@ -312,8 +312,6 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
       // Execute the query
       const { data, error } = await query;
 
-      console.log('DEBUG: Supabase response:', data ? `Got ${data.length} records` : 'No data', error ? `Error: ${error.message}` : 'No error');
-      
       if (error) {
         console.error('Error fetching trivia questions:', error);
         console.error('Error details:', JSON.stringify(error, null, 2));
@@ -324,8 +322,6 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
         console.warn('No trivia questions found, using mock data instead');
         return mockFeedData;
       }
-
-      console.log('DEBUG: Successfully retrieved data from Supabase');
       
       // Log some stats about subtopics and tags when in topic-specific mode
       if (filterContentByTopic && activeTopic !== 'default') {
@@ -343,8 +339,7 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
           }
         });
         
-        console.log(`DEBUG: Found ${subtopics.size} unique subtopics:`, Array.from(subtopics));
-        console.log(`DEBUG: Found ${allTags.size} unique tags:`, Array.from(allTags));
+        console.log(`DEBUG: Found content with ${subtopics.size} subtopics and ${allTags.size} tags`);
       }
       
       // Transform the Supabase data to match our app's format
@@ -568,15 +563,12 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
           chunks.push(existingIds.slice(i, i + chunkSize));
         }
         
-        console.log(`Split into ${chunks.length} chunks of max ${chunkSize} IDs each`);
-        
         let allNewQuestions: TriviaQuestion[] = [];
         const allExistingIds = new Set(existingIds);
         
         // Process each chunk with database-side exclusion
         for (let i = 0; i < chunks.length; i++) {
           const chunk = chunks[i];
-          console.log(`Processing chunk ${i + 1}/${chunks.length} with ${chunk.length} IDs`);
           
           try {
             // Build query for this chunk - exclude this specific chunk of IDs
@@ -588,7 +580,6 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
             
             // Apply topic filter if configured (preserving existing logic)
             if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
-              console.log(`DEBUG: Filtering chunk ${i + 1} by topic: ${topicDbName}`);
               query = query.eq('topic', topicDbName);
             }
             
@@ -605,11 +596,9 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
               const filteredChunkData = chunkData.filter((q: TriviaQuestion) => !allExistingIds.has(q.id));
               
               allNewQuestions.push(...filteredChunkData);
-              console.log(`Chunk ${i + 1} contributed ${filteredChunkData.length} new questions`);
               
               // Stop if we've collected enough questions
               if (allNewQuestions.length >= 100) {
-                console.log(`Reached 100 question limit, stopping chunk processing`);
                 break;
               }
             }
@@ -627,7 +616,6 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
         const seenIds = new Set<string>();
         data = data.filter(question => {
           if (seenIds.has(question.id)) {
-            console.log(`Removing duplicate question ID: ${question.id}`);
             return false;
           }
           seenIds.add(question.id);
@@ -638,7 +626,6 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
         
       } else {
         // For smaller sets, use the original efficient single query approach
-        console.log(`Small exclusion list (${existingIds.length} IDs), using single query approach`);
         
         let query = supabase
           .from('trivia_questions')
@@ -648,7 +635,6 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
         
         // Apply topic filter if configured (preserving existing logic)
         if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
-          console.log(`DEBUG: Filtering new questions by topic: ${topicDbName}`);
           query = query.eq('topic', topicDbName);
         }
         
@@ -668,7 +654,6 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
       
       // Apply topic filter if configured
       if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
-        console.log(`DEBUG: Filtering fallback query by topic: ${topicDbName}`);
         query = query.eq('topic', topicDbName);
       }
       
@@ -705,8 +690,7 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
         }
       });
       
-      console.log(`DEBUG: Found ${subtopics.size} unique subtopics in new questions:`, Array.from(subtopics));
-      console.log(`DEBUG: Found ${allTags.size} unique tags in new questions:`, Array.from(allTags));
+      console.log(`DEBUG: Found content with ${subtopics.size} subtopics and ${allTags.size} tags in new questions`);
     }
     
     // Transform the data same as in fetchTriviaQuestions
@@ -836,7 +820,6 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
     // Update the last fetch timestamp after successful fetch
     if (transformedQuestions.length > 0) {
       await setLastFetchTimestamp();
-      console.log(`🕐 Updated last fetch timestamp after fetching ${transformedQuestions.length} new questions`);
     }
     
     return transformedQuestions;

@@ -225,9 +225,6 @@ export function updateUserProfile(
     branchWeight: branchNode.weight
   };
   
-  // Log the actual values being used
-  console.log(`[WEIGHT UPDATE] Initial weights for ${questionId}: topic=${oldWeights.topicWeight.toFixed(2)}, subtopic=${oldWeights.subtopicWeight.toFixed(2)}, branch=${oldWeights.branchWeight.toFixed(2)}`);
-  
   // REMOVED: Problematic weight reset logic that was causing weights to reset to default
   // This was preventing weight changes from accumulating properly across interactions
   
@@ -297,9 +294,6 @@ export function updateUserProfile(
   }
   // If question was skipped, decrease weights (per new requirements)
   else if (interaction.wasSkipped) {
-    console.log(`[WEIGHT UPDATE] Reducing weights for skipped question ${questionId} in topic ${topic}`);
-    console.log(`[WEIGHT UPDATE] Before skip: topic=${topicNode.weight.toFixed(4)}, subtopic=${subtopicNode.weight.toFixed(4)}, branch=${branchNode.weight.toFixed(4)}`);
-    
     // Store values before changes
     const prevTopicWeight = topicNode.weight;
     const prevSubtopicWeight = subtopicNode.weight;
@@ -322,7 +316,6 @@ export function updateUserProfile(
       // Force the change if it didn't take effect
       if (Math.abs(prevTopicWeight - 0.5) < 0.001) {
         topicNode.weight = 0.45; // Force to expected value if it was default
-        console.log(`[WEIGHT UPDATE] Force-applied topic weight change: ${topicNode.weight.toFixed(4)}`);
       }
     }
     
@@ -332,7 +325,6 @@ export function updateUserProfile(
       // Force the change if it didn't take effect
       if (Math.abs(prevSubtopicWeight - 0.5) < 0.001) {
         subtopicNode.weight = 0.43; // Force to expected value if it was default
-        console.log(`[WEIGHT UPDATE] Force-applied subtopic weight change: ${subtopicNode.weight.toFixed(4)}`);
       }
     }
     
@@ -342,17 +334,8 @@ export function updateUserProfile(
       // Force the change if it didn't take effect
       if (Math.abs(prevBranchWeight - 0.5) < 0.001) {
         branchNode.weight = 0.4; // Force to expected value if it was default
-        console.log(`[WEIGHT UPDATE] Force-applied branch weight change: ${branchNode.weight.toFixed(4)}`);
       }
     }
-    
-    // Calculate changes for logging
-    const topicChange = topicNode.weight - prevTopicWeight;
-    const subtopicChange = subtopicNode.weight - prevSubtopicWeight;
-    const branchChange = branchNode.weight - prevBranchWeight;
-    
-    console.log(`[WEIGHT UPDATE] After skip: topic=${topicNode.weight.toFixed(4)}, subtopic=${subtopicNode.weight.toFixed(4)}, branch=${branchNode.weight.toFixed(4)}`);
-    console.log(`[WEIGHT UPDATE] Changes: topic=${topicChange.toFixed(4)}, subtopic=${subtopicChange.toFixed(4)}, branch=${branchChange.toFixed(4)}`);
   }
   
   // Create weight change record - make sure it uses real weight values
@@ -378,12 +361,6 @@ export function updateUserProfile(
     // Add skip compensation information if applicable
     skipCompensation: skipCompensation.applied ? skipCompensation : undefined
   };
-  
-  // Log the weight change record
-  console.log(`[WEIGHT UPDATE] Created weight change record:
-    Old weights: topic=${weightChange.oldWeights.topicWeight.toFixed(2)}, subtopic=${weightChange.oldWeights.subtopicWeight?.toFixed(2) || 'N/A'}, branch=${weightChange.oldWeights.branchWeight?.toFixed(2) || 'N/A'}
-    New weights: topic=${weightChange.newWeights.topicWeight.toFixed(2)}, subtopic=${weightChange.newWeights.subtopicWeight?.toFixed(2) || 'N/A'}, branch=${weightChange.newWeights.branchWeight?.toFixed(2) || 'N/A'}
-  `);
   
   return { updatedProfile, weightChange };
 }

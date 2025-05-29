@@ -4,6 +4,7 @@ import { FeedChange, InteractionLog, WeightFactors, WeightChange } from '../type
 import { Platform } from 'react-native';
 import { EventEmitter } from 'events';
 import { syncUserProfile as simplifiedSyncUserProfile, fetchUserProfile as simplifiedFetchUserProfile } from './simplifiedSyncService';
+import { logger } from '../utils/logger';
 
 // Create a global event emitter for logging database operations
 export const dbEventEmitter = new EventEmitter();
@@ -477,12 +478,12 @@ export const logGeneratorEvent = (
     
     // Only log start, completion, or errors to console
     if (error) {
-      console.error(`[GENERATOR] ERROR: ${error}`);
+      logger.error('Generator', `ERROR: ${error}`);
     } else if (status?.includes('completed')) {
-      console.log(`[GENERATOR] COMPLETED: Generated ${questionsGenerated}, saved ${questionsSaved} questions`);
+      logger.info('Generator', `COMPLETED: Generated ${questionsGenerated}, saved ${questionsSaved} questions`);
     }
   } catch (loggingError) {
     // Only log critical errors
-    console.error(`[GENERATOR] Failed to log event: ${loggingError instanceof Error ? loggingError.message : 'Unknown error'}`);
+    logger.error('Generator', `Failed to log event: ${loggingError instanceof Error ? loggingError.message : 'Unknown error'}`);
   }
 }; 

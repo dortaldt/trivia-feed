@@ -333,41 +333,21 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         const reduxCorrectCount = getCorrectAnswersForTopic(topic);
         const existingRing = ringsState.rings[topic];
         
-        // MODIFIED: Only update if Redux count is higher than cached count
-        // This preserves cached progress after app refresh
-        let correctAnswersToUse = reduxCorrectCount;
+        // Choose the count to use based on which is higher
+        const correctAnswersToUse = Math.max(reduxCorrectCount, existingRing?.totalCorrectAnswers || 0);
         
-        if (existingRing && existingRing.totalCorrectAnswers > reduxCorrectCount) {
-          // Cached ring has more progress than Redux (probably after refresh)
-          // Use the cached count and only add new Redux answers
-          console.log(`[RING CACHE PRESERVE] ${topic}: Using cached count ${existingRing.totalCorrectAnswers} instead of Redux count ${reduxCorrectCount}`);
-          correctAnswersToUse = existingRing.totalCorrectAnswers;
-        } else if (reduxCorrectCount > 0 && (!existingRing || reduxCorrectCount > existingRing.totalCorrectAnswers)) {
-          // Only log when Redux count is actually higher than existing count (real progress)
-          console.log(`[RING PROGRESS UPDATE] ${topic}: Using Redux count ${reduxCorrectCount} (cached: ${existingRing?.totalCorrectAnswers || 0})`);
-        }
-        
-        // Create or update ring with preserved/updated count
-        const updatedRing = createRingProgress(topic, correctAnswersToUse, existingRing);
-        
-        // Check for meaningful changes (not just icon/color updates)
-        const hasDataChanges = !existingRing || 
-          existingRing.level !== updatedRing.level ||
-          existingRing.currentProgress !== updatedRing.currentProgress ||
-          existingRing.totalCorrectAnswers !== updatedRing.totalCorrectAnswers ||
-          existingRing.targetAnswers !== updatedRing.targetAnswers;
-        
-        // Check for icon/color updates (important for cache refresh)
-        const hasIconColorChanges = existingRing &&
-          (existingRing.icon !== updatedRing.icon || existingRing.color !== updatedRing.color);
-        
-        if (hasDataChanges || hasIconColorChanges) {
-          const oldCount = existingRing ? existingRing.totalCorrectAnswers : 0;
+        // Only update if there's actually a change
+        if (!existingRing || existingRing.totalCorrectAnswers !== correctAnswersToUse) {
+          const oldCount = existingRing?.totalCorrectAnswers || 0;
+          
           if (correctAnswersToUse > oldCount) {
-            console.log(`[RING COUNT UPDATE] ${topic}: COUNT UP FROM ${oldCount} to ${correctAnswersToUse}`);
+            console.log(`[RING PROGRESS] ${topic}: Adding ${correctAnswersToUse - oldCount} new correct answers (${oldCount} → ${correctAnswersToUse})`);
           }
-          console.log(`[RING UPDATE] "${topic}": ${correctAnswersToUse} correct → Level ${updatedRing.level}, Progress ${updatedRing.currentProgress}/${updatedRing.targetAnswers}`);
-          newRings[topic] = updatedRing;
+          
+          const newRing = createRingProgress(topic, correctAnswersToUse, existingRing);
+          console.log(`[RING UPDATE] "${topic}": ${newRing.totalCorrectAnswers} correct → Level ${newRing.level}, Progress ${newRing.currentProgress}/${newRing.targetAnswers}`);
+          
+          newRings[topic] = newRing;
           hasChanges = true;
         }
       });

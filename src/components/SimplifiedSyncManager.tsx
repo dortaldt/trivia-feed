@@ -85,7 +85,6 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
             setTimeout(() => reject(new Error('iOS direct query timeout')), 10000));
           
           // Direct database query with detailed logging
-          console.log(`🍎 iOS: Direct query for user ${user.id}`);
           const fetchPromise = supabase
             .from('user_profile_data')
             .select('topics, interactions, last_refreshed, cold_start_complete, total_questions_answered')
@@ -120,8 +119,6 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
               
               if (hasNonDefaultWeights) {
                 console.log('✅ iOS: Found valid NON-DEFAULT weights, prioritizing these over local weights');
-              } else {
-                console.log('⚠️ iOS: Found valid weights but they appear to be default values (0.5)');
               }
               
               // Always use the database weights for consistency
@@ -141,11 +138,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
               setProfileDataFetched(true);
               
               return; // Exit early with success
-            } else {
-              console.log('⚠️ iOS: Found topics but weights are invalid');
             }
-          } else {
-            console.log('⚠️ iOS: Direct query did not return valid topic data');
           }
         } catch (iosError) {
           console.error('❌ iOS: Error during direct database query:', iosError);
@@ -231,11 +224,9 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
         
         while (attempts < maxAttempts && !success) {
           try {
-            console.log(`🍎 iOS fetch attempt ${attempts + 1}/${maxAttempts}`);
             // Add small delay between retries with exponential backoff
             if (attempts > 0) {
               const delayMs = Math.pow(2, attempts) * 1000; // 2s, 4s, 8s...
-              console.log(`🍎 iOS: Waiting ${delayMs}ms before retry ${attempts + 1}`);
               await new Promise(resolve => setTimeout(resolve, delayMs));
             }
             
@@ -250,7 +241,6 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
             const { supabase } = await import('../lib/supabaseClient');
             
             // Direct query with detailed logging
-            console.log(`🍎 iOS: Querying user_profile_data for user ID: ${user.id}`);
             const fetchPromise = supabase
               .from('user_profile_data')
               .select('topics, interactions, last_refreshed, cold_start_complete, total_questions_answered')
@@ -260,16 +250,8 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
             // Race the fetch against a timeout
             const result = await Promise.race([fetchPromise, timeoutPromise]);
             
-            console.log('🍎 iOS: Direct database query completed');
-            
             if (result && result.data) {
-              console.log('🍎 iOS: Got response data:', {
-                hasTopics: !!result.data.topics,
-                topicsType: typeof result.data.topics,
-                topicCount: result.data.topics ? Object.keys(result.data.topics).length : 0
-              });
-              
-                              // IMPORTANT: Strict validation of topic data
+              // IMPORTANT: Strict validation of topic data
               if (
                 result.data.topics && 
                 typeof result.data.topics === 'object' && 
@@ -287,13 +269,6 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
                 // Log sample topic to verify data structure
                 const sampleTopicKey = Object.keys(remoteProfile.topics)[0];
                 const sampleTopic = remoteProfile.topics[sampleTopicKey];
-                
-                console.log('🍎 iOS: Sample topic data:', {
-                  topic: sampleTopicKey,
-                  weight: sampleTopic.weight,
-                  hasSubtopics: !!sampleTopic.subtopics,
-                  subtopicCount: sampleTopic.subtopics ? Object.keys(sampleTopic.subtopics).length : 0
-                });
                 
                 // ADDITIONAL CHECK: Does this profile have any non-default weights?
                 const hasNonDefaultWeights = Object.values(remoteProfile.topics).some(
@@ -313,24 +288,11 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
                   console.log('✅ iOS database fetch successful with valid topic weights!');
                   forceResult = remoteProfile;
                   success = true;
-                } else {
-                  console.log('⚠️ iOS: Found topics but weights are invalid, retrying...');
                 }
-              } else {
-                console.log('⚠️ iOS: Topics data is missing or empty, retrying...');
               }
-            } else {
-              console.log('⚠️ iOS: No data returned from direct query, retrying...');
             }
           } catch (directError) {
             console.error(`❌ iOS fetch attempt ${attempts + 1} failed:`, directError);
-            if (directError instanceof Error) {
-              console.error('iOS error details:', {
-                message: directError.message,
-                name: directError.name,
-                stack: directError.stack?.substring(0, 200) // Truncate stack trace
-              });
-            }
           }
           
           attempts++;
@@ -389,10 +351,6 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
           
           if (remoteProfile) {
             console.log('✅ DIRECT DATABASE ACCESS SUCCESSFUL!');
-            console.log(`✅ Got topics with ${Object.keys(remoteProfile.topics || {}).length} entries`);
-            console.log(`✅ Got interactions with ${Object.keys(remoteProfile.interactions || {}).length} entries`);
-          } else {
-            console.log('⚠️ DIRECT DATABASE ACCESS returned null profile');
           }
         } catch (directError) {
           console.error('❌ DIRECT DATABASE ACCESS failed:', directError);
@@ -436,7 +394,6 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
           // If both have custom weights or both have defaults, compare timestamps
           else {
             console.log('SyncManager: Comparing timestamps for profiles with similar weight status');
-            console.log(`Remote lastRefreshed: ${remoteProfile.lastRefreshed}, Local lastRefreshed: ${userProfile.lastRefreshed}`);
             
             // ALWAYS prioritize database profile when it has non-default weights
             if (remoteHasNonDefaultWeights) {
@@ -544,7 +501,6 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
     
     // Load questions from storage for the current user
     const userId = user?.id || undefined;
-    console.log(`[REDUX PERSIST] Loading questions from storage for user: ${userId || 'guest'}`);
     dispatch(loadQuestionsFromStorageThunk(userId));
     
     // Force immediate data load when the component mounts
@@ -568,7 +524,6 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
   // Load questions from storage when user changes (e.g., login/logout/guest mode)
   useEffect(() => {
     const userId = user?.id || undefined;
-    console.log(`[REDUX PERSIST] User changed, reloading questions for: ${userId || 'guest'}`);
     dispatch(loadQuestionsFromStorageThunk(userId));
   }, [user?.id, dispatch]);
   

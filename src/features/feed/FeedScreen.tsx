@@ -87,6 +87,7 @@ import { TopicRings } from '../../components/TopicRings';
 import { AllRingsModal } from '../../components/AllRingsModal';
 import { useTopicRings } from '../../hooks/useTopicRings';
 import { useWebScrollPrevention } from '../../hooks/useWebScrollPrevention';
+import { logger, setLoggerDebugMode } from '../../utils/logger';
 
 const { width, height } = Dimensions.get('window');
 
@@ -922,7 +923,7 @@ const FeedScreen: React.FC = () => {
   // Add debug logs to markPreviousAsSkipped to identify if it's being called correctly
   const markPreviousAsSkipped = useCallback((prevIndex: number, newIndex: number) => {
     // Only mark as skipped when explicitly scrolling down past a question and if we have feed data
-    console.log(`[DEBUG] markPreviousAsSkipped called with prevIndex=${prevIndex}, newIndex=${newIndex}`);
+    logger.debug('Feed', `markPreviousAsSkipped called with prevIndex=${prevIndex}, newIndex=${newIndex}`);
     
     if (prevIndex >= 0 && prevIndex < personalizedFeed.length && newIndex > prevIndex) {
       const previousQuestion = personalizedFeed[prevIndex];
@@ -937,16 +938,16 @@ const FeedScreen: React.FC = () => {
       
       // Add special logging for first question
       if (prevIndex === 0) {
-        console.log(`[Feed] FIRST QUESTION being marked as skipped: ID ${previousQuestionId}, question "${previousQuestion.question?.substring(0, 30)}..."`)
+        logger.feed(`FIRST QUESTION being marked as skipped: ID ${previousQuestionId}, question "${previousQuestion.question?.substring(0, 30)}..."`)
       } else {
-        console.log(`[Feed] Marking question #${prevIndex + 1} as skipped: ID ${previousQuestionId}, question "${previousQuestion.question?.substring(0, 30)}..."`);
+        logger.feed(`Marking question #${prevIndex + 1} as skipped: ID ${previousQuestionId}, question "${previousQuestion.question?.substring(0, 30)}..."`);
       }
       
       // Skip if the question is already marked as skipped or answered
       if (questions[previousQuestionId] && 
           (questions[previousQuestionId].status === 'skipped' || 
            questions[previousQuestionId].status === 'answered')) {
-        console.log(`[Feed] Question ${previousQuestionId} already processed (${questions[previousQuestionId].status}), skipping`);
+        logger.feed(`Question ${previousQuestionId} already processed (${questions[previousQuestionId].status}), skipping`);
         return;
       }
       
@@ -962,7 +963,7 @@ const FeedScreen: React.FC = () => {
       if (prevIndex === 0) {
         // Force at least 1 second to ensure weight changes register
         timeSpent = Math.max(timeSpent, 1000);
-        console.log(`[Feed] FIRST QUESTION: Ensuring minimum timeSpent of 1000ms (actual: ${timeSpent}ms)`);
+        logger.feed(`FIRST QUESTION: Ensuring minimum timeSpent of 1000ms (actual: ${timeSpent}ms)`);
       }
       
       // Mark question as skipped in Redux
@@ -971,7 +972,7 @@ const FeedScreen: React.FC = () => {
         userId: user?.id
       }));
       
-      console.log(`[Feed] Dispatched skipQuestion action for question ${previousQuestionId}`);
+      logger.feed(`Dispatched skipQuestion action for question ${previousQuestionId}`);
       
       // Update user profile with new weight changes
       if (user && user.id) {
@@ -1103,9 +1104,9 @@ const FeedScreen: React.FC = () => {
 
   // Helper function to log feed state for debugging
   const logFeedState = useCallback(() => {
-    console.log("===== CURRENT FEED STATE =====");
-    console.log(`Feed length: ${personalizedFeed.length} questions`);
-    console.log(`Current index: ${currentIndex}`);
+    logger.debug('Feed', '===== CURRENT FEED STATE =====');
+    logger.debug('Feed', `Feed length: ${personalizedFeed.length} questions`);
+    logger.debug('Feed', `Current index: ${currentIndex}`);
     
     // Count topics in feed
     const topicCounts = new Map<string, number>();
@@ -1114,9 +1115,9 @@ const FeedScreen: React.FC = () => {
       topicCounts.set(topic, (topicCounts.get(topic) || 0) + 1);
     });
     
-    console.log("Topics in feed:");
+    logger.debug('Feed', 'Topics in feed:');
     topicCounts.forEach((count, topic) => {
-      console.log(`  ${topic}: ${count} questions`);
+      logger.debug('Feed', `  ${topic}: ${count} questions`);
     });
     
     // Count interactions by type
@@ -1135,15 +1136,15 @@ const FeedScreen: React.FC = () => {
       }
     });
     
-    console.log(`Interaction breakdown: ${answeredCount} answered, ${skippedCount} skipped, ${pendingCount} pending`);
+    logger.debug('Feed', `Interaction breakdown: ${answeredCount} answered, ${skippedCount} skipped, ${pendingCount} pending`);
     
     // Check user profile
     const totalInteractions = Object.keys(userProfile.interactions || {}).length;
     const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
     const inColdStart = !userProfile.coldStartComplete && totalQuestionsAnswered < 20;
     
-    console.log(`User profile: ${totalInteractions} interactions, ${totalQuestionsAnswered} questions answered`);
-    console.log(`Cold start: ${inColdStart ? 'active' : 'complete'}`);
+    logger.debug('Feed', `User profile: ${totalInteractions} interactions, ${totalQuestionsAnswered} questions answered`);
+    logger.debug('Feed', `Cold start: ${inColdStart ? 'active' : 'complete'}`);
     
     if (inColdStart) {
       // Identify cold start phase
@@ -1153,10 +1154,10 @@ const FeedScreen: React.FC = () => {
       } else if (totalQuestionsAnswered < 20) {
         phase = 'branching (6-20)';
       }
-      console.log(`Cold start phase: ${phase}`);
+      logger.debug('Feed', `Cold start phase: ${phase}`);
     }
     
-    console.log("===========================");
+    logger.debug('Feed', '===========================');
     
     return { inColdStart, totalInteractions, totalQuestionsAnswered };
   }, [personalizedFeed, currentIndex, questions, userProfile]);
@@ -1165,16 +1166,16 @@ const FeedScreen: React.FC = () => {
   const handleFastScroll = useCallback((startIndex: number, endIndex: number) => {
     // Don't process if start and end are the same or if scrolling up
     if (startIndex >= endIndex || !personalizedFeed.length) {
-      console.log(`[FastScroll] Skipping processing: startIndex=${startIndex}, endIndex=${endIndex}, moving up or same position`);
+      logger.fastScroll(`Skipping processing: startIndex=${startIndex}, endIndex=${endIndex}, moving up or same position`);
       return;
     }
     
-    console.log(`[FastScroll] Processing fast scroll: ${startIndex} → ~${endIndex}`);
-    console.log(`[FastScroll] Before processing, checking feed state:`);
+    logger.fastScroll(`Processing fast scroll: ${startIndex} → ~${endIndex}`);
+    logger.fastScroll('Before processing, checking feed state:');
     const { inColdStart, totalInteractions, totalQuestionsAnswered } = logFeedState();
     
     const totalSkipped = Math.min(endIndex - startIndex, 5); // Limit to 5 max questions skipped
-    console.log(`[FastScroll] Will attempt to process ${totalSkipped} skipped questions`);
+    logger.fastScroll(`Will attempt to process ${totalSkipped} skipped questions`);
 
     // Process the skips first
     let skippedCount = 0;
@@ -1185,8 +1186,8 @@ const FeedScreen: React.FC = () => {
     if (firstQuestionId) {
       const firstQuestionState = questions[firstQuestionId];
       if (!firstQuestionState || firstQuestionState.status === 'unanswered') {
-        console.log(`[FastScroll] First question not yet processed, marking as skipped: ${firstQuestionId}`);
-        console.log(`[FastScroll] First question topic: ${personalizedFeed[0]?.topic}`);
+        logger.fastScroll(`First question not yet processed, marking as skipped: ${firstQuestionId}`);
+        logger.fastScroll(`First question topic: ${personalizedFeed[0]?.topic}`);
         markPreviousAsSkipped(0, 1);
         skippedCount++;
         highestProcessedIndex = 0;
@@ -1200,13 +1201,13 @@ const FeedScreen: React.FC = () => {
         
         // Skip questions that are already processed (answers or skipped)
         if (questionState && (questionState.status === 'answered' || questionState.status === 'skipped')) {
-          console.log(`[FastScroll] Question at index ${i} (${question.id}) already processed as ${questionState.status}, skipping`);
+          logger.fastScroll(`Question at index ${i} (${question.id}) already processed as ${questionState.status}, skipping`);
           continue;
         }
         
       // Mark as skipped
-      console.log(`[FastScroll] Marking question at index ${i} (${question.id}) as skipped`);
-      console.log(`[FastScroll] Question topic: ${question.topic}`);
+      logger.fastScroll(`Marking question at index ${i} (${question.id}) as skipped`);
+      logger.fastScroll(`Question topic: ${question.topic}`);
       markPreviousAsSkipped(i, i+1); // Mark this specific question as skipped
       skippedCount++;
       if (i > highestProcessedIndex) {
@@ -1220,16 +1221,16 @@ const FeedScreen: React.FC = () => {
       // We use position + 1 because our checkpoints are 1-indexed but array is 0-indexed
       const currentPosition = highestProcessedIndex + 1;
       
-      console.log(`[FastScroll] Skipped ${skippedCount} questions, highest index was ${highestProcessedIndex}`);
-      console.log(`[FastScroll] Checking if position ${currentPosition} is a checkpoint`);
+      logger.fastScroll(`Skipped ${skippedCount} questions, highest index was ${highestProcessedIndex}`);
+      logger.fastScroll(`Checking if position ${currentPosition} is a checkpoint`);
       
       if (currentPosition <= 20 && shouldAddQuestionsAtPosition(currentPosition)) {
         // At a checkpoint position in cold start - add 4 questions
-        console.log(`[FastScroll] At checkpoint position ${currentPosition}, adding 4 questions`);
+        logger.fastScroll(`At checkpoint position ${currentPosition}, adding 4 questions`);
         addQuestionsAtCheckpoint(currentPosition, userProfile);
       } else if (currentPosition > 20) {
         // After position 20 (past cold start) - add 1 question
-        console.log(`[FastScroll] Past cold start (position ${currentPosition}), adding 1 question`);
+        logger.fastScroll(`Past cold start (position ${currentPosition}), adding 1 question`);
         
         // Only proceed if we have feedData to choose from
         if (feedData.length > personalizedFeed.length) {
@@ -1249,8 +1250,8 @@ const FeedScreen: React.FC = () => {
             const newQuestions = personalizedItems.filter((item: FeedItemType) => !existingIds.has(item.id)).slice(0, 1);
         
             if (newQuestions.length > 0) {
-              console.log(`[FastScroll] Adding 1 personalized question to feed`);
-              console.log(`[FastScroll] Selected topic: ${newQuestions[0].topic}`);
+              logger.fastScroll(`Adding 1 personalized question to feed`);
+              logger.fastScroll(`Selected topic: ${newQuestions[0].topic}`);
               
               // Create a new feed with existing + new question
               const updatedFeed = [...currentFeed, ...newQuestions];
@@ -1267,7 +1268,7 @@ const FeedScreen: React.FC = () => {
               });
           
               // Update the feed in Redux - log dispatch for debugging
-              console.log(`[FastScroll] Dispatching setPersonalizedFeed with ${updatedFeed.length} items`);
+              logger.fastScroll(`Dispatching setPersonalizedFeed with ${updatedFeed.length} items`);
               dispatch(setPersonalizedFeed({
                 items: updatedFeed,
                 explanations: combinedExplanations,
@@ -1277,11 +1278,11 @@ const FeedScreen: React.FC = () => {
           }
         }
       } else {
-        console.log(`[FastScroll] Not at a checkpoint position (${currentPosition}), not adding questions`);
+        logger.fastScroll(`Not at a checkpoint position (${currentPosition}), not adding questions`);
       }
       
       // Log feed state after processing
-      console.log(`[FastScroll] After processing, checking updated feed state:`);
+      logger.fastScroll('After processing, checking updated feed state:');
       logFeedState();
     }
   }, [personalizedFeed, questions, markPreviousAsSkipped, feedData, userProfile, feedExplanations, dispatch, user, addQuestionsAtCheckpoint, shouldAddQuestionsAtPosition, logFeedState]);
@@ -1822,7 +1823,6 @@ const FeedScreen: React.FC = () => {
           !existingIds.has(item.id) && !answeredQuestionIds.has(item.id)
         );
         
-        console.log(`[Feed] Post-answer filtering: ${feedData.length} total, ${existingIds.size} in feed, ${answeredQuestionIds.size} answered/skipped, ${availableQuestions.length} available`);
         
         // Use personalization logic to select new questions
         const { items: personalizedItems, explanations: personalizedExplanations } = 
@@ -2109,19 +2109,18 @@ const FeedScreen: React.FC = () => {
         try {
           const urlParams = new URLSearchParams(window.location.search);
           const debugParam = urlParams.get('debug');
-          console.log('URL Params check - debug param:', debugParam);
+          logger.info('Debug', `URL Params check - debug param: ${debugParam}`);
           
           // Only enable if exact parameter match
           if (debugParam === 'trivia-debug-panel') {
-            console.log('Debug panel enabled via URL parameter');
+            logger.info('Debug', 'Debug panel enabled via URL parameter');
             setDebugPanelVisible(true);
           } else {
-            console.log('Debug panel hidden (no valid URL param)');
             // Only reset debug panel visibility if not on iOS (where gesture can toggle it)
             setDebugPanelVisible(false);
           }
         } catch (error) {
-          console.error('Error parsing URL parameters:', error);
+          logger.error('Debug', 'Error parsing URL parameters', error);
         }
       }
     };
@@ -2133,7 +2132,7 @@ const FeedScreen: React.FC = () => {
     if (Platform.OS === 'web') {
       // Use the History API to detect changes
       const handlePopState = () => {
-        console.log('URL changed, rechecking parameters');
+        logger.info('Debug', 'URL changed, rechecking parameters');
         checkUrlParams();
       };
       
@@ -2149,7 +2148,7 @@ const FeedScreen: React.FC = () => {
         const currentUrl = window.location.href;
         if (previousUrl !== currentUrl) {
           previousUrl = currentUrl;
-          console.log('URL changed programmatically, rechecking parameters');
+          logger.info('Debug', 'URL changed programmatically, rechecking parameters');
           checkUrlParams();
         }
       }, 500); // Check every 500ms
@@ -2462,6 +2461,16 @@ const FeedScreen: React.FC = () => {
     }
   }, [needMoreQuestions, personalizedFeed, currentIndex, feedData, dispatch, user?.id, feedExplanations, userProfile, questions]);
 
+  // Initialize logger debug mode when debug panel visibility changes
+  useEffect(() => {
+    setLoggerDebugMode(debugPanelVisible);
+    if (debugPanelVisible) {
+      logger.info('Debug', 'Debug mode enabled - all logs will be visible');
+    } else {
+      logger.info('Debug', 'Debug mode disabled - only warnings and errors will be visible');
+    }
+  }, [debugPanelVisible]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -2602,7 +2611,6 @@ const FeedScreen: React.FC = () => {
               
               // Enhanced logging for iOS debugging
               if (isIOS) {
-                console.log(`[iOS ACTIVE TOPIC] Indices - State: ${currentIndex}, LastVisible: ${lastVisibleIndexRef.current}, Scroll: ${scrollBasedIndexRef.current}, Using: ${bestIndex}, Topic: "${currentTopic}"`);
               }
               
               return currentTopic;

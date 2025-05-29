@@ -1455,8 +1455,6 @@ export function getColdStartFeed(
     : groupQuestionsByTopic(filteredQuestions);
   
   // Add debug logging to see if grouped questions is properly populated
-  console.log(`DEBUG: groupedQuestions has ${filteredGroupedQuestions.size} topics`);
-  console.log(`DEBUG: Topics in groupedQuestions: ${Array.from(filteredGroupedQuestions.keys()).join(', ')}`);
   
   // Determine the phase based on questions shown
   if (state.questionsShown < 5) {
@@ -1473,7 +1471,6 @@ export function getColdStartFeed(
     state.phase = forcedPhase;
   }
   
-  console.log(`Cold start phase: ${state.phase}, Questions shown: ${state.questionsShown}`);
   
   // Get questions for the current phase
   let phaseQuestions: FeedItem[] = [];

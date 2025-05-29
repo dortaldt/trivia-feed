@@ -45,7 +45,6 @@ const saveQuestionsToStorage = async (questions: { [questionId: string]: Questio
     const safeQuestions = JSON.parse(JSON.stringify(questions));
     
     await AsyncStorage.setItem(storageKey, JSON.stringify(safeQuestions));
-    console.log(`[REDUX PERSIST] Saved ${Object.keys(safeQuestions).length} questions to storage`);
   } catch (error) {
     console.error('[REDUX PERSIST] Error saving questions to storage:', error);
     
@@ -65,7 +64,6 @@ const saveQuestionsToStorage = async (questions: { [questionId: string]: Questio
       });
       
       await AsyncStorage.setItem(storageKey, JSON.stringify(safeQuestions));
-      console.log(`[REDUX PERSIST] Saved ${Object.keys(safeQuestions).length} questions to storage (fallback method)`);
     } catch (fallbackError) {
       console.error('[REDUX PERSIST] Fallback save method also failed:', fallbackError);
     }
@@ -80,7 +78,6 @@ const loadQuestionsFromStorage = async (userId?: string): Promise<{ [questionId:
     
     if (storedData) {
       const parsedQuestions = JSON.parse(storedData);
-      console.log(`[REDUX PERSIST] Loaded ${Object.keys(parsedQuestions).length} questions from storage`);
       return parsedQuestions;
     }
   } catch (error) {
@@ -291,14 +288,10 @@ const triviaSlice = createSlice({
           const subtopic = feedItem.tags?.[0] || 'General';
           const branch = feedItem.tags?.[1] || 'General';
           
-          console.log(`[Redux] Processing weight changes for answered question: topic=${topic}, subtopic=${subtopic}, branch=${branch}`);
-          
           // Store original weights before any changes
           const originalTopicWeight = state.userProfile.topics?.[topic]?.weight || 0.5;
           const originalSubtopicWeight = state.userProfile.topics?.[topic]?.subtopics?.[subtopic]?.weight || 0.5;
           const originalBranchWeight = state.userProfile.topics?.[topic]?.subtopics?.[subtopic]?.branches?.[branch]?.weight || 0.5;
-          
-          console.log(`[Redux] Original weights before answer - Topic: ${originalTopicWeight.toFixed(4)}, Subtopic: ${originalSubtopicWeight.toFixed(4)}, Branch: ${originalBranchWeight.toFixed(4)}`);
           
           // Create the interaction object
           const interactionObj = { 
@@ -353,11 +346,6 @@ const triviaSlice = createSlice({
             const updatedSubtopicWeight = state.userProfile.topics[topic].subtopics[subtopic].weight;
             const updatedBranchWeight = state.userProfile.topics[topic].subtopics[subtopic].branches[branch].weight;
             
-            // Log the actual changes
-            console.log(`[Redux] Updated weights after answer - Topic: ${updatedTopicWeight.toFixed(4)}, Subtopic: ${updatedSubtopicWeight.toFixed(4)}, Branch: ${updatedBranchWeight.toFixed(4)}`);
-            console.log(`[Redux] Weight changes - Topic: ${(updatedTopicWeight - originalTopicWeight).toFixed(4)}, Subtopic: ${(updatedSubtopicWeight - originalSubtopicWeight).toFixed(4)}, Branch: ${(updatedBranchWeight - originalBranchWeight).toFixed(4)}`);
-            
-            console.log(`[Redux] Successfully updated user profile for answered question ${questionId}`);
             
             // Create a weight change record
             const weightChange: WeightChange = {
@@ -382,7 +370,6 @@ const triviaSlice = createSlice({
             
             // Add to synced weight changes
             state.syncedWeightChanges.push(weightChange);
-            console.log(`[Redux] Added weight change to syncedWeightChanges: ${weightChange.topic} (${weightChange.interactionType})`);
             console.log(`[Redux] Weight change details: ${weightChange.oldWeights.topicWeight.toFixed(4)} -> ${weightChange.newWeights.topicWeight.toFixed(4)}`);
             
           } catch (error) {
@@ -415,7 +402,6 @@ const triviaSlice = createSlice({
       const { questionId, userId } = action.payload;
       
       // Log more detail about the question being skipped
-      console.log(`[Redux] Processing skip action for question: ${questionId}`);
       
       // Only mark as skipped if it hasn't been answered yet
       if (!state.questions[questionId] || state.questions[questionId].status !== 'answered') {
@@ -429,7 +415,6 @@ const triviaSlice = createSlice({
         // Skip logging if already marked as skipped (avoids duplicate log entries)
         if (previousState !== 'skipped') {
           // Log the skipped question and timing information
-          console.log(`[Redux] Skipping question ${questionId}: time spent = ${timeSpent}ms, previous state=${previousState}`);
           
           state.questions[questionId] = { 
             status: 'skipped',
@@ -457,7 +442,6 @@ const triviaSlice = createSlice({
           if (!hasExistingSkip) {
             state.syncedInteractions.push(interaction);
             
-            console.log(`[Redux] Added skipped interaction for question ${questionId} to syncedInteractions`);
             
             // Get the feed item for this question to update user profile
             const feedItem = state.personalizedFeed.find(item => item.id === questionId);
@@ -467,14 +451,10 @@ const triviaSlice = createSlice({
               const subtopic = feedItem.tags?.[0] || 'General';
               const branch = feedItem.tags?.[1] || 'General';
               
-              console.log(`[Redux] Processing weight changes for topic=${topic}, subtopic=${subtopic}, branch=${branch}`);
-              
               // Store original weights before any changes
               const originalTopicWeight = state.userProfile.topics?.[topic]?.weight || 0.5;
               const originalSubtopicWeight = state.userProfile.topics?.[topic]?.subtopics?.[subtopic]?.weight || 0.5;
               const originalBranchWeight = state.userProfile.topics?.[topic]?.subtopics?.[subtopic]?.branches?.[branch]?.weight || 0.5;
-              
-              console.log(`[Redux] Original weights before skip - Topic: ${originalTopicWeight.toFixed(4)}, Subtopic: ${originalSubtopicWeight.toFixed(4)}, Branch: ${originalBranchWeight.toFixed(4)}`);
               
               // Create the interaction object
               const interactionObj = { 
@@ -483,9 +463,6 @@ const triviaSlice = createSlice({
               };
               
               try {
-                // Force log the starting user profile
-                console.log(`[Redux] User profile before skip - Topics count: ${Object.keys(state.userProfile.topics).length}`);
-                
                 // Update the user profile
                 const result = updateUserProfileFn(
                   state.userProfile,
@@ -538,10 +515,6 @@ const triviaSlice = createSlice({
                 const updatedSubtopicWeight = state.userProfile.topics[topic].subtopics[subtopic].weight;
                 const updatedBranchWeight = state.userProfile.topics[topic].subtopics[subtopic].branches[branch].weight;
                 
-                // Log the actual changes
-                console.log(`[Redux] Updated weights after skip - Topic: ${updatedTopicWeight.toFixed(4)}, Subtopic: ${updatedSubtopicWeight.toFixed(4)}, Branch: ${updatedBranchWeight.toFixed(4)}`);
-                console.log(`[Redux] Weight changes - Topic: ${(updatedTopicWeight - originalTopicWeight).toFixed(4)}, Subtopic: ${(updatedSubtopicWeight - originalSubtopicWeight).toFixed(4)}, Branch: ${(updatedBranchWeight - originalBranchWeight).toFixed(4)}`);
-                
                 // Verify that the weights have actually changed
                 if (Math.abs(updatedTopicWeight - originalTopicWeight) < 0.01 &&
                     Math.abs(updatedSubtopicWeight - originalSubtopicWeight) < 0.01 &&
@@ -554,13 +527,9 @@ const triviaSlice = createSlice({
                     state.userProfile.topics[topic].weight = Math.max(0.1, originalTopicWeight - 0.05);
                     state.userProfile.topics[topic].subtopics[subtopic].weight = Math.max(0.1, originalSubtopicWeight - 0.07);
                     state.userProfile.topics[topic].subtopics[subtopic].branches[branch].weight = Math.max(0.1, originalBranchWeight - 0.1);
-                    
-                    // Log the forced changes
-                    console.log(`[Redux] Forced weights - Topic: ${state.userProfile.topics[topic].weight.toFixed(4)}, Subtopic: ${state.userProfile.topics[topic].subtopics[subtopic].weight.toFixed(4)}, Branch: ${state.userProfile.topics[topic].subtopics[subtopic].branches[branch].weight.toFixed(4)}`);
                   }
                 }
                 
-                console.log(`[Redux] Successfully updated user profile for skipped question ${questionId}`);
                 
                 // Get the updated weights for the weight change record
                 const finalTopicWeight = state.userProfile.topics[topic].weight;
@@ -590,7 +559,6 @@ const triviaSlice = createSlice({
                 
                 // Add to synced weight changes
                 state.syncedWeightChanges.push(weightChange);
-                console.log(`[Redux] Added weight change to syncedWeightChanges: ${weightChange.questionId}`);
                 
               } catch (error) {
                 console.error(`[Redux] Error updating profile for skipped question:`, error);
@@ -631,7 +599,6 @@ const triviaSlice = createSlice({
       // Record when the user started interacting with this question
       const now = Date.now();
       state.interactionStartTimes[questionId] = now;
-      console.log(`[Redux] Started interaction timer for question ${questionId} at ${new Date(now).toISOString()}`);
     },
     setPersonalizedFeed: (state, action: PayloadAction<{ 
       items: FeedItem[]; 
@@ -702,7 +669,6 @@ const triviaSlice = createSlice({
       // If we have a weight change, add it to the synced weight changes
       if (weightChange) {
         state.syncedWeightChanges.push(weightChange);
-        console.log(`[Redux] Added weight change to syncedWeightChanges: ${weightChange.topic} (${weightChange.interactionType})`);
         console.log(`[Redux] Weight change details: ${weightChange.oldWeights.topicWeight.toFixed(4)} -> ${weightChange.newWeights.topicWeight.toFixed(4)}`);
       }
       
@@ -851,13 +817,12 @@ const triviaSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(loadQuestionsFromStorageThunk.pending, (state) => {
-        console.log('[REDUX PERSIST] Loading questions from storage...');
+        // Loading questions from storage
       })
       .addCase(loadQuestionsFromStorageThunk.fulfilled, (state, action) => {
         const loadedQuestions = action.payload;
         state.questions = loadedQuestions;
         state.questionsLoaded = true;
-        console.log(`[REDUX PERSIST] Successfully loaded ${Object.keys(loadedQuestions).length} questions from storage`);
       })
       .addCase(loadQuestionsFromStorageThunk.rejected, (state, action) => {
         console.error('[REDUX PERSIST] Failed to load questions from storage:', action.error);

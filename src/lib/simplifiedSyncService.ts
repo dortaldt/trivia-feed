@@ -478,21 +478,6 @@ async function _fetchUserProfile(userId: string, forceLoad: boolean = false): Pr
     console.log(`Initial Load: Got topics with ${Object.keys(data.topics || {}).length} entries`);
     console.log(`Initial Load: Got interactions with ${Object.keys(data.interactions || {}).length} entries`);
     
-    // Inspect topics data structure
-    if (data.topics && typeof data.topics === 'object') {
-      console.log('TOPICS DATA STRUCTURE:');
-      const topicCount = Object.keys(data.topics).length;
-      console.log(`Found ${topicCount} topics`);
-      
-      if (topicCount > 0) {
-        // Log sample topic
-        const sampleTopicKey = Object.keys(data.topics)[0];
-        console.log(`Sample topic "${sampleTopicKey}": `, JSON.stringify(data.topics[sampleTopicKey]).substring(0, 100) + '...');
-      }
-    } else {
-      console.log('WARNING: Topics data is not an object. Type:', typeof data.topics, 'Keys:', Object.keys(data.topics || {}).length);
-    }
-    
     return {
       topics: data.topics || {},
       interactions: data.interactions || {}, // Load interactions directly from profile

@@ -2,6 +2,10 @@ import { supabase } from './supabaseClient';
 import { generateQuestions, generateQuestionFingerprint, checkQuestionExists, GeneratedQuestion } from './openaiService';
 import { dbEventEmitter, logGeneratorEvent } from './syncService';
 import { logDbOperation } from './simplifiedSyncService';
+import { UserProfile } from './personalizationService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+import { logger } from '../utils/logger';
 
 // Interface for the question category item from the database
 interface QuestionCategoryItem {
@@ -22,14 +26,15 @@ interface UserAnswerWithQuestion {
 }
 
 // Interface for the user profile from the database
-interface UserProfile {
-  id: string;
-  topics: Record<string, { weight: number }>;
-  topic_weights?: Record<string, number>; // Legacy format
-  subtopics?: Record<string, { topic: string, weight: number }>; // Added for subtopic weights
-  recentGenerationTopics?: string[]; // Added for cyclic selection tracking
-  [key: string]: any;
-}
+// NOTE: This interface is commented out to avoid conflict with imported UserProfile
+// interface UserProfile {
+//   id: string;
+//   topics: Record<string, { weight: number }>;
+//   topic_weights?: Record<string, number>; // Legacy format
+//   subtopics?: Record<string, { topic: string, weight: number }>; // Added for subtopic weights
+//   recentGenerationTopics?: string[]; // Added for cyclic selection tracking
+//   [key: string]: any;
+// }
 
 // Local implementation of the TopicMapper to avoid import errors
 class TopicMapper {
@@ -141,7 +146,7 @@ export async function getTopicQuestionCounts(): Promise<Record<string, number>> 
     
     return counts;
   } catch (error) {
-    console.error('[GENERATOR] Error getting topic question counts:', error);
+    logger.error('[GENERATOR] Error getting topic question counts:', error);
     return {};
   }
 }
@@ -160,7 +165,7 @@ export async function getRecentAnsweredTopics(userId: string, count: number = 5)
       .limit(count);
     
     if (answerError) {
-      console.error('[GENERATOR] Error getting recent answers:', answerError);
+      logger.error('[GENERATOR] Error getting recent answers:', answerError);
       return [];
     }
     
@@ -178,7 +183,7 @@ export async function getRecentAnsweredTopics(userId: string, count: number = 5)
       .in('id', questionIds);
     
     if (questionError) {
-      console.error('[GENERATOR] Error getting question categories:', questionError);
+      logger.error('[GENERATOR] Error getting question categories:', questionError);
       return [];
     }
     
@@ -192,7 +197,7 @@ export async function getRecentAnsweredTopics(userId: string, count: number = 5)
     
     return Array.from(topics);
   } catch (error) {
-    console.error('[GENERATOR] Error getting recent answered topics:', error);
+    logger.error('[GENERATOR] Error getting recent answered topics:', error);
     return [];
   }
 }
@@ -203,7 +208,7 @@ export async function getRecentAnsweredTopics(userId: string, count: number = 5)
 export async function getUserTopTopics(userId: string, scoreThreshold: number = 0.5): Promise<string[]> {
   try {
     // Just return a default set of popular topics since topic_weights doesn't exist
-    console.log('[GENERATOR] Using default topics (topic_weights not available)');
+    logger.debug('Generator', 'Using default topics (topic_weights not available)');
     return ['Science', 'History', 'Geography'];
     
     /* Original implementation disabled
@@ -230,7 +235,7 @@ export async function getUserTopTopics(userId: string, scoreThreshold: number = 
     return topTopics;
     */
   } catch (error) {
-    console.error('[GENERATOR] Error getting user top topics:', error);
+    logger.error('[GENERATOR] Error getting user top topics:', error);
     return [];
   }
 }
@@ -289,7 +294,7 @@ async function getExistingTopicIntents(topics: string[]): Promise<Map<string, Se
       .in('topic', topics);
       
     if (error) {
-      console.error('[GENERATOR] Error fetching topic intents:', error);
+      logger.error('[GENERATOR] Error fetching topic intents:', error);
       return topicIntents;
     }
     
@@ -310,13 +315,13 @@ async function getExistingTopicIntents(topics: string[]): Promise<Map<string, Se
           topicIntents.get(question.topic)?.add(intent);
         }
       } catch (e) {
-        console.warn('[GENERATOR] Error extracting intent:', e);
+        logger.warn('[GENERATOR] Error extracting intent:', e);
       }
     });
     
     return topicIntents;
   } catch (error) {
-    console.error('[GENERATOR] Error getting topic intents:', error);
+    logger.error('[GENERATOR] Error getting topic intents:', error);
     return new Map<string, Set<string>>();
   }
 }
@@ -331,10 +336,10 @@ export async function shouldGenerateQuestions(userId: string): Promise<{
   answerCount?: number;
 }> {
   try {
-    console.log('[GENERATOR] Checking if questions should be generated for user:', userId);
+    logger.debug('Generator', `Checking if questions should be generated for user: ${userId}`);
     
     if (!userId) {
-      console.log('[GENERATOR] No user ID provided, skipping generation check');
+      logger.debug('Generator', 'No user ID provided, skipping generation check');
       return { shouldGenerate: false, reason: 'none' };
     }
     
@@ -342,11 +347,11 @@ export async function shouldGenerateQuestions(userId: string): Promise<{
     // This will work for both guest and logged-in users
     const answerCount = clientSideAnswerCounts[userId] || 0;
     
-    console.log('[GENERATOR] Client-side user answer count:', answerCount);
+    logger.log('[GENERATOR] Client-side user answer count:', answerCount);
     
     // Not enough answers yet - must have at least 6 interactions before first generation
     if (answerCount < 6) {
-      console.log('[GENERATOR] Not enough questions answered yet:', answerCount);
+      logger.log('[GENERATOR] Not enough questions answered yet:', answerCount);
       return { shouldGenerate: false, reason: 'none', answerCount };
     }
     
@@ -355,21 +360,21 @@ export async function shouldGenerateQuestions(userId: string): Promise<{
     if (lastGeneration) {
       // Check if we've already generated for this milestone (same answer count)
       if (lastGeneration.answerCount === answerCount) {
-        console.log(`[GENERATOR] Already generated questions for milestone ${answerCount}, skipping`);
+        logger.log(`[GENERATOR] Already generated questions for milestone ${answerCount}, skipping`);
         return { shouldGenerate: false, reason: 'none', answerCount };
       }
       
       // Check if we've recently generated (within the last 10 seconds)
       const timeSinceLastGeneration = Date.now() - lastGeneration.timestamp;
       if (timeSinceLastGeneration < 10000) { // 10 seconds
-        console.log(`[GENERATOR] Generated questions recently (${timeSinceLastGeneration}ms ago), throttling`);
+        logger.log(`[GENERATOR] Generated questions recently (${timeSinceLastGeneration}ms ago), throttling`);
         return { shouldGenerate: false, reason: 'none', answerCount };
       }
     }
     
     // Generate new questions every 6 questions answered
     if (answerCount > 0 && answerCount % 6 === 0) {
-      console.log(`[GENERATOR] User answered ${answerCount} questions (multiple of 6), triggering generation`);
+      logger.log(`[GENERATOR] User answered ${answerCount} questions (multiple of 6), triggering generation`);
       
       // Record generation time and count
       lastGenerationTimes[userId] = { timestamp: Date.now(), answerCount };
@@ -382,10 +387,10 @@ export async function shouldGenerateQuestions(userId: string): Promise<{
     }
     
     // No other triggers - not a multiple of 6
-    console.log(`[GENERATOR] User answered ${answerCount} questions (not a multiple of 6), skipping generation`);
+    logger.log(`[GENERATOR] User answered ${answerCount} questions (not a multiple of 6), skipping generation`);
     return { shouldGenerate: false, reason: 'none', answerCount };
   } catch (error) {
-    console.error('[GENERATOR] Error checking if questions should be generated:', error);
+    logger.error('[GENERATOR] Error checking if questions should be generated:', error);
     return { shouldGenerate: false, reason: 'none' };
   }
 }
@@ -406,7 +411,7 @@ export async function runQuestionGeneration(
   try {
     // Ensure user ID is valid
     if (!userId) {
-      console.error('[GENERATOR] Invalid user ID');
+      logger.error('[GENERATOR] Invalid user ID');
         return false;
       }
     
@@ -415,12 +420,12 @@ export async function runQuestionGeneration(
     
     if (recentQuestions && recentQuestions.length > 0) {
       // Client provided recent questions - use those
-      console.log(`[GENERATOR] Using ${recentQuestions.length} client-provided recent questions`);
+      logger.log(`[GENERATOR] Using ${recentQuestions.length} client-provided recent questions`);
       validRecentQuestions = recentQuestions;
       
       // Log a sample for verification
       validRecentQuestions.slice(0, 3).forEach((q, i) => {
-        console.log(`[GENERATOR] Recent question ${i+1}: ${q.questionText.substring(0, 50)}...`);
+        logger.log(`[GENERATOR] Recent question ${i+1}: ${q.questionText.substring(0, 50)}...`);
       });
     } else {
       // No client-provided questions, fetch from database
@@ -434,7 +439,7 @@ export async function runQuestionGeneration(
           .limit(10);
           
         if (answerError) {
-          console.error('[GENERATOR] Error fetching recent answers:', answerError);
+          logger.error('[GENERATOR] Error fetching recent answers:', answerError);
         } else if (answerData && answerData.length > 0) {
           // Get question texts for these IDs
           const questionIds = answerData.map((a: any) => a.question_id);
@@ -445,7 +450,7 @@ export async function runQuestionGeneration(
             .in('id', questionIds);
             
           if (questionError) {
-            console.error('[GENERATOR] Error fetching recent questions:', questionError);
+            logger.error('[GENERATOR] Error fetching recent questions:', questionError);
           } else if (questionData && questionData.length > 0) {
             // Map to correct format
             validRecentQuestions = questionData.map((q: any) => ({
@@ -457,11 +462,11 @@ export async function runQuestionGeneration(
               tags: q.tags
             }));
             
-            console.log(`[GENERATOR] Found ${validRecentQuestions.length} recent questions from database`);
+            logger.log(`[GENERATOR] Found ${validRecentQuestions.length} recent questions from database`);
           }
         }
       } catch (error) {
-        console.error('[GENERATOR] Error getting recent questions:', error);
+        logger.error('[GENERATOR] Error getting recent questions:', error);
       }
     }
     
@@ -472,7 +477,7 @@ export async function runQuestionGeneration(
       const incompleteQuestions = validRecentQuestions.filter(q => !q.topic || !q.subtopic || !q.branch);
       
       if (incompleteQuestions.length > 0) {
-        console.log(`[GENERATOR] Enhancing ${incompleteQuestions.length} questions with missing hierarchy data`);
+        logger.log(`[GENERATOR] Enhancing ${incompleteQuestions.length} questions with missing hierarchy data`);
         
         try {
           const questionIds = incompleteQuestions.map(q => q.id);
@@ -482,7 +487,7 @@ export async function runQuestionGeneration(
             .in('id', questionIds);
             
           if (error) {
-            console.error('[GENERATOR] Error fetching hierarchy data:', error);
+            logger.error('[GENERATOR] Error fetching hierarchy data:', error);
           } else if (data && data.length > 0) {
             // Update the questions with the fetched data
             validRecentQuestions = validRecentQuestions.map(q => {
@@ -499,10 +504,10 @@ export async function runQuestionGeneration(
               return q;
             });
             
-            console.log('[GENERATOR] Successfully enhanced recent questions with hierarchy data');
+            logger.log('[GENERATOR] Successfully enhanced recent questions with hierarchy data');
           }
         } catch (error) {
-          console.error('[GENERATOR] Error enhancing questions with hierarchy data:', error);
+          logger.error('[GENERATOR] Error enhancing questions with hierarchy data:', error);
         }
       }
     }
@@ -511,7 +516,7 @@ export async function runQuestionGeneration(
     let primaryTopics: string[] = [];
     if (forcedTopics && forcedTopics.length > 0) {
       primaryTopics = forcedTopics;
-      console.log('[GENERATOR] Using forced topics:', primaryTopics);
+      logger.log('[GENERATOR] Using forced topics:', primaryTopics);
     } else {
       try {
         // Import the user profile fetching function
@@ -522,10 +527,11 @@ export async function runQuestionGeneration(
         
         // Step 2.1: Get the most recent answered questions - higher priority
         const recentTopics = await getRecentAnsweredTopics(userId, 10); // Get more recent topics
-        console.log('[GENERATOR] Most recent answered topics (highest priority):', recentTopics);
+        logger.log('[GENERATOR] Most recent answered topics (highest priority):', recentTopics);
         
-        // Step 2.2: Extract weighted topics from user profile
+        // Step 2.2: Get topics with high weights from user profile
         const weightedTopics: {name: string, weight: number}[] = [];
+        
         if (userProfile && userProfile.topics) {
           // Convert topics object to array of {name, weight} pairs
           weightedTopics.push(
@@ -533,10 +539,6 @@ export async function runQuestionGeneration(
               .map(([name, data]) => ({ name, weight: data.weight || 0 }))
               .sort((a, b) => b.weight - a.weight) // Sort by weight descending
           );
-          
-          // Log the weights from the profile for verification
-          console.log('[GENERATOR] User profile topic weights:', 
-            weightedTopics.slice(0, 10).map(t => `${t.name} (${t.weight.toFixed(2)})`));
         }
         
         // Step 2.3: Create a balanced prioritized topic list
@@ -548,23 +550,18 @@ export async function runQuestionGeneration(
           // Reverse index so most recent gets highest score
           const recencyScore = 0.5 * (recentTopics.length - index) / recentTopics.length;
           topicScores[topic] = (topicScores[topic] || 0) + recencyScore;
-          console.log(`[GENERATOR] Topic ${topic} recency score: ${recencyScore.toFixed(2)}`);
         });
         
         // Score weighted topics (direct weight value from profile)
         weightedTopics.forEach(topic => {
           // Weight score (0-1 from profile)
           topicScores[topic.name] = (topicScores[topic.name] || 0) + topic.weight;
-          console.log(`[GENERATOR] Topic ${topic.name} weight score: ${topic.weight.toFixed(2)}`);
         });
         
         // Calculate final scores and sort
         const scoredTopics = Object.entries(topicScores)
           .map(([topic, score]) => ({ topic, score }))
           .sort((a, b) => b.score - a.score);
-          
-        console.log('[GENERATOR] Combined topic scores:', 
-          scoredTopics.map(t => `${t.topic}: ${t.score.toFixed(2)}`));
         
         // Take top topics as prioritized list
         const prioritizedTopics = scoredTopics.slice(0, 6).map(t => t.topic);
@@ -609,8 +606,7 @@ export async function runQuestionGeneration(
           
           // Log discovered subtopics for debugging
           if (subtopicWeights.length > 0) {
-            console.log('[GENERATOR] Found subtopics from high-weight topics:', 
-              subtopicWeights.slice(0, 5).map(s => `${s.topic}/${s.subtopic}: ${s.weight.toFixed(2)}`));
+            // Don't log the verbose subtopic details
           }
         }
         
@@ -630,8 +626,6 @@ export async function runQuestionGeneration(
           sortedSubtopicWeights.slice(0, 3).forEach(item => {
             combinedTopics.push(`${item.topic}:${item.subtopic}`);
           });
-          
-          console.log('[GENERATOR] Created combined topic:subtopic entries:', combinedTopics);
         }
         
         // Also create topic:branch combinations for branches with high weights
@@ -654,9 +648,6 @@ export async function runQuestionGeneration(
           
           // Log discovered branches for debugging
           if (branchWeights.length > 0) {
-            console.log('[GENERATOR] Found branches from profile:', 
-              branchWeights.slice(0, 3).map(b => `${b.topic}/${b.branch}: ${b.weight.toFixed(2)}`));
-              
             // Add top branches to combined topics list
             const sortedBranchWeights = [...branchWeights].sort((a, b) => b.weight - a.weight);
             
@@ -665,9 +656,6 @@ export async function runQuestionGeneration(
               // Create a topic:branch format
               combinedTopics.push(`${item.topic}:${item.branch}`);
             });
-            
-            console.log('[GENERATOR] Created combined topic:branch entries:', 
-              combinedTopics.filter(t => t.includes(':') && !subtopicWeights.some(s => t.endsWith(s.subtopic))));
           }
         }
         
@@ -682,14 +670,12 @@ export async function runQuestionGeneration(
           
           // Keep the list size reasonable (not too many topics)
           primaryTopics = combinedList.slice(0, 6);
-          
-          console.log('[GENERATOR] Final topics with hierarchical combinations:', primaryTopics);
         }
         
-        // Log final selection for verification
-        console.log('[GENERATOR] Final prioritized topics in order of importance:', primaryTopics);
+        // Final selection logged only for verification
+        logger.log('[GENERATOR] Final prioritized topics in order of importance:', primaryTopics);
       } catch (error) {
-        console.error('[GENERATOR] Error getting personalized topics:', error);
+        logger.error('[GENERATOR] Error getting personalized topics:', error);
         // Fallback to default topics on error
         primaryTopics = ['Science', 'History', 'Geography'];
       }
@@ -698,7 +684,7 @@ export async function runQuestionGeneration(
     // If we still don't have any topics, use defaults
     if (primaryTopics.length === 0) {
       primaryTopics = ['Science', 'History', 'Geography'];
-      console.log('[GENERATOR] Using default topics (no topics available)');
+      logger.log('[GENERATOR] Using default topics (no topics available)');
     }
     
     // Step 3: Get adjacent topics
@@ -717,8 +703,8 @@ export async function runQuestionGeneration(
     // Log that generation is starting with reason information
     let reason = forcedTopics ? 'Client-side count: multiple of 6 questions' : 'Server check triggered';
     
-    console.log(`[GENERATOR] Primary topics: ${primaryTopics.join(', ')}`);
-    console.log(`[GENERATOR] Adjacent topics: ${uniqueAdjacentTopics.join(', ')}`);
+    logger.log(`[GENERATOR] Primary topics: ${primaryTopics.join(', ')}`);
+    logger.log(`[GENERATOR] Adjacent topics: ${uniqueAdjacentTopics.join(', ')}`);
     
     logGeneratorEvent(
       userId,
@@ -745,7 +731,7 @@ export async function runQuestionGeneration(
           const { fetchUserProfile } = await import('./syncService');
           userProfile = await fetchUserProfile(userId);
         } catch (e) {
-          console.error('[GENERATOR] Error importing or fetching user profile:', e);
+          logger.error('[GENERATOR] Error importing or fetching user profile:', e);
         }
         
         if (userProfile && userProfile.topics) {
@@ -779,9 +765,9 @@ export async function runQuestionGeneration(
           topSubtopics.push(...allSubtopics.sort((a, b) => b.weight - a.weight).slice(0, 5));
           topBranches.push(...allBranches.sort((a, b) => b.weight - a.weight).slice(0, 5));
           
-          console.log('[GENERATOR] Top weighted subtopics:', 
+          logger.log('[GENERATOR] Top weighted subtopics:', 
             topSubtopics.map(s => `${s.topic}/${s.subtopic} (${s.weight.toFixed(2)})`));
-          console.log('[GENERATOR] Top weighted branches:', 
+          logger.log('[GENERATOR] Top weighted branches:', 
             topBranches.map(b => `${b.topic}/${b.subtopic}/${b.branch} (${b.weight.toFixed(2)})`));
         }
         
@@ -826,13 +812,13 @@ export async function runQuestionGeneration(
                 .map(([tag]) => tag)
             );
             
-            console.log('[GENERATOR] Top tags from recent questions:', topTags);
+            logger.log('[GENERATOR] Top tags from recent questions:', topTags);
           }
         } catch (error) {
-          console.error('[GENERATOR] Error fetching question tags:', error);
+          logger.error('[GENERATOR] Error fetching question tags:', error);
         }
       } catch (error) {
-        console.error('[GENERATOR] Error extracting subtopics and branches:', error);
+        logger.error('[GENERATOR] Error extracting subtopics and branches:', error);
       }
     }
     
@@ -843,7 +829,7 @@ export async function runQuestionGeneration(
     
     // PRIORITY 1: Use client-side data if provided (highest priority)
     if (clientSubtopics && clientSubtopics.length > 0) {
-      console.log('[GENERATOR] Using client-side subtopics:', clientSubtopics);
+      logger.log('[GENERATOR] Using client-side subtopics:', clientSubtopics);
       finalSubtopics.push(...clientSubtopics);
     } else {
       // Otherwise use profile data
@@ -851,7 +837,7 @@ export async function runQuestionGeneration(
     }
     
     if (clientBranches && clientBranches.length > 0) {
-      console.log('[GENERATOR] Using client-side branches:', clientBranches);
+      logger.log('[GENERATOR] Using client-side branches:', clientBranches);
       finalBranches.push(...clientBranches);
     } else {
       // Otherwise use profile data
@@ -859,7 +845,7 @@ export async function runQuestionGeneration(
     }
     
     if (clientTags && clientTags.length > 0) {
-      console.log('[GENERATOR] Using client-side tags:', clientTags);
+      logger.log('[GENERATOR] Using client-side tags:', clientTags);
       finalTags.push(...clientTags);
     } else {
       // Otherwise use database tags
@@ -875,7 +861,7 @@ export async function runQuestionGeneration(
           const { fetchUserProfile } = await import('./syncService');
           userProfile = await fetchUserProfile(userId);
         } catch (e) {
-          console.error('[GENERATOR] Error importing or fetching user profile:', e);
+          logger.error('[GENERATOR] Error importing or fetching user profile:', e);
         }
         
         if (userProfile && userProfile.topics) {
@@ -911,14 +897,14 @@ export async function runQuestionGeneration(
             if (finalSubtopics.length === 0) {
               const sortedSubtopics = allSubtopics.sort((a, b) => b.weight - a.weight).slice(0, 5);
               finalSubtopics.push(...sortedSubtopics.map(s => s.subtopic));
-              console.log('[GENERATOR] Using profile subtopics:', finalSubtopics);
+              logger.log('[GENERATOR] Using profile subtopics:', finalSubtopics);
             }
             
             // If we don't have branches yet, add them from profile
             if (finalBranches.length === 0) {
               const sortedBranches = allBranches.sort((a, b) => b.weight - a.weight).slice(0, 5);
               finalBranches.push(...sortedBranches.map(b => b.branch));
-              console.log('[GENERATOR] Using profile branches:', finalBranches);
+              logger.log('[GENERATOR] Using profile branches:', finalBranches);
             }
           }
         }
@@ -965,14 +951,14 @@ export async function runQuestionGeneration(
                   .map(([tag]) => tag)
               );
               
-              console.log('[GENERATOR] Using database tags:', finalTags);
+              logger.log('[GENERATOR] Using database tags:', finalTags);
             }
           } catch (error) {
-            console.error('[GENERATOR] Error fetching question tags:', error);
+            logger.error('[GENERATOR] Error fetching question tags:', error);
           }
         }
       } catch (error) {
-        console.error('[GENERATOR] Error extracting subtopics and branches:', error);
+        logger.error('[GENERATOR] Error extracting subtopics and branches:', error);
       }
     }
     
@@ -984,7 +970,7 @@ export async function runQuestionGeneration(
       // Ensure we have at least some primary topics
       if (primaryTopics.length === 0) {
         primaryTopics = ['General Knowledge', 'Trivia'];
-        console.log('[GENERATOR] Using fallback topics as no primary topics were found');
+        logger.log('[GENERATOR] Using fallback topics as no primary topics were found');
       }
 
       // Collection of preferred subtopics from client or user profile
@@ -1024,7 +1010,7 @@ export async function runQuestionGeneration(
             // Create the final ordered list
             primaryTopics = [...orderedPrimaryTopics, ...remainingTopics];
             
-            console.log('[GENERATOR] Ordered primary topics by weight:', primaryTopics);
+            logger.log('[GENERATOR] Ordered primary topics by weight:', primaryTopics);
           }
           
           // Try to extract subtopics for the highest weighted topic for question 10
@@ -1061,16 +1047,16 @@ export async function runQuestionGeneration(
                 // Add these subtopics to the preferred list
                 if (sortedSubtopics.length > 0) {
                   preferredSubtopics = [...sortedSubtopics, ...preferredSubtopics];
-                  console.log('[GENERATOR] Added top subtopics for exploration:', sortedSubtopics);
+                  logger.log('[GENERATOR] Added top subtopics for exploration:', sortedSubtopics);
                 }
               }
             } catch (subtopicError) {
-              console.error('[GENERATOR] Error fetching subtopics for top topic:', subtopicError);
+              logger.error('[GENERATOR] Error fetching subtopics for top topic:', subtopicError);
             }
           }
         }
       } catch (profileError) {
-        console.error('[GENERATOR] Error processing user profile for subtopics:', profileError);
+        logger.error('[GENERATOR] Error processing user profile for subtopics:', profileError);
       }
 
       // Prepare variables for OpenAI call  
@@ -1091,7 +1077,7 @@ export async function runQuestionGeneration(
       const avoidIntentsSection = await buildAvoidTopicIntentsSection(primaryTopics);
       
       // Generate questions
-      console.log('[GENERATOR] Calling OpenAI with preferred subtopics:', preferredSubtopics);
+      logger.log('[GENERATOR] Calling OpenAI with preferred subtopics:', preferredSubtopics);
     const generatedQuestions = await generateQuestions(
       primaryTopics,
         adjacentTopics,
@@ -1107,7 +1093,7 @@ export async function runQuestionGeneration(
       // Step 6: Filter out duplicates and save to database
     const savedCount = await saveUniqueQuestions(generatedQuestions);
     
-    console.log(`[GENERATOR] Generated ${generatedQuestions.length} questions, saved ${savedCount}`);
+    logger.log(`[GENERATOR] Generated ${generatedQuestions.length} questions, saved ${savedCount}`);
     
     // Log generation results
     logGeneratorEvent(
@@ -1123,7 +1109,7 @@ export async function runQuestionGeneration(
     
     return savedCount > 0;
   } catch (error) {
-      console.error('[GENERATOR] Error during question generation:', error);
+      logger.error('[GENERATOR] Error during question generation:', error);
       
       logGeneratorEvent(
         userId,
@@ -1138,7 +1124,7 @@ export async function runQuestionGeneration(
       return false;
     }
   } catch (error) {
-    console.error('[GENERATOR] Error during question generation:', error);
+    logger.error('[GENERATOR] Error during question generation:', error);
     
     logGeneratorEvent(
       userId,
@@ -1188,7 +1174,7 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
     for (const [answer, answerQuestions] of questionsByAnswer.entries()) {
       // If we have multiple questions with the same answer, further analyze them
       if (answerQuestions.length > 1) {
-        console.log(`[GENERATOR] Analyzing ${answerQuestions.length} questions with answer "${answer}"`);
+        logger.log(`[GENERATOR] Analyzing ${answerQuestions.length} questions with answer "${answer}"`);
         
         // Import functions from openaiService
         const { generateEnhancedFingerprint, calculateFingerprintSimilarity } = require('./openaiService');
@@ -1209,15 +1195,15 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
             
             // If similarity is too high, mark as duplicate
             if (similarity > 0.6) {
-              console.log(`[GENERATOR] Duplicate detected with similarity ${similarity.toFixed(2)}:`);
-              console.log(`  - Main: ${mainQuestion.question}`);
-              console.log(`  - Dupe: ${compareQuestion.question}`);
+              logger.log(`[GENERATOR] Duplicate detected with similarity ${similarity.toFixed(2)}:`);
+              logger.log(`  - Main: ${mainQuestion.question}`);
+              logger.log(`  - Dupe: ${compareQuestion.question}`);
               
               // Mark this question as a duplicate
               compareQuestion.isDuplicate = true;
             }
           } catch (e) {
-            console.warn('[GENERATOR] Error comparing fingerprints:', e);
+            logger.warn('[GENERATOR] Error comparing fingerprints:', e);
           }
         }
       }
@@ -1227,7 +1213,7 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
     for (const question of questions) {
       // Skip questions marked as duplicates
       if ((question as any).isDuplicate) {
-        console.log('[GENERATOR] Skipping duplicate question:', question.question.substring(0, 30) + '...');
+        logger.log('[GENERATOR] Skipping duplicate question:', question.question.substring(0, 30) + '...');
         continue;
       }
       
@@ -1237,7 +1223,7 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
       // Check if this question already exists
       const exists = await checkQuestionExists(fingerprint);
       if (exists) {
-        console.log('[GENERATOR] Skipping duplicate question:', question.question.substring(0, 30) + '...');
+        logger.log('[GENERATOR] Skipping duplicate question:', question.question.substring(0, 30) + '...');
         continue;
       }
       
@@ -1302,11 +1288,11 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
       );
       
       if (error) {
-        console.error('[GENERATOR] Error saving question:', error);
+        logger.error('[GENERATOR] Error saving question:', error);
         
         // If the error is due to missing fingerprint column, try again without it
         if (error.message.includes('column "fingerprint" does not exist')) {
-          console.log('[GENERATOR] Fingerprint column not found, retrying without fingerprint');
+          logger.log('[GENERATOR] Fingerprint column not found, retrying without fingerprint');
           
           // Retry insert without fingerprint column
           const { error: retryError } = await supabase
@@ -1349,7 +1335,7 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
           );
             
           if (retryError) {
-            console.error('[GENERATOR] Error in retry save without fingerprint:', retryError);
+            logger.error('[GENERATOR] Error in retry save without fingerprint:', retryError);
             continue;
           }
         } else {
@@ -1358,12 +1344,12 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
       }
       
       savedCount++;
-      console.log('[GENERATOR] Saved question with fingerprint:', question.question.substring(0, 30) + '...');
+      logger.log('[GENERATOR] Saved question with fingerprint:', question.question.substring(0, 30) + '...');
     }
     
     return savedCount;
   } catch (error) {
-    console.error('[GENERATOR] Error saving unique questions:', error);
+    logger.error('[GENERATOR] Error saving unique questions:', error);
     return 0;
   }
 }
@@ -1399,7 +1385,7 @@ async function buildAvoidTopicIntentsSection(topics: string[]): Promise<string> 
     
     return avoidIntentsSection;
   } catch (error) {
-    console.error('[GENERATOR] Error building avoid intents section:', error);
+    logger.error('[GENERATOR] Error building avoid intents section:', error);
     return '';
   }
 } 

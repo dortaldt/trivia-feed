@@ -183,7 +183,6 @@ const triviaSlice = createSlice({
         const startTime = state.interactionStartTimes[questionId] || Date.now();
         const timeSpent = Date.now() - startTime;
         
-        console.log(`[Redux] Skipping question ${questionId}: time spent = ${timeSpent}ms`);
         
         state.questions[questionId] = { 
           status: 'skipped',

@@ -202,17 +202,6 @@ export function useQuestionGenerator() {
           clientRecentTopics.push(...sortedTopics);
         }
         
-        console.log('[GENERATOR_HOOK] Sorted weighted topics:', 
-          Object.entries(topicWeights)
-            .sort((a, b) => b[1] - a[1])
-            .map(([topic, weight]) => `${topic} (${weight.toFixed(2)})`));
-            
-        console.log('[GENERATOR_HOOK] Topic-subtopic combinations created:',
-          topicSubtopicCombos.length > 0 ? topicSubtopicCombos.join(', ') : 'None');
-          
-        console.log('[GENERATOR_HOOK] Topic-branch combinations created:',
-          topicBranchCombos.length > 0 ? topicBranchCombos.join(', ') : 'None');
-        
         // Create a mixed array of primary topics for question generation
         // This will include a mix of regular topics, topic+subtopic combinations, and topic+branch combinations
         const enhancedTopics: string[] = [];
@@ -224,34 +213,19 @@ export function useQuestionGenerator() {
         if (topicSubtopicCombos.length > 0) {
           const sortedTopicSubtopics = topicSubtopicCombos.slice(0, 2);
           enhancedTopics.push(...sortedTopicSubtopics);
-          console.log('[GENERATOR_HOOK] Added topic-subtopic combos to enhanced topics:', sortedTopicSubtopics);
         }
         
         // Add top topic+branch combinations (up to 1)
         if (topicBranchCombos.length > 0) {
           const sortedTopicBranches = topicBranchCombos.slice(0, 1);
           enhancedTopics.push(...sortedTopicBranches);
-          console.log('[GENERATOR_HOOK] Added topic-branch combos to enhanced topics:', sortedTopicBranches);
         }
-        
-        // Log the enhanced hierarchical data
-        console.log('[GENERATOR_HOOK] Client-side topics (weighted):', clientRecentTopics);
-        console.log('[GENERATOR_HOOK] Topic+subtopic combinations:', topicSubtopicCombos);
-        console.log('[GENERATOR_HOOK] Topic+branch combinations:', topicBranchCombos);
-        console.log('[GENERATOR_HOOK] Enhanced mixed topics:', enhancedTopics);
-        console.log('[GENERATOR_HOOK] Client-side subtopics:', clientRecentSubtopics);
-        console.log('[GENERATOR_HOOK] Client-side branches:', clientRecentBranches);
-        console.log('[GENERATOR_HOOK] Client-side tags:', clientRecentTags);
         
         // Replace regular topics with our enhanced topic mix if available
         if (enhancedTopics.length > 0) {
           const originalTopics = [...clientRecentTopics];
           clientRecentTopics.length = 0;
           clientRecentTopics.push(...enhancedTopics);
-          
-          console.log('[GENERATOR_HOOK] IMPORTANT: Replaced original topics with enhanced topics');
-          console.log('  Original:', originalTopics);
-          console.log('  Enhanced:', clientRecentTopics);
         }
       } else {
         console.log('[GENERATOR_HOOK] No client-side interaction data available');
@@ -269,9 +243,6 @@ export function useQuestionGenerator() {
         'checking'
       );
       
-      console.log('[GENERATOR_HOOK] FINAL TOPICS BEING SENT TO OPENAI:', clientRecentTopics);
-      console.log('====================== END GENERATOR LOGS ======================\n\n');
-
       // Call our modified function with client-side data
       const result = await generateQuestionsDirectly(
         userId, 
@@ -348,28 +319,6 @@ export function useQuestionGenerator() {
         // Use client-provided topics directly
         primaryTopics = clientTopics;
         console.log(`[GENERATOR_HOOK] Using ${clientTopics.length} client-side topics for generation`);
-        
-        if (hasHierarchicalTopics) {
-          console.log('[GENERATOR_HOOK] Hierarchical topics detected:', 
-            clientTopics.filter(t => t.includes(':')));
-          
-          // Log the breakdown of hierarchical topics
-          const regularTopics = clientTopics.filter(t => !t.includes(':'));
-          const topicSubtopicCombos = clientTopics.filter(t => {
-            if (!t.includes(':')) return false;
-            const [_, secondPart] = t.split(':');
-            return clientSubtopics.includes(secondPart);
-          });
-          const topicBranchCombos = clientTopics.filter(t => {
-            if (!t.includes(':')) return false;
-            const [_, secondPart] = t.split(':');
-            return clientBranches.includes(secondPart);
-          });
-          
-          console.log('[GENERATOR_HOOK] Regular topics:', regularTopics);
-          console.log('[GENERATOR_HOOK] Topic:subtopic combos:', topicSubtopicCombos);
-          console.log('[GENERATOR_HOOK] Topic:branch combos:', topicBranchCombos);
-        }
       } else {
         // Fall back to database query if no client data
         console.log('[GENERATOR_HOOK] No client topics available, querying database');
