@@ -88,6 +88,13 @@ const ProfileView: React.FC = () => {
     
     if (!user) return;
     
+    // Additional safety check: validate UUID format before database query
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(user.id)) {
+      console.log('Invalid UUID format, cannot query database:', user.id);
+      return;
+    }
+    
     try {
       setLoadingProfile(true);
       

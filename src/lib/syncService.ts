@@ -227,6 +227,13 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
       return null;
     }
 
+    // Additional safety check: validate UUID format before database query
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      console.log('Invalid UUID format, cannot query database:', userId);
+      return null;
+    }
+
     console.log('Fetching user profile data for user:', userId);
     
     const { data, error } = await supabase

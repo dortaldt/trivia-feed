@@ -146,7 +146,7 @@ export async function getTopicQuestionCounts(): Promise<Record<string, number>> 
     
     return counts;
   } catch (error) {
-    logger.error('[GENERATOR] Error getting topic question counts:', error);
+    logger.error('[GENERATOR]', 'Error getting topic question counts:', error instanceof Error ? error.message : String(error));
     return {};
   }
 }
@@ -165,7 +165,7 @@ export async function getRecentAnsweredTopics(userId: string, count: number = 5)
       .limit(count);
     
     if (answerError) {
-      logger.error('[GENERATOR] Error getting recent answers:', answerError);
+      logger.error('[GENERATOR]', 'Error getting recent answers:', answerError instanceof Error ? answerError.message : String(answerError));
       return [];
     }
     
@@ -183,7 +183,7 @@ export async function getRecentAnsweredTopics(userId: string, count: number = 5)
       .in('id', questionIds);
     
     if (questionError) {
-      logger.error('[GENERATOR] Error getting question categories:', questionError);
+      logger.error('[GENERATOR]', 'Error getting question categories:', questionError instanceof Error ? questionError.message : String(questionError));
       return [];
     }
     
@@ -197,7 +197,7 @@ export async function getRecentAnsweredTopics(userId: string, count: number = 5)
     
     return Array.from(topics);
   } catch (error) {
-    logger.error('[GENERATOR] Error getting recent answered topics:', error);
+    logger.error('[GENERATOR]', 'Error getting recent answered topics:', error instanceof Error ? error.message : String(error));
     return [];
   }
 }
@@ -235,7 +235,7 @@ export async function getUserTopTopics(userId: string, scoreThreshold: number = 
     return topTopics;
     */
   } catch (error) {
-    logger.error('[GENERATOR] Error getting user top topics:', error);
+    logger.error('[GENERATOR]', 'Error getting user top topics:', error instanceof Error ? error.message : String(error));
     return [];
   }
 }
@@ -294,7 +294,7 @@ async function getExistingTopicIntents(topics: string[]): Promise<Map<string, Se
       .in('topic', topics);
       
     if (error) {
-      logger.error('[GENERATOR] Error fetching topic intents:', error);
+      logger.error('[GENERATOR]', 'Error fetching topic intents:', error instanceof Error ? error.message : String(error));
       return topicIntents;
     }
     
@@ -315,13 +315,13 @@ async function getExistingTopicIntents(topics: string[]): Promise<Map<string, Se
           topicIntents.get(question.topic)?.add(intent);
         }
       } catch (e) {
-        logger.warn('[GENERATOR] Error extracting intent:', e);
+        logger.warn('[GENERATOR]', 'Error extracting intent:', e instanceof Error ? e.message : String(e));
       }
     });
     
     return topicIntents;
   } catch (error) {
-    logger.error('[GENERATOR] Error getting topic intents:', error);
+    logger.error('[GENERATOR]', 'Error getting topic intents:', error instanceof Error ? error.message : String(error));
     return new Map<string, Set<string>>();
   }
 }
@@ -347,11 +347,11 @@ export async function shouldGenerateQuestions(userId: string): Promise<{
     // This will work for both guest and logged-in users
     const answerCount = clientSideAnswerCounts[userId] || 0;
     
-    logger.log('[GENERATOR] Client-side user answer count:', answerCount);
+    logger.info('[GENERATOR]', 'Client-side user answer count:', String(answerCount));
     
     // Not enough answers yet - must have at least 6 interactions before first generation
     if (answerCount < 6) {
-      logger.log('[GENERATOR] Not enough questions answered yet:', answerCount);
+      logger.info('[GENERATOR]', 'Not enough questions answered yet:', String(answerCount));
       return { shouldGenerate: false, reason: 'none', answerCount };
     }
     
@@ -360,21 +360,21 @@ export async function shouldGenerateQuestions(userId: string): Promise<{
     if (lastGeneration) {
       // Check if we've already generated for this milestone (same answer count)
       if (lastGeneration.answerCount === answerCount) {
-        logger.log(`[GENERATOR] Already generated questions for milestone ${answerCount}, skipping`);
+        logger.info('[GENERATOR]', `Already generated questions for milestone ${answerCount}, skipping`);
         return { shouldGenerate: false, reason: 'none', answerCount };
       }
       
       // Check if we've recently generated (within the last 10 seconds)
       const timeSinceLastGeneration = Date.now() - lastGeneration.timestamp;
       if (timeSinceLastGeneration < 10000) { // 10 seconds
-        logger.log(`[GENERATOR] Generated questions recently (${timeSinceLastGeneration}ms ago), throttling`);
+        logger.info('[GENERATOR]', `Generated questions recently (${timeSinceLastGeneration}ms ago), throttling`);
         return { shouldGenerate: false, reason: 'none', answerCount };
       }
     }
     
     // Generate new questions every 6 questions answered
     if (answerCount > 0 && answerCount % 6 === 0) {
-      logger.log(`[GENERATOR] User answered ${answerCount} questions (multiple of 6), triggering generation`);
+      logger.info('[GENERATOR]', `User answered ${answerCount} questions (multiple of 6), triggering generation`);
       
       // Record generation time and count
       lastGenerationTimes[userId] = { timestamp: Date.now(), answerCount };
@@ -387,10 +387,10 @@ export async function shouldGenerateQuestions(userId: string): Promise<{
     }
     
     // No other triggers - not a multiple of 6
-    logger.log(`[GENERATOR] User answered ${answerCount} questions (not a multiple of 6), skipping generation`);
+    logger.info('[GENERATOR]', `User answered ${answerCount} questions (not a multiple of 6), skipping generation`);
     return { shouldGenerate: false, reason: 'none', answerCount };
   } catch (error) {
-    logger.error('[GENERATOR] Error checking if questions should be generated:', error);
+    logger.error('[GENERATOR]', 'Error checking if questions should be generated:', error instanceof Error ? error.message : String(error));
     return { shouldGenerate: false, reason: 'none' };
   }
 }
@@ -411,7 +411,7 @@ export async function runQuestionGeneration(
   try {
     // Ensure user ID is valid
     if (!userId) {
-      logger.error('[GENERATOR] Invalid user ID');
+      logger.error('[GENERATOR]', 'Invalid user ID');
         return false;
       }
     
@@ -420,12 +420,12 @@ export async function runQuestionGeneration(
     
     if (recentQuestions && recentQuestions.length > 0) {
       // Client provided recent questions - use those
-      logger.log(`[GENERATOR] Using ${recentQuestions.length} client-provided recent questions`);
+      logger.info('[GENERATOR]', `Using ${recentQuestions.length} client-provided recent questions`);
       validRecentQuestions = recentQuestions;
       
       // Log a sample for verification
       validRecentQuestions.slice(0, 3).forEach((q, i) => {
-        logger.log(`[GENERATOR] Recent question ${i+1}: ${q.questionText.substring(0, 50)}...`);
+        logger.info('[GENERATOR]', `Recent question ${i+1}: ${q.questionText.substring(0, 50)}...`);
       });
     } else {
       // No client-provided questions, fetch from database
@@ -439,7 +439,7 @@ export async function runQuestionGeneration(
           .limit(10);
           
         if (answerError) {
-          logger.error('[GENERATOR] Error fetching recent answers:', answerError);
+          logger.error('[GENERATOR]', 'Error fetching recent answers:', answerError instanceof Error ? answerError.message : String(answerError));
         } else if (answerData && answerData.length > 0) {
           // Get question texts for these IDs
           const questionIds = answerData.map((a: any) => a.question_id);
@@ -450,7 +450,7 @@ export async function runQuestionGeneration(
             .in('id', questionIds);
             
           if (questionError) {
-            logger.error('[GENERATOR] Error fetching recent questions:', questionError);
+            logger.error('[GENERATOR]', 'Error fetching recent questions:', questionError instanceof Error ? questionError.message : String(questionError));
           } else if (questionData && questionData.length > 0) {
             // Map to correct format
             validRecentQuestions = questionData.map((q: any) => ({
@@ -462,11 +462,11 @@ export async function runQuestionGeneration(
               tags: q.tags
             }));
             
-            logger.log(`[GENERATOR] Found ${validRecentQuestions.length} recent questions from database`);
+            logger.info('[GENERATOR]', `Found ${validRecentQuestions.length} recent questions from database`);
           }
         }
       } catch (error) {
-        logger.error('[GENERATOR] Error getting recent questions:', error);
+        logger.error('[GENERATOR]', 'Error getting recent questions:', error instanceof Error ? error.message : String(error));
       }
     }
     
@@ -477,7 +477,7 @@ export async function runQuestionGeneration(
       const incompleteQuestions = validRecentQuestions.filter(q => !q.topic || !q.subtopic || !q.branch);
       
       if (incompleteQuestions.length > 0) {
-        logger.log(`[GENERATOR] Enhancing ${incompleteQuestions.length} questions with missing hierarchy data`);
+        logger.info('[GENERATOR]', `Enhancing ${incompleteQuestions.length} questions with missing hierarchy data`);
         
         try {
           const questionIds = incompleteQuestions.map(q => q.id);
@@ -487,7 +487,7 @@ export async function runQuestionGeneration(
             .in('id', questionIds);
             
           if (error) {
-            logger.error('[GENERATOR] Error fetching hierarchy data:', error);
+            logger.error('[GENERATOR]', 'Error fetching hierarchy data:', error instanceof Error ? error.message : String(error));
           } else if (data && data.length > 0) {
             // Update the questions with the fetched data
             validRecentQuestions = validRecentQuestions.map(q => {
@@ -504,10 +504,10 @@ export async function runQuestionGeneration(
               return q;
             });
             
-            logger.log('[GENERATOR] Successfully enhanced recent questions with hierarchy data');
+            logger.info('[GENERATOR]', 'Successfully enhanced recent questions with hierarchy data');
           }
         } catch (error) {
-          logger.error('[GENERATOR] Error enhancing questions with hierarchy data:', error);
+          logger.error('[GENERATOR]', 'Error enhancing questions with hierarchy data:', error instanceof Error ? error.message : String(error));
         }
       }
     }
@@ -516,7 +516,7 @@ export async function runQuestionGeneration(
     let primaryTopics: string[] = [];
     if (forcedTopics && forcedTopics.length > 0) {
       primaryTopics = forcedTopics;
-      logger.log('[GENERATOR] Using forced topics:', primaryTopics);
+      logger.debug('Generator', 'Using forced topics:', primaryTopics);
     } else {
       try {
         // Import the user profile fetching function
@@ -527,7 +527,7 @@ export async function runQuestionGeneration(
         
         // Step 2.1: Get the most recent answered questions - higher priority
         const recentTopics = await getRecentAnsweredTopics(userId, 10); // Get more recent topics
-        logger.log('[GENERATOR] Most recent answered topics (highest priority):', recentTopics);
+        logger.info('[GENERATOR]', 'Most recent answered topics (highest priority):', recentTopics.join(', '));
         
         // Step 2.2: Get topics with high weights from user profile
         const weightedTopics: {name: string, weight: number}[] = [];
@@ -673,9 +673,9 @@ export async function runQuestionGeneration(
         }
         
         // Final selection logged only for verification
-        logger.log('[GENERATOR] Final prioritized topics in order of importance:', primaryTopics);
+        logger.info('[GENERATOR]', 'Final prioritized topics in order of importance:', primaryTopics.join(', '));
       } catch (error) {
-        logger.error('[GENERATOR] Error getting personalized topics:', error);
+        logger.error('[GENERATOR]', 'Error getting personalized topics:', error instanceof Error ? error.message : String(error));
         // Fallback to default topics on error
         primaryTopics = ['Science', 'History', 'Geography'];
       }
@@ -684,7 +684,7 @@ export async function runQuestionGeneration(
     // If we still don't have any topics, use defaults
     if (primaryTopics.length === 0) {
       primaryTopics = ['Science', 'History', 'Geography'];
-      logger.log('[GENERATOR] Using default topics (no topics available)');
+      logger.info('[GENERATOR]', 'Using default topics (no topics available)');
     }
     
     // Step 3: Get adjacent topics
@@ -703,8 +703,8 @@ export async function runQuestionGeneration(
     // Log that generation is starting with reason information
     let reason = forcedTopics ? 'Client-side count: multiple of 6 questions' : 'Server check triggered';
     
-    logger.log(`[GENERATOR] Primary topics: ${primaryTopics.join(', ')}`);
-    logger.log(`[GENERATOR] Adjacent topics: ${uniqueAdjacentTopics.join(', ')}`);
+    logger.info('[GENERATOR]', 'Primary topics:', primaryTopics.join(', '));
+    logger.info('[GENERATOR]', 'Adjacent topics:', uniqueAdjacentTopics.join(', '));
     
     logGeneratorEvent(
       userId,
@@ -726,12 +726,12 @@ export async function runQuestionGeneration(
     if (!forcedTopics || forcedTopics.length === 0) {
       try {
         // Import the user profile fetching function if not already imported
-        let userProfile: UserProfile | null;
+        let userProfile: UserProfile | null = null;
         try {
           const { fetchUserProfile } = await import('./syncService');
           userProfile = await fetchUserProfile(userId);
         } catch (e) {
-          logger.error('[GENERATOR] Error importing or fetching user profile:', e);
+          logger.error('[GENERATOR]', 'Error importing or fetching user profile:', e instanceof Error ? e.message : String(e));
         }
         
         if (userProfile && userProfile.topics) {
@@ -765,10 +765,10 @@ export async function runQuestionGeneration(
           topSubtopics.push(...allSubtopics.sort((a, b) => b.weight - a.weight).slice(0, 5));
           topBranches.push(...allBranches.sort((a, b) => b.weight - a.weight).slice(0, 5));
           
-          logger.log('[GENERATOR] Top weighted subtopics:', 
-            topSubtopics.map(s => `${s.topic}/${s.subtopic} (${s.weight.toFixed(2)})`));
-          logger.log('[GENERATOR] Top weighted branches:', 
-            topBranches.map(b => `${b.topic}/${b.subtopic}/${b.branch} (${b.weight.toFixed(2)})`));
+          logger.info('[GENERATOR]', 'Top weighted subtopics:', 
+            topSubtopics.map(s => `${s.topic}/${s.subtopic} (${s.weight.toFixed(2)})`).join(', '));
+          logger.info('[GENERATOR]', 'Top weighted branches:', 
+            topBranches.map(b => `${b.topic}/${b.subtopic}/${b.branch} (${b.weight.toFixed(2)})`).join(', '));
         }
         
         // Get tags from most recent questions the user has answered
@@ -812,13 +812,13 @@ export async function runQuestionGeneration(
                 .map(([tag]) => tag)
             );
             
-            logger.log('[GENERATOR] Top tags from recent questions:', topTags);
+            logger.info('[GENERATOR]', 'Top tags from recent questions:', topTags.join(', '));
           }
         } catch (error) {
-          logger.error('[GENERATOR] Error fetching question tags:', error);
+          logger.error('[GENERATOR]', 'Error fetching question tags:', error instanceof Error ? error.message : String(error));
         }
       } catch (error) {
-        logger.error('[GENERATOR] Error extracting subtopics and branches:', error);
+        logger.error('[GENERATOR]', 'Error extracting subtopics and branches:', error instanceof Error ? error.message : String(error));
       }
     }
     
@@ -829,7 +829,7 @@ export async function runQuestionGeneration(
     
     // PRIORITY 1: Use client-side data if provided (highest priority)
     if (clientSubtopics && clientSubtopics.length > 0) {
-      logger.log('[GENERATOR] Using client-side subtopics:', clientSubtopics);
+      logger.info('[GENERATOR]', 'Using client-side subtopics:', clientSubtopics.join(', '));
       finalSubtopics.push(...clientSubtopics);
     } else {
       // Otherwise use profile data
@@ -837,7 +837,7 @@ export async function runQuestionGeneration(
     }
     
     if (clientBranches && clientBranches.length > 0) {
-      logger.log('[GENERATOR] Using client-side branches:', clientBranches);
+      logger.info('[GENERATOR]', 'Using client-side branches:', clientBranches.join(', '));
       finalBranches.push(...clientBranches);
     } else {
       // Otherwise use profile data
@@ -845,7 +845,7 @@ export async function runQuestionGeneration(
     }
     
     if (clientTags && clientTags.length > 0) {
-      logger.log('[GENERATOR] Using client-side tags:', clientTags);
+      logger.info('[GENERATOR]', 'Using client-side tags:', clientTags.join(', '));
       finalTags.push(...clientTags);
     } else {
       // Otherwise use database tags
@@ -856,12 +856,12 @@ export async function runQuestionGeneration(
     if (!forcedTopics || forcedTopics.length === 0) {
       try {
         // Import the user profile fetching function if not already imported
-        let userProfile: UserProfile | null;
+        let userProfile: UserProfile | null = null;
         try {
           const { fetchUserProfile } = await import('./syncService');
           userProfile = await fetchUserProfile(userId);
         } catch (e) {
-          logger.error('[GENERATOR] Error importing or fetching user profile:', e);
+          logger.error('[GENERATOR]', 'Error importing or fetching user profile:', e instanceof Error ? e.message : String(e));
         }
         
         if (userProfile && userProfile.topics) {
@@ -897,14 +897,14 @@ export async function runQuestionGeneration(
             if (finalSubtopics.length === 0) {
               const sortedSubtopics = allSubtopics.sort((a, b) => b.weight - a.weight).slice(0, 5);
               finalSubtopics.push(...sortedSubtopics.map(s => s.subtopic));
-              logger.log('[GENERATOR] Using profile subtopics:', finalSubtopics);
+              logger.info('[GENERATOR]', 'Using profile subtopics:', finalSubtopics.join(', '));
             }
             
             // If we don't have branches yet, add them from profile
             if (finalBranches.length === 0) {
               const sortedBranches = allBranches.sort((a, b) => b.weight - a.weight).slice(0, 5);
               finalBranches.push(...sortedBranches.map(b => b.branch));
-              logger.log('[GENERATOR] Using profile branches:', finalBranches);
+              logger.info('[GENERATOR]', 'Using profile branches:', finalBranches.join(', '));
             }
           }
         }
@@ -951,14 +951,14 @@ export async function runQuestionGeneration(
                   .map(([tag]) => tag)
               );
               
-              logger.log('[GENERATOR] Using database tags:', finalTags);
+              logger.info('[GENERATOR]', 'Using database tags:', finalTags.join(', '));
             }
           } catch (error) {
-            logger.error('[GENERATOR] Error fetching question tags:', error);
+            logger.error('[GENERATOR]', 'Error fetching question tags:', error instanceof Error ? error.message : String(error));
           }
         }
       } catch (error) {
-        logger.error('[GENERATOR] Error extracting subtopics and branches:', error);
+        logger.error('[GENERATOR]', 'Error extracting subtopics and branches:', error instanceof Error ? error.message : String(error));
       }
     }
     
@@ -970,7 +970,7 @@ export async function runQuestionGeneration(
       // Ensure we have at least some primary topics
       if (primaryTopics.length === 0) {
         primaryTopics = ['General Knowledge', 'Trivia'];
-        logger.log('[GENERATOR] Using fallback topics as no primary topics were found');
+        logger.info('[GENERATOR]', 'Using fallback topics as no primary topics were found');
       }
 
       // Collection of preferred subtopics from client or user profile
@@ -1010,7 +1010,7 @@ export async function runQuestionGeneration(
             // Create the final ordered list
             primaryTopics = [...orderedPrimaryTopics, ...remainingTopics];
             
-            logger.log('[GENERATOR] Ordered primary topics by weight:', primaryTopics);
+            logger.info('[GENERATOR]', 'Ordered primary topics by weight:', primaryTopics.join(', '));
           }
           
           // Try to extract subtopics for the highest weighted topic for question 10
@@ -1032,7 +1032,7 @@ export async function runQuestionGeneration(
                 // Count subtopics to find the most common ones
                 const subtopicCount = new Map<string, number>();
                 
-                topicAnswers.forEach(answer => {
+                topicAnswers.forEach((answer: any) => {
                   if (answer.questions && answer.questions.subtopic) {
                     const subtopic = answer.questions.subtopic;
                     subtopicCount.set(subtopic, (subtopicCount.get(subtopic) || 0) + 1);
@@ -1047,16 +1047,16 @@ export async function runQuestionGeneration(
                 // Add these subtopics to the preferred list
                 if (sortedSubtopics.length > 0) {
                   preferredSubtopics = [...sortedSubtopics, ...preferredSubtopics];
-                  logger.log('[GENERATOR] Added top subtopics for exploration:', sortedSubtopics);
+                  logger.info('[GENERATOR]', 'Added top subtopics for exploration:', sortedSubtopics.join(', '));
                 }
               }
             } catch (subtopicError) {
-              logger.error('[GENERATOR] Error fetching subtopics for top topic:', subtopicError);
+              logger.error('[GENERATOR]', 'Error fetching subtopics for top topic:', subtopicError instanceof Error ? subtopicError.message : String(subtopicError));
             }
           }
         }
       } catch (profileError) {
-        logger.error('[GENERATOR] Error processing user profile for subtopics:', profileError);
+        logger.error('[GENERATOR]', 'Error processing user profile for subtopics:', profileError instanceof Error ? profileError.message : String(profileError));
       }
 
       // Prepare variables for OpenAI call  
@@ -1077,7 +1077,7 @@ export async function runQuestionGeneration(
       const avoidIntentsSection = await buildAvoidTopicIntentsSection(primaryTopics);
       
       // Generate questions
-      logger.log('[GENERATOR] Calling OpenAI with preferred subtopics:', preferredSubtopics);
+      logger.info('[GENERATOR]', 'Calling OpenAI with preferred subtopics:', preferredSubtopics.join(', '));
     const generatedQuestions = await generateQuestions(
       primaryTopics,
         adjacentTopics,
@@ -1093,7 +1093,7 @@ export async function runQuestionGeneration(
       // Step 6: Filter out duplicates and save to database
     const savedCount = await saveUniqueQuestions(generatedQuestions);
     
-    logger.log(`[GENERATOR] Generated ${generatedQuestions.length} questions, saved ${savedCount}`);
+    logger.info('[GENERATOR]', `Generated ${generatedQuestions.length} questions, saved ${savedCount}`);
     
     // Log generation results
     logGeneratorEvent(
@@ -1109,7 +1109,7 @@ export async function runQuestionGeneration(
     
     return savedCount > 0;
   } catch (error) {
-      logger.error('[GENERATOR] Error during question generation:', error);
+      logger.error('[GENERATOR]', 'Error during question generation:', error instanceof Error ? error.message : String(error));
       
       logGeneratorEvent(
         userId,
@@ -1124,7 +1124,7 @@ export async function runQuestionGeneration(
       return false;
     }
   } catch (error) {
-    logger.error('[GENERATOR] Error during question generation:', error);
+    logger.error('[GENERATOR]', 'Error during question generation:', error instanceof Error ? error.message : String(error));
     
     logGeneratorEvent(
       userId,
@@ -1171,10 +1171,10 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
     }
     
     // Second pass: identify duplicates among questions with the same answer
-    for (const [answer, answerQuestions] of questionsByAnswer.entries()) {
+    for (const [answer, answerQuestions] of Array.from(questionsByAnswer.entries())) {
       // If we have multiple questions with the same answer, further analyze them
       if (answerQuestions.length > 1) {
-        logger.log(`[GENERATOR] Analyzing ${answerQuestions.length} questions with answer "${answer}"`);
+        logger.info('[GENERATOR]', `Analyzing ${answerQuestions.length} questions with answer "${answer}"`);
         
         // Import functions from openaiService
         const { generateEnhancedFingerprint, calculateFingerprintSimilarity } = require('./openaiService');
@@ -1195,15 +1195,15 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
             
             // If similarity is too high, mark as duplicate
             if (similarity > 0.6) {
-              logger.log(`[GENERATOR] Duplicate detected with similarity ${similarity.toFixed(2)}:`);
-              logger.log(`  - Main: ${mainQuestion.question}`);
-              logger.log(`  - Dupe: ${compareQuestion.question}`);
+              logger.info('[GENERATOR]', `Duplicate detected with similarity ${similarity.toFixed(2)}:`);
+              logger.info('[GENERATOR]', `  - Main: ${mainQuestion.question}`);
+              logger.info('[GENERATOR]', `  - Dupe: ${compareQuestion.question}`);
               
               // Mark this question as a duplicate
               compareQuestion.isDuplicate = true;
             }
           } catch (e) {
-            logger.warn('[GENERATOR] Error comparing fingerprints:', e);
+            logger.warn('[GENERATOR]', 'Error comparing fingerprints:', e instanceof Error ? e.message : String(e));
           }
         }
       }
@@ -1213,7 +1213,7 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
     for (const question of questions) {
       // Skip questions marked as duplicates
       if ((question as any).isDuplicate) {
-        logger.log('[GENERATOR] Skipping duplicate question:', question.question.substring(0, 30) + '...');
+        logger.info('[GENERATOR]', `Skipping duplicate question: ${question.question.substring(0, 30) + '...'}`);
         continue;
       }
       
@@ -1223,7 +1223,7 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
       // Check if this question already exists
       const exists = await checkQuestionExists(fingerprint);
       if (exists) {
-        logger.log('[GENERATOR] Skipping duplicate question:', question.question.substring(0, 30) + '...');
+        logger.info('[GENERATOR]', `Skipping duplicate question: ${question.question.substring(0, 30) + '...'}`);
         continue;
       }
       
@@ -1288,11 +1288,11 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
       );
       
       if (error) {
-        logger.error('[GENERATOR] Error saving question:', error);
+        logger.error('[GENERATOR]', 'Error saving question:', error instanceof Error ? error.message : String(error));
         
         // If the error is due to missing fingerprint column, try again without it
         if (error.message.includes('column "fingerprint" does not exist')) {
-          logger.log('[GENERATOR] Fingerprint column not found, retrying without fingerprint');
+          logger.info('[GENERATOR]', 'Fingerprint column not found, retrying without fingerprint');
           
           // Retry insert without fingerprint column
           const { error: retryError } = await supabase
@@ -1335,7 +1335,7 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
           );
             
           if (retryError) {
-            logger.error('[GENERATOR] Error in retry save without fingerprint:', retryError);
+            logger.error('[GENERATOR]', 'Error in retry save without fingerprint:', retryError instanceof Error ? retryError.message : String(retryError));
             continue;
           }
         } else {
@@ -1344,12 +1344,12 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
       }
       
       savedCount++;
-      logger.log('[GENERATOR] Saved question with fingerprint:', question.question.substring(0, 30) + '...');
+      logger.info('[GENERATOR]', `Saved question with fingerprint: ${question.question.substring(0, 30) + '...'}`);
     }
     
     return savedCount;
   } catch (error) {
-    logger.error('[GENERATOR] Error saving unique questions:', error);
+    logger.error('[GENERATOR]', 'Error saving unique questions:', error instanceof Error ? error.message : String(error));
     return 0;
   }
 }
@@ -1367,7 +1367,7 @@ async function buildAvoidTopicIntentsSection(topics: string[]): Promise<string> 
     if (topicIntents.size > 0) {
       const topicIntentStrings = [];
       
-      for (const [topic, intents] of topicIntents.entries()) {
+      for (const [topic, intents] of Array.from(topicIntents.entries())) {
         if (intents.size > 0) {
           topicIntentStrings.push(`${topic}: ${Array.from(intents).join(', ')}`);
         }
@@ -1385,7 +1385,7 @@ async function buildAvoidTopicIntentsSection(topics: string[]): Promise<string> 
     
     return avoidIntentsSection;
   } catch (error) {
-    logger.error('[GENERATOR] Error building avoid intents section:', error);
+    logger.error('[GENERATOR]', 'Error building avoid intents section:', error instanceof Error ? error.message : String(error));
     return '';
   }
 } 

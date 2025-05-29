@@ -332,9 +332,9 @@ export async function generateQuestions(
       });
 
       console.log('[GENERATOR] Full response:', {
-        hasData: !!data,
-        dataType: typeof data,
-        dataKeys: data ? Object.keys(data) : [],
+        // hasData: !!data,
+        // dataType: typeof data,
+        // dataKeys: data ? Object.keys(data) : [],
         error: error
       });
 

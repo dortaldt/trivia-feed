@@ -174,6 +174,14 @@ async function isGuestUser(userId?: string): Promise<boolean> {
       return true;
     }
     
+    // Additional validation: check if it's a valid UUID format
+    // UUIDs should be 36 characters long and contain dashes
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      console.log('Invalid UUID format detected, treating as guest user:', userId);
+      return true;
+    }
+    
     // Check AsyncStorage as well for safety
     const guestMode = await AsyncStorage.getItem('guestMode');
     return guestMode === 'true';
@@ -201,6 +209,13 @@ async function _syncUserProfile(userId: string, userProfile: UserProfile): Promi
   try {
     if (!userId) {
       console.log('No user ID provided for sync');
+      return;
+    }
+
+    // Additional safety check: validate UUID format before database operation
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      console.log('Invalid UUID format, cannot sync to database:', userId);
       return;
     }
 
@@ -376,6 +391,13 @@ async function _fetchUserProfile(userId: string, forceLoad: boolean = false): Pr
       return null;
     }
 
+    // Additional safety check: validate UUID format before database query
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      console.log('Invalid UUID format, cannot query database:', userId);
+      return null;
+    }
+
     // Check if user is in guest mode
     const isGuest = await isGuestUser(userId);
     if (isGuest) {
@@ -536,6 +558,13 @@ async function _loadUserData(userId: string, forceLoad: boolean = false): Promis
     }
     
     if (!userId) {
+      return { profile: null };
+    }
+
+    // Additional safety check: validate UUID format before database operation
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      console.log('Invalid UUID format, cannot load from database:', userId);
       return { profile: null };
     }
 
