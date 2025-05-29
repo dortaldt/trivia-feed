@@ -143,6 +143,9 @@ const FeedScreen: React.FC = () => {
   // Add state for debug panel visibility
   const [debugPanelVisible, setDebugPanelVisible] = useState(false);
   
+  // Add state for the currently visible topic
+  const [activeTopic, setActiveTopic] = useState<string | undefined>(undefined);
+  
   // Get user from auth context
   const { user, isGuest } = useAuth();
   
@@ -1398,6 +1401,9 @@ const FeedScreen: React.FC = () => {
     
     const estimatedIndex = Math.round(currentScrollPos / viewportHeight);
     
+    // Update scrollBasedIndexRef with the current estimated index
+    scrollBasedIndexRef.current = estimatedIndex;
+    
     // Determine scroll direction
     const scrollDirection = currentScrollPos > lastScrollPosition.current ? 'down' : 'up';
     lastScrollPosition.current = currentScrollPos;
@@ -1475,6 +1481,9 @@ const FeedScreen: React.FC = () => {
             lastVisibleIndexRef.current = newIndex;
             lastVisibleItemId.current = currentItemId;
             
+            // Also update scrollBasedIndexRef to keep it in sync
+            scrollBasedIndexRef.current = newIndex;
+            
             // Update currentIndex state to match the visible item
             // This is critical for iOS to correctly detect skipped questions in onMomentumScrollEnd
             // console.log(`[INDEX UPDATE] Setting currentIndex from ${currentIndex} to ${newIndex}`);
@@ -1482,6 +1491,15 @@ const FeedScreen: React.FC = () => {
             
             // Start tracking interaction with new question
             dispatch(startInteraction({ questionId: currentItemId }));
+            
+            // Update active topic immediately when a new item becomes visible
+            if (currentItem && currentItem.topic) {
+              const newTopic = currentItem.topic;
+              if (newTopic !== activeTopic) {
+                console.log(`[VIEWABLE ITEMS] Updating active topic from "${activeTopic}" to "${newTopic}"`);
+                setActiveTopic(newTopic);
+              }
+            }
             
             // Set current explanation for debugging
             if (debugPanelVisible && feedExplanations[currentItemId]) {
@@ -1497,7 +1515,7 @@ const FeedScreen: React.FC = () => {
       const viewabilityEnd = performance.now();
       console.log(`[Performance tracker ⏱️] Viewability Detection - Ended: ${viewabilityEnd.toFixed(2)}ms | Duration: ${(viewabilityEnd - viewabilityStart).toFixed(2)}ms`);
     },
-    [personalizedFeed, questions, preloadNextItems, markPreviousAsSkipped, currentIndex, setCurrentIndex, dispatch, debugPanelVisible, feedExplanations]
+    [personalizedFeed, questions, preloadNextItems, markPreviousAsSkipped, currentIndex, setCurrentIndex, dispatch, debugPanelVisible, feedExplanations, activeTopic, setActiveTopic]
   );
 
   useEffect(() => {
@@ -1505,6 +1523,7 @@ const FeedScreen: React.FC = () => {
       const firstQuestionId = personalizedFeed[0].id;
       lastVisibleItemId.current = firstQuestionId;
       lastVisibleIndexRef.current = 0; // Explicitly initialize this ref to 0
+      scrollBasedIndexRef.current = 0; // Also initialize scrollBasedIndexRef to 0
       
       // Start tracking interaction with first question
       // console.log(`Starting initial interaction tracking for question ${firstQuestionId}`);
@@ -1523,6 +1542,34 @@ const FeedScreen: React.FC = () => {
       lastVisibleIndexRef.current = currentIndex;
     }
   }, [currentIndex]);
+  
+  // Update activeTopic when the visible index changes
+  useEffect(() => {
+    if (personalizedFeed.length > 0) {
+      // Use the same logic as before to determine the best index
+      let bestIndex = currentIndex;
+      
+      // On iOS, prioritize lastVisibleIndexRef as it's updated immediately when items become visible
+      if (isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
+        bestIndex = lastVisibleIndexRef.current;
+      } 
+      // For non-iOS or when lastVisibleIndexRef is not available, use scrollBasedIndex
+      else if (scrollBasedIndexRef.current >= 0 && scrollBasedIndexRef.current < personalizedFeed.length) {
+        bestIndex = scrollBasedIndexRef.current;
+      }
+      // Fallback to lastVisibleIndexRef for non-iOS platforms
+      else if (!isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
+        bestIndex = lastVisibleIndexRef.current;
+      }
+      
+      const newActiveTopic = bestIndex >= 0 && bestIndex < personalizedFeed.length ? personalizedFeed[bestIndex]?.topic : undefined;
+      
+      if (newActiveTopic !== activeTopic) {
+        console.log(`[ACTIVE TOPIC UPDATE] Changing active topic from "${activeTopic}" to "${newActiveTopic}" (index: ${bestIndex})`);
+        setActiveTopic(newActiveTopic);
+      }
+    }
+  }, [currentIndex, personalizedFeed, isIOS, activeTopic]);
 
   // Separate useEffect for verification to prevent infinite loops
   useEffect(() => {
@@ -1678,6 +1725,9 @@ const FeedScreen: React.FC = () => {
 
     // Update previousIndex.current to reflect the index used for THIS event's logic.
     previousIndex.current = eventCorrectedCurrentIndex;
+    
+    // Update scrollBasedIndexRef to reflect the final position after scroll ends
+    scrollBasedIndexRef.current = eventCorrectedCurrentIndex;
 
     // If the eventCorrectedCurrentIndex is different from the actual current state, or other refs are out of sync, update.
     if (eventCorrectedCurrentIndex !== currentIndex || lastVisibleIndexRef.current !== eventCorrectedCurrentIndex) {
@@ -2625,31 +2675,7 @@ const FeedScreen: React.FC = () => {
           <TopicRings
             size={50}
             userId={user?.id}
-            activeTopic={(() => {
-              // Use the same iOS-optimized logic for consistency
-              let bestIndex = currentIndex;
-              
-              // On iOS, prioritize lastVisibleIndexRef as it's updated immediately when items become visible
-              if (isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
-                bestIndex = lastVisibleIndexRef.current;
-              } 
-              // For non-iOS or when lastVisibleIndexRef is not available, use scrollBasedIndex
-              else if (scrollBasedIndexRef.current >= 0 && scrollBasedIndexRef.current < personalizedFeed.length) {
-                bestIndex = scrollBasedIndexRef.current;
-              }
-              // Fallback to lastVisibleIndexRef for non-iOS platforms
-              else if (!isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
-                bestIndex = lastVisibleIndexRef.current;
-              }
-              
-              const currentTopic = personalizedFeed.length > 0 && bestIndex < personalizedFeed.length ? personalizedFeed[bestIndex]?.topic : undefined;
-              
-              // Enhanced logging for iOS debugging
-              if (isIOS) {
-              }
-              
-              return currentTopic;
-            })()}
+            activeTopic={activeTopic}
             onRingComplete={(topic, level) => {
               console.log(`🎉 ${topic} reached level ${level}!`);
               // You can add celebration effects here
@@ -2776,26 +2802,7 @@ const FeedScreen: React.FC = () => {
           visible={showAllRingsModal}
           onClose={() => setShowAllRingsModal(false)}
           userId={user?.id}
-          activeTopic={(() => {
-            // Use the same iOS-optimized logic for consistency
-            let bestIndex = currentIndex;
-            
-            // On iOS, prioritize lastVisibleIndexRef as it's updated immediately when items become visible
-            if (isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
-              bestIndex = lastVisibleIndexRef.current;
-            } 
-            // For non-iOS or when lastVisibleIndexRef is not available, use scrollBasedIndex
-            else if (scrollBasedIndexRef.current >= 0 && scrollBasedIndexRef.current < personalizedFeed.length) {
-              bestIndex = scrollBasedIndexRef.current;
-            }
-            // Fallback to lastVisibleIndexRef for non-iOS platforms
-            else if (!isIOS && lastVisibleIndexRef.current !== null && lastVisibleIndexRef.current < personalizedFeed.length) {
-              bestIndex = lastVisibleIndexRef.current;
-            }
-            
-            const currentTopic = personalizedFeed.length > 0 && bestIndex < personalizedFeed.length ? personalizedFeed[bestIndex]?.topic : undefined;
-            return currentTopic;
-          })()}
+          activeTopic={activeTopic}
         />
       </View>
 
