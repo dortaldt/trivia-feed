@@ -57,7 +57,7 @@ const ADMIN_PAGES: AdminPageInfo[] = [
     description: 'Modify app settings, feature flags, and environment-specific configurations.',
     icon: 'settings',
     path: '/admin-config',
-    status: 'coming-soon',
+    status: 'active',
     category: 'config',
   },
   {

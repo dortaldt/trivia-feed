@@ -561,12 +561,12 @@ const FeedScreen: React.FC = () => {
   }, []);
 
   // Use the DOM scroll prevention hook for web platforms
-  useWebScrollPrevention({
-    flatListRef,
-    currentIndex,
-    viewportHeight,
-    personalizedFeedLength: personalizedFeed.length
-  });
+  // useWebScrollPrevention({
+  //   flatListRef,
+  //   currentIndex,
+  //   viewportHeight,
+  //   personalizedFeedLength: personalizedFeed.length
+  // });
 
   const createTikTokAnimation = () => {
     try {
@@ -930,6 +930,35 @@ const FeedScreen: React.FC = () => {
 
   // Add debug logs to markPreviousAsSkipped to identify if it's being called correctly
   const markPreviousAsSkipped = useCallback((prevIndex: number, newIndex: number) => {
+    // Performance tracker ⏱️ - Skip Detection START
+    const skipDetectionStart = performance.now();
+    console.log(`[Performance tracker ⏱️] Skip Detection & Fast Scroll - Started: ${skipDetectionStart.toFixed(2)}ms`);
+    
+    // Only mark as skipped when explicitly scrolling down past a question and if we have feed data
+    if (newIndex <= prevIndex || personalizedFeed.length === 0) {
+      // Performance tracker ⏱️ - Skip Detection END (early return)
+      const skipDetectionEnd = performance.now();
+      console.log(`[Performance tracker ⏱️] Skip Detection & Fast Scroll - Ended (early): ${skipDetectionEnd.toFixed(2)}ms | Duration: ${(skipDetectionEnd - skipDetectionStart).toFixed(2)}ms`);
+      return;
+    }
+    
+    // Mark all questions between prevIndex and newIndex as skipped
+    for (let i = prevIndex; i < newIndex; i++) {
+      if (i >= 0 && i < personalizedFeed.length) {
+        const questionId = personalizedFeed[i].id;
+        const questionState = questions[questionId];
+        
+        // Only mark as skipped if it hasn't been answered or skipped already
+        if (!questionState || questionState.status === 'unanswered') {
+          dispatch(skipQuestion({ questionId }));
+        }
+      }
+    }
+    
+    // Performance tracker ⏱️ - Skip Detection END
+    const skipDetectionEnd = performance.now();
+    console.log(`[Performance tracker ⏱️] Skip Detection & Fast Scroll - Ended: ${skipDetectionEnd.toFixed(2)}ms | Duration: ${(skipDetectionEnd - skipDetectionStart).toFixed(2)}ms`);
+    
     // Only mark as skipped when explicitly scrolling down past a question and if we have feed data
     logger.debug('Feed', `markPreviousAsSkipped called with prevIndex=${prevIndex}, newIndex=${newIndex}`);
     
@@ -1343,56 +1372,40 @@ const FeedScreen: React.FC = () => {
 
   // Optimize handleScroll for iOS specifically
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    // Early return for tooltips - hide only on first scroll
-    if (event.nativeEvent.contentOffset.y !== 0 && showTooltip) {
-      hideTooltip();
-      return; // Early return after hiding tooltip
+    // Get scroll position and calculate current index
+    const currentScrollPos = event.nativeEvent.contentOffset.y;
+    const scrollDelta = Math.abs(currentScrollPos - lastScrollPosition.current);
+    
+    // Only log performance tracking for significant scroll movements (> 50px)
+    const shouldLogPerformance = scrollDelta > 50;
+    let scrollDetectionStart = 0;
+    
+    if (shouldLogPerformance) {
+      // Performance tracker ⏱️ - Scroll Detection START
+      scrollDetectionStart = performance.now();
+      console.log(`[Performance tracker ⏱️] Scroll Detection - Started: ${scrollDetectionStart.toFixed(2)}ms`);
     }
     
-    // Special iOS optimization: skip all processing during momentum scrolling
+    // Early return for tooltips - hide only on first scroll
+    if (showTooltip) {
+      hideTooltip();
+    }
+    
+    // Don't process heavy logic during active scrolling on iOS
     if (isIOS && isMomentumScrolling.current) {
       return;
     }
     
-    // Skip all processing if already actively scrolling
-    if (isActivelyScrolling) {
-      return;
-    }
+    const estimatedIndex = Math.round(currentScrollPos / viewportHeight);
     
-    // Mark as actively scrolling
-    setIsActivelyScrolling(true);
-    
-    // Clear any existing timeout
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-    
-    // Set a timeout to mark as no longer scrolling after a brief period
-    scrollTimeoutRef.current = setTimeout(() => {
-      setIsActivelyScrolling(false);
-    }, 500);
-    
-    // Track scroll direction but with minimal processing
-    const currentScrollPos = event.nativeEvent.contentOffset.y;
+    // Determine scroll direction
     const scrollDirection = currentScrollPos > lastScrollPosition.current ? 'down' : 'up';
     lastScrollPosition.current = currentScrollPos;
     
-    // Update scroll-based index for more accurate active topic detection
-    const scrollBasedIndex = Math.round(currentScrollPos / viewportHeight);
-    if (scrollBasedIndex >= 0 && scrollBasedIndex < personalizedFeed.length) {
-      scrollBasedIndexRef.current = scrollBasedIndex;
-    }
-    
-    // For iOS, calculate the current index based on scroll position
-    // and update if it's significantly different from the current index
-    if (isIOS && scrollDirection === 'down' && !isActivelyScrolling) {
-      const estimatedIndex = Math.round(currentScrollPos / viewportHeight);
-      
-      // Only update if we've moved to a clearly different question
-      if (estimatedIndex > currentIndex + 0.5) {
-        console.log(`[handleScroll] On iOS: Updating currentIndex from ${currentIndex} to ${estimatedIndex}`);
-        setCurrentIndex(estimatedIndex);
-      }
+    if (shouldLogPerformance) {
+      // Performance tracker ⏱️ - Scroll Detection END
+      const scrollDetectionEnd = performance.now();
+      console.log(`[Performance tracker ⏱️] Scroll Detection - Ended: ${scrollDetectionEnd.toFixed(2)}ms | Duration: ${(scrollDetectionEnd - scrollDetectionStart).toFixed(2)}ms`);
     }
     
     // Only process "skipped" logic on desktop or when scrolling has ended
@@ -1414,6 +1427,10 @@ const FeedScreen: React.FC = () => {
   // Enhanced onViewableItemsChanged with preloading
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      // Performance tracker ⏱️ - Viewability Detection START
+      const viewabilityStart = performance.now();
+      console.log(`[Performance tracker ⏱️] Viewability Detection - Started: ${viewabilityStart.toFixed(2)}ms`);
+      
       if (viewableItems.length > 0 && viewableItems[0].index !== null && personalizedFeed.length > 0) {
         const newIndex = viewableItems[0].index;
         const currentItem = personalizedFeed[newIndex];
@@ -1475,9 +1492,12 @@ const FeedScreen: React.FC = () => {
           }
         }
       }
+      
+      // Performance tracker ⏱️ - Viewability Detection END
+      const viewabilityEnd = performance.now();
+      console.log(`[Performance tracker ⏱️] Viewability Detection - Ended: ${viewabilityEnd.toFixed(2)}ms | Duration: ${(viewabilityEnd - viewabilityStart).toFixed(2)}ms`);
     },
-    [personalizedFeed, questions, preloadNextItems, markPreviousAsSkipped, dispatch, 
-     debugPanelVisible, feedExplanations, setCurrentIndex, currentIndex]
+    [personalizedFeed, questions, preloadNextItems, markPreviousAsSkipped, currentIndex, setCurrentIndex, dispatch, debugPanelVisible, feedExplanations]
   );
 
   useEffect(() => {
@@ -2692,7 +2712,7 @@ const FeedScreen: React.FC = () => {
         onMomentumScrollBegin={onMomentumScrollBegin}
         onMomentumScrollEnd={onMomentumScrollEnd}
         onScroll={Platform.OS === 'web' ? undefined : handleScroll} // Disable React scroll handler on web - using DOM prevention instead
-        scrollEventThrottle={Platform.OS === 'ios' ? 32 : 16} // Reduce frequency on iOS (30fps vs 60fps)
+        scrollEventThrottle={Platform.OS === 'ios' ? 200 : 100} // Significantly reduce frequency - was 32/16, now 200/100ms
         snapToAlignment="start"
         decelerationRate={getOptimalDecelerationRate()}
         snapToInterval={viewportHeight}

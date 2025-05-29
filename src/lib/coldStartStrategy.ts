@@ -205,7 +205,7 @@ function getExplorationPhaseQuestions(
   state: ColdStartState,
   userProfile: UserProfile
 ): FeedItem[] {
-  logger.info("Getting Initial Exploration phase questions (1-5) - STRICT ONE PER TOPIC");
+  logger.info('ColdStart', "Getting Initial Exploration phase questions (1-5) - STRICT ONE PER TOPIC");
   
   // Initialize topic weights from userProfile
   initializeTopicWeights(state, userProfile, Array.from(groupedQuestions.keys()));
@@ -223,7 +223,7 @@ function getExplorationPhaseQuestions(
   // Shuffle to get some randomness in selection order, while maintaining the priority of initial topics
   shuffleArray(prioritizedTopics);
   
-  logger.info(`Prioritized initial topics (after shuffle): ${prioritizedTopics.join(', ')}`);
+  logger.info('ColdStart', `Prioritized initial topics (after shuffle): ${prioritizedTopics.join(', ')}`);
   
   // First pass: Try to select one question from each initial topic
   for (const topic of prioritizedTopics) {
@@ -232,13 +232,13 @@ function getExplorationPhaseQuestions(
     
     // Skip if we already selected a question from this topic
     if (selectedTopics.has(topic)) {
-      logger.info(`Skipping topic ${topic} - already selected a question from this topic`);
+      logger.info('ColdStart', `Skipping topic ${topic} - already selected a question from this topic`);
       continue;
     }
     
     const topicMap = groupedQuestions.get(topic);
     if (!topicMap) {
-      logger.info(`Topic ${topic} has no questions available in groupedQuestions`);
+      logger.info('ColdStart', `Topic ${topic} has no questions available in groupedQuestions`);
       continue;
     }
     
@@ -272,19 +272,19 @@ function getExplorationPhaseQuestions(
         state.recentTopics.pop();
       }
     } else {
-      logger.info(`No unseen questions available for topic ${topic}`);
+      logger.info('ColdStart', `No unseen questions available for topic ${topic}`);
     }
   }
 
   // If we still don't have 5 questions, try the initial topics again (allow duplicates if necessary)
   if (selectedQuestions.length < 5) {
-    logger.info(`Only selected ${selectedQuestions.length} questions from initial topics, need ${5 - selectedQuestions.length} more`);
+    logger.info('ColdStart', `Only selected ${selectedQuestions.length} questions from initial topics, need ${5 - selectedQuestions.length} more`);
     
     // Make a new copy of initial topics and shuffle again for a different order
     const remainingInitialTopics = [...INITIAL_EXPLORATION_TOPICS];
     shuffleArray(remainingInitialTopics);
     
-    logger.info(`Trying initial topics again: ${remainingInitialTopics.join(', ')}`);
+    logger.info('ColdStart', `Trying initial topics again: ${remainingInitialTopics.join(', ')}`);
     
     // Try each initial topic again, even if we've already used it
     for (const topic of remainingInitialTopics) {
@@ -313,7 +313,7 @@ function getExplorationPhaseQuestions(
         // Track this topic for diversity
         trackTopicForDiversity(state, topic);
         
-        logger.info(`Added additional question from initial topic: ${topic}`);
+        logger.info('ColdStart', `Added additional question from initial topic: ${topic}`);
         
         // Add to recent topics for diversity tracking
         state.recentTopics.unshift(topic);
@@ -326,7 +326,7 @@ function getExplorationPhaseQuestions(
   
   // Last resort: If we still need more questions, use any remaining questions FROM INITIAL TOPICS ONLY
   if (selectedQuestions.length < 5) {
-    logger.info(`Still only have ${selectedQuestions.length} questions, need ${5 - selectedQuestions.length} more from INITIAL TOPICS ONLY`);
+    logger.info('ColdStart', `Still only have ${selectedQuestions.length} questions, need ${5 - selectedQuestions.length} more from INITIAL TOPICS ONLY`);
     
     // Get unused initial topics first - this is the key improvement
     const unusedInitialTopics = INITIAL_EXPLORATION_TOPICS.filter(topic => 
@@ -334,7 +334,7 @@ function getExplorationPhaseQuestions(
       !selectedQuestions.some(q => q.topic === topic)
     );
     
-    logger.info(`Prioritizing unused initial topics: ${unusedInitialTopics.join(', ')}`);
+    logger.info('ColdStart', `Prioritizing unused initial topics: ${unusedInitialTopics.join(', ')}`);
     
     // Filter questions to prioritize unused topics
     const remainingQuestionsFromUnusedTopics = allQuestions
@@ -361,7 +361,7 @@ function getExplorationPhaseQuestions(
       ...remainingQuestionsFromAnyInitialTopicCopy
     ];
     
-    logger.info(`Found ${remainingQuestionsFromUnusedTopics.length} questions from unused topics and ${remainingQuestionsFromAnyInitialTopic.length} from previously used topics`);
+    logger.info('ColdStart', `Found ${remainingQuestionsFromUnusedTopics.length} questions from unused topics and ${remainingQuestionsFromAnyInitialTopic.length} from previously used topics`);
     
     // Add questions up to 5 total
     for (const question of remainingQuestions) {
@@ -377,7 +377,7 @@ function getExplorationPhaseQuestions(
       // Track this topic for diversity
       trackTopicForDiversity(state, question.topic);
       
-      logger.info(`Added question from last-resort (initial topics only): ${question.topic}`);
+      logger.info('ColdStart', `Added question from last-resort (initial topics only): ${question.topic}`);
       
       // Add to recent topics for diversity tracking
       state.recentTopics.unshift(question.topic);
@@ -434,15 +434,12 @@ function getBranchingPhaseQuestions(
   state: ColdStartState,
   userProfile: UserProfile
 ): FeedItem[] {
+  // Performance tracker ⏱️ - Cold Start Phase Calculation START
+  const coldStartPhaseStart = performance.now();
+  console.log(`[Performance tracker ⏱️] Cold Start Phase Calculation (Branching) - Started: ${coldStartPhaseStart.toFixed(2)}ms`);
+  
   // Add detailed debug logging
-  logger.info("===== DETAILED BRANCHING PHASE DEBUG =====");
-  logger.info(`Questions shown so far: ${state.questionsShown}`);
-  logger.info(`Topics shown: ${Array.from(state.topicsShown).join(', ')}`);
-  logger.info(`Topics in skippedByTopic: ${Array.from(state.skippedByTopic.entries()).map(([topic, count]) => `${topic}(${count})`).join(', ')}`);
-  logger.info(`Topics in correctAnsweredByTopic: ${Array.from(state.correctAnsweredByTopic.entries()).map(([topic, count]) => `${topic}(${count})`).join(', ')}`);
-  logger.info(`Topics in wrongAnsweredByTopic: ${Array.from(state.wrongAnsweredByTopic.entries()).map(([topic, count]) => `${topic}(${count})`).join(', ')}`);
-  logger.info(`Recently used topics: ${state.lastSelectedTopics.join(', ')}`);
-  logger.info(`All available topics: ${Array.from(groupedQuestions.keys()).join(', ')}`);
+  logger.info('ColdStart', "Getting Branching phase questions (6-12 answered)");
   
   // Initialize or update topic weights
   initializeTopicWeights(state, userProfile, Array.from(groupedQuestions.keys()));
@@ -832,6 +829,10 @@ function getBranchingPhaseQuestions(
   // console.log(`Topics now shown: ${Array.from(state.topicsShown).join(', ')}`);
   // console.log(`Topic distribution in this batch: ${Array.from(state.topicCountInCurrentBatch.entries()).map(([topic, count]) => `${topic}: ${count}`).join(', ')}`);
   
+  // Performance tracker ⏱️ - Cold Start Phase Calculation END
+  const coldStartPhaseEnd = performance.now();
+  console.log(`[Performance tracker ⏱️] Cold Start Phase Calculation (Branching) - Ended: ${coldStartPhaseEnd.toFixed(2)}ms | Duration: ${(coldStartPhaseEnd - coldStartPhaseStart).toFixed(2)}ms`);
+  
   return selectedQuestions;
 }
 
@@ -842,7 +843,11 @@ function getNormalPhaseQuestions(
   state: ColdStartState,
   userProfile: UserProfile
 ): FeedItem[] {
-  console.log("Getting Normal phase questions (beyond 20)");
+  // Performance tracker ⏱️ - Cold Start Phase Calculation START (Normal)
+  const normalPhaseStart = performance.now();
+  console.log(`[Performance tracker ⏱️] Cold Start Phase Calculation (Normal) - Started: ${normalPhaseStart.toFixed(2)}ms`);
+  
+  logger.info('ColdStart', "Getting Normal phase questions (beyond 20)");
 
   // Initialize or update topic weights
   initializeTopicWeights(state, userProfile, Array.from(groupedQuestions.keys()));
@@ -1243,6 +1248,10 @@ function getNormalPhaseQuestions(
   // console.log(`NORMAL PHASE: Returning ${preferredQuestions.length} preferred questions and ${explorationQuestions.length} exploration questions`);
   // console.log(`NORMAL PHASE: Selected topics: ${selectedQuestions.map(q => q.topic).join(', ')}`);
   // console.log(`NORMAL PHASE: Topic distribution in this batch: ${Array.from(state.topicCountInCurrentBatch.entries()).map(([topic, count]) => `${topic}: ${count}`).join(', ')}`);
+  
+  // Performance tracker ⏱️ - Cold Start Phase Calculation END
+  const normalPhaseEnd = performance.now();
+  console.log(`[Performance tracker ⏱️] Cold Start Phase Calculation (Normal) - Ended: ${normalPhaseEnd.toFixed(2)}ms | Duration: ${(normalPhaseEnd - normalPhaseStart).toFixed(2)}ms`);
   
   return selectedQuestions;
 }

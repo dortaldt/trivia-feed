@@ -81,6 +81,10 @@ export function calculateQuestionScore(
   question: FeedItem,
   userProfile: UserProfile
 ): { score: number; explanations: string[] } {
+  // Performance tracker ⏱️ - Personalization Score Calculation START
+  const scoreCalculationStart = performance.now();
+  console.log(`[Performance tracker ⏱️] Personalization Score Calculation - Started: ${scoreCalculationStart.toFixed(2)}ms`);
+  
   const explanations: string[] = [];
   let score = 0;
   
@@ -137,6 +141,10 @@ export function calculateQuestionScore(
     explanations.push(`Novelty bonus: +${WEIGHTS.novelty.toFixed(2)} (never seen)`);
   }
   
+  // Performance tracker ⏱️ - Personalization Score Calculation END
+  const scoreCalculationEnd = performance.now();
+  console.log(`[Performance tracker ⏱️] Personalization Score Calculation - Ended: ${scoreCalculationEnd.toFixed(2)}ms | Duration: ${(scoreCalculationEnd - scoreCalculationStart).toFixed(2)}ms`);
+  
   return { score, explanations };
 }
 
@@ -149,6 +157,10 @@ export function updateUserProfile(
   interaction: Partial<QuestionInteraction>,
   question: FeedItem
 ): { updatedProfile: UserProfile; weightChange: WeightChange | null } {
+  // Performance tracker ⏱️ - Weight Update Calculation START
+  const weightUpdateStart = performance.now();
+  console.log(`[Performance tracker ⏱️] Weight Update Calculation - Started: ${weightUpdateStart.toFixed(2)}ms`);
+  
   // Use JSON parse/stringify for a full deep clone to avoid extensibility issues
   const updatedProfile = JSON.parse(JSON.stringify(userProfile)) as UserProfile;
   
@@ -271,7 +283,7 @@ export function updateUserProfile(
       subtopicNode.weight = Math.min(1.0, subtopicNode.weight + skipCompensation.subtopicCompensation);
       branchNode.weight = Math.min(1.0, branchNode.weight + skipCompensation.branchCompensation);
     }
-  } 
+  }
   // If question was answered incorrectly, moderate increase (user still engaged)
   else if (interaction.wasCorrect === false) {
     // Moderate weight increase for incorrect answers (per new requirements)
@@ -362,6 +374,10 @@ export function updateUserProfile(
     skipCompensation: skipCompensation.applied ? skipCompensation : undefined
   };
   
+  // Performance tracker ⏱️ - Weight Update Calculation END
+  const weightUpdateEnd = performance.now();
+  console.log(`[Performance tracker ⏱️] Weight Update Calculation - Ended: ${weightUpdateEnd.toFixed(2)}ms | Duration: ${(weightUpdateEnd - weightUpdateStart).toFixed(2)}ms`);
+  
   return { updatedProfile, weightChange };
 }
 
@@ -369,49 +385,47 @@ export function updateUserProfile(
  * Applies weight decay to inactive topics/subtopics/branches
  */
 export function applyWeightDecay(userProfile: UserProfile): UserProfile {
+  // Performance tracker ⏱️ - Weight Decay Calculation START
+  const weightDecayStart = performance.now();
+  console.log(`[Performance tracker ⏱️] Weight Decay Calculation - Started: ${weightDecayStart.toFixed(2)}ms`);
+  
+  const updatedProfile = JSON.parse(JSON.stringify(userProfile)) as UserProfile;
   const currentTime = Date.now();
-  const daysSinceLastRefresh = (currentTime - userProfile.lastRefreshed) / (1000 * 60 * 60 * 24);
+  const oneDayMs = 24 * 60 * 60 * 1000;
   
-  // Only apply decay if it's been at least a day
-  if (daysSinceLastRefresh < 1) {
-    return userProfile;
-  }
-  
-  const decayFactor = daysSinceLastRefresh * WEIGHTS.weightDecay;
-  const updatedProfile = { ...userProfile, lastRefreshed: currentTime };
-  
-  // Apply decay to all topics
-  Object.keys(updatedProfile.topics).forEach(topicName => {
-    const topic = updatedProfile.topics[topicName];
+  Object.entries(updatedProfile.topics).forEach(([topic, topicData]) => {
+    const daysSinceLastViewed = (currentTime - (topicData.lastViewed || currentTime)) / oneDayMs;
     
-    // Decay topic weight
-    const daysSinceTopicViewed = (currentTime - (topic.lastViewed || 0)) / (1000 * 60 * 60 * 24);
-    if (daysSinceTopicViewed > 1) {
-      topic.weight = Math.max(0.1, topic.weight - decayFactor);
-    }
-    
-    // Decay subtopics
-    Object.keys(topic.subtopics).forEach(subtopicName => {
-      const subtopic = topic.subtopics[subtopicName];
+    if (daysSinceLastViewed > 1) {
+      // Apply decay to topic weight
+      const decayAmount = Math.min(daysSinceLastViewed * WEIGHTS.weightDecay, 0.4); // Max decay of 0.4
+      topicData.weight = Math.max(0.1, topicData.weight - decayAmount);
       
-      // Decay subtopic weight
-      const daysSinceSubtopicViewed = (currentTime - (subtopic.lastViewed || 0)) / (1000 * 60 * 60 * 24);
-      if (daysSinceSubtopicViewed > 1) {
-        subtopic.weight = Math.max(0.1, subtopic.weight - decayFactor);
-      }
-      
-      // Decay branches
-      Object.keys(subtopic.branches).forEach(branchName => {
-        const branch = subtopic.branches[branchName];
+      // Apply decay to subtopics
+      Object.entries(topicData.subtopics).forEach(([subtopic, subtopicData]) => {
+        const subtopicDaysSinceLastViewed = (currentTime - (subtopicData.lastViewed || currentTime)) / oneDayMs;
         
-        // Decay branch weight
-        const daysSinceBranchViewed = (currentTime - (branch.lastViewed || 0)) / (1000 * 60 * 60 * 24);
-        if (daysSinceBranchViewed > 1) {
-          branch.weight = Math.max(0.1, branch.weight - decayFactor);
+        if (subtopicDaysSinceLastViewed > 1) {
+          const subtopicDecayAmount = Math.min(subtopicDaysSinceLastViewed * WEIGHTS.weightDecay, 0.4);
+          subtopicData.weight = Math.max(0.1, subtopicData.weight - subtopicDecayAmount);
+          
+          // Apply decay to branches
+          Object.entries(subtopicData.branches).forEach(([branch, branchData]) => {
+            const branchDaysSinceLastViewed = (currentTime - (branchData.lastViewed || currentTime)) / oneDayMs;
+            
+            if (branchDaysSinceLastViewed > 1) {
+              const branchDecayAmount = Math.min(branchDaysSinceLastViewed * WEIGHTS.weightDecay, 0.4);
+              branchData.weight = Math.max(0.1, branchData.weight - branchDecayAmount);
+            }
+          });
         }
       });
-    });
+    }
   });
+  
+  // Performance tracker ⏱️ - Weight Decay Calculation END
+  const weightDecayEnd = performance.now();
+  console.log(`[Performance tracker ⏱️] Weight Decay Calculation - Ended: ${weightDecayEnd.toFixed(2)}ms | Duration: ${(weightDecayEnd - weightDecayStart).toFixed(2)}ms`);
   
   return updatedProfile;
 }
@@ -425,49 +439,24 @@ export function getPersonalizedFeed(
   userProfile: UserProfile,
   count: number = 20
 ): { items: FeedItem[], explanations: { [questionId: string]: string[] } } {
-  // Check if we should use cold start strategy
-  const totalInteractions = Object.keys(userProfile.interactions).length;
-  const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
+  // Performance tracker ⏱️ - Personalized Feed Generation START
+  const feedGenerationStart = performance.now();
+  console.log(`[Performance tracker ⏱️] Personalized Feed Generation - Started: ${feedGenerationStart.toFixed(2)}ms`);
   
-  // Use cold start strategy if user has interacted with fewer than 20 questions
-  // or if coldStartComplete flag is not set to true
-  if (totalInteractions < 20 || totalQuestionsAnswered < 20 || !userProfile.coldStartComplete) {
-    console.log('Using Cold Start Strategy for feed personalization');
-    const coldStartResult = getColdStartFeed(allItems, userProfile);
+  // Check if we should use cold start strategy
+  const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
+  const shouldUseColdStart = !userProfile.coldStartComplete && totalQuestionsAnswered < 20;
+  
+  if (shouldUseColdStart) {
+    console.log('Using Cold Start Strategy for feed');
+    const { getColdStartFeed } = require('./coldStartStrategy');
+    const result = getColdStartFeed(allItems, userProfile, count);
     
-    // If we're in the final phase, mark cold start as complete
-    if (coldStartResult.state.phase === 'normal' && coldStartResult.state.questionsShown >= 20) {
-      // This will be saved to userProfile when updateUserProfile is called
-      userProfile.coldStartComplete = true;
-    }
+    // Performance tracker ⏱️ - Personalized Feed Generation END (Cold Start)
+    const feedGenerationEnd = performance.now();
+    console.log(`[Performance tracker ⏱️] Personalized Feed Generation (Cold Start) - Ended: ${feedGenerationEnd.toFixed(2)}ms | Duration: ${(feedGenerationEnd - feedGenerationStart).toFixed(2)}ms`);
     
-    // Ensure no duplicate items by ID
-    const seen = new Set<string>();
-    const uniqueItems: FeedItem[] = [];
-    
-    // Build a unique items array
-    for (const item of coldStartResult.items) {
-      if (!seen.has(item.id)) {
-        seen.add(item.id);
-        uniqueItems.push(item);
-      }
-    }
-    
-    // Rebuild explanations object for unique items only
-    const uniqueExplanations: { [questionId: string]: string[] } = {};
-    uniqueItems.forEach(item => {
-      if (coldStartResult.explanations[item.id]) {
-        uniqueExplanations[item.id] = coldStartResult.explanations[item.id];
-      }
-    });
-    
-    // Use string concatenation for logging
-    console.log("Cold start feed: " + coldStartResult.items.length + " items, " + uniqueItems.length + " after removing duplicates");
-    
-    return {
-      items: uniqueItems,
-      explanations: uniqueExplanations
-    };
+    return result;
   }
   
   // Otherwise, continue with normal personalization logic
@@ -604,116 +593,94 @@ export function getPersonalizedFeed(
     i++;
   }
   
-  // If we haven't filled the preferred quota, add any known items
-  if (added < preferredCount) {
-    i = 0; // Reset counter to start from beginning
-    while (added < preferredCount && i < knownItems.length) {
-      const { item, explanations: itemExplanations } = knownItems[i];
+  // If we still need more preferred items, add from medium-weight topics (0.3 < weight <= 0.5)
+  i = 0;
+  while (added < preferredCount && i < knownItems.length) {
+    const { item, explanations: itemExplanations } = knownItems[i];
+    
+    // Get topic weight
+    const topicWeight = updatedProfile.topics[item.topic]?.weight || 0.5;
+    
+    // If weight is medium and we haven't used this topic too much
+    if (topicWeight > 0.3 && topicWeight <= 0.5 && (!usedPreferredTopics.has(item.topic) || usedPreferredTopics.size >= 5)) {
       if (addItemIfUnique(item, [...itemExplanations], false)) {
         added++;
+        usedPreferredTopics.add(item.topic);
       }
-      i++;
     }
+    i++;
+  }
+  
+  // If we still need more, fill from any remaining known items
+  i = 0;
+  while (added < preferredCount && i < knownItems.length) {
+    const { item, explanations: itemExplanations } = knownItems[i];
+    
+    if (addItemIfUnique(item, [...itemExplanations], false)) {
+      added++;
+    }
+    i++;
   }
   
   // Step 2: Add exploration items (30% of total)
-  // - First try new branches from known subtopics
+  let explorationAdded = 0;
+  
+  // First, try to add new branch items (most conservative exploration)
   i = 0;
-  added = 0;
-  while (added < explorationCount && i < newBranchItems.length) {
+  while (explorationAdded < explorationCount && i < newBranchItems.length) {
     const { item, explanations: itemExplanations } = newBranchItems[i];
-    if (addItemIfUnique(item, [...itemExplanations, 'Exploration: New branch within known subtopic'], true)) {
-      added++;
+    
+    if (addItemIfUnique(item, [...itemExplanations], true)) {
+      explorationAdded++;
     }
     i++;
   }
   
-  // - Then try new subtopics from known topics
+  // Then, add new subtopic items (moderate exploration)
   i = 0;
-  while (added < explorationCount && i < newSubtopicItems.length) {
+  while (explorationAdded < explorationCount && i < newSubtopicItems.length) {
     const { item, explanations: itemExplanations } = newSubtopicItems[i];
-    if (addItemIfUnique(item, [...itemExplanations, 'Exploration: New subtopic within known topic'], true)) {
-      added++;
+    
+    if (addItemIfUnique(item, [...itemExplanations], true)) {
+      explorationAdded++;
     }
     i++;
   }
   
-  // - Finally try entirely new topics
+  // Finally, add new topic items (most aggressive exploration)
   i = 0;
-  while (added < explorationCount && i < newTopicItems.length) {
+  while (explorationAdded < explorationCount && i < newTopicItems.length) {
     const { item, explanations: itemExplanations } = newTopicItems[i];
-    if (addItemIfUnique(item, [...itemExplanations, 'Exploration: Entirely new topic'], true)) {
-      added++;
+    
+    if (addItemIfUnique(item, [...itemExplanations], true)) {
+      explorationAdded++;
     }
     i++;
   }
   
-  // If we still need more items, fill with any remaining known items
-  if (selectedItems.length < count) {
-    const remainingNeeded = count - selectedItems.length;
-    // Try remaining known items first
-    i = 0;
-    added = 0;
-    while (added < remainingNeeded && i < knownItems.length) {
-      const { item, explanations: itemExplanations } = knownItems[i];
-      if (!addedItemIds.has(item.id)) {
-      if (addItemIfUnique(item, itemExplanations, false)) {
-          added++;
-        }
-      }
-      i++;
-    }
+  // If we still haven't filled our target, add any remaining items
+  const allRemainingItems = [
+    ...newBranchItems,
+    ...newSubtopicItems, 
+    ...newTopicItems,
+    ...knownItems
+  ].filter(({ item }) => !addedItemIds.has(item.id));
+  
+  i = 0;
+  while (selectedItems.length < count && i < allRemainingItems.length) {
+    const { item, explanations: itemExplanations } = allRemainingItems[i];
     
-    // If still not enough, try any remaining item not yet used
-    const allRemainingItems = [...newTopicItems, ...newSubtopicItems, ...newBranchItems]
-      .filter(({ item }) => !addedItemIds.has(item.id));
-    
-    i = 0;
-    while (added < remainingNeeded && i < allRemainingItems.length) {
-      const { item, explanations: itemExplanations } = allRemainingItems[i];
-      if (addItemIfUnique(item, itemExplanations, true)) {
-        added++;
-      }
-      i++;
+    if (addItemIfUnique(item, [...itemExplanations], false)) {
+      // This counts as filler, not specifically preferred or exploration
     }
+    i++;
   }
   
-  // Double-check for duplicates as a final safety measure
-  const seen = new Set<string>();
-  const uniqueItems: FeedItem[] = [];
+  // Performance tracker ⏱️ - Personalized Feed Generation END
+  const feedGenerationEnd = performance.now();
+  console.log(`[Performance tracker ⏱️] Personalized Feed Generation - Ended: ${feedGenerationEnd.toFixed(2)}ms | Duration: ${(feedGenerationEnd - feedGenerationStart).toFixed(2)}ms`);
   
-  // Build a unique items array
-  for (const item of selectedItems) {
-    if (!seen.has(item.id)) {
-      seen.add(item.id);
-      uniqueItems.push(item);
-    }
-  }
-  
-  // If we removed any duplicates, rebuild the explanations object
-  if (uniqueItems.length !== selectedItems.length) {
-    // Create a simple logging message with string concatenation
-    console.log("Removed " + (selectedItems.length - uniqueItems.length) + " duplicate items in final check");
-    
-    // Create a new explanations object with only the unique items
-    const finalExplanations: { [questionId: string]: string[] } = {};
-    
-    for (const item of uniqueItems) {
-      if (explanations[item.id]) {
-        finalExplanations[item.id] = explanations[item.id];
-      }
-    }
-    
-    return { 
-      items: uniqueItems, 
-      explanations: finalExplanations 
-    };
-  }
-  
-  return { 
-    items: selectedItems, 
-    explanations
-  };
+  return { items: selectedItems, explanations };
 }
 
 /**

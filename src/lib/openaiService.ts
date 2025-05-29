@@ -685,6 +685,15 @@ export async function checkQuestionExists(fingerprint: string): Promise<boolean>
  * Considers questions with 1-3 word differences as duplicates
  */
 async function checkQuestionSimilarity(fingerprint: string): Promise<boolean> {
+  // Import feature flag service dynamically to avoid circular dependencies
+  const { isQuestionSimilarityCheckEnabled } = await import('./featureFlagService');
+  
+  // Check if similarity checking feature is enabled
+  if (!isQuestionSimilarityCheckEnabled()) {
+    console.log('[GENERATOR] Question similarity check is disabled. You can enable it in the feature flag settings (Admin → App Configuration).');
+    return false; // Skip similarity check when feature is disabled
+  }
+
   try {
     // Extract just the question part from the fingerprint (before the first |)
     const normalizedQuestion = fingerprint.split('|')[0];

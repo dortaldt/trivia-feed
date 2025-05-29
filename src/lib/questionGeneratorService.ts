@@ -431,15 +431,39 @@ export async function runQuestionGeneration(
       // No client-provided questions, fetch from database
       try {
         // Get IDs of questions answered by the user
-        const { data: answerData, error: answerError } = await supabase
-          .from('user_answers')
-          .select('question_id')
-          .eq('user_id', userId)
-          .order('answered_at', { ascending: false })
-          .limit(10);
-          
+        let answerData, answerError;
+        
+        // Try with created_at ordering first
+        try {
+          const result = await supabase
+            .from('user_answers')
+            .select('question_id')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(10);
+          answerData = result.data;
+          answerError = result.error;
+        } catch (orderError) {
+          // If ordering fails, try without ordering
+          logger.info('[GENERATOR]', 'Ordering by created_at failed, trying without ordering');
+          const result = await supabase
+            .from('user_answers')
+            .select('question_id')
+            .eq('user_id', userId)
+            .limit(10);
+          answerData = result.data;
+          answerError = result.error;
+        }
+        
         if (answerError) {
-          logger.error('[GENERATOR]', 'Error fetching recent answers:', answerError instanceof Error ? answerError.message : String(answerError));
+          logger.error('[GENERATOR]', 'Error fetching recent answers:', JSON.stringify({
+            message: answerError.message || 'Unknown error',
+            code: answerError.code || 'No code',
+            details: answerError.details || 'No details',
+            hint: answerError.hint || 'No hint',
+            fullError: answerError
+          }, null, 2));
+          logger.info('[GENERATOR]', 'Continuing question generation without recent answers due to database error');
         } else if (answerData && answerData.length > 0) {
           // Get question texts for these IDs
           const questionIds = answerData.map((a: any) => a.question_id);
@@ -450,7 +474,13 @@ export async function runQuestionGeneration(
             .in('id', questionIds);
             
           if (questionError) {
-            logger.error('[GENERATOR]', 'Error fetching recent questions:', questionError instanceof Error ? questionError.message : String(questionError));
+            logger.error('[GENERATOR]', 'Error fetching recent questions:', JSON.stringify({
+              message: questionError.message || 'Unknown error',
+              code: questionError.code || 'No code', 
+              details: questionError.details || 'No details',
+              hint: questionError.hint || 'No hint',
+              fullError: questionError
+            }, null, 2));
           } else if (questionData && questionData.length > 0) {
             // Map to correct format
             validRecentQuestions = questionData.map((q: any) => ({
@@ -466,7 +496,13 @@ export async function runQuestionGeneration(
           }
         }
       } catch (error) {
-        logger.error('[GENERATOR]', 'Error getting recent questions:', error instanceof Error ? error.message : String(error));
+        logger.error('[GENERATOR]', 'Error getting recent questions:', JSON.stringify({
+          message: error instanceof Error ? error.message : 'Unknown error',
+          name: error instanceof Error ? error.name : 'No error name',
+          stack: error instanceof Error ? error.stack : 'No stack trace',
+          fullError: error
+        }, null, 2));
+        logger.info('[GENERATOR]', 'Continuing question generation without recent answers due to catch block error');
       }
     }
     

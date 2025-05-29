@@ -160,15 +160,27 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
 
   // Press animation for answer buttons - memoize with useCallback
   const animateAnswerPress = useCallback((index: number, pressed: boolean) => {
+    // Performance tracker ⏱️ - UI Animation Calculation START
+    const animationStart = performance.now();
+    console.log(`[Performance tracker ⏱️] UI Animation Calculation - Started: ${animationStart.toFixed(2)}ms`);
+    
     Animated.spring(answerAnimations[index], {
       toValue: pressed ? 0.98 : 1,
       friction: 8,
       tension: 100,
       useNativeDriver: true
     }).start();
+    
+    // Performance tracker ⏱️ - UI Animation Calculation END
+    const animationEnd = performance.now();
+    console.log(`[Performance tracker ⏱️] UI Animation Calculation - Ended: ${animationEnd.toFixed(2)}ms | Duration: ${(animationEnd - animationStart).toFixed(2)}ms`);
   }, [answerAnimations]);
 
   const calculateFontSize = useMemo(() => {
+    // Performance tracker ⏱️ - UI Animation Calculation START (Font Size)
+    const fontCalcStart = performance.now();
+    console.log(`[Performance tracker ⏱️] UI Animation Calculation (Font Size) - Started: ${fontCalcStart.toFixed(2)}ms`);
+    
     const textLength = item.question.length;
     const lineBreaks = (item.question.match(/\n/g) || []).length;
     
@@ -194,6 +206,10 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
     if (textLength > 200 || lineBreaks > 6) {
       fontSize = 14;
     }
+    
+    // Performance tracker ⏱️ - UI Animation Calculation END (Font Size)
+    const fontCalcEnd = performance.now();
+    console.log(`[Performance tracker ⏱️] UI Animation Calculation (Font Size) - Ended: ${fontCalcEnd.toFixed(2)}ms | Duration: ${(fontCalcEnd - fontCalcStart).toFixed(2)}ms`);
     
     return fontSize;
   }, [item.question]);
@@ -230,35 +246,39 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
 
   // Optimized selectAnswer function with performance improvements
   const selectAnswerCore = useCallback((index: number) => {
+    // Performance tracker ⏱️ - Performance & Analytics Calculation START
+    const analyticsStart = performance.now();
+    console.log(`[Performance tracker ⏱️] Performance & Analytics Calculation - Started: ${analyticsStart.toFixed(2)}ms`);
+    
     // Early return if already answered
-    if (isAnswered()) return;
-
-    // Immediate UI feedback - run haptics asynchronously without blocking
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (isAnswered()) {
+      // Performance tracker ⏱️ - Performance & Analytics Calculation END (early return)
+      const analyticsEnd = performance.now();
+      console.log(`[Performance tracker ⏱️] Performance & Analytics Calculation - Ended (early): ${analyticsEnd.toFixed(2)}ms | Duration: ${(analyticsEnd - analyticsStart).toFixed(2)}ms`);
+      return;
     }
     
-    // Immediate visual feedback with optimized animations
+    // Set selected answer immediately for UI feedback
+    setSelectedAnswerIndex(index);
+    
+    // Haptic feedback for iOS
     if (isIOS) {
       springAnimation();
     }
-
-    // Batch animations for better performance
-    const scaleDown = Animated.timing(answerAnimations[index], {
-      toValue: 0.96,
-      duration: 100,
-      useNativeDriver: true,
-    });
     
-    const scaleUp = Animated.spring(answerAnimations[index], {
-      toValue: 1,
-      friction: 5,
-      tension: 40,
-      useNativeDriver: true,
-    });
-
-    // Run animations in parallel where possible
-    Animated.sequence([scaleDown, scaleUp]).start();
+    // Animate the pressed answer
+    Animated.sequence([
+      Animated.timing(answerAnimations[index], {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true
+      }),
+      Animated.timing(answerAnimations[index], {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true
+      })
+    ]).start();
     
     // Critical state update - do this immediately
     if (onAnswer) {
@@ -301,6 +321,10 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
         });
       }
     }
+    
+    // Performance tracker ⏱️ - Performance & Analytics Calculation END
+    const analyticsEnd = performance.now();
+    console.log(`[Performance tracker ⏱️] Performance & Analytics Calculation - Ended: ${analyticsEnd.toFixed(2)}ms | Duration: ${(analyticsEnd - analyticsStart).toFixed(2)}ms`);
   }, [
     isAnswered, 
     isIOS, 
