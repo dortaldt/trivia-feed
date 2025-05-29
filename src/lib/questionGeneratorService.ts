@@ -433,19 +433,19 @@ export async function runQuestionGeneration(
         // Get IDs of questions answered by the user
         let answerData, answerError;
         
-        // Try with created_at ordering first
+        // Try with answer_time ordering first
         try {
           const result = await supabase
             .from('user_answers')
             .select('question_id')
             .eq('user_id', userId)
-            .order('created_at', { ascending: false })
+            .order('answer_time', { ascending: false })
             .limit(10);
           answerData = result.data;
           answerError = result.error;
         } catch (orderError) {
           // If ordering fails, try without ordering
-          logger.info('[GENERATOR]', 'Ordering by created_at failed, trying without ordering');
+          logger.info('[GENERATOR]', 'Ordering by answer_time failed, trying without ordering');
           const result = await supabase
             .from('user_answers')
             .select('question_id')
