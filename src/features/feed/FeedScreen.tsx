@@ -164,6 +164,10 @@ const FeedScreen: React.FC = () => {
   const lastProfileClickTime = useRef<number | null>(null);
   // Add ref to track scroll-based index for active topic detection
   const scrollBasedIndexRef = useRef<number>(0);
+  // Add ref to track last active topic update time for iOS
+  const lastActiveTopicUpdateRef = useRef<number>(0);
+  // Add ref to track if we're currently in an answer interaction
+  const isAnsweringRef = useRef<boolean>(false);
 
   // Get a background color for the loading state
   const backgroundColor = useThemeColor({}, 'background');
@@ -1404,6 +1408,20 @@ const FeedScreen: React.FC = () => {
     // Update scrollBasedIndexRef with the current estimated index
     scrollBasedIndexRef.current = estimatedIndex;
     
+    // For iOS, update activeTopic during scroll for immediate feedback
+    if (isIOS && estimatedIndex >= 0 && estimatedIndex < personalizedFeed.length && !isAnsweringRef.current) {
+      const item = personalizedFeed[estimatedIndex];
+      if (item && item.topic && item.topic !== activeTopic) {
+        // Debounce updates to prevent too many rapid changes
+        const now = Date.now();
+        if (now - lastActiveTopicUpdateRef.current > 100) { // 100ms debounce
+          console.log(`[iOS SCROLL] Updating active topic during scroll from "${activeTopic}" to "${item.topic}" (index: ${estimatedIndex})`);
+          setActiveTopic(item.topic);
+          lastActiveTopicUpdateRef.current = now;
+        }
+      }
+    }
+    
     // Determine scroll direction
     const scrollDirection = currentScrollPos > lastScrollPosition.current ? 'down' : 'up';
     lastScrollPosition.current = currentScrollPos;
@@ -1428,7 +1446,7 @@ const FeedScreen: React.FC = () => {
         }
       });
     }
-  }, [currentIndex, viewportHeight, showTooltip, hideTooltip, isActivelyScrolling, handleFastScroll, isIOS, setCurrentIndex]);
+  }, [currentIndex, viewportHeight, showTooltip, hideTooltip, isActivelyScrolling, handleFastScroll, isIOS, setCurrentIndex, personalizedFeed, activeTopic, setActiveTopic]);
 
   // Enhanced onViewableItemsChanged with preloading
   const onViewableItemsChanged = useCallback(
@@ -1493,7 +1511,7 @@ const FeedScreen: React.FC = () => {
             dispatch(startInteraction({ questionId: currentItemId }));
             
             // Update active topic immediately when a new item becomes visible
-            if (currentItem && currentItem.topic) {
+            if (currentItem && currentItem.topic && (!isIOS || !isAnsweringRef.current)) {
               const newTopic = currentItem.topic;
               if (newTopic !== activeTopic) {
                 console.log(`[VIEWABLE ITEMS] Updating active topic from "${activeTopic}" to "${newTopic}"`);
@@ -1525,6 +1543,13 @@ const FeedScreen: React.FC = () => {
       lastVisibleIndexRef.current = 0; // Explicitly initialize this ref to 0
       scrollBasedIndexRef.current = 0; // Also initialize scrollBasedIndexRef to 0
       
+      // Set initial active topic
+      const firstItem = personalizedFeed[0];
+      if (firstItem && firstItem.topic && !activeTopic) {
+        console.log(`[INITIAL LOAD] Setting initial active topic to "${firstItem.topic}"`);
+        setActiveTopic(firstItem.topic);
+      }
+      
       // Start tracking interaction with first question
       // console.log(`Starting initial interaction tracking for question ${firstQuestionId}`);
       
@@ -1545,7 +1570,7 @@ const FeedScreen: React.FC = () => {
   
   // Update activeTopic when the visible index changes
   useEffect(() => {
-    if (personalizedFeed.length > 0) {
+    if (personalizedFeed.length > 0 && (!isIOS || !isAnsweringRef.current)) {
       // Use the same logic as before to determine the best index
       let bestIndex = currentIndex;
       
@@ -1569,7 +1594,7 @@ const FeedScreen: React.FC = () => {
         setActiveTopic(newActiveTopic);
       }
     }
-  }, [currentIndex, personalizedFeed, isIOS, activeTopic]);
+  }, [currentIndex, personalizedFeed.length, isIOS]); // Remove activeTopic from dependencies to prevent loops, only monitor index changes
 
   // Separate useEffect for verification to prevent infinite loops
   useEffect(() => {
@@ -1704,6 +1729,12 @@ const FeedScreen: React.FC = () => {
         eventCorrectedCurrentIndex = estimatedIndex;
         const item = personalizedFeed[estimatedIndex];
         // console.log(`[INDEX UPDATE] Using iOS estimated index ${estimatedIndex} (topic: "${item?.topic}", id: ${item?.id})`);
+        
+        // IMMEDIATE UPDATE: Update activeTopic right away for iOS
+        if (item && item.topic && item.topic !== activeTopic && !isAnsweringRef.current) {
+          console.log(`[iOS MOMENTUM END] Immediately updating active topic from "${activeTopic}" to "${item.topic}"`);
+          setActiveTopic(item.topic);
+        }
       } else {
         console.warn(`[INDEX UPDATE] iOS: Estimated index ${estimatedIndex} is out of bounds. Falling back to state currentIndex: ${currentIndex}`);
         eventCorrectedCurrentIndex = currentIndex; // Fallback if calculation is odd
@@ -1759,7 +1790,7 @@ const FeedScreen: React.FC = () => {
         console.warn(`[onMomentumScrollEnd] (Else branch) No item in personalizedFeed at eventCorrectedCurrentIndex ${eventCorrectedCurrentIndex}.`);
       }
     }
-  }, [currentIndex, setCurrentIndex, handleFastScroll, isIOS, viewportHeight, personalizedFeed, dispatch]);
+  }, [currentIndex, setCurrentIndex, handleFastScroll, isIOS, viewportHeight, personalizedFeed, dispatch, activeTopic, setActiveTopic]);
 
   // Add this hook to handle question generation
   const { triggerQuestionGeneration, trackQuestionInteraction } = useQuestionGenerator();
@@ -1771,6 +1802,9 @@ const FeedScreen: React.FC = () => {
   const handleAnswer = useCallback(async (questionId: string, answerIndex: number, isCorrect: boolean) => {
     const questionItem = personalizedFeed.find(item => item.id === questionId);
     if (!questionItem) return;
+    
+    // Set flag to prevent activeTopic updates during answer interaction
+    isAnsweringRef.current = true;
     
     console.log(`\n[Answer] User answered question ${questionId}`);
     
@@ -1858,11 +1892,15 @@ const FeedScreen: React.FC = () => {
       userId: user?.id // Pass user ID if available
     }));
     
-    // Store question topic mapping for ring calculation (important for generated questions)
     // Use setTimeout to ensure Redux state is updated first
     setTimeout(() => {
       addQuestionTopic(questionId, questionItem.topic);
       console.log(`[ANSWER] Stored topic "${questionItem.topic}" for question ${questionId} (isCorrect: ${isCorrect}) - DELAYED`);
+      
+      // Clear the answering flag after a delay to allow animations to complete
+      setTimeout(() => {
+        isAnsweringRef.current = false;
+      }, 500);
     }, 50);
     
     // NOTE: Weight updates are now handled directly in the answerQuestion Redux action
