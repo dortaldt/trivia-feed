@@ -2726,7 +2726,7 @@ const FeedScreen: React.FC = () => {
           {/* Topic Rings - with real active topic tracking */}
           <TopicRings
             config={ringConfig}
-            size={debugPanelVisible ? 35 : 50}
+            size={50}
             userId={user?.id}
             activeTopic={activeTopic}
             activeSubTopic={currentItem?.subtopic}
