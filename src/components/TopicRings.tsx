@@ -40,6 +40,7 @@ interface TopicRingsProps {
   size?: number;
   userId?: string;
   activeTopic?: string;
+  activeSubTopic?: string;
   onRingComplete?: (topic: string, newLevel: number) => void;
 }
 
@@ -446,6 +447,7 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
   size = 50,
   userId,
   activeTopic: propActiveTopic,
+  activeSubTopic,
   onRingComplete,
 }) => {
   const { topRings, onRingComplete: hookOnRingComplete, isSubTopicMode } = useTopicRings({ config, userId });
@@ -516,11 +518,11 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
         .mass(0.8)}
     >
       {validRings.map((ring, index) => {
-        // For sub-topic rings, we don't need to match against activeTopic
-        // since they're already filtered by the hook
-        const isRingActive = ring.isSubTopic ? false : (
-          ring.topic.toLowerCase().trim() === propActiveTopic?.toLowerCase().trim()
-        );
+        // For sub-topic rings, check against activeSubTopic
+        // For main topic rings, check against activeTopic
+        const isRingActive = ring.isSubTopic ? 
+          (ring.topic.toLowerCase().trim() === activeSubTopic?.toLowerCase().trim()) :
+          (ring.topic.toLowerCase().trim() === propActiveTopic?.toLowerCase().trim());
         
         return (
           <SingleRing

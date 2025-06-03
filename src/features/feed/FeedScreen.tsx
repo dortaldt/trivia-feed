@@ -88,6 +88,7 @@ import { AllRingsModal } from '../../components/AllRingsModal';
 import { useTopicRings } from '../../hooks/useTopicRings';
 import { useWebScrollPrevention } from '../../hooks/useWebScrollPrevention';
 import { logger, setLoggerDebugMode } from '../../utils/logger';
+import { DEFAULT_RING_CONFIG } from '../../types/topicRings';
 
 const { width, height } = Dimensions.get('window');
 
@@ -2594,6 +2595,18 @@ const FeedScreen: React.FC = () => {
     }
   }, [debugPanelVisible]);
 
+  // Get current item for topic rings
+  const currentItem = currentIndex >= 0 && currentIndex < personalizedFeed.length ? personalizedFeed[currentIndex] : null;
+  
+  // Ring configuration (can be customized later)
+  const ringConfig = DEFAULT_RING_CONFIG;
+  
+  // Handle ring completion celebration
+  const handleRingComplete = (topic: string, level: number) => {
+    console.log(`🎉 ${topic} reached level ${level}!`);
+    // You can add celebration effects here
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -2710,14 +2723,14 @@ const FeedScreen: React.FC = () => {
         return shouldShowRings;
       })() && (
         <View style={styles.topicRingsContainer}>
+          {/* Topic Rings - with real active topic tracking */}
           <TopicRings
-            size={50}
+            config={ringConfig}
+            size={debugPanelVisible ? 35 : 50}
             userId={user?.id}
             activeTopic={activeTopic}
-            onRingComplete={(topic, level) => {
-              console.log(`🎉 ${topic} reached level ${level}!`);
-              // You can add celebration effects here
-            }}
+            activeSubTopic={currentItem?.subtopic}
+            onRingComplete={handleRingComplete}
           />
           
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
