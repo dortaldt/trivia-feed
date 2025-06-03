@@ -2726,12 +2726,13 @@ const FeedScreen: React.FC = () => {
               <TouchableOpacity 
                 style={styles.showAllRingsButton}
                 onPress={() => {
-                  // Track button click for analytics
-                  import('../../lib/mixpanelAnalytics').then(({ trackButtonClick }) => {
-                    trackButtonClick('Show All Rings', {
+                  // Track button click for analytics using specific rings modal tracking
+                  import('../../lib/mixpanelAnalytics').then(({ trackAllRingsModal }) => {
+                    trackAllRingsModal('show_all_clicked', {
                       location: 'FeedScreen',
                       userId: user?.id,
-                      isGuest: isGuest
+                      isGuest: isGuest,
+                      debugMode: debugPanelVisible,
                     });
                   }).catch(err => console.error('Failed to track show all rings click:', err));
                   

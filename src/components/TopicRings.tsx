@@ -27,6 +27,10 @@ import Reanimated, {
   withSpring,
   withTiming
 } from 'react-native-reanimated';
+import { 
+  trackTopicRingClick, 
+  trackTopicRingModal 
+} from '../lib/mixpanelAnalytics';
 // Import topic configuration
 const topicConfig = require('../../app-topic-config');
 const { activeTopic, topics } = topicConfig;
@@ -83,6 +87,22 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
   const progressPercentage = Math.round((ringData.currentProgress / ringData.targetAnswers) * 100);
   const nextLevelAnswers = ringData.targetAnswers - ringData.currentProgress;
 
+  // Track modal open/close events
+  useEffect(() => {
+    if (visible && ringData) {
+      // Track modal opened
+      trackTopicRingModal('opened', ringData.topic, {
+        ringLevel: ringData.level,
+        ringProgress: progressPercentage,
+        totalCorrectAnswers: ringData.totalCorrectAnswers,
+        isSubTopic: ringData.isSubTopic || false,
+        parentTopic: ringData.parentTopic || null,
+        ringColor: ringData.color,
+        ringIcon: ringData.icon,
+      });
+    }
+  }, [visible, ringData, progressPercentage]);
+
   // Helper functions for sub-topic display
   const getDisplayTitle = () => {
     if (ringData?.isSubTopic && ringData.parentTopic) {
@@ -136,7 +156,18 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
   }, [isNeonTheme]);
 
   const handleTopicWeightChange = (topic: string, weightChange: number) => {
-    if (!userProfile || buttonsDisabled) return;
+    if (!userProfile || buttonsDisabled || !ringData) return;
+
+    // Track feed control button click
+    const actionType = weightChange > 0 ? 'feed_control_more' : 'feed_control_less';
+    trackTopicRingModal(actionType, ringData.topic, {
+      weightChange,
+      ringLevel: ringData.level,
+      ringProgress: progressPercentage,
+      isSubTopic: ringData.isSubTopic || false,
+      parentTopic: ringData.parentTopic || null,
+      currentWeight: userProfile.topics[ringData?.isSubTopic && ringData.parentTopic ? ringData.parentTopic : topic]?.weight || 0.5,
+    });
 
     // For sub-topics, use the parent topic for weight changes
     const topicForWeight = ringData?.isSubTopic ? ringData.parentTopic : topic;
@@ -199,14 +230,29 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
     }
   }, [visible]);
 
+  // Handle modal close with tracking
+  const handleClose = () => {
+    // Track modal closed
+    if (ringData) {
+      trackTopicRingModal('closed', ringData.topic, {
+        ringLevel: ringData.level,
+        ringProgress: progressPercentage,
+        totalCorrectAnswers: ringData.totalCorrectAnswers,
+        isSubTopic: ringData.isSubTopic || false,
+        parentTopic: ringData.parentTopic || null,
+      });
+    }
+    onClose();
+  };
+
   return (
     <Modal
       animationType="fade"
       transparent={true}
       visible={visible}
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={handleClose}>
         <View style={[styles.modalContent, { backgroundColor: cardBackground }]}>
           <Pressable onPress={(e) => e.stopPropagation()}>
             {/* Header */}
@@ -219,7 +265,7 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
                   {ringData.parentTopic} ›
                 </ThemedText>
               )}
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
                 <Feather name="x" size={24} color={textColor} />
               </TouchableOpacity>
             </View>
@@ -415,6 +461,20 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
   };
 
   const handleRingPress = (ring: TopicRingProgress) => {
+    // Track ring click
+    trackTopicRingClick(ring.topic, {
+      ringLevel: ring.level,
+      ringProgress: Math.round((ring.currentProgress / ring.targetAnswers) * 100),
+      totalCorrectAnswers: ring.totalCorrectAnswers,
+      isSubTopic: ring.isSubTopic || false,
+      parentTopic: ring.parentTopic || null,
+      ringColor: ring.color,
+      ringIcon: ring.icon,
+      isActiveTopic: ring.topic.toLowerCase().trim() === propActiveTopic?.toLowerCase().trim(),
+      ringPosition: topRings.findIndex(r => r.topic === ring.topic) + 1,
+      totalRingsVisible: topRings.length,
+    });
+
     setSelectedRing(ring);
     setModalVisible(true);
   };
