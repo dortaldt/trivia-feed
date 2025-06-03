@@ -22,6 +22,7 @@ interface AllRingsModalProps {
   onClose: () => void;
   userId?: string;
   activeTopic?: string; // Add activeTopic prop for glow effect
+  activeSubtopic?: string; // Add activeSubtopic prop for sub-topic highlighting
 }
 
 interface RingItemProps {
@@ -115,7 +116,7 @@ const RingItem: React.FC<RingItemProps> = ({ ring, onPress, isActive, index = 0 
   );
 };
 
-export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, userId, activeTopic }) => {
+export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, userId, activeTopic, activeSubtopic }) => {
   const insets = useSafeAreaInsets();
   const { allRings } = useTopicRings({ userId });
 
@@ -197,12 +198,12 @@ export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, 
             <>
               <ThemedText style={styles.sectionTitle}>Active Rings</ThemedText>
               {ringsWithProgress.map((ring, index) => {
-                // More robust topic matching - normalize case and trim whitespace
-                const normalizedRingTopic = ring.topic.toLowerCase().trim();
-                const normalizedActiveTopic = activeTopic?.toLowerCase().trim();
-                const isRingActive = normalizedRingTopic === normalizedActiveTopic;
+                // Check if this ring should be highlighted based on whether it's a sub-topic or regular topic
+                const isRingActive = ring.isSubTopic 
+                  ? !!(activeSubtopic && ring.topic.toLowerCase().trim() === activeSubtopic.toLowerCase().trim())
+                  : !!(activeTopic && ring.topic.toLowerCase().trim() === activeTopic.toLowerCase().trim());
                 
-                // console.log(`[AllRingsModal] Checking ring "${ring.topic}" (normalized: "${normalizedRingTopic}") against activeTopic "${activeTopic}" (normalized: "${normalizedActiveTopic}") -> isActive: ${isRingActive}`);
+                // console.log(`[AllRingsModal] Checking ${ring.isSubTopic ? 'sub-topic' : 'topic'} ring "${ring.topic}" against ${ring.isSubTopic ? 'activeSubtopic' : 'activeTopic'} "${ring.isSubTopic ? activeSubtopic : activeTopic}" -> isActive: ${isRingActive}`);
                 
                 return (
                   <RingItem

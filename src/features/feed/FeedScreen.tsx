@@ -88,7 +88,6 @@ import { AllRingsModal } from '../../components/AllRingsModal';
 import { useTopicRings } from '../../hooks/useTopicRings';
 import { useWebScrollPrevention } from '../../hooks/useWebScrollPrevention';
 import { logger, setLoggerDebugMode } from '../../utils/logger';
-import { DEFAULT_RING_CONFIG } from '../../types/topicRings';
 
 const { width, height } = Dimensions.get('window');
 
@@ -146,6 +145,9 @@ const FeedScreen: React.FC = () => {
   
   // Add state for the currently visible topic
   const [activeTopic, setActiveTopic] = useState<string | undefined>(undefined);
+  
+  // Track active topic and subtopic for ring highlighting
+  const [activeSubtopic, setActiveSubtopic] = useState<string>('');
   
   // Get user from auth context
   const { user, isGuest } = useAuth();
@@ -1514,9 +1516,16 @@ const FeedScreen: React.FC = () => {
             // Update active topic immediately when a new item becomes visible
             if (currentItem && currentItem.topic && (!isIOS || !isAnsweringRef.current)) {
               const newTopic = currentItem.topic;
+              const newSubtopic = currentItem.subtopic || '';
+              
               if (newTopic !== activeTopic) {
                 console.log(`[VIEWABLE ITEMS] Updating active topic from "${activeTopic}" to "${newTopic}"`);
                 setActiveTopic(newTopic);
+              }
+              
+              if (newSubtopic !== activeSubtopic) {
+                console.log(`[VIEWABLE ITEMS] Updating active subtopic from "${activeSubtopic}" to "${newSubtopic}"`);
+                setActiveSubtopic(newSubtopic);
               }
             }
             
@@ -1549,6 +1558,10 @@ const FeedScreen: React.FC = () => {
       if (firstItem && firstItem.topic && !activeTopic) {
         console.log(`[INITIAL LOAD] Setting initial active topic to "${firstItem.topic}"`);
         setActiveTopic(firstItem.topic);
+        
+        const firstSubtopic = firstItem.subtopic || '';
+        console.log(`[INITIAL LOAD] Setting initial active subtopic to "${firstSubtopic}"`);
+        setActiveSubtopic(firstSubtopic);
       }
       
       // Start tracking interaction with first question
@@ -1589,13 +1602,19 @@ const FeedScreen: React.FC = () => {
       }
       
       const newActiveTopic = bestIndex >= 0 && bestIndex < personalizedFeed.length ? personalizedFeed[bestIndex]?.topic : undefined;
+      const newActiveSubtopic = bestIndex >= 0 && bestIndex < personalizedFeed.length ? personalizedFeed[bestIndex]?.subtopic || '' : '';
       
       if (newActiveTopic !== activeTopic) {
         console.log(`[ACTIVE TOPIC UPDATE] Changing active topic from "${activeTopic}" to "${newActiveTopic}" (index: ${bestIndex})`);
         setActiveTopic(newActiveTopic);
       }
+      
+      if (newActiveSubtopic !== activeSubtopic) {
+        console.log(`[ACTIVE SUBTOPIC UPDATE] Changing active subtopic from "${activeSubtopic}" to "${newActiveSubtopic}" (index: ${bestIndex})`);
+        setActiveSubtopic(newActiveSubtopic);
+      }
     }
-  }, [currentIndex, personalizedFeed.length, isIOS]); // Remove activeTopic from dependencies to prevent loops, only monitor index changes
+  }, [currentIndex, personalizedFeed.length, isIOS]); // Remove activeTopic and activeSubtopic from dependencies to prevent loops, only monitor index changes
 
   // Separate useEffect for verification to prevent infinite loops
   useEffect(() => {
@@ -2595,18 +2614,6 @@ const FeedScreen: React.FC = () => {
     }
   }, [debugPanelVisible]);
 
-  // Get current item for topic rings
-  const currentItem = currentIndex >= 0 && currentIndex < personalizedFeed.length ? personalizedFeed[currentIndex] : null;
-  
-  // Ring configuration (can be customized later)
-  const ringConfig = DEFAULT_RING_CONFIG;
-  
-  // Handle ring completion celebration
-  const handleRingComplete = (topic: string, level: number) => {
-    console.log(`🎉 ${topic} reached level ${level}!`);
-    // You can add celebration effects here
-  };
-
   // Loading state
   if (isLoading) {
     return (
@@ -2723,14 +2730,15 @@ const FeedScreen: React.FC = () => {
         return shouldShowRings;
       })() && (
         <View style={styles.topicRingsContainer}>
-          {/* Topic Rings - with real active topic tracking */}
           <TopicRings
-            config={ringConfig}
             size={50}
             userId={user?.id}
             activeTopic={activeTopic}
-            activeSubTopic={currentItem?.subtopic}
-            onRingComplete={handleRingComplete}
+            activeSubtopic={activeSubtopic}
+            onRingComplete={(topic, level) => {
+              console.log(`🎉 ${topic} reached level ${level}!`);
+              // You can add celebration effects here
+            }}
           />
           
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -2855,6 +2863,7 @@ const FeedScreen: React.FC = () => {
           onClose={() => setShowAllRingsModal(false)}
           userId={user?.id}
           activeTopic={activeTopic}
+          activeSubtopic={activeSubtopic}
         />
       </View>
 
