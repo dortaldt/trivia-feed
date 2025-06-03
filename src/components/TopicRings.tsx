@@ -8,6 +8,7 @@ import {
   RingConfig,
   DEFAULT_RING_CONFIG,
   TOPIC_ICONS,
+  getSubTopicIcon,
 } from '../types/topicRings';
 import { useTopicRings } from '../hooks/useTopicRings';
 import Svg, { Circle, Defs, Filter, FeGaussianBlur, FeMerge, FeMergeNode } from 'react-native-svg';
@@ -26,6 +27,9 @@ import Reanimated, {
   withSpring,
   withTiming
 } from 'react-native-reanimated';
+// Import topic configuration
+const topicConfig = require('../../app-topic-config');
+const { activeTopic, topics } = topicConfig;
 
 interface TopicRingsProps {
   config?: RingConfig;
@@ -79,6 +83,23 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
   const progressPercentage = Math.round((ringData.currentProgress / ringData.targetAnswers) * 100);
   const nextLevelAnswers = ringData.targetAnswers - ringData.currentProgress;
 
+  // Helper functions for sub-topic display
+  const getDisplayTitle = () => {
+    if (ringData?.isSubTopic && ringData.parentTopic) {
+      const subTopicConfig = topics[ringData.parentTopic]?.subTopics?.[ringData.topic];
+      return subTopicConfig?.displayName || ringData.topic;
+    }
+    return ringData?.topic.charAt(0).toUpperCase() + ringData?.topic.slice(1);
+  };
+
+  const getDescription = () => {
+    if (ringData?.isSubTopic && ringData.parentTopic) {
+      const subTopicConfig = topics[ringData.parentTopic]?.subTopics?.[ringData.topic];
+      return subTopicConfig?.description || `Questions about ${ringData.topic}`;
+    }
+    return `Questions about ${ringData?.topic}`;
+  };
+
   // Add CSS for web hover effects when component mounts
   useEffect(() => {
     if (Platform.OS === 'web' && isNeonTheme) {
@@ -117,8 +138,12 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
   const handleTopicWeightChange = (topic: string, weightChange: number) => {
     if (!userProfile || buttonsDisabled) return;
 
+    // For sub-topics, use the parent topic for weight changes
+    const topicForWeight = ringData?.isSubTopic ? ringData.parentTopic : topic;
+    if (!topicForWeight) return;
+
     // Update the topic weight in Redux
-    const currentWeight = userProfile.topics[topic]?.weight || 0.5;
+    const currentWeight = userProfile.topics[topicForWeight]?.weight || 0.5;
     const newWeight = Math.max(0.1, Math.min(1.0, currentWeight + weightChange));
     
     // Create updated profile with new weight
@@ -126,8 +151,8 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
       ...userProfile,
       topics: {
         ...userProfile.topics,
-        [topic]: {
-          ...userProfile.topics[topic],
+        [topicForWeight]: {
+          ...userProfile.topics[topicForWeight],
           weight: newWeight
         }
       },
@@ -140,18 +165,18 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
       questionId: 'manual-adjustment',
       interactionType: 'skipped' as const, // Use 'skipped' as closest to manual action
       questionText: 'Manual topic weight adjustment',
-      topic: topic,
+      topic: topicForWeight,
       subtopic: 'General',
       branch: 'General',
       oldWeights: {
         topicWeight: currentWeight,
-        subtopicWeight: userProfile.topics[topic]?.subtopics?.['General']?.weight || 0.5,
-        branchWeight: userProfile.topics[topic]?.subtopics?.['General']?.branches?.['General']?.weight || 0.5
+        subtopicWeight: userProfile.topics[topicForWeight]?.subtopics?.['General']?.weight || 0.5,
+        branchWeight: userProfile.topics[topicForWeight]?.subtopics?.['General']?.branches?.['General']?.weight || 0.5
       },
       newWeights: {
         topicWeight: newWeight,
-        subtopicWeight: userProfile.topics[topic]?.subtopics?.['General']?.weight || 0.5,
-        branchWeight: userProfile.topics[topic]?.subtopics?.['General']?.branches?.['General']?.weight || 0.5
+        subtopicWeight: userProfile.topics[topicForWeight]?.subtopics?.['General']?.weight || 0.5,
+        branchWeight: userProfile.topics[topicForWeight]?.subtopics?.['General']?.branches?.['General']?.weight || 0.5
       }
     };
 
@@ -164,7 +189,7 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
     // Disable buttons until next question scroll
     setButtonsDisabled(true);
     
-    console.log(`[Feed Control] Updated ${topic} weight: ${currentWeight.toFixed(3)} -> ${newWeight.toFixed(3)} (change: ${weightChange > 0 ? '+' : ''}${weightChange})`);
+    console.log(`[Feed Control] Updated ${topicForWeight} weight: ${currentWeight.toFixed(3)} -> ${newWeight.toFixed(3)} (change: ${weightChange > 0 ? '+' : ''}${weightChange})`);
   };
 
   // Reset button state when modal opens/closes
@@ -189,6 +214,11 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
               <View style={[styles.modalIconContainer, { backgroundColor: `${ringData.color}20` }]}>
                 <Feather name={ringData.icon as any} size={32} color={ringData.color} />
               </View>
+              {ringData?.isSubTopic && (
+                <ThemedText style={styles.parentTopicLabel}>
+                  {ringData.parentTopic} ›
+                </ThemedText>
+              )}
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Feather name="x" size={24} color={textColor} />
               </TouchableOpacity>
@@ -196,7 +226,12 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
 
             {/* Topic Name */}
             <ThemedText style={[styles.modalTopicName, { color: ringData.color }]}>
-              {ringData.topic.charAt(0).toUpperCase() + ringData.topic.slice(1)}
+              {getDisplayTitle()}
+            </ThemedText>
+
+            {/* Description */}
+            <ThemedText style={styles.modalDescription}>
+              {getDescription()}
             </ThemedText>
 
             {/* Level Info */}
@@ -222,13 +257,15 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
             <View style={styles.modalSection}>
               <ThemedText style={styles.modalSectionTitle}>Total Stats</ThemedText>
               <ThemedText style={styles.modalTotalText}>
-                {ringData.totalCorrectAnswers} total correct answers in {ringData.topic}
+                {ringData.totalCorrectAnswers} total correct answers in {getDisplayTitle()}
               </ThemedText>
             </View>
 
             {/* Feed Control Buttons */}
             <View style={styles.modalSection}>
-              <ThemedText style={styles.modalSectionTitle}>Feed Control</ThemedText>
+              <ThemedText style={styles.modalSectionTitle}>
+                Feed Control {ringData?.isSubTopic && `(${ringData.parentTopic})`}
+              </ThemedText>
               <View style={styles.feedControlButtons}>
                 <TouchableOpacity 
                   style={[
@@ -248,7 +285,7 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
                     styles.feedControlButtonText,
                     { color: buttonsDisabled ? '#666' : '#00FF88' }
                   ]}>
-                    Show more from topic
+                    Show more from {ringData?.isSubTopic ? ringData.parentTopic : 'topic'}
                   </ThemedText>
                 </TouchableOpacity>
                 
@@ -270,7 +307,7 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
                     styles.feedControlButtonText,
                     { color: buttonsDisabled ? '#666' : '#FF0080' }
                   ]}>
-                    Show less from topic
+                    Show less from {ringData?.isSubTopic ? ringData.parentTopic : 'topic'}
                   </ThemedText>
                 </TouchableOpacity>
               </View>
@@ -362,10 +399,10 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
   config,
   size = 50,
   userId,
-  activeTopic,
+  activeTopic: propActiveTopic,
   onRingComplete,
 }) => {
-  const { topRings, onRingComplete: hookOnRingComplete } = useTopicRings({ config, userId });
+  const { topRings, onRingComplete: hookOnRingComplete, isSubTopicMode } = useTopicRings({ config, userId });
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedRing, setSelectedRing] = useState<TopicRingProgress | null>(null);
 
@@ -406,8 +443,9 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
     return null;
   }
 
-  // Log all available rings and active topic for debugging
-  // console.log(`[ACTIVE TOPIC RING] Available rings: [${validRings.map(r => `"${r.topic}"`).join(', ')}] vs activeTopic: "${activeTopic}"`);
+  console.log(`[TOPIC RINGS] Rendering ${validRings.length} rings (sub-topic mode: ${isSubTopicMode}):`, 
+    validRings.map(r => `${r.topic}${r.isSubTopic ? ' (sub)' : ''} (${r.totalCorrectAnswers} correct)`).join(', ')
+  );
 
   return (
     <Reanimated.View 
@@ -418,12 +456,11 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
         .mass(0.8)}
     >
       {validRings.map((ring, index) => {
-        // More robust topic matching - normalize case and trim whitespace
-        const normalizedRingTopic = ring.topic.toLowerCase().trim();
-        const normalizedActiveTopic = activeTopic?.toLowerCase().trim();
-        const isRingActive = normalizedRingTopic === normalizedActiveTopic;
-        
-        // console.log(`[ACTIVE TOPIC RING] Ring "${ring.topic}" -> isActive: ${isRingActive}`);
+        // For sub-topic rings, we don't need to match against activeTopic
+        // since they're already filtered by the hook
+        const isRingActive = ring.isSubTopic ? false : (
+          ring.topic.toLowerCase().trim() === propActiveTopic?.toLowerCase().trim()
+        );
         
         return (
           <SingleRing
@@ -853,5 +890,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#666',
     textAlign: 'center',
+  },
+  // Add styles for sub-topic elements
+  parentTopicLabel: {
+    fontSize: 14,
+    opacity: 0.7,
+    fontStyle: 'italic',
+    flex: 1,
+    textAlign: 'center',
+  },
+  modalDescription: {
+    fontSize: 16,
+    opacity: 0.8,
+    textAlign: 'center',
+    marginBottom: 20,
   },
 }); 
