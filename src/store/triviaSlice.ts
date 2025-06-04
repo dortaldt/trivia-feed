@@ -9,6 +9,7 @@ import { FeedItem } from '../lib/triviaService';
 import { recordUserAnswer } from '../lib/leaderboardService';
 import { syncUserProfile } from '../lib/simplifiedSyncService';
 import { InteractionLog, FeedChange, WeightChange } from '../types/trackerTypes';
+import { BannerState } from '../types/bannerTypes';
 import { RootState } from '../store';
 import { dbEventEmitter } from '../lib/syncService';
 
@@ -112,6 +113,7 @@ interface TriviaState {
   interactionCount: number; // Track number of interactions since last sync for batching
   firstInteractionProcessed: boolean; // Track if the first interaction has been processed
   questionsLoaded: boolean; // Track whether questions have been loaded from storage
+  banners: BannerState; // State for promotional banners
 }
 
 const initialState: TriviaState = {
@@ -129,6 +131,13 @@ const initialState: TriviaState = {
   interactionCount: 0,
   firstInteractionProcessed: false,
   questionsLoaded: false,
+  banners: {
+    activeBanners: [],
+    shownBanners: [],
+    dismissedBanners: [],
+    interactions: [],
+    lastFetch: null,
+  },
 };
 
 // Async thunk to load questions from storage
@@ -813,6 +822,36 @@ const triviaSlice = createSlice({
     loadUserDataFailure: (state) => {
       state.isSyncing = false;
     },
+    // Banner-related actions
+    setBanners: (state, action: PayloadAction<{ banners: any[], lastFetch: string }>) => {
+      const { banners, lastFetch } = action.payload;
+      state.banners.activeBanners = banners;
+      state.banners.lastFetch = lastFetch;
+    },
+    recordBannerInteraction: (state, action: PayloadAction<any>) => {
+      const interaction = action.payload;
+      state.banners.interactions.push(interaction);
+      
+      // Update shown banners list for session tracking
+      if (interaction.action === 'shown') {
+        if (!state.banners.shownBanners.includes(interaction.bannerId)) {
+          state.banners.shownBanners.push(interaction.bannerId);
+        }
+      }
+    },
+    dismissBanner: (state, action: PayloadAction<{ bannerId: string, persistDismissal: boolean }>) => {
+      const { bannerId, persistDismissal } = action.payload;
+      
+      if (persistDismissal) {
+        if (!state.banners.dismissedBanners.includes(bannerId)) {
+          state.banners.dismissedBanners.push(bannerId);
+        }
+      }
+    },
+    clearBannerSession: (state) => {
+      // Clear session-specific banner data (called on app start)
+      state.banners.shownBanners = [];
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -845,7 +884,11 @@ export const {
   syncFailed,
   loadUserDataStart,
   loadUserDataSuccess,
-  loadUserDataFailure
+  loadUserDataFailure,
+  setBanners,
+  recordBannerInteraction,
+  dismissBanner,
+  clearBannerSession
 } = triviaSlice.actions;
 
 export default triviaSlice.reducer;

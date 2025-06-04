@@ -88,6 +88,9 @@ import { AllRingsModal } from '../../components/AllRingsModal';
 import { useTopicRings } from '../../hooks/useTopicRings';
 import { useWebScrollPrevention } from '../../hooks/useWebScrollPrevention';
 import { logger, setLoggerDebugMode } from '../../utils/logger';
+import { useBanners } from '../../hooks/useBanners';
+import PromotionalBanner from '../../components/PromotionalBanner';
+import { BannerPlacement } from '../../types/bannerTypes';
 
 const { width, height } = Dimensions.get('window');
 
@@ -210,6 +213,15 @@ const FeedScreen: React.FC = () => {
   
   // Add state to track skipped questions that need processing
   const [pendingSkips, setPendingSkips] = useState<Set<string>>(new Set());
+  
+  // Banner integration
+  const { 
+    getBannersForFeed, 
+    recordInteraction: recordBannerInteraction, 
+    dismissBanner: dismissBannerFunc,
+    getDebugInfo: getBannerDebugInfo 
+  } = useBanners();
+  const [bannerPlacements, setBannerPlacements] = useState<BannerPlacement[]>([]);
   
   // Fetch username from the database when user changes
   useEffect(() => {
@@ -2116,40 +2128,144 @@ const FeedScreen: React.FC = () => {
     setShowLeaderboard(prev => !prev);
   }, []);
 
-  const renderItem = ({ item, index }: { item: FeedItemType; index: number }) => {
+  // Create enhanced feed with banners inserted at appropriate positions
+  type EnhancedFeedItem = FeedItemType | { type: 'banner'; banner: any; position: number };
+  
+  const enhancedFeed = useMemo((): EnhancedFeedItem[] => {
+    console.log('🔧 Creating enhanced feed');
+    console.log('📊 Input:', {
+      feedLength: personalizedFeed.length,
+      bannerPlacements: bannerPlacements.length,
+      placements: bannerPlacements.map(p => ({ id: p.banner.id, position: p.position }))
+    });
+    
+    const feed = [...personalizedFeed];
+    const result: EnhancedFeedItem[] = [];
+    
+    // Sort banner placements by position
+    const sortedPlacements = [...bannerPlacements].sort((a, b) => a.position - b.position);
+    console.log('📋 Sorted placements:', sortedPlacements.map(p => ({ id: p.banner.id, position: p.position })));
+    
+    let bannerIndex = 0;
+    for (let i = 0; i < feed.length; i++) {
+      // Insert any banners that should come before this position
+      while (bannerIndex < sortedPlacements.length && sortedPlacements[bannerIndex].position <= i) {
+        console.log(`🎯 Inserting banner ${sortedPlacements[bannerIndex].banner.id} at position ${i}`);
+        result.push({
+          type: 'banner',
+          banner: sortedPlacements[bannerIndex].banner,
+          position: sortedPlacements[bannerIndex].position
+        });
+        bannerIndex++;
+      }
+      
+      // Add the regular feed item
+      result.push(feed[i]);
+    }
+    
+    // Add any remaining banners at the end
+    while (bannerIndex < sortedPlacements.length) {
+      console.log(`🎯 Adding remaining banner ${sortedPlacements[bannerIndex].banner.id} at end`);
+      result.push({
+        type: 'banner',
+        banner: sortedPlacements[bannerIndex].banner,
+        position: sortedPlacements[bannerIndex].position
+      });
+      bannerIndex++;
+    }
+    
+    console.log('✨ Enhanced feed created:', {
+      totalItems: result.length,
+      banners: result.filter(item => 'type' in item && item.type === 'banner').length,
+      feedItems: result.filter(item => !('type' in item) || item.type !== 'banner').length
+    });
+    
+    return result;
+  }, [personalizedFeed, bannerPlacements]);
+
+  const renderItem = ({ item, index }: { item: EnhancedFeedItem; index: number }) => {
+    // Banner dismiss handler with auto-scroll for this specific item
+    const handleBannerDismiss = async (bannerId: string) => {
+      try {
+        // First dismiss the banner
+        await dismissBannerFunc(bannerId);
+        
+        // Then scroll to the next item automatically
+        setTimeout(() => {
+          if (flatListRef.current && index < enhancedFeed.length - 1) {
+            const targetIndex = index + 1;
+            const offset = viewportHeight * targetIndex;
+            
+            flatListRef.current.scrollToOffset({
+              offset,
+              animated: true
+            });
+          }
+        }, 100); // Small delay to allow banner dismissal animation to start
+      } catch (error) {
+        console.error('Failed to dismiss banner and scroll:', error);
+      }
+    };
+
+    // Handle promotional banners
+    if ('type' in item && item.type === 'banner') {
+      return (
+        <View style={[styles.itemContainer, { width, height: viewportHeight }]}>
+          <PromotionalBanner
+            banner={item.banner}
+            position={item.position}
+            onDismiss={handleBannerDismiss}
+            onInteraction={(bannerId: string, action: string, metadata?: any) => {
+              recordBannerInteraction(bannerId, action as 'shown' | 'clicked' | 'dismissed' | 'auto_hidden', metadata);
+            }}
+            debugMode={debugPanelVisible}
+          />
+        </View>
+      );
+    }
+    
+    // Handle regular feed items
+    const feedItem = item as FeedItemType;
     // Add debug logging for duplicate detection and feed stability
-    // console.log(`Rendering item ${index}: ${item.id} - "${item.question.substring(0, 30)}..."`, 
-    //   questions[item.id] ? `(Question status: ${questions[item.id].status})` : '(No status yet)');
+    // console.log(`Rendering item ${index}: ${feedItem.id} - "${feedItem.question.substring(0, 30)}..."`, 
+    //   questions[feedItem.id] ? `(Question status: ${questions[feedItem.id].status})` : '(No status yet)');
     
     // Get the next item's topic for gradient transition (if any)
-    const nextItemTopic = index < personalizedFeed.length - 1 ? personalizedFeed[index + 1].topic : undefined;
+    const nextItem = index < enhancedFeed.length - 1 ? enhancedFeed[index + 1] : undefined;
+    const nextItemTopic = nextItem && 'type' in nextItem && nextItem.type === 'banner' ? undefined : (nextItem as FeedItemType)?.topic;
     
     return (
       <View style={[styles.itemContainer, { width, height: viewportHeight }]}>
         <FeedItem 
-          item={item} 
+          item={feedItem} 
           nextTopic={nextItemTopic}
           onAnswer={(answerIndex, isCorrect) => 
-            handleAnswer(item.id, answerIndex, isCorrect)
+            handleAnswer(feedItem.id, answerIndex, isCorrect)
           }
           showExplanation={() => {
             // Show explanation only when debug panel is visible
-            if (debugPanelVisible && feedExplanations[item.id]) {
-              setCurrentExplanation(feedExplanations[item.id]);
+            if (debugPanelVisible && feedExplanations[feedItem.id]) {
+              setCurrentExplanation(feedExplanations[feedItem.id]);
               setShowExplanationModal(true);
             }
           }}
           onNextQuestion={handleNextQuestion}
-          onToggleLeaderboard={() => toggleLeaderboard(item.id)}
+          onToggleLeaderboard={() => toggleLeaderboard(feedItem.id)}
           debugMode={debugPanelVisible}
         />
       </View>
     );
   };
 
-  const keyExtractor = (item: FeedItemType, index: number) => {
-    // Ensure key is always unique even if duplicate IDs exist
-    return `${item.id}-${index}`;
+  const keyExtractor = (item: EnhancedFeedItem, index: number) => {
+    // Handle promotional banners
+    if ('type' in item && item.type === 'banner') {
+      return `banner-${item.banner.id}-${index}`;
+    }
+    
+    // Handle regular feed items
+    const feedItem = item as FeedItemType;
+    return `${feedItem.id}-${index}`;
   };
 
   // Get item layout with responsive height
@@ -2320,6 +2436,36 @@ const FeedScreen: React.FC = () => {
   
   // Get addQuestionTopic from the rings hook for immediate updates
   const { addQuestionTopic } = useTopicRings({ userId: user?.id });
+  
+  // Calculate banner placements when feed or user profile changes
+  useEffect(() => {
+    const calculateBannerPlacements = async () => {
+      console.log('🎯 FeedScreen: calculateBannerPlacements triggered');
+      console.log('📊 State:', {
+        feedLength: personalizedFeed.length,
+        hasUserProfile: !!userProfile,
+        isGuest,
+        questionsAnswered: userProfile?.totalQuestionsAnswered || 0
+      });
+      
+      if (personalizedFeed.length > 0 && userProfile) {
+        try {
+          console.log('🚀 Calling getBannersForFeed...');
+          const placements = await getBannersForFeed();
+          console.log('🎉 Got banner placements:', placements);
+          setBannerPlacements(placements || []);
+        } catch (error) {
+          console.error('❌ Failed to calculate banner placements:', error);
+          setBannerPlacements([]);
+        }
+      } else {
+        console.log('⚠️  Not calling getBannersForFeed - missing feed or userProfile');
+        setBannerPlacements([]);
+      }
+    };
+
+    calculateBannerPlacements();
+  }, [personalizedFeed, userProfile, isGuest]);
   
   // Handle 3-finger tap for iOS
   const handleTouchStart = useCallback((event: GestureResponderEvent) => {
@@ -2794,7 +2940,7 @@ const FeedScreen: React.FC = () => {
       
       <FlatList
         ref={flatListRef}
-        data={personalizedFeed.length > 0 ? personalizedFeed : feedData}
+        data={enhancedFeed.length > 0 ? enhancedFeed : (personalizedFeed.length > 0 ? personalizedFeed : feedData)}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
@@ -2820,10 +2966,11 @@ const FeedScreen: React.FC = () => {
           autoscrollToTopThreshold: 10
         }}
         onEndReached={() => {
-          console.log('[Feed] onEndReached triggered at index', currentIndex, 'of', personalizedFeed.length);
+          console.log('[Feed] onEndReached triggered at index', currentIndex, 'of', enhancedFeed.length);
           
-          // Preload more when nearing the end
-          if (currentIndex < personalizedFeed.length - 3) {
+          // Preload more when nearing the end (accounting for banners in enhanced feed)
+          const actualFeedLength = personalizedFeed.length;
+          if (currentIndex < actualFeedLength - 3) {
             preloadNextItems(currentIndex + 1);
           }
           
@@ -2851,7 +2998,7 @@ const FeedScreen: React.FC = () => {
 
       {/* InteractionTracker Component */}
       <InteractionTracker 
-        feedData={personalizedFeed.length > 0 ? personalizedFeed : feedData} 
+        feedData={enhancedFeed.length > 0 ? enhancedFeed.filter(item => !('type' in item && item.type === 'banner')) as FeedItemType[] : (personalizedFeed.length > 0 ? personalizedFeed : feedData)} 
         debugEnabled={debugPanelVisible}
       />
 
