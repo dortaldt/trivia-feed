@@ -316,14 +316,14 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     // This prevents unnecessary recalculation when preserving cached data
     if (correctAnswers > existingRing.totalCorrectAnswers) {
       const newCorrectAnswers = correctAnswers - existingRing.totalCorrectAnswers;
-      console.log(`[RING PROGRESS] ${topic}: Adding ${newCorrectAnswers} new correct answers (${existingRing.totalCorrectAnswers} → ${correctAnswers})`);
+      // console.log(`[RING PROGRESS] ${topic}: Adding ${newCorrectAnswers} new correct answers (${existingRing.totalCorrectAnswers} → ${correctAnswers})`);
       
       updatedRing.totalCorrectAnswers = correctAnswers;
       updatedRing.currentProgress += newCorrectAnswers;
 
       // Check if level should be increased
       while (updatedRing.currentProgress >= updatedRing.targetAnswers && updatedRing.level < config.maxDisplayLevel) {
-        console.log(`[RING LEVEL UP] ${topic}: Level ${updatedRing.level} → ${updatedRing.level + 1} (progress: ${updatedRing.currentProgress}/${updatedRing.targetAnswers})`);
+        // console.log(`[RING LEVEL UP] ${topic}: Level ${updatedRing.level} → ${updatedRing.level + 1} (progress: ${updatedRing.currentProgress}/${updatedRing.targetAnswers})`);
         updatedRing.currentProgress -= updatedRing.targetAnswers;
         updatedRing.level += 1;
         updatedRing.targetAnswers = calculateTargetAnswers(updatedRing.level);
@@ -386,14 +386,14 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
 
     if (correctAnswers > existingRing.totalCorrectAnswers) {
       const newCorrectAnswers = correctAnswers - existingRing.totalCorrectAnswers;
-      console.log(`[SUB-TOPIC RING PROGRESS] ${subTopic}: Adding ${newCorrectAnswers} new correct answers (${existingRing.totalCorrectAnswers} → ${correctAnswers})`);
+      // console.log(`[SUB-TOPIC RING PROGRESS] ${subTopic}: Adding ${newCorrectAnswers} new correct answers (${existingRing.totalCorrectAnswers} → ${correctAnswers})`);
       
       updatedRing.totalCorrectAnswers = correctAnswers;
       updatedRing.currentProgress += newCorrectAnswers;
 
       // Handle level ups
       while (updatedRing.currentProgress >= updatedRing.targetAnswers && updatedRing.level < config.maxDisplayLevel) {
-        console.log(`[SUB-TOPIC RING LEVEL UP] ${subTopic}: Level ${updatedRing.level} → ${updatedRing.level + 1} (progress: ${updatedRing.currentProgress}/${updatedRing.targetAnswers})`);
+        // console.log(`[SUB-TOPIC RING LEVEL UP] ${subTopic}: Level ${updatedRing.level} → ${updatedRing.level + 1} (progress: ${updatedRing.currentProgress}/${updatedRing.targetAnswers})`);
         updatedRing.currentProgress -= updatedRing.targetAnswers;
         updatedRing.level += 1;
         updatedRing.targetAnswers = calculateTargetAnswers(updatedRing.level);
@@ -457,7 +457,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
           }
         });
         
-        console.log(`[SUB-TOPIC MODE] Found ${availableSubTopics.size} sub-topics in persistent map:`, Array.from(availableSubTopics));
+        // console.log(`[SUB-TOPIC MODE] Found ${availableSubTopics.size} sub-topics in persistent map:`, Array.from(availableSubTopics));
         
         // Process sub-topics that are both configured and have questions
         Object.keys(subTopicsConfig).forEach(subTopic => {
@@ -467,7 +467,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
             
             if (!existingRing || existingRing.totalCorrectAnswers !== correctAnswersCount) {
               const newRing = createSubTopicRingProgress(subTopic, correctAnswersCount, existingRing);
-              console.log(`[SUB-TOPIC RING UPDATE] "${subTopic}": ${newRing.totalCorrectAnswers} correct → Level ${newRing.level}, Progress ${newRing.currentProgress}/${newRing.targetAnswers}`);
+              // console.log(`[SUB-TOPIC RING UPDATE] "${subTopic}": ${newRing.totalCorrectAnswers} correct → Level ${newRing.level}, Progress ${newRing.currentProgress}/${newRing.targetAnswers}`);
               newRings[subTopic] = newRing;
               hasChanges = true;
             }
@@ -483,7 +483,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
             
             if (correctAnswersCount > 0 && (!existingRing || existingRing.totalCorrectAnswers !== correctAnswersCount)) {
               const newRing = createSubTopicRingProgress(subTopic, correctAnswersCount, existingRing);
-              console.log(`[SUB-TOPIC RING UPDATE] "${subTopic}" (unconfigured): ${newRing.totalCorrectAnswers} correct → Level ${newRing.level}, Progress ${newRing.currentProgress}/${newRing.targetAnswers}`);
+              // console.log(`[SUB-TOPIC RING UPDATE] "${subTopic}" (unconfigured): ${newRing.totalCorrectAnswers} correct → Level ${newRing.level}, Progress ${newRing.currentProgress}/${newRing.targetAnswers}`);
               newRings[subTopic] = newRing;
               hasChanges = true;
             }
@@ -501,11 +501,11 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
             const oldCount = existingRing?.totalCorrectAnswers || 0;
             
             if (correctAnswersToUse > oldCount) {
-              console.log(`[RING PROGRESS] ${topic}: Adding ${correctAnswersToUse - oldCount} new correct answers (${oldCount} → ${correctAnswersToUse})`);
+              // console.log(`[RING PROGRESS] ${topic}: Adding ${correctAnswersToUse - oldCount} new correct answers (${oldCount} → ${correctAnswersToUse})`);
             }
             
             const newRing = createRingProgress(topic, correctAnswersToUse, existingRing);
-            console.log(`[RING UPDATE] "${topic}": ${newRing.totalCorrectAnswers} correct → Level ${newRing.level}, Progress ${newRing.currentProgress}/${newRing.targetAnswers}`);
+            // console.log(`[RING UPDATE] "${topic}": ${newRing.totalCorrectAnswers} correct → Level ${newRing.level}, Progress ${newRing.currentProgress}/${newRing.targetAnswers}`);
             
             newRings[topic] = newRing;
             hasChanges = true;
@@ -513,12 +513,12 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         });
       }
       
+      // Apply changes
       if (hasChanges) {
-        console.log(`[RING EFFECT] Applying ring state changes (sub-topic mode: ${shouldUseSubTopics})`);
-        setRingsState(prevState => ({
-          ...prevState,
-          rings: newRings,
-          lastUpdated: Date.now(),
+        // console.log(`[RING EFFECT] Applying ring state changes (sub-topic mode: ${shouldUseSubTopics})`);
+        setRingsState(prev => ({
+          ...prev,
+          rings: newRings
         }));
       }
     }

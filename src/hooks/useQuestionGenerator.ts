@@ -65,7 +65,7 @@ export function useQuestionGenerator() {
         recentInteractionsRef.current[userId].slice(0, 20);
     }
     
-    console.log(`[GENERATOR_HOOK] Tracked interaction with question ${questionId} (topic: ${topic})`);
+    // console.log(`[GENERATOR_HOOK] Tracked interaction with question ${questionId} (topic: ${topic})`);
   }, []);
 
   /**
@@ -75,22 +75,22 @@ export function useQuestionGenerator() {
   const triggerQuestionGeneration = useCallback(async (userId: string) => {
     // Performance tracker ⏱️ - Question Generation Trigger START
     const questionGenStart = performance.now();
-    console.log(`[Performance tracker ⏱️] Question Generation Trigger - Started: ${questionGenStart.toFixed(2)}ms`);
+    // console.log(`[Performance tracker ⏱️] Question Generation Trigger - Started: ${questionGenStart.toFixed(2)}ms`);
     
     if (!userId) {
       // Performance tracker ⏱️ - Question Generation Trigger END (early return)
       const questionGenEnd = performance.now();
-      console.log(`[Performance tracker ⏱️] Question Generation Trigger - Ended (early): ${questionGenEnd.toFixed(2)}ms | Duration: ${(questionGenEnd - questionGenStart).toFixed(2)}ms`);
+      // console.log(`[Performance tracker ⏱️] Question Generation Trigger - Ended (early): ${questionGenEnd.toFixed(2)}ms | Duration: ${(questionGenEnd - questionGenStart).toFixed(2)}ms`);
       return;
     }
     
     // Check if we've attempted generation recently (within last 30 seconds)
     const now = Date.now();
     if (lastGenerationAttemptRef.current && (now - lastGenerationAttemptRef.current) < 30000) {
-      console.log('[GENERATOR_HOOK] Skipping generation - attempted recently');
+      // console.log('[GENERATOR_HOOK] Skipping generation - attempted recently');
       // Performance tracker ⏱️ - Question Generation Trigger END (recent attempt)
       const questionGenEnd = performance.now();
-      console.log(`[Performance tracker ⏱️] Question Generation Trigger - Ended (recent attempt): ${questionGenEnd.toFixed(2)}ms | Duration: ${(questionGenEnd - questionGenStart).toFixed(2)}ms`);
+      // console.log(`[Performance tracker ⏱️] Question Generation Trigger - Ended (recent attempt): ${questionGenEnd.toFixed(2)}ms | Duration: ${(questionGenEnd - questionGenStart).toFixed(2)}ms`);
       return;
     }
     
@@ -98,7 +98,7 @@ export function useQuestionGenerator() {
     lastGenerationAttemptRef.current = now;
     
     try {
-      console.log('[GENERATOR_HOOK] Attempting to trigger question generation...');
+      // console.log('[GENERATOR_HOOK] Attempting to trigger question generation...');
       
       // Get user interactions from client-side storage
       const userIdentifier = userId;
@@ -121,13 +121,13 @@ export function useQuestionGenerator() {
       const topicBranchCombos: string[] = [];
       
       if (userInteractions.length > 0) {
-        console.log(`[GENERATOR_HOOK] Using ${userInteractions.length} client-side interactions for topic generation`);
+        // console.log(`[GENERATOR_HOOK] Using ${userInteractions.length} client-side interactions for topic generation`);
         
         // Log a few recent interactions for debugging
-        console.log('[GENERATOR_HOOK] Recent interactions sample:');
-        userInteractions.slice(0, 3).forEach((interaction, idx) => {
-          console.log(`  [${idx}] Topic: ${interaction.topic}, Subtopic: ${interaction.subtopic || 'N/A'}, Branch: ${interaction.branch || 'N/A'}, Tags: ${interaction.tags?.join(', ') || 'N/A'}`);
-        });
+        // console.log('[GENERATOR_HOOK] Recent interactions sample:');
+        // userInteractions.slice(0, 3).forEach((interaction, idx) => {
+        //   console.log(`  [${idx}] Topic: ${interaction.topic}, Subtopic: ${interaction.subtopic || 'N/A'}, Branch: ${interaction.branch || 'N/A'}, Tags: ${interaction.tags?.join(', ') || 'N/A'}`);
+        // });
         
         // Extract topics from client-side history with recency-based weighting
         userInteractions.forEach((interaction, index) => {
@@ -208,7 +208,7 @@ export function useQuestionGenerator() {
         // Add topic+branch combinations (up to 2)
         enhancedTopics.push(...topicBranchCombos.slice(0, 2));
         
-        console.log('[GENERATOR_HOOK] Enhanced topics with combinations:', enhancedTopics);
+        // console.log('[GENERATOR_HOOK] Enhanced topics with combinations:', enhancedTopics);
         
         // Attempt question generation with enhanced topics and client-side preferences
         const success = await runQuestionGeneration(
@@ -219,13 +219,13 @@ export function useQuestionGenerator() {
           clientRecentTags
         );
         
-        console.log('[GENERATOR_HOOK] Question generation result:', success);
+        // console.log('[GENERATOR_HOOK] Question generation result:', success);
       } else {
-        console.log('[GENERATOR_HOOK] No client-side interactions found, using basic generation');
+        // console.log('[GENERATOR_HOOK] No client-side interactions found, using basic generation');
         
         // Fallback to basic question generation if no client interactions
         const success = await runQuestionGeneration(userId);
-        console.log('[GENERATOR_HOOK] Basic question generation result:', success);
+        // console.log('[GENERATOR_HOOK] Basic question generation result:', success);
       }
     } catch (error) {
       console.error('[GENERATOR_HOOK] Error during question generation:', error);
@@ -233,7 +233,7 @@ export function useQuestionGenerator() {
     
     // Performance tracker ⏱️ - Question Generation Trigger END
     const questionGenEnd = performance.now();
-    console.log(`[Performance tracker ⏱️] Question Generation Trigger - Ended: ${questionGenEnd.toFixed(2)}ms | Duration: ${(questionGenEnd - questionGenStart).toFixed(2)}ms`);
+    // console.log(`[Performance tracker ⏱️] Question Generation Trigger - Ended: ${questionGenEnd.toFixed(2)}ms | Duration: ${(questionGenEnd - questionGenStart).toFixed(2)}ms`);
   }, []);
   
   /**
@@ -265,7 +265,7 @@ export function useQuestionGenerator() {
           }));
           
         if (recentQuestions.length > 0) {
-          console.log(`[GENERATOR_HOOK] Found ${recentQuestions.length} recent questions with text to avoid duplication`);
+          // console.log(`[GENERATOR_HOOK] Found ${recentQuestions.length} recent questions with text to avoid duplication`);
         }
       }
       
@@ -276,10 +276,10 @@ export function useQuestionGenerator() {
         
         // Use client-provided topics directly
         primaryTopics = clientTopics;
-        console.log(`[GENERATOR_HOOK] Using ${clientTopics.length} client-side topics for generation`);
+        // console.log(`[GENERATOR_HOOK] Using ${clientTopics.length} client-side topics for generation`);
       } else {
         // Fall back to database query if no client data
-        console.log('[GENERATOR_HOOK] No client topics available, querying database');
+        // console.log('[GENERATOR_HOOK] No client topics available, querying database');
         
         const { data: answerData } = await supabase
           .from('user_answers')
@@ -306,10 +306,10 @@ export function useQuestionGenerator() {
       // Use default topics if we don't have enough
       if (primaryTopics.length === 0) {
         primaryTopics = ['Science', 'History', 'Geography'];
-        console.log('[GENERATOR_HOOK] No topics found, using defaults');
+        // console.log('[GENERATOR_HOOK] No topics found, using defaults');
       }
       
-      console.log(`[GENERATOR_HOOK] Final topics for generation: ${primaryTopics.join(', ')}`);
+      // console.log(`[GENERATOR_HOOK] Final topics for generation: ${primaryTopics.join(', ')}`);
       
       // Call the actual generation process with all the client data
       return await runQuestionGeneration(
@@ -330,7 +330,7 @@ export function useQuestionGenerator() {
   const resetQuestionCounter = useCallback((userId: string) => {
     if (userId && answeredQuestionsRef.current[userId]) {
       answeredQuestionsRef.current[userId] = 0;
-      console.log(`[GENERATOR_HOOK] Manually reset question counter for user ${userId}`);
+      // console.log(`[GENERATOR_HOOK] Manually reset question counter for user ${userId}`);
     }
   }, []);
 
