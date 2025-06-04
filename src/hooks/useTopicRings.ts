@@ -23,6 +23,12 @@ interface UseTopicRingsProps {
 // Storage key for persisting rings data
 const RINGS_STORAGE_KEY = 'topicRings_';
 
+// Enhanced interface for question mapping
+interface QuestionMapping {
+  topic: string;
+  subtopic?: string;
+}
+
 export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopicRingsProps) => {
   const [ringsState, setRingsState] = useState<TopicRingsState>({
     rings: {},
@@ -130,28 +136,33 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     }
   }, [getStorageKey, userId]);
 
-  // Load rings and topic map on component mount or user change
+  // Enhanced persistent topic map that stores both topic and subtopic
+  const [persistentTopicMap, setPersistentTopicMap] = useState<Map<string, QuestionMapping>>(new Map());
+
+  // Load rings and enhanced topic map on component mount or user change
   useEffect(() => {
     loadRingsFromStorage();
     
-    // Also load the persistent topic map from storage
+    // Load the enhanced persistent topic map from storage
     (async () => {
       try {
         const storageKey = `${getStorageKey()}_topicMap`;
         const storedTopicMap = await AsyncStorage.getItem(storageKey);
-        const restoredMap = new Map<string, string>();
+        const restoredMap = new Map<string, QuestionMapping>();
         
         if (storedTopicMap) {
           const parsedMap = JSON.parse(storedTopicMap);
           Object.entries(parsedMap).forEach(([key, value]) => {
-            if (typeof value === 'string') {
-              restoredMap.set(key, value);
+            if (typeof value === 'object' && value !== null && 'topic' in value && typeof (value as any).topic === 'string') {
+              restoredMap.set(key, value as QuestionMapping);
+            } else if (typeof value === 'string') {
+              // Backward compatibility: convert old string format to new object format
+              restoredMap.set(key, { topic: value });
             }
           });
         }
         
         setPersistentTopicMap(restoredMap);
-        // console.log(`[TOPIC MAP] Loaded ${restoredMap.size} question topics from storage`);
       } catch (error) {
         console.error('Error loading topic map from storage:', error);
       }
@@ -170,18 +181,22 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     return Math.floor(config.baseTargetAnswers * Math.pow(config.scalingFactor, level - 1));
   }, [config]);
 
-  // Create a comprehensive lookup map that includes ALL questions we've seen
-  // This will store topic information for questions even after they're no longer in the current feed
-  const [persistentTopicMap, setPersistentTopicMap] = useState<Map<string, string>>(new Map());
-  
   // Update the persistent map whenever we see new questions in the feed
   useEffect(() => {
     let hasUpdates = false;
     const newMap = new Map(persistentTopicMap);
     
     personalizedFeed.forEach(item => {
-      if (!newMap.has(item.id)) {
-        newMap.set(item.id, item.topic);
+      const existingMapping = newMap.get(item.id);
+      const newMapping: QuestionMapping = { 
+        topic: item.topic, 
+        subtopic: item.subtopic 
+      };
+      
+      if (!existingMapping || 
+          existingMapping.topic !== newMapping.topic || 
+          existingMapping.subtopic !== newMapping.subtopic) {
+        newMap.set(item.id, newMapping);
         hasUpdates = true;
       }
     });
@@ -200,11 +215,11 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         }
       })();
     }
-      }, [personalizedFeed, persistentTopicMap, getStorageKey]);
+  }, [personalizedFeed, persistentTopicMap, getStorageKey]);
   
   // Create a memoized lookup map for feed items by ID for O(1) access
   const feedItemsMap = useMemo(() => {
-    // Use the persistent map that remembers ALL questions we've seen
+    // Use the enhanced persistent map that remembers ALL questions we've seen
     return persistentTopicMap;
   }, [persistentTopicMap]);
 
@@ -215,9 +230,9 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     // Only count questions that are answered correctly
     Object.entries(questions).forEach(([questionId, questionState]) => {
       if (questionState.status === 'answered' && questionState.isCorrect) {
-        const questionTopic = feedItemsMap.get(questionId);
-        if (questionTopic) {
-          counts[questionTopic] = (counts[questionTopic] || 0) + 1;
+        const mapping = feedItemsMap.get(questionId);
+        if (mapping?.topic) {
+          counts[mapping.topic] = (counts[mapping.topic] || 0) + 1;
         }
       }
     });
@@ -225,26 +240,26 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     return counts;
   }, [questions, feedItemsMap]);
 
-  // Create a memoized count of correct answers by sub-topic
+  // Create a memoized count of correct answers by sub-topic using the enhanced map
   const correctAnswersBySubTopic = useMemo(() => {
     const counts: { [subTopic: string]: number } = {};
     
     if (shouldUseSubTopics) {
-      // Only count questions that are answered correctly and match the current topic
+      // Use the persistent map instead of personalizedFeed for reliability
       Object.entries(questions).forEach(([questionId, questionState]) => {
         if (questionState.status === 'answered' && questionState.isCorrect) {
-          const feedItem = personalizedFeed.find(item => item.id === questionId);
-          if (feedItem && 
-              feedItem.topic === topics[activeTopic]?.dbTopicName && 
-              feedItem.subtopic) {
-            counts[feedItem.subtopic] = (counts[feedItem.subtopic] || 0) + 1;
+          const mapping = feedItemsMap.get(questionId);
+          if (mapping && 
+              mapping.topic === topics[activeTopic]?.dbTopicName && 
+              mapping.subtopic) {
+            counts[mapping.subtopic] = (counts[mapping.subtopic] || 0) + 1;
           }
         }
       });
     }
     
     return counts;
-  }, [questions, personalizedFeed, shouldUseSubTopics, activeTopic]);
+  }, [questions, feedItemsMap, shouldUseSubTopics, activeTopic]);
 
   // Get correct answers count for a topic from the memoized counts
   const getCorrectAnswersForTopic = (topic: string): number => {
@@ -396,13 +411,16 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
       try {
         const storageKey = `${getStorageKey()}_topicMap`;
         const storedTopicMap = await AsyncStorage.getItem(storageKey);
-        const restoredMap = new Map<string, string>();
+        const restoredMap = new Map<string, QuestionMapping>();
         
         if (storedTopicMap) {
           const parsedMap = JSON.parse(storedTopicMap);
           Object.entries(parsedMap).forEach(([key, value]) => {
-            if (typeof value === 'string') {
-              restoredMap.set(key, value);
+            if (typeof value === 'object' && value !== null && 'topic' in value && typeof (value as any).topic === 'string') {
+              restoredMap.set(key, value as QuestionMapping);
+            } else if (typeof value === 'string') {
+              // Backward compatibility: convert old string format to new object format
+              restoredMap.set(key, { topic: value });
             }
           });
         }
@@ -410,7 +428,6 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         // Only update if the map has actually changed
         if (restoredMap.size !== persistentTopicMap.size) {
           setPersistentTopicMap(restoredMap);
-          // console.log(`[TOPIC MAP] Reloaded ${restoredMap.size} question topics from storage`);
         }
       } catch (error) {
         console.error('Error reloading topic map from storage:', error);
@@ -429,18 +446,18 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
       const newRings = { ...ringsState.rings };
       
       if (shouldUseSubTopics) {
-        // Sub-topic mode: create rings for each sub-topic that has questions
+        // Sub-topic mode: get available sub-topics from the persistent map instead of personalizedFeed
         const subTopicsConfig = topics[activeTopic]?.subTopics || {};
         
-        // Get all unique sub-topics from the feed that match our current topic
+        // Get all unique sub-topics from the persistent map that match our current topic
         const availableSubTopics = new Set<string>();
-        personalizedFeed.forEach(item => {
-          if (item.topic === topics[activeTopic]?.dbTopicName && item.subtopic) {
-            availableSubTopics.add(item.subtopic);
+        persistentTopicMap.forEach((mapping) => {
+          if (mapping.topic === topics[activeTopic]?.dbTopicName && mapping.subtopic) {
+            availableSubTopics.add(mapping.subtopic);
           }
         });
         
-        console.log(`[SUB-TOPIC MODE] Found ${availableSubTopics.size} sub-topics in feed:`, Array.from(availableSubTopics));
+        console.log(`[SUB-TOPIC MODE] Found ${availableSubTopics.size} sub-topics in persistent map:`, Array.from(availableSubTopics));
         
         // Process sub-topics that are both configured and have questions
         Object.keys(subTopicsConfig).forEach(subTopic => {
@@ -505,7 +522,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         }));
       }
     }
-  }, [correctAnswersByTopic, correctAnswersBySubTopic, userProfile, isLoaded, questionsLoaded, personalizedFeed, shouldUseSubTopics]);
+  }, [correctAnswersByTopic, correctAnswersBySubTopic, userProfile, isLoaded, questionsLoaded, persistentTopicMap, shouldUseSubTopics]);
 
   // Calculate top rings - modified for sub-topic support
   const topRings = useMemo((): TopicRingProgress[] => {
@@ -551,9 +568,9 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
           
           Object.entries(questions).forEach(([questionId, questionState]) => {
             if (questionState.status === 'answered' && questionState.isCorrect) {
-              const questionTopic = feedItemsMap.get(questionId);
-              if (questionTopic && !top3Topics.has(questionTopic)) {
-                correctAnswersForNonTop3.push({topic: questionTopic, questionId});
+              const questionMapping = feedItemsMap.get(questionId);
+              if (questionMapping?.topic && !top3Topics.has(questionMapping.topic)) {
+                correctAnswersForNonTop3.push({topic: questionMapping.topic, questionId});
               }
             }
           });
@@ -615,7 +632,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     // console.log(`[IMMEDIATE UPDATE] Adding question ${questionId} with topic "${topic}" to persistent map`);
     setPersistentTopicMap(current => {
       const newMap = new Map(current);
-      newMap.set(questionId, topic);
+      newMap.set(questionId, { topic });
       
       // Save to storage
       (async () => {
