@@ -91,6 +91,9 @@ import { logger, setLoggerDebugMode } from '../../utils/logger';
 
 const { width, height } = Dimensions.get('window');
 
+// Import topic configuration
+const topicConfig = require('../../../app-topic-config.js');
+
 const FeedScreen: React.FC = () => {
   // Utility function to load topic-specific images with fallback
   const getTopicSpecificImage = (baseName: string) => {
@@ -110,9 +113,12 @@ const FeedScreen: React.FC = () => {
       // 'app-icon-science': require('../../../assets/images/app-icon-science.png'),
     };
     
+    // Get active topic from config
+    const { activeTopic: configActiveTopic } = topicConfig;
+    
     // Try to get topic-specific image first
-    if (activeTopic !== 'default') {
-      const topicImageKey = `${baseName}-${activeTopic}`;
+    if (configActiveTopic && configActiveTopic !== 'default') {
+      const topicImageKey = `${baseName}-${configActiveTopic}`;
       if (imageMapping[topicImageKey]) {
         return imageMapping[topicImageKey];
       }

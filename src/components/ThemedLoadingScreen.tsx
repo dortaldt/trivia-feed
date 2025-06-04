@@ -7,10 +7,34 @@ import LoadingBar from '@/src/components/ui/LoadingBar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NeonColors } from '@/constants/NeonColors';
 
+const topicConfig = require('../../app-topic-config.js');
+
 interface ThemedLoadingScreenProps {
   message?: string;
   style?: ViewStyle;
 }
+
+// Static mapping of all app icons - this ensures they're included in the bundle
+const APP_ICONS = {
+  default: require('../../assets/images/app-icon.png'),
+  music: require('../../assets/images/app-icon-music.png'),
+  science: require('../../assets/images/app-icon.png'), // Fallback to default if no science icon exists
+  history: require('../../assets/images/app-icon.png'), // Fallback to default if no history icon exists
+  // Add more topics as needed
+};
+
+// Function to get the appropriate app icon based on active topic
+const getAppIcon = () => {
+  const { activeTopic } = topicConfig;
+  
+  // Use topic-specific icon if available, otherwise use default
+  if (activeTopic && APP_ICONS[activeTopic as keyof typeof APP_ICONS]) {
+    return APP_ICONS[activeTopic as keyof typeof APP_ICONS];
+  }
+  
+  // Default case
+  return APP_ICONS.default;
+};
 
 export const ThemedLoadingScreen: React.FC<ThemedLoadingScreenProps> = ({ 
   message = 'Loading...',
@@ -144,7 +168,7 @@ export const ThemedLoadingScreen: React.FC<ThemedLoadingScreenProps> = ({
             ]}
           >
             <Image 
-              source={require('../../assets/images/app-icon-neon.png')} 
+              source={getAppIcon()} 
               style={[
                 styles.loadingIcon, 
                 { borderRadius: 20 } // Add rounded corners to the app icon
@@ -204,7 +228,7 @@ export const ThemedLoadingScreen: React.FC<ThemedLoadingScreenProps> = ({
             ]}
           >
             <Image 
-              source={require('../../assets/images/app-icon.png')} 
+              source={getAppIcon()} 
               style={[
                 styles.loadingIcon,
                 { borderRadius: 20 } // Add rounded corners to the app icon
