@@ -13,12 +13,12 @@ module.exports = {
   // The active topic for this build (default, music, science, etc.)
   // Set to 'default' for the standard multi-topic experience
   // Set to a specific topic name for a focused single-topic experience
-  activeTopic: envTopic || 'music', // Set to 'default' for the standard multi-topic experience
+  activeTopic: envTopic || 'default', // Set to 'default' for the standard multi-topic experience
   
   // Whether to filter content based on the active topic
   // When true, only questions matching the active topic will be shown
   // When false, all questions will be shown regardless of topic
-  filterContentByTopic: true, // Set to false for default multi-topic experience
+  filterContentByTopic: false, // Set to false for default multi-topic experience
   
   // Available topics configuration
   // Add new topics here as they become available
@@ -37,38 +37,32 @@ module.exports = {
         'Classical Composers': {
           displayName: 'Classical',
           description: 'Classical music and composers',
-          icon: 'music',
-          color: '#BC13FE'
+          icon: 'music'
         },
         'Rock & Roll History': {
           displayName: 'Rock',
           description: 'Rock music history and legends',
-          icon: 'headphones',
-          color: '#FF10F0'
+          icon: 'headphones'
         },
         'Pop Music Trends': {
           displayName: 'Pop',
           description: 'Modern pop music and trends',
-          icon: 'radio',
-          color: '#39FF14'
+          icon: 'radio'
         },
         'Jazz & Blues': {
           displayName: 'Jazz & Blues',
           description: 'Jazz and blues traditions',
-          icon: 'volume-2',
-          color: '#8A00FF'
+          icon: 'volume-2'
         },
         'Music Theory': {
           displayName: 'Theory',
           description: 'Music theory and notation',
-          icon: 'book-open',
-          color: '#00FF8F'
+          icon: 'book-open'
         },
         'Theater & Musicals': {
           displayName: 'Theater',
           description: 'Broadway and musical theater',
-          icon: 'play',
-          color: '#FF71CE'
+          icon: 'play'
         }
       }
     },
@@ -80,26 +74,22 @@ module.exports = {
         'Physics': {
           displayName: 'Physics',
           description: 'Laws of physics and mechanics',
-          icon: 'zap',
-          color: '#FFE500'
+          icon: 'zap'
         },
         'Chemistry': {
           displayName: 'Chemistry',
           description: 'Chemical elements and reactions',
-          icon: 'droplet',
-          color: '#00FFCD'
+          icon: 'droplet'
         },
         'Biology': {
           displayName: 'Biology',
           description: 'Life sciences and organisms',
-          icon: 'heart',
-          color: '#00D68F'
+          icon: 'heart'
         },
         'Astronomy': {
           displayName: 'Astronomy',
           description: 'Space and celestial bodies',
-          icon: 'star',
-          color: '#9966FF'
+          icon: 'star'
         }
       }
     },
@@ -111,14 +101,12 @@ module.exports = {
         'Ancient History': {
           displayName: 'Ancient',
           description: 'Ancient civilizations and events',
-          icon: 'book-open',
-          color: '#FFD700'
+          icon: 'book-open'
         },
         'Modern History': {
           displayName: 'Modern',
           description: 'Recent historical events',
-          icon: 'clock',
-          color: '#4F5FFF'
+          icon: 'clock'
         }
       }
     },
