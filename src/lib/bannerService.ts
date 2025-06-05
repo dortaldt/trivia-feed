@@ -26,6 +26,8 @@ class BannerService {
 
   private sessionId: string = '';
   private initialized = false;
+  private isLoadingBanners = false;
+  private hasLoggedBannerConfig = false;
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -55,6 +57,14 @@ class BannerService {
    * Load promotional banners from configuration or remote source
    */
   async loadBanners(): Promise<void> {
+    // Prevent multiple simultaneous banner loads
+    if (this.isLoadingBanners) {
+      console.log('🔄 Banner loading already in progress, skipping duplicate call');
+      return;
+    }
+    
+    this.isLoadingBanners = true;
+    
     try {
       // For now, load from predefined configuration
       // In the future, this could fetch from a remote API
@@ -66,6 +76,8 @@ class BannerService {
       await this.saveState();
     } catch (error) {
       console.error('Failed to load banners:', error);
+    } finally {
+      this.isLoadingBanners = false;
     }
   }
 
@@ -79,11 +91,15 @@ class BannerService {
     // Only show banners for non-default topic apps (music, etc.)
     const isNonDefaultTopicApp = activeTopic && activeTopic !== 'default';
     
-    console.log('🎯 Banner Service: getConfiguredBanners called', {
-      activeTopic,
-      isNonDefaultTopicApp,
-      returningBanners: isNonDefaultTopicApp
-    });
+    // Reduce log verbosity to prevent spam during development
+    if (!this.hasLoggedBannerConfig) {
+      console.log('🎯 Banner Service: getConfiguredBanners called', {
+        activeTopic,
+        isNonDefaultTopicApp,
+        returningBanners: isNonDefaultTopicApp
+      });
+      this.hasLoggedBannerConfig = true;
+    }
     
     if (!isNonDefaultTopicApp) {
       // Return empty array for default topic app - no banners
@@ -310,6 +326,7 @@ class BannerService {
     
     await this.initialize();
     
+    // Only load banners if we haven't loaded them yet and we're not currently loading
     if (this.bannerState.activeBanners.length === 0) {
       console.log('⚠️  No active banners, loading...');
       await this.loadBanners();

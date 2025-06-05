@@ -2439,6 +2439,8 @@ const FeedScreen: React.FC = () => {
   
   // Calculate banner placements when feed or user profile changes
   useEffect(() => {
+    let isCancelled = false;
+    
     const calculateBannerPlacements = async () => {
       console.log('🎯 FeedScreen: calculateBannerPlacements triggered');
       console.log('📊 State:', {
@@ -2452,20 +2454,33 @@ const FeedScreen: React.FC = () => {
         try {
           console.log('🚀 Calling getBannersForFeed...');
           const placements = await getBannersForFeed();
-          console.log('🎉 Got banner placements:', placements);
-          setBannerPlacements(placements || []);
+          
+          // Only update state if the effect hasn't been cancelled
+          if (!isCancelled) {
+            console.log('🎉 Got banner placements:', placements);
+            setBannerPlacements(placements || []);
+          }
         } catch (error) {
-          console.error('❌ Failed to calculate banner placements:', error);
-          setBannerPlacements([]);
+          if (!isCancelled) {
+            console.error('❌ Failed to calculate banner placements:', error);
+            setBannerPlacements([]);
+          }
         }
       } else {
-        console.log('⚠️  Not calling getBannersForFeed - missing feed or userProfile');
-        setBannerPlacements([]);
+        if (!isCancelled) {
+          console.log('⚠️  Not calling getBannersForFeed - missing feed or userProfile');
+          setBannerPlacements([]);
+        }
       }
     };
 
     calculateBannerPlacements();
-  }, [personalizedFeed, userProfile, isGuest]);
+    
+    // Cleanup function to prevent state updates if component unmounts or dependencies change
+    return () => {
+      isCancelled = true;
+    };
+     }, [personalizedFeed.length, userProfile?.totalQuestionsAnswered, isGuest]); // Removed getBannersForFeed dependency to prevent loops
   
   // Handle 3-finger tap for iOS
   const handleTouchStart = useCallback((event: GestureResponderEvent) => {

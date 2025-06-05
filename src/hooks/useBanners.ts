@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { bannerService } from '../lib/bannerService';
 import { 
@@ -18,10 +18,21 @@ export const useBanners = () => {
   const bannerState = useAppSelector(state => state.trivia.banners);
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   const personalizedFeed = useAppSelector(state => state.trivia.personalizedFeed);
+  
+  // Use refs to track initialization state and prevent re-initialization
+  const isInitialized = useRef(false);
+  const isLoading = useRef(false);
 
-  // Initialize banner service on mount
+  // Initialize banner service on mount - only run once
   useEffect(() => {
     const initializeBanners = async () => {
+      // Prevent multiple simultaneous initializations
+      if (isInitialized.current || isLoading.current) {
+        return;
+      }
+      
+      isLoading.current = true;
+      
       try {
         await bannerService.initialize();
         
@@ -41,39 +52,45 @@ export const useBanners = () => {
             lastFetch: serviceState.lastFetch || new Date().toISOString()
           }));
         }
+        
+        isInitialized.current = true;
       } catch (error) {
         console.error('Failed to initialize banners:', error);
+      } finally {
+        isLoading.current = false;
       }
     };
 
     initializeBanners();
-  }, [dispatch, bannerState.lastFetch, bannerState.activeBanners.length]);
+  }, [dispatch]); // Only depend on dispatch, not on banner state to prevent loops
 
   /**
    * Get banners that should be placed in the current feed
    */
-  const getBannersForFeed = async (): Promise<BannerPlacement[]> => {
-    if (!userProfile || personalizedFeed.length === 0) {
-      return [];
-    }
+  const getBannersForFeed = useMemo(() => {
+    return async (): Promise<BannerPlacement[]> => {
+      if (!userProfile || personalizedFeed.length === 0) {
+        return [];
+      }
 
-    try {
-      // Get current active topic (if any)
-      const currentTopic = personalizedFeed[0]?.topic;
-      
-      const placements = await bannerService.getBannersForFeed(
-        personalizedFeed,
-        userProfile,
-        isGuest,
-        currentTopic
-      );
-      
-      return placements;
-    } catch (error) {
-      console.error('Failed to get banners for feed:', error);
-      return [];
-    }
-  };
+      try {
+        // Get current active topic (if any)
+        const currentTopic = personalizedFeed[0]?.topic;
+        
+        const placements = await bannerService.getBannersForFeed(
+          personalizedFeed,
+          userProfile,
+          isGuest,
+          currentTopic
+        );
+        
+        return placements;
+      } catch (error) {
+        console.error('Failed to get banners for feed:', error);
+        return [];
+      }
+    };
+  }, [personalizedFeed, userProfile, isGuest]);
 
   /**
    * Record a banner interaction
