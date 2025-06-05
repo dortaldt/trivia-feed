@@ -125,23 +125,23 @@ class BannerService {
           targeting: {
             userTypes: ['guest', 'logged_in'],
             platforms: ['ios', 'android', 'web'],
-            minQuestionsAnswered: 25, // Show after answering 25 questions
+            minQuestionsAnswered: 10, // Show after answering 10 questions
             maxQuestionsAnswered: 999999,
           },
           display: {
             frequency: {
-              type: 'after_first_session', // Show only after first session
-              maxShows: 3, // Limit to 3 times per user
-              cooldownHours: 72, // Show every 3 days max
+              type: 'after_first_session', // Show from second session onwards
+              maxShows: 5, // Allow more shows
+              cooldownHours: 24, // Show every day max (relaxed from 3 days)
             },
             positioning: {
               strategy: 'after_questions',
-              afterQuestions: 8, // Show after some engagement in session
+              afterQuestions: 3, // Show after 3rd question in session
             },
           },
           behavior: {
             dismissible: true,
-            persistDismissal: true, // Remember dismissal to avoid annoying users
+            persistDismissal: false, // Allow banners to return even if dismissed
           },
         },
         createdAt: now,
