@@ -51,7 +51,7 @@ export interface BannerConfig {
     
     // How often
     frequency: {
-      type: 'once' | 'session' | 'daily' | 'weekly' | 'always';
+      type: 'once' | 'session' | 'daily' | 'weekly' | 'always' | 'after_first_session';
       maxShows?: number; // Maximum times to show this banner
       cooldownHours?: number; // Hours between shows
     };

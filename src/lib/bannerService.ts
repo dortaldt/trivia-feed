@@ -10,6 +10,7 @@ import {
 } from '../types/bannerTypes';
 import { UserProfile } from './personalizationService';
 import { FeedItem } from './triviaService';
+import { trackEvent } from './mixpanelAnalytics';
 
 const BANNER_STORAGE_KEY = 'promotional_banners_state';
 const SESSION_ID_KEY = 'banner_session_id';
@@ -75,20 +76,19 @@ class BannerService {
     const now = new Date().toISOString();
     const { activeTopic } = Constants.expoConfig?.extra || {};
     
-    // TESTING: Show banners for all apps (including default) for testing purposes
+    // Only show banners for non-default topic apps (music, etc.)
     const isNonDefaultTopicApp = activeTopic && activeTopic !== 'default';
     
     console.log('🎯 Banner Service: getConfiguredBanners called', {
       activeTopic,
       isNonDefaultTopicApp,
-      returningBanners: true
+      returningBanners: isNonDefaultTopicApp
     });
     
-    // Temporarily disable this check for testing
-    // if (!isNonDefaultTopicApp) {
-    //   // Return empty array for default topic app - no banners
-    //   return [];
-    // }
+    if (!isNonDefaultTopicApp) {
+      // Return empty array for default topic app - no banners
+      return [];
+    }
     
     return [
       // Ultimate trivia app promotion (only for non-default topic apps)
@@ -108,21 +108,23 @@ class BannerService {
           targeting: {
             userTypes: ['guest', 'logged_in'],
             platforms: ['ios', 'android', 'web'],
-            minQuestionsAnswered: 0, // Show immediately for testing
+            minQuestionsAnswered: 25, // Show after answering 25 questions
             maxQuestionsAnswered: 999999,
           },
           display: {
             frequency: {
-              type: 'always', // Show every time for testing
+              type: 'after_first_session', // Show only after first session
+              maxShows: 3, // Limit to 3 times per user
+              cooldownHours: 72, // Show every 3 days max
             },
             positioning: {
-              strategy: 'fixed_position',
-              position: 4, // Second feed item (0-indexed)
+              strategy: 'after_questions',
+              afterQuestions: 8, // Show after some engagement in session
             },
           },
           behavior: {
             dismissible: true,
-            persistDismissal: false, // Never persist dismissal for testing
+            persistDismissal: true, // Remember dismissal to avoid annoying users
           },
         },
         createdAt: now,
@@ -236,6 +238,30 @@ class BannerService {
       case 'session':
         if (this.bannerState.shownBanners.includes(banner.id)) {
           return { eligible: false, reasons: ['Banner already shown in this session'] };
+        }
+        break;
+        
+      case 'after_first_session':
+        // Check if this is NOT the first session by looking at interaction history
+        const hasAnyPreviousInteractions = this.bannerState.interactions.length > 0;
+        if (!hasAnyPreviousInteractions) {
+          return { eligible: false, reasons: ['Banner only shows after first session, this appears to be first session'] };
+        }
+        
+        // Apply cooldown if specified
+        if (banner.config.display.frequency.cooldownHours) {
+          const lastShown = shownInteractions[shownInteractions.length - 1];
+          if (lastShown) {
+            const timeSinceLastShown = Date.now() - new Date(lastShown.timestamp).getTime();
+            const cooldownMs = banner.config.display.frequency.cooldownHours * 60 * 60 * 1000;
+            if (timeSinceLastShown < cooldownMs) {
+              const remainingHours = Math.ceil((cooldownMs - timeSinceLastShown) / (60 * 60 * 1000));
+              return { 
+                eligible: false, 
+                reasons: [`Banner in cooldown, ${remainingHours} hours remaining`] 
+              };
+            }
+          }
         }
         break;
         
@@ -378,6 +404,19 @@ class BannerService {
       if (!this.bannerState.shownBanners.includes(bannerId)) {
         this.bannerState.shownBanners.push(bannerId);
       }
+    }
+
+    // Track interaction with Mixpanel
+    try {
+      await trackEvent('Promotional Banner Interaction', {
+        bannerId,
+        action,
+        sessionId: this.sessionId,
+        userId,
+        ...metadata
+      });
+    } catch (error) {
+      console.error('Failed to track banner interaction:', error);
     }
 
     await this.saveState();
