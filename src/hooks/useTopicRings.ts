@@ -7,8 +7,13 @@ import {
   RingConfig,
   DEFAULT_RING_CONFIG,
   TOPIC_ICONS,
+  SUB_TOPIC_ICONS,
+  getSubTopicIcon,
 } from '../types/topicRings';
 import { getTopicColor } from '../../constants/NeonColors';
+// Import topic configuration
+const topicConfig = require('../../app-topic-config');
+const { activeTopic, topics } = topicConfig;
 
 interface UseTopicRingsProps {
   config?: RingConfig;
@@ -17,6 +22,12 @@ interface UseTopicRingsProps {
 
 // Storage key for persisting rings data
 const RINGS_STORAGE_KEY = 'topicRings_';
+
+// Enhanced interface for question mapping
+interface QuestionMapping {
+  topic: string;
+  subtopic?: string;
+}
 
 export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopicRingsProps) => {
   const [ringsState, setRingsState] = useState<TopicRingsState>({
@@ -30,6 +41,9 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   const personalizedFeed = useAppSelector(state => state.trivia.personalizedFeed);
   const questionsLoaded = useAppSelector(state => state.trivia.questionsLoaded);
+
+  // Determine if we should use sub-topics
+  const shouldUseSubTopics = activeTopic !== 'default' && topics[activeTopic]?.subTopics;
 
   // Get storage key for current user
   const getStorageKey = useCallback(() => {
@@ -109,6 +123,8 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
             totalCorrectAnswers: ring.totalCorrectAnswers,
             color: ring.color,
             icon: ring.icon,
+            isSubTopic: ring.isSubTopic,
+            parentTopic: ring.parentTopic,
           };
         });
         
@@ -120,28 +136,33 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     }
   }, [getStorageKey, userId]);
 
-  // Load rings and topic map on component mount or user change
+  // Enhanced persistent topic map that stores both topic and subtopic
+  const [persistentTopicMap, setPersistentTopicMap] = useState<Map<string, QuestionMapping>>(new Map());
+
+  // Load rings and enhanced topic map on component mount or user change
   useEffect(() => {
     loadRingsFromStorage();
     
-    // Also load the persistent topic map from storage
+    // Load the enhanced persistent topic map from storage
     (async () => {
       try {
         const storageKey = `${getStorageKey()}_topicMap`;
         const storedTopicMap = await AsyncStorage.getItem(storageKey);
-        const restoredMap = new Map<string, string>();
+        const restoredMap = new Map<string, QuestionMapping>();
         
         if (storedTopicMap) {
           const parsedMap = JSON.parse(storedTopicMap);
           Object.entries(parsedMap).forEach(([key, value]) => {
-            if (typeof value === 'string') {
-              restoredMap.set(key, value);
+            if (typeof value === 'object' && value !== null && 'topic' in value && typeof (value as any).topic === 'string') {
+              restoredMap.set(key, value as QuestionMapping);
+            } else if (typeof value === 'string') {
+              // Backward compatibility: convert old string format to new object format
+              restoredMap.set(key, { topic: value });
             }
           });
         }
         
         setPersistentTopicMap(restoredMap);
-        // console.log(`[TOPIC MAP] Loaded ${restoredMap.size} question topics from storage`);
       } catch (error) {
         console.error('Error loading topic map from storage:', error);
       }
@@ -160,18 +181,22 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     return Math.floor(config.baseTargetAnswers * Math.pow(config.scalingFactor, level - 1));
   }, [config]);
 
-  // Create a comprehensive lookup map that includes ALL questions we've seen
-  // This will store topic information for questions even after they're no longer in the current feed
-  const [persistentTopicMap, setPersistentTopicMap] = useState<Map<string, string>>(new Map());
-  
   // Update the persistent map whenever we see new questions in the feed
   useEffect(() => {
     let hasUpdates = false;
     const newMap = new Map(persistentTopicMap);
     
     personalizedFeed.forEach(item => {
-      if (!newMap.has(item.id)) {
-        newMap.set(item.id, item.topic);
+      const existingMapping = newMap.get(item.id);
+      const newMapping: QuestionMapping = { 
+        topic: item.topic, 
+        subtopic: item.subtopic 
+      };
+      
+      if (!existingMapping || 
+          existingMapping.topic !== newMapping.topic || 
+          existingMapping.subtopic !== newMapping.subtopic) {
+        newMap.set(item.id, newMapping);
         hasUpdates = true;
       }
     });
@@ -190,11 +215,11 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         }
       })();
     }
-      }, [personalizedFeed, persistentTopicMap, getStorageKey]);
+  }, [personalizedFeed, persistentTopicMap, getStorageKey]);
   
   // Create a memoized lookup map for feed items by ID for O(1) access
   const feedItemsMap = useMemo(() => {
-    // Use the persistent map that remembers ALL questions we've seen
+    // Use the enhanced persistent map that remembers ALL questions we've seen
     return persistentTopicMap;
   }, [persistentTopicMap]);
 
@@ -205,9 +230,9 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     // Only count questions that are answered correctly
     Object.entries(questions).forEach(([questionId, questionState]) => {
       if (questionState.status === 'answered' && questionState.isCorrect) {
-        const questionTopic = feedItemsMap.get(questionId);
-        if (questionTopic) {
-          counts[questionTopic] = (counts[questionTopic] || 0) + 1;
+        const mapping = feedItemsMap.get(questionId);
+        if (mapping?.topic) {
+          counts[mapping.topic] = (counts[mapping.topic] || 0) + 1;
         }
       }
     });
@@ -215,9 +240,35 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     return counts;
   }, [questions, feedItemsMap]);
 
+  // Create a memoized count of correct answers by sub-topic using the enhanced map
+  const correctAnswersBySubTopic = useMemo(() => {
+    const counts: { [subTopic: string]: number } = {};
+    
+    if (shouldUseSubTopics) {
+      // Use the persistent map instead of personalizedFeed for reliability
+      Object.entries(questions).forEach(([questionId, questionState]) => {
+        if (questionState.status === 'answered' && questionState.isCorrect) {
+          const mapping = feedItemsMap.get(questionId);
+          if (mapping && 
+              mapping.topic === topics[activeTopic]?.dbTopicName && 
+              mapping.subtopic) {
+            counts[mapping.subtopic] = (counts[mapping.subtopic] || 0) + 1;
+          }
+        }
+      });
+    }
+    
+    return counts;
+  }, [questions, feedItemsMap, shouldUseSubTopics, activeTopic]);
+
   // Get correct answers count for a topic from the memoized counts
   const getCorrectAnswersForTopic = (topic: string): number => {
     return correctAnswersByTopic[topic] || 0;
+  };
+
+  // Get correct answers count for a sub-topic from the memoized counts
+  const getCorrectAnswersForSubTopic = (subTopic: string): number => {
+    return correctAnswersBySubTopic[subTopic] || 0;
   };
 
   // Create or update ring progress for a topic - PURE FUNCTION (no state updates)
@@ -265,14 +316,14 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     // This prevents unnecessary recalculation when preserving cached data
     if (correctAnswers > existingRing.totalCorrectAnswers) {
       const newCorrectAnswers = correctAnswers - existingRing.totalCorrectAnswers;
-      console.log(`[RING PROGRESS] ${topic}: Adding ${newCorrectAnswers} new correct answers (${existingRing.totalCorrectAnswers} → ${correctAnswers})`);
+      // console.log(`[RING PROGRESS] ${topic}: Adding ${newCorrectAnswers} new correct answers (${existingRing.totalCorrectAnswers} → ${correctAnswers})`);
       
       updatedRing.totalCorrectAnswers = correctAnswers;
       updatedRing.currentProgress += newCorrectAnswers;
 
       // Check if level should be increased
       while (updatedRing.currentProgress >= updatedRing.targetAnswers && updatedRing.level < config.maxDisplayLevel) {
-        console.log(`[RING LEVEL UP] ${topic}: Level ${updatedRing.level} → ${updatedRing.level + 1} (progress: ${updatedRing.currentProgress}/${updatedRing.targetAnswers})`);
+        // console.log(`[RING LEVEL UP] ${topic}: Level ${updatedRing.level} → ${updatedRing.level + 1} (progress: ${updatedRing.currentProgress}/${updatedRing.targetAnswers})`);
         updatedRing.currentProgress -= updatedRing.targetAnswers;
         updatedRing.level += 1;
         updatedRing.targetAnswers = calculateTargetAnswers(updatedRing.level);
@@ -288,6 +339,70 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     return updatedRing;
   }, [calculateTargetAnswers, config.maxDisplayLevel]);
 
+  // Create or update ring progress for sub-topics
+  const createSubTopicRingProgress = useCallback((subTopic: string, correctAnswers: number, existingRing?: TopicRingProgress): TopicRingProgress => {
+    const subTopicConfig = topics[activeTopic]?.subTopics?.[subTopic];
+    
+    if (!existingRing) {
+      const targetAnswers = calculateTargetAnswers(1);
+      const newRing: TopicRingProgress = {
+        topic: subTopic,
+        level: 1,
+        currentProgress: Math.min(correctAnswers, targetAnswers),
+        targetAnswers,
+        totalCorrectAnswers: correctAnswers,
+        color: subTopicConfig?.color || getTopicColor(subTopic).hex,
+        icon: subTopicConfig?.icon || getSubTopicIcon(subTopic, activeTopic),
+        isSubTopic: true,
+        parentTopic: activeTopic,
+      };
+      
+      // Handle level ups for new rings
+      let currentLevel = 1;
+      let remainingAnswers = correctAnswers;
+      
+      while (remainingAnswers >= calculateTargetAnswers(currentLevel)) {
+        remainingAnswers -= calculateTargetAnswers(currentLevel);
+        currentLevel++;
+      }
+      
+      if (currentLevel > 1) {
+        newRing.level = Math.min(currentLevel, config.maxDisplayLevel);
+        newRing.currentProgress = remainingAnswers;
+        newRing.targetAnswers = calculateTargetAnswers(newRing.level);
+      }
+      
+      return newRing;
+    }
+
+    // Update existing sub-topic ring
+    const updatedRing = { 
+      ...existingRing,
+      icon: subTopicConfig?.icon || getSubTopicIcon(subTopic, activeTopic),
+      color: subTopicConfig?.color || getTopicColor(subTopic).hex,
+      isSubTopic: true,
+      parentTopic: activeTopic,
+    };
+
+    if (correctAnswers > existingRing.totalCorrectAnswers) {
+      const newCorrectAnswers = correctAnswers - existingRing.totalCorrectAnswers;
+      // console.log(`[SUB-TOPIC RING PROGRESS] ${subTopic}: Adding ${newCorrectAnswers} new correct answers (${existingRing.totalCorrectAnswers} → ${correctAnswers})`);
+      
+      updatedRing.totalCorrectAnswers = correctAnswers;
+      updatedRing.currentProgress += newCorrectAnswers;
+
+      // Handle level ups
+      while (updatedRing.currentProgress >= updatedRing.targetAnswers && updatedRing.level < config.maxDisplayLevel) {
+        // console.log(`[SUB-TOPIC RING LEVEL UP] ${subTopic}: Level ${updatedRing.level} → ${updatedRing.level + 1} (progress: ${updatedRing.currentProgress}/${updatedRing.targetAnswers})`);
+        updatedRing.currentProgress -= updatedRing.targetAnswers;
+        updatedRing.level += 1;
+        updatedRing.targetAnswers = calculateTargetAnswers(updatedRing.level);
+      }
+    }
+
+    return updatedRing;
+  }, [calculateTargetAnswers, config.maxDisplayLevel, activeTopic]);
+
   // Reload topic map periodically to catch updates from storeQuestionTopic
   useEffect(() => {
     if (!isLoaded) return;
@@ -296,13 +411,16 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
       try {
         const storageKey = `${getStorageKey()}_topicMap`;
         const storedTopicMap = await AsyncStorage.getItem(storageKey);
-        const restoredMap = new Map<string, string>();
+        const restoredMap = new Map<string, QuestionMapping>();
         
         if (storedTopicMap) {
           const parsedMap = JSON.parse(storedTopicMap);
           Object.entries(parsedMap).forEach(([key, value]) => {
-            if (typeof value === 'string') {
-              restoredMap.set(key, value);
+            if (typeof value === 'object' && value !== null && 'topic' in value && typeof (value as any).topic === 'string') {
+              restoredMap.set(key, value as QuestionMapping);
+            } else if (typeof value === 'string') {
+              // Backward compatibility: convert old string format to new object format
+              restoredMap.set(key, { topic: value });
             }
           });
         }
@@ -310,7 +428,6 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         // Only update if the map has actually changed
         if (restoredMap.size !== persistentTopicMap.size) {
           setPersistentTopicMap(restoredMap);
-          // console.log(`[TOPIC MAP] Reloaded ${restoredMap.size} question topics from storage`);
         }
       } catch (error) {
         console.error('Error reloading topic map from storage:', error);
@@ -322,126 +439,171 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     return () => clearInterval(interval);
   }, [isLoaded, getStorageKey, persistentTopicMap.size]);
 
-  // Update rings when correct answers change - OPTIMIZED to prevent spam
+  // Update rings when correct answers change - MODIFIED to handle sub-topics
   useEffect(() => {
     if (userProfile?.topics && isLoaded && questionsLoaded) {
       let hasChanges = false;
       const newRings = { ...ringsState.rings };
       
-      // Get all topics from user profile
-      Object.keys(userProfile.topics).forEach(topic => {
-        const reduxCorrectCount = getCorrectAnswersForTopic(topic);
-        const existingRing = ringsState.rings[topic];
+      if (shouldUseSubTopics) {
+        // Sub-topic mode: get available sub-topics from the persistent map instead of personalizedFeed
+        const subTopicsConfig = topics[activeTopic]?.subTopics || {};
         
-        // Choose the count to use based on which is higher
-        const correctAnswersToUse = Math.max(reduxCorrectCount, existingRing?.totalCorrectAnswers || 0);
-        
-        // Only update if there's actually a change
-        if (!existingRing || existingRing.totalCorrectAnswers !== correctAnswersToUse) {
-          const oldCount = existingRing?.totalCorrectAnswers || 0;
-          
-          if (correctAnswersToUse > oldCount) {
-            console.log(`[RING PROGRESS] ${topic}: Adding ${correctAnswersToUse - oldCount} new correct answers (${oldCount} → ${correctAnswersToUse})`);
-          }
-          
-          const newRing = createRingProgress(topic, correctAnswersToUse, existingRing);
-          console.log(`[RING UPDATE] "${topic}": ${newRing.totalCorrectAnswers} correct → Level ${newRing.level}, Progress ${newRing.currentProgress}/${newRing.targetAnswers}`);
-          
-          newRings[topic] = newRing;
-          hasChanges = true;
-        }
-      });
-      
-      if (hasChanges) {
-        console.log(`[RING EFFECT] Applying ring state changes`);
-        setRingsState(prevState => ({
-          ...prevState,
-          rings: newRings,
-          lastUpdated: Date.now(),
-        }));
-      } else {
-        // console.log(`[RING EFFECT] No changes detected`);
-      }
-    } else {
-      // console.log(`[RING EFFECT] Skipping update - userProfile.topics: ${!!userProfile?.topics}, isLoaded: ${isLoaded}, questionsLoaded: ${questionsLoaded}`);
-    }
-  }, [correctAnswersByTopic, userProfile, isLoaded, questionsLoaded, persistentTopicMap]);
-
-  // Calculate top 3 topic rings + recent ring using useMemo to prevent recalculation
-  const topRings = useMemo((): TopicRingProgress[] => {
-    // Get all rings that have at least 1 correct answer, sorted by progress
-    const ringsWithProgress = Object.values(ringsState.rings)
-      .filter(ring => ring && ring.totalCorrectAnswers > 0)
-      .sort((a, b) => b.totalCorrectAnswers - a.totalCorrectAnswers);
-
-    // Get top 3 rings by progress
-    const top3Rings = ringsWithProgress.slice(0, 3);
-    const top3Topics = new Set(top3Rings.map(ring => ring.topic));
-
-    // Find the most recent ring that's not in top 3
-    let recentRing: TopicRingProgress | null = null;
-    
-    if (ringsWithProgress.length > 3) {
-      // Get all rings not in top 3
-      const nonTop3Rings = ringsWithProgress.filter(ring => !top3Topics.has(ring.topic));
-      
-      if (nonTop3Rings.length > 0) {
-        // Find the most recently answered topic by checking Redux questions
-        let mostRecentTopic: string | null = null;
-        let mostRecentQuestionId: string | null = null;
-        
-        // Get all correct answers for non-top-3 topics
-        const correctAnswersForNonTop3: {topic: string, questionId: string}[] = [];
-        
-        Object.entries(questions).forEach(([questionId, questionState]) => {
-          if (questionState.status === 'answered' && questionState.isCorrect) {
-            const questionTopic = feedItemsMap.get(questionId);
-            if (questionTopic && !top3Topics.has(questionTopic)) {
-              correctAnswersForNonTop3.push({topic: questionTopic, questionId});
-            }
+        // Get all unique sub-topics from the persistent map that match our current topic
+        const availableSubTopics = new Set<string>();
+        persistentTopicMap.forEach((mapping) => {
+          if (mapping.topic === topics[activeTopic]?.dbTopicName && mapping.subtopic) {
+            availableSubTopics.add(mapping.subtopic);
           }
         });
         
-        // If we have correct answers for non-top-3 topics, take the last one
-        // (assuming questions are processed in chronological order)
-        if (correctAnswersForNonTop3.length > 0) {
-          const lastCorrectAnswer = correctAnswersForNonTop3[correctAnswersForNonTop3.length - 1];
-          mostRecentTopic = lastCorrectAnswer.topic;
-          mostRecentQuestionId = lastCorrectAnswer.questionId;
-        }
+        // console.log(`[SUB-TOPIC MODE] Found ${availableSubTopics.size} sub-topics in persistent map:`, Array.from(availableSubTopics));
         
-        // If we found a recent topic, find its ring
-        if (mostRecentTopic) {
-          recentRing = nonTop3Rings.find(ring => ring.topic === mostRecentTopic) || null;
-        }
-        
-        // If no recent topic found from questions, just use the highest progress non-top-3 ring
-        if (!recentRing && nonTop3Rings.length > 0) {
-          recentRing = nonTop3Rings[0];
-        }
-        
-        // Log recent ring selection for debugging
-        if (recentRing) {
-          // console.log(`[RECENT RING] Selected "${recentRing.topic}" as recent ring (last correct: ${mostRecentQuestionId || 'unknown'})`);
-        }
+        // Process sub-topics that are both configured and have questions
+        Object.keys(subTopicsConfig).forEach(subTopic => {
+          if (availableSubTopics.has(subTopic)) {
+            const correctAnswersCount = getCorrectAnswersForSubTopic(subTopic);
+            const existingRing = ringsState.rings[subTopic];
+            
+            if (!existingRing || existingRing.totalCorrectAnswers !== correctAnswersCount) {
+              const newRing = createSubTopicRingProgress(subTopic, correctAnswersCount, existingRing);
+              // console.log(`[SUB-TOPIC RING UPDATE] "${subTopic}": ${newRing.totalCorrectAnswers} correct → Level ${newRing.level}, Progress ${newRing.currentProgress}/${newRing.targetAnswers}`);
+              newRings[subTopic] = newRing;
+              hasChanges = true;
+            }
+          }
+        });
+
+        // Also process any sub-topics that exist in the data but aren't configured
+        // This makes the system more robust
+        availableSubTopics.forEach(subTopic => {
+          if (!subTopicsConfig[subTopic]) {
+            const correctAnswersCount = getCorrectAnswersForSubTopic(subTopic);
+            const existingRing = ringsState.rings[subTopic];
+            
+            if (correctAnswersCount > 0 && (!existingRing || existingRing.totalCorrectAnswers !== correctAnswersCount)) {
+              const newRing = createSubTopicRingProgress(subTopic, correctAnswersCount, existingRing);
+              // console.log(`[SUB-TOPIC RING UPDATE] "${subTopic}" (unconfigured): ${newRing.totalCorrectAnswers} correct → Level ${newRing.level}, Progress ${newRing.currentProgress}/${newRing.targetAnswers}`);
+              newRings[subTopic] = newRing;
+              hasChanges = true;
+            }
+          }
+        });
+      } else {
+        // Regular topic mode: use existing logic
+        Object.keys(userProfile.topics).forEach(topic => {
+          const reduxCorrectCount = getCorrectAnswersForTopic(topic);
+          const existingRing = ringsState.rings[topic];
+          
+          const correctAnswersToUse = Math.max(reduxCorrectCount, existingRing?.totalCorrectAnswers || 0);
+          
+          if (!existingRing || existingRing.totalCorrectAnswers !== correctAnswersToUse) {
+            const oldCount = existingRing?.totalCorrectAnswers || 0;
+            
+            if (correctAnswersToUse > oldCount) {
+              // console.log(`[RING PROGRESS] ${topic}: Adding ${correctAnswersToUse - oldCount} new correct answers (${oldCount} → ${correctAnswersToUse})`);
+            }
+            
+            const newRing = createRingProgress(topic, correctAnswersToUse, existingRing);
+            // console.log(`[RING UPDATE] "${topic}": ${newRing.totalCorrectAnswers} correct → Level ${newRing.level}, Progress ${newRing.currentProgress}/${newRing.targetAnswers}`);
+            
+            newRings[topic] = newRing;
+            hasChanges = true;
+          }
+        });
+      }
+      
+      // Apply changes
+      if (hasChanges) {
+        // console.log(`[RING EFFECT] Applying ring state changes (sub-topic mode: ${shouldUseSubTopics})`);
+        setRingsState(prev => ({
+          ...prev,
+          rings: newRings
+        }));
       }
     }
+  }, [correctAnswersByTopic, correctAnswersBySubTopic, userProfile, isLoaded, questionsLoaded, persistentTopicMap, shouldUseSubTopics]);
 
-    // Combine top 3 + recent ring
-    const finalRings = [...top3Rings];
-    if (recentRing) {
-      finalRings.push(recentRing);
+  // Calculate top rings - modified for sub-topic support
+  const topRings = useMemo((): TopicRingProgress[] => {
+    const ringsWithProgress = Object.values(ringsState.rings)
+      .filter(ring => ring && ring.totalCorrectAnswers > 0);
+
+    if (shouldUseSubTopics) {
+      // In sub-topic mode, only show sub-topic rings
+      const subTopicRings = ringsWithProgress
+        .filter(ring => ring.isSubTopic)
+        .sort((a, b) => b.totalCorrectAnswers - a.totalCorrectAnswers)
+        .slice(0, 4); // Show top 4 sub-topic rings
+      
+      console.log(`[SUB-TOPIC RINGS] Showing ${subTopicRings.length} sub-topic rings:`, 
+        subTopicRings.map(ring => `${ring.topic} (${ring.totalCorrectAnswers} correct)`).join(', ')
+      );
+      
+      return subTopicRings;
+    } else {
+      // Regular topic mode logic
+      const regularRings = ringsWithProgress
+        .filter(ring => !ring.isSubTopic)
+        .sort((a, b) => b.totalCorrectAnswers - a.totalCorrectAnswers);
+
+      // Get top 3 rings by progress
+      const top3Rings = regularRings.slice(0, 3);
+      const top3Topics = new Set(top3Rings.map(ring => ring.topic));
+
+      // Find the most recent ring that's not in top 3
+      let recentRing: TopicRingProgress | null = null;
+      
+      if (regularRings.length > 3) {
+        // Get all rings not in top 3
+        const nonTop3Rings = regularRings.filter(ring => !top3Topics.has(ring.topic));
+        
+        if (nonTop3Rings.length > 0) {
+          // Find the most recently answered topic by checking Redux questions
+          let mostRecentTopic: string | null = null;
+          let mostRecentQuestionId: string | null = null;
+          
+          // Get all correct answers for non-top-3 topics
+          const correctAnswersForNonTop3: {topic: string, questionId: string}[] = [];
+          
+          Object.entries(questions).forEach(([questionId, questionState]) => {
+            if (questionState.status === 'answered' && questionState.isCorrect) {
+              const questionMapping = feedItemsMap.get(questionId);
+              if (questionMapping?.topic && !top3Topics.has(questionMapping.topic)) {
+                correctAnswersForNonTop3.push({topic: questionMapping.topic, questionId});
+              }
+            }
+          });
+          
+          // If we have correct answers for non-top-3 topics, take the last one
+          // (assuming questions are processed in chronological order)
+          if (correctAnswersForNonTop3.length > 0) {
+            const lastCorrectAnswer = correctAnswersForNonTop3[correctAnswersForNonTop3.length - 1];
+            mostRecentTopic = lastCorrectAnswer.topic;
+            mostRecentQuestionId = lastCorrectAnswer.questionId;
+          }
+          
+          // If we found a recent topic, find its ring
+          if (mostRecentTopic) {
+            recentRing = nonTop3Rings.find(ring => ring.topic === mostRecentTopic) || null;
+          }
+          
+          // If no recent topic found from questions, just use the highest progress non-top-3 ring
+          if (!recentRing && nonTop3Rings.length > 0) {
+            recentRing = nonTop3Rings[0];
+          }
+        }
+      }
+
+      // Combine top 3 + recent ring
+      const finalRings = [...top3Rings];
+      if (recentRing) {
+        finalRings.push(recentRing);
+      }
+
+      return finalRings;
     }
-
-    // console.log(`[RING SELECTION] Progress-based selection (${finalRings.length} rings):`, 
-    //   finalRings.map((ring, index) => {
-    //     const label = index < 3 ? `#${index + 1}` : 'recent';
-    //     return `${label}: ${ring.topic} (${ring.totalCorrectAnswers} correct)`;
-    //   }).join(', ')
-    // );
-
-    return finalRings;
-  }, [ringsState.rings, questions, feedItemsMap]);
+  }, [ringsState.rings, questions, feedItemsMap, shouldUseSubTopics]);
 
   // Callback when a ring completes a level
   const onRingComplete = useCallback((topic: string, newLevel: number) => {
@@ -470,7 +632,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     // console.log(`[IMMEDIATE UPDATE] Adding question ${questionId} with topic "${topic}" to persistent map`);
     setPersistentTopicMap(current => {
       const newMap = new Map(current);
-      newMap.set(questionId, topic);
+      newMap.set(questionId, { topic });
       
       // Save to storage
       (async () => {
@@ -488,6 +650,51 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     });
   }, [getStorageKey]);
 
+  // Function to discover all unique sub-topics from feed data
+  const discoverUniqueSubTopics = useCallback((targetTopic: string): Set<string> => {
+    const subtopics = new Set<string>();
+    
+    personalizedFeed.forEach(item => {
+      if (item.topic === targetTopic && item.subtopic) {
+        subtopics.add(item.subtopic);
+      }
+    });
+    
+    return subtopics;
+  }, [personalizedFeed]);
+
+  // Get all available sub-topics for logging and debugging
+  const availableSubTopics = useMemo(() => {
+    if (shouldUseSubTopics && topics[activeTopic]?.dbTopicName) {
+      return discoverUniqueSubTopics(topics[activeTopic].dbTopicName);
+    }
+    return new Set<string>();
+  }, [shouldUseSubTopics, activeTopic, discoverUniqueSubTopics]);
+
+  // Log discovered sub-topics when they change
+  useEffect(() => {
+    if (shouldUseSubTopics && availableSubTopics.size > 0) {
+      console.log(`[SUB-TOPIC DISCOVERY] Found ${availableSubTopics.size} sub-topics for ${activeTopic}:`, 
+        Array.from(availableSubTopics).sort().join(', ')
+      );
+      
+      // Check for missing icon mappings
+      const missingIcons: string[] = [];
+      availableSubTopics.forEach(subTopic => {
+        const hasConfigIcon = topics[activeTopic]?.subTopics?.[subTopic]?.icon;
+        const hasDefaultIcon = SUB_TOPIC_ICONS[subTopic];
+        
+        if (!hasConfigIcon && !hasDefaultIcon) {
+          missingIcons.push(subTopic);
+        }
+      });
+      
+      if (missingIcons.length > 0) {
+        console.warn(`[SUB-TOPIC ICONS] Missing icon mappings for: ${missingIcons.join(', ')} (falling back to parent topic icon)`);
+      }
+    }
+  }, [shouldUseSubTopics, availableSubTopics, activeTopic]);
+
   return {
     topRings,
     allRings: ringsState.rings,
@@ -496,6 +703,8 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
     isLoaded,
     clearStoredRings,
     addQuestionTopic,
+    // Expose sub-topic mode status for components
+    isSubTopicMode: shouldUseSubTopics,
   };
 };
 

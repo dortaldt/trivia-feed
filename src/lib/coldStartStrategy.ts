@@ -468,7 +468,7 @@ function getBranchingPhaseQuestions(
     if (count > 0) {
       interactedTopics.add(topic);
       hasAnsweredTopics = true;
-      logger.info(`Topic ${topic} was answered correctly ${count} times`);
+      logger.info('ColdStart', `Topic ${topic} was answered correctly ${count} times`);
     }
   });
   
@@ -476,7 +476,7 @@ function getBranchingPhaseQuestions(
     if (count > 0) {
       interactedTopics.add(topic);
       hasAnsweredTopics = true;
-      logger.info(`Topic ${topic} was answered incorrectly ${count} times`);
+      logger.info('ColdStart', `Topic ${topic} was answered incorrectly ${count} times`);
     }
   });
   
@@ -484,13 +484,13 @@ function getBranchingPhaseQuestions(
   state.skippedByTopic.forEach((count, topic) => {
     if (count > 0 && !interactedTopics.has(topic)) {
       onlySkippedTopics.add(topic);
-      logger.info(`Topic ${topic} was only skipped (${count} times)`);
+      logger.info('ColdStart', `Topic ${topic} was only skipped (${count} times)`);
     }
   });
 
-  logger.info(`Has answered topics: ${hasAnsweredTopics}`);
-  logger.info(`Interacted topics: ${Array.from(interactedTopics).join(', ')}`);
-  logger.info(`Only skipped topics: ${Array.from(onlySkippedTopics).join(', ')}`);
+  logger.info('ColdStart', `Has answered topics: ${hasAnsweredTopics}`);
+  logger.info('ColdStart', `Interacted topics: ${Array.from(interactedTopics).join(', ')}`);
+  logger.info('ColdStart', `Only skipped topics: ${Array.from(onlySkippedTopics).join(', ')}`);
 
   // Update the stored list of previously interested topics
   state.previouslyInterestedTopics = Array.from(interactedTopics);
@@ -499,7 +499,7 @@ function getBranchingPhaseQuestions(
   
   // If user has answered questions, prioritize those topics with higher weights
   if (hasAnsweredTopics) {
-    logger.info("User has answered questions, selecting from answered topics");
+    logger.info('ColdStart', "User has answered questions, selecting from answered topics");
     
     // Create an array of topics with their weights from in-session state
     const topicsWithWeights = Array.from(interactedTopics).map(topic => {
@@ -519,9 +519,9 @@ function getBranchingPhaseQuestions(
     // Sort topics by adjusted weight (descending)
     topicsWithWeights.sort((a, b) => b.weight - a.weight);
     
-    logger.info("Answered topics sorted by weight with diversity adjustment:");
+    logger.info('ColdStart', "Answered topics sorted by weight with diversity adjustment:");
     topicsWithWeights.forEach(({ topic, weight, originalWeight }) => {
-      logger.info(`  ${topic}: ${weight.toFixed(2)} (original: ${originalWeight.toFixed(2)})`);
+      logger.info('ColdStart', `  ${topic}: ${weight.toFixed(2)} (original: ${originalWeight.toFixed(2)})`);
     });
     
     // Prioritize topics with original weight > 0.5 (preferred topics)
@@ -534,14 +534,14 @@ function getBranchingPhaseQuestions(
       ? preferredTopics 
       : topicsWithWeights.map(t => t.topic);
     
-    logger.info(`Using topics: ${topicsArray.join(', ')}`);
+    logger.info('ColdStart', `Using topics: ${topicsArray.join(', ')}`);
     
     for (const topic of topicsArray) {
       if (userPreferredQuestions.length >= 2) break;
       
       // Skip if this topic would violate diversity requirements
       if (!isTopicAllowedForDiversity(state, topic)) {
-        logger.info(`Skipping topic ${topic} for diversity reasons`);
+        logger.info('ColdStart', `Skipping topic ${topic} for diversity reasons`);
         continue;
       }
       
@@ -566,7 +566,7 @@ function getBranchingPhaseQuestions(
         // Track this topic for diversity
         trackTopicForDiversity(state, topic);
         
-        logger.info(`Selected question from answered topic ${topic}: "${question.question?.substring(0, 30)}..."`);
+        logger.info('ColdStart', `Selected question from answered topic ${topic}: "${question.question?.substring(0, 30)}..."`);
         
         // Add to recent topics for diversity tracking
         state.recentTopics.unshift(topic);
@@ -578,7 +578,7 @@ function getBranchingPhaseQuestions(
   }
   // If user has only skipped questions, select from ANY unused topics
   else {
-    logger.info("User has only skipped questions, selecting from unused topics");
+    logger.info('ColdStart', "User has only skipped questions, selecting from unused topics");
     
     // Get ALL unused topics
     const allUnusedTopics = Array.from(groupedQuestions.keys())
@@ -733,13 +733,13 @@ function getBranchingPhaseQuestions(
     
     // Skip if this topic would violate diversity requirements
     if (!isTopicAllowedForDiversity(state, topic)) {
-      console.log(`Skipping topic ${topic} for diversity reasons`);
+      logger.info('ColdStart', `Skipping topic ${topic} for diversity reasons`);
       continue;
     }
     
     const topicMap = groupedQuestions.get(topic);
     if (!topicMap) {
-      console.log(`No questions available for topic ${topic}`);
+      logger.info('ColdStart', `No questions available for topic ${topic}`);
       continue;
     }
     
@@ -796,7 +796,7 @@ function getBranchingPhaseQuestions(
         if (isInSingleTopicMode && activeTopicName === question.topic) {
           console.log(`Overriding diversity check for topic ${question.topic} in single topic mode`);
         } else {
-          console.log(`Skipping random question from topic ${question.topic} for diversity reasons`);
+          logger.info('ColdStart', `Skipping random question from topic ${question.topic} for diversity reasons`);
           continue;
         }
       }
@@ -845,7 +845,7 @@ function getNormalPhaseQuestions(
 ): FeedItem[] {
   // Performance tracker ⏱️ - Cold Start Phase Calculation START (Normal)
   const normalPhaseStart = performance.now();
-  console.log(`[Performance tracker ⏱️] Cold Start Phase Calculation (Normal) - Started: ${normalPhaseStart.toFixed(2)}ms`);
+  // console.log(`[Performance tracker ⏱️] Cold Start Phase Calculation (Normal) - Started: ${normalPhaseStart.toFixed(2)}ms`);
   
   logger.info('ColdStart', "Getting Normal phase questions (beyond 20)");
 
@@ -940,7 +940,7 @@ function getNormalPhaseQuestions(
       
       // Skip if this topic would violate diversity requirements
       if (!isTopicAllowedForDiversity(state, topic)) {
-        console.log(`Skipping underrepresented topic ${topic} for diversity reasons`);
+        logger.info('ColdStart', `Skipping underrepresented topic ${topic} for diversity reasons`);
         continue;
       }
     
@@ -1063,7 +1063,7 @@ function getNormalPhaseQuestions(
       
       // Skip if this topic would violate diversity requirements
       if (!isTopicAllowedForDiversity(state, topic)) {
-        console.log(`Skipping medium-weight topic ${topic} for diversity reasons`);
+        logger.info('ColdStart', `Skipping medium-weight topic ${topic} for diversity reasons`);
         continue;
       }
       
@@ -1154,13 +1154,13 @@ function getNormalPhaseQuestions(
     
     // Skip if this topic would violate diversity requirements
     if (!isTopicAllowedForDiversity(state, topic)) {
-      console.log(`NORMAL PHASE: Skipping exploration topic ${topic} for diversity reasons`);
+      logger.info('ColdStart', `Skipping exploration topic ${topic} for diversity reasons`);
       continue;
     }
     
     const topicMap = groupedQuestions.get(topic);
     if (!topicMap) {
-      console.log(`NORMAL PHASE: No questions available for topic ${topic}`);
+      logger.info('ColdStart', `No questions available for topic ${topic}`);
       continue;
     }
     
@@ -1218,7 +1218,7 @@ function getNormalPhaseQuestions(
       
       // Skip if this topic would violate diversity requirements
       if (!isTopicAllowedForDiversity(state, question.topic)) {
-        console.log(`NORMAL PHASE: Skipping fallback question from topic ${question.topic} for diversity reasons`);
+        logger.info('ColdStart', `Skipping fallback question from topic ${question.topic} for diversity reasons`);
         continue;
       }
       
@@ -1249,9 +1249,9 @@ function getNormalPhaseQuestions(
   // console.log(`NORMAL PHASE: Selected topics: ${selectedQuestions.map(q => q.topic).join(', ')}`);
   // console.log(`NORMAL PHASE: Topic distribution in this batch: ${Array.from(state.topicCountInCurrentBatch.entries()).map(([topic, count]) => `${topic}: ${count}`).join(', ')}`);
   
-  // Performance tracker ⏱️ - Cold Start Phase Calculation END
+  // Performance tracker ⏱️ - Cold Start Phase Calculation END (Normal)
   const normalPhaseEnd = performance.now();
-  console.log(`[Performance tracker ⏱️] Cold Start Phase Calculation (Normal) - Ended: ${normalPhaseEnd.toFixed(2)}ms | Duration: ${(normalPhaseEnd - normalPhaseStart).toFixed(2)}ms`);
+  // console.log(`[Performance tracker ⏱️] Cold Start Phase Calculation (Normal) - Ended: ${normalPhaseEnd.toFixed(2)}ms | Duration: ${(normalPhaseEnd - normalPhaseStart).toFixed(2)}ms`);
   
   return selectedQuestions;
 }

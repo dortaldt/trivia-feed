@@ -156,6 +156,16 @@ export const trackEvent = async (eventName: string, properties: Record<string, a
       currentUserId = deviceId;
     }
     
+    // Get app version for all events
+    let appVersion = 'default';
+    try {
+      const topicConfig = require('../../app-topic-config');
+      appVersion = topicConfig.activeTopic || 'default';
+    } catch (error) {
+      // Fallback to default if config can't be loaded
+      appVersion = 'default';
+    }
+    
     // Special handling for Question Answered events to ensure accurate counting
     if (eventName === 'Question Answered') {
       // Increment our local counter first
@@ -172,11 +182,12 @@ export const trackEvent = async (eventName: string, properties: Record<string, a
       questionAnsweredCount = localQuestionCounter;
     }
     
-    // Combine event properties with default platform info
+    // Combine event properties with default platform info and app version
     const eventProperties = {
       ...properties,
       platform: Platform.OS,
       deviceType: Platform.OS === 'web' ? 'web' : Platform.OS,
+      appVersion, // Add app version to all events
       timestamp: new Date().toISOString(),
     };
     
@@ -193,6 +204,7 @@ export const trackEvent = async (eventName: string, properties: Record<string, a
           isCorrect: properties.isCorrect,
           totalAnswered: localQuestionCounter,
           platform: Platform.OS,
+          appVersion, // Include app version in milestone events too
           timestamp: new Date().toISOString(),
         });
       }
@@ -222,6 +234,77 @@ export const trackScreenView = async (screenName: string, properties: Record<str
 export const trackButtonClick = async (buttonName: string, properties: Record<string, any> = {}) => {
   await trackEvent('Button Click', {
     button: buttonName,
+    ...properties,
+  });
+};
+
+/**
+ * Track topic ring interactions
+ * @param ringTopic The topic of the ring that was clicked
+ * @param properties Additional properties for the ring interaction
+ */
+export const trackTopicRingClick = async (ringTopic: string, properties: Record<string, any> = {}) => {
+  // Get app version from topic config
+  let appVersion = 'default';
+  try {
+    const topicConfig = require('../../app-topic-config');
+    appVersion = topicConfig.activeTopic || 'default';
+  } catch (error) {
+    console.warn('Could not load topic config for analytics:', error);
+  }
+
+  await trackEvent('Topic Ring Click', {
+    ringTopic,
+    appVersion,
+    timestamp: new Date().toISOString(),
+    ...properties,
+  });
+};
+
+/**
+ * Track topic ring modal interactions
+ * @param action The action performed in the modal (opened, closed, feed_control_more, feed_control_less)
+ * @param ringTopic The topic of the ring
+ * @param properties Additional properties for the modal interaction
+ */
+export const trackTopicRingModal = async (action: string, ringTopic: string, properties: Record<string, any> = {}) => {
+  // Get app version from topic config
+  let appVersion = 'default';
+  try {
+    const topicConfig = require('../../app-topic-config');
+    appVersion = topicConfig.activeTopic || 'default';
+  } catch (error) {
+    console.warn('Could not load topic config for analytics:', error);
+  }
+
+  await trackEvent('Topic Ring Modal', {
+    action,
+    ringTopic,
+    appVersion,
+    timestamp: new Date().toISOString(),
+    ...properties,
+  });
+};
+
+/**
+ * Track all rings modal interactions
+ * @param action The action performed (opened, closed, ring_selected)
+ * @param properties Additional properties for the interaction
+ */
+export const trackAllRingsModal = async (action: string, properties: Record<string, any> = {}) => {
+  // Get app version from topic config
+  let appVersion = 'default';
+  try {
+    const topicConfig = require('../../app-topic-config');
+    appVersion = topicConfig.activeTopic || 'default';
+  } catch (error) {
+    console.warn('Could not load topic config for analytics:', error);
+  }
+
+  await trackEvent('All Rings Modal', {
+    action,
+    appVersion,
+    timestamp: new Date().toISOString(),
     ...properties,
   });
 };
@@ -279,6 +362,9 @@ export default {
   trackEvent,
   trackScreenView,
   trackButtonClick,
+  trackTopicRingClick,
+  trackTopicRingModal,
+  trackAllRingsModal,
   resetUser,
   endSession,
 }; 

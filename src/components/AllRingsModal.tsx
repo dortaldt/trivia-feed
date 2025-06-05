@@ -14,12 +14,15 @@ import Reanimated, {
   FadeOutUp,
   LinearTransition
 } from 'react-native-reanimated';
+import { trackAllRingsModal } from '../lib/mixpanelAnalytics';
+import { useTheme } from '@/src/context/ThemeContext';
 
 interface AllRingsModalProps {
   visible: boolean;
   onClose: () => void;
   userId?: string;
   activeTopic?: string; // Add activeTopic prop for glow effect
+  activeSubtopic?: string; // Add activeSubtopic prop for sub-topic highlighting
 }
 
 interface RingItemProps {
@@ -30,64 +33,90 @@ interface RingItemProps {
 }
 
 const RingItem: React.FC<RingItemProps> = ({ ring, onPress, isActive, index = 0 }) => {
+  const { isNeonTheme } = useTheme();
+
+  const handlePress = () => {
+    // Track ring selection
+    trackAllRingsModal('ring_selected', {
+      ringTopic: ring.topic,
+      ringLevel: ring.level,
+      ringProgress: Math.round((ring.currentProgress / ring.targetAnswers) * 100),
+      totalCorrectAnswers: ring.totalCorrectAnswers,
+      isSubTopic: ring.isSubTopic || false,
+      parentTopic: ring.parentTopic || null,
+      ringPosition: index !== undefined ? index + 1 : 0,
+      isActiveTopic: isActive || false,
+    });
+    
+    onPress();
+  };
+
   const progressPercentage = Math.round((ring.currentProgress / ring.targetAnswers) * 100);
   const nextLevelAnswers = ring.targetAnswers - ring.currentProgress;
 
   return (
     <Reanimated.View
-      layout={LinearTransition.springify()
-        .stiffness(200)
-        .damping(20)
-        .mass(1)}
-      entering={FadeInDown.duration(300).delay(index * 50)}
-      exiting={FadeOutUp.duration(300)}
+      style={[
+        styles.ringItem,
+        isActive && { borderColor: ring.color, borderWidth: 2 },
+        isActive && isNeonTheme && Platform.OS === 'web' && {
+          boxShadow: `0 0 15px ${ring.color}40, inset 0 0 10px ${ring.color}20`,
+        } as any
+      ]}
+      layout={LinearTransition.springify().stiffness(200).damping(20)}
+      entering={FadeInDown.delay((index || 0) * 50)}
+      exiting={FadeOutUp.delay((index || 0) * 25)}
     >
-      <TouchableOpacity style={styles.ringItem} onPress={onPress} activeOpacity={0.7}>
-        <View style={styles.ringItemLeft}>
-          <AppleActivityRing
-            size={60}
-            strokeWidth={7}
-            color={ring.color}
-            progress={ring.currentProgress / ring.targetAnswers}
-            icon={ring.icon}
-            level={ring.level}
-            isActive={isActive}
-          />
-        </View>
-        
-        <View style={styles.ringItemRight}>
-          <View style={styles.ringItemHeader}>
-            <ThemedText style={[styles.topicName, { color: ring.color }]}>
-              {ring.topic.charAt(0).toUpperCase() + ring.topic.slice(1)}
-            </ThemedText>
-            <ThemedText style={styles.levelText}>Level {ring.level}</ThemedText>
+      <TouchableOpacity
+        style={styles.ringTouchable}
+        onPress={handlePress}
+        activeOpacity={0.8}
+      >
+        <View style={styles.ringContent}>
+          <View style={styles.ringVisualization}>
+            <AppleActivityRing
+              size={40}
+              strokeWidth={4}
+              progress={ring.currentProgress / ring.targetAnswers}
+              color={ring.color}
+              icon={ring.icon}
+              level={ring.level}
+            />
           </View>
           
-          <View style={styles.progressInfo}>
-            <ThemedText style={styles.progressText}>
-              {ring.currentProgress} / {ring.targetAnswers} answers
-            </ThemedText>
-            <ThemedText style={[styles.percentageText, { color: ring.color }]}>
-              {progressPercentage}% complete
-            </ThemedText>
+          <View style={styles.ringInfo}>
+            <View style={styles.ringHeader}>
+              <View style={[styles.ringIcon, { backgroundColor: `${ring.color}20` }]}>
+                <Feather name={ring.icon as any} size={16} color={ring.color} />
+              </View>
+              <ThemedText style={[styles.ringTitle, isActive && { color: ring.color }]}>
+                {ring.isSubTopic 
+                  ? `${ring.parentTopic}: ${ring.topic}` 
+                  : ring.topic.charAt(0).toUpperCase() + ring.topic.slice(1)
+                }
+              </ThemedText>
+              {isActive && (
+                <View style={[styles.activeIndicator, { backgroundColor: ring.color }]} />
+              )}
+            </View>
+            
+            <View style={styles.ringStats}>
+              <ThemedText style={styles.ringLevel}>Level {ring.level}</ThemedText>
+              <ThemedText style={styles.ringProgress}>
+                {ring.currentProgress}/{ring.targetAnswers} ({Math.round((ring.currentProgress / ring.targetAnswers) * 100)}%)
+              </ThemedText>
+              <ThemedText style={styles.ringTotal}>
+                {ring.totalCorrectAnswers} total correct
+              </ThemedText>
+            </View>
           </View>
-          
-          {nextLevelAnswers > 0 && (
-            <ThemedText style={styles.nextLevelText}>
-              {nextLevelAnswers} more to Level {ring.level + 1}
-            </ThemedText>
-          )}
-          
-          <ThemedText style={styles.totalAnswersText}>
-            {ring.totalCorrectAnswers} total correct
-          </ThemedText>
         </View>
       </TouchableOpacity>
     </Reanimated.View>
   );
 };
 
-export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, userId, activeTopic }) => {
+export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, userId, activeTopic, activeSubtopic }) => {
   const insets = useSafeAreaInsets();
   const { allRings } = useTopicRings({ userId });
 
@@ -100,8 +129,28 @@ export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, 
 
   // Use a proper callback for closing to prevent re-renders
   const handleClose = useCallback(() => {
+    // Track modal close
+    trackAllRingsModal('closed', {
+      totalRingsShown: ringsArray.length,
+      activeRingsShown: ringsWithProgress.length,
+      inactiveRingsShown: ringsWithoutProgress.length,
+      activeTopic: activeTopic || null,
+    });
+    
     onClose();
-  }, [onClose]);
+  }, [onClose, ringsArray.length, ringsWithProgress.length, ringsWithoutProgress.length, activeTopic]);
+
+  // Track modal open
+  React.useEffect(() => {
+    if (visible) {
+      trackAllRingsModal('opened', {
+        totalRingsShown: ringsArray.length,
+        activeRingsShown: ringsWithProgress.length,
+        inactiveRingsShown: ringsWithoutProgress.length,
+        activeTopic: activeTopic || null,
+      });
+    }
+  }, [visible, ringsArray.length, ringsWithProgress.length, ringsWithoutProgress.length, activeTopic]);
 
   // Determine appropriate snap points based on platform
   const snapPoints = Platform.OS === 'ios' 
@@ -149,12 +198,12 @@ export const AllRingsModal: React.FC<AllRingsModalProps> = ({ visible, onClose, 
             <>
               <ThemedText style={styles.sectionTitle}>Active Rings</ThemedText>
               {ringsWithProgress.map((ring, index) => {
-                // More robust topic matching - normalize case and trim whitespace
-                const normalizedRingTopic = ring.topic.toLowerCase().trim();
-                const normalizedActiveTopic = activeTopic?.toLowerCase().trim();
-                const isRingActive = normalizedRingTopic === normalizedActiveTopic;
+                // Check if this ring should be highlighted based on whether it's a sub-topic or regular topic
+                const isRingActive = ring.isSubTopic 
+                  ? !!(activeSubtopic && ring.topic.toLowerCase().trim() === activeSubtopic.toLowerCase().trim())
+                  : !!(activeTopic && ring.topic.toLowerCase().trim() === activeTopic.toLowerCase().trim());
                 
-                // console.log(`[AllRingsModal] Checking ring "${ring.topic}" (normalized: "${normalizedRingTopic}") against activeTopic "${activeTopic}" (normalized: "${normalizedActiveTopic}") -> isActive: ${isRingActive}`);
+                // console.log(`[AllRingsModal] Checking ${ring.isSubTopic ? 'sub-topic' : 'topic'} ring "${ring.topic}" against ${ring.isSubTopic ? 'activeSubtopic' : 'activeTopic'} "${ring.isSubTopic ? activeSubtopic : activeTopic}" -> isActive: ${isRingActive}`);
                 
                 return (
                   <RingItem
@@ -312,5 +361,59 @@ const styles = StyleSheet.create({
   inactiveRingsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+  },
+  ringTouchable: {
+    flex: 1,
+  },
+  ringContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ringVisualization: {
+    marginRight: 16,
+  },
+  ringInfo: {
+    flex: 1,
+  },
+  ringHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  ringIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ringTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  ringStats: {
+    marginTop: 4,
+  },
+  ringLevel: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ringProgress: {
+    fontSize: 14,
+    opacity: 0.8,
+  },
+  ringTotal: {
+    fontSize: 12,
+    opacity: 0.6,
+  },
+  activeIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'white',
+    position: 'absolute',
+    top: 4,
+    right: 4,
   },
 }); 

@@ -60,7 +60,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
   // Log sync prevention state when it changes
   useEffect(() => {
     if (shouldPreventDefaultsSync) {
-      console.log('🛑 Delaying all sync operations until real profile is loaded');
+      // console.log('🛑 Delaying all sync operations until real profile is loaded');
     }
   }, [shouldPreventDefaultsSync]);
   
@@ -70,11 +70,11 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
     
     // Check if we need to fetch profile data due to default weights
     if (hasAllDefaultWeights(userProfile)) {
-      console.log('⚠️ Default weights detected - checking database for actual weights');
+      // console.log('⚠️ Default weights detected - checking database for actual weights');
       
       // iOS-specific handling for default weights
       if (Platform.OS === 'ios') {
-        console.log('🍎 iOS: Default weights detected, using direct database query');
+        // console.log('🍎 iOS: Default weights detected, using direct database query');
         
         try {
           // Import Supabase client directly
@@ -95,7 +95,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
           const result = await Promise.race([fetchPromise, timeoutPromise]);
           
           if (result && result.data && result.data.topics && Object.keys(result.data.topics).length > 0) {
-            console.log('🍎 iOS: Successfully fetched profile data directly');
+            // console.log('🍎 iOS: Successfully fetched profile data directly');
             
             // Convert to UserProfile format
             const remoteProfile = {
@@ -118,11 +118,11 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
               );
               
               if (hasNonDefaultWeights) {
-                console.log('✅ iOS: Found valid NON-DEFAULT weights, prioritizing these over local weights');
+                // console.log('✅ iOS: Found valid NON-DEFAULT weights, prioritizing these over local weights');
               }
               
               // Always use the database weights for consistency
-              console.log('✅ iOS: Found valid non-default weights, updating profile');
+              // console.log('✅ iOS: Found valid non-default weights, updating profile');
               
               dispatch(loadUserDataSuccess({ 
                 profile: remoteProfile,
@@ -131,7 +131,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
               
               // Now we have non-default weights, safe to enter write-only mode
               if (!isWriteOnlyMode()) {
-                console.log('✅ Non-default weights retrieved, now entering write-only mode');
+                // console.log('✅ Non-default weights retrieved, now entering write-only mode');
                 markInitialDataLoadComplete();
               }
               
@@ -145,7 +145,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
         }
         
         // Fall back to normal path if direct query fails
-        console.log('🍎 iOS: Falling back to normal fetchProfileWithDefaultCheck');
+        // console.log('🍎 iOS: Falling back to normal fetchProfileWithDefaultCheck');
       }
       
       // Normal (non-iOS) path or iOS fallback
@@ -153,7 +153,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
         const remoteProfile = await fetchProfileWithDefaultCheck(user.id, userProfile);
         
         if (remoteProfile && !hasAllDefaultWeights(remoteProfile)) {
-          console.log('✅ Found non-default weights in database - updating local profile');
+          // console.log('✅ Found non-default weights in database - updating local profile');
           dispatch(loadUserDataSuccess({ 
             profile: remoteProfile,
             timestamp: Date.now()
@@ -161,13 +161,13 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
           
           // Now we have non-default weights, safe to enter write-only mode
           if (!isWriteOnlyMode()) {
-            console.log('✅ Non-default weights retrieved, now entering write-only mode');
+            // console.log('✅ Non-default weights retrieved, now entering write-only mode');
             markInitialDataLoadComplete();
           }
           
           setProfileDataFetched(true);
         } else {
-          console.log('📊 No non-default weights found in database - keeping defaults');
+          // console.log('📊 No non-default weights found in database - keeping defaults');
           // Continue allowing database reads since we still have default weights
         }
       } catch (error) {
@@ -176,7 +176,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
     } else {
       // We already have non-default weights in memory, make sure we're in write-only mode
       if (!isWriteOnlyMode()) {
-        console.log('✅ Local profile already has non-default weights, entering write-only mode');
+        // console.log('✅ Local profile already has non-default weights, entering write-only mode');
         markInitialDataLoadComplete();
       }
     }
@@ -193,8 +193,8 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
     try {
       const guestMode = await AsyncStorage.getItem('guestMode');
       if (guestMode === 'true') {
-        console.log('🏠 Guest user detected in SimplifiedSyncManager - skipping database operations');
-        console.log('🏠 All data remains client-side only for guest users');
+        // console.log('🏠 Guest user detected in SimplifiedSyncManager - skipping database operations');
+        // console.log('🏠 All data remains client-side only for guest users');
         setInitialDataLoaded(true);
         return;
       }
@@ -206,15 +206,15 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
       // Reset module state again here to be sure
       resetModuleState();
       
-      console.log('🔥 SyncManager: FORCED ONE-TIME initial data load 🔥');
-      console.log('🔥 SyncManager: BYPASS write-only mode and all caches 🔥');
+      // console.log('🔥 SyncManager: FORCED ONE-TIME initial data load 🔥');
+      // console.log('🔥 SyncManager: BYPASS write-only mode and all caches 🔥');
       
       // Check current sync status before load
       logSyncStatus();
       
       // iOS-specific initialization path with retries
       if (Platform.OS === 'ios') {
-        console.log('🍎 iOS-specific database initialization path');
+        // console.log('🍎 iOS-specific database initialization path');
         
         // Force multiple retry attempts for iOS
         let attempts = 0;
@@ -231,7 +231,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
             }
             
             // DIRECT DATABASE QUERY: Bypass loadUserData wrapper for more control
-            console.log('🍎 iOS: Using direct database query with extended timeout');
+            // console.log('🍎 iOS: Using direct database query with extended timeout');
             
             // Create timeout promise for database operation
             const timeoutPromise = new Promise((_, reject) => 
@@ -276,7 +276,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
                 );
                 
                 if (hasNonDefaultWeights) {
-                  console.log('✅ iOS: Found profile with NON-DEFAULT weights! This is what we want.');
+                  // console.log('✅ iOS: Found profile with NON-DEFAULT weights! This is what we want.');
                 }
                 
                 // Only mark as success if we have valid topic weights
@@ -285,7 +285,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
                   typeof sampleTopic.weight === 'number' &&
                   !isNaN(sampleTopic.weight)
                 ) {
-                  console.log('✅ iOS database fetch successful with valid topic weights!');
+                  // console.log('✅ iOS database fetch successful with valid topic weights!');
                   forceResult = remoteProfile;
                   success = true;
                 }
@@ -299,7 +299,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
         }
         
         if (!success) {
-          console.log('⚠️ All iOS fetch attempts failed, using local profile');
+          // console.log('⚠️ All iOS fetch attempts failed, using local profile');
           // Use local profile if all attempts fail
           dispatch(loadUserDataSuccess({
             profile: userProfile,
@@ -314,22 +314,22 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
         
         // Process the profile we got
         if (remoteProfile) {
-          console.log('SyncManager: iOS fetch successful, updating profile');
+          // console.log('SyncManager: iOS fetch successful, updating profile');
           dispatch(loadUserDataSuccess({ 
             profile: remoteProfile,
             timestamp: Date.now()
           }));
           
-          console.log('SyncManager: Initial data load complete - NO MORE READS');
+          // console.log('SyncManager: Initial data load complete - NO MORE READS');
           setInitialDataLoaded(true);
           
           // Mark initial data load complete to enter write-only mode
           if (!hasAllDefaultWeights(remoteProfile)) {
-            console.log('SyncManager: Non-default weights found, safe to enter write-only mode');
+            // console.log('SyncManager: Non-default weights found, safe to enter write-only mode');
             markInitialDataLoadComplete();
           } else {
-            console.log('SyncManager: WARNING - All weights are default!');
-            console.log('SyncManager: Staying in read-write mode until non-default weights are detected');
+            // console.log('SyncManager: WARNING - All weights are default!');
+            // console.log('SyncManager: Staying in read-write mode until non-default weights are detected');
           }
           
           setProfileDataFetched(true);
@@ -343,14 +343,14 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
         // This is a last resort if all else fails
         let forceResult;
         try {
-          console.log('🔥 Attempting DIRECT database access 🔥');
+          // console.log('🔥 Attempting DIRECT database access 🔥');
           
           // ONE-TIME profile load - FORCED, bypassing all caches
           const { profile: remoteProfile } = await loadUserData(user.id, true);
           forceResult = remoteProfile;
           
           if (remoteProfile) {
-            console.log('✅ DIRECT DATABASE ACCESS SUCCESSFUL!');
+            // console.log('✅ DIRECT DATABASE ACCESS SUCCESSFUL!');
           }
         } catch (directError) {
           console.error('❌ DIRECT DATABASE ACCESS failed:', directError);
@@ -367,8 +367,8 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
           // PRIORITIZE WEIGHTS OVER TIMESTAMPS
           // If remote has custom weights but local has defaults, always use remote
           if (remoteHasNonDefaultWeights && localHasDefaultWeights) {
-            console.log('SyncManager: Remote profile has non-default weights while local has defaults');
-            console.log('SyncManager: Prioritizing remote profile to preserve personalization');
+            // console.log('SyncManager: Remote profile has non-default weights while local has defaults');
+            // console.log('SyncManager: Prioritizing remote profile to preserve personalization');
             
             dispatch(loadUserDataSuccess({ 
               profile: remoteProfile,
@@ -380,8 +380,8 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
           }
           // If local has custom weights but remote has defaults, keep local
           else if (!localHasDefaultWeights && !remoteHasNonDefaultWeights) {
-            console.log('SyncManager: Local profile has non-default weights while remote has defaults');
-            console.log('SyncManager: Keeping local profile to preserve personalization');
+            // console.log('SyncManager: Local profile has non-default weights while remote has defaults');
+            // console.log('SyncManager: Keeping local profile to preserve personalization');
             
             dispatch(loadUserDataSuccess({ 
               profile: userProfile,
@@ -393,11 +393,11 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
           }
           // If both have custom weights or both have defaults, compare timestamps
           else {
-            console.log('SyncManager: Comparing timestamps for profiles with similar weight status');
+            // console.log('SyncManager: Comparing timestamps for profiles with similar weight status');
             
             // ALWAYS prioritize database profile when it has non-default weights
             if (remoteHasNonDefaultWeights) {
-              console.log('SyncManager: Remote profile has non-default weights, ALWAYS using database weights');
+              // console.log('SyncManager: Remote profile has non-default weights, ALWAYS using database weights');
               dispatch(loadUserDataSuccess({ 
                 profile: remoteProfile,
                 timestamp: Date.now()
@@ -405,26 +405,26 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
             }
             // Only use timestamp comparison if neither has personalized weights or both do
             else if (remoteProfile.lastRefreshed > userProfile.lastRefreshed) {
-              console.log('SyncManager: Remote profile is newer, updating local profile');
+              // console.log('SyncManager: Remote profile is newer, updating local profile');
               dispatch(loadUserDataSuccess({ 
                 profile: remoteProfile,
                 timestamp: Date.now()
               }));
             } else {
-              console.log('SyncManager: Local profile is newer, keeping local but NOT syncing back to server');
+              // console.log('SyncManager: Local profile is newer, keeping local but NOT syncing back to server');
               
               // Only sync if we have non-default weights
               const preventDefaultWeightSync = localHasDefaultWeights;
               
               if (preventDefaultWeightSync) {
-                console.log('SyncManager: Preventing sync of default weights back to database');
+                // console.log('SyncManager: Preventing sync of default weights back to database');
                 dispatch(loadUserDataSuccess({ 
                   profile: userProfile,
                   timestamp: Date.now()
                 }));
               } else {
                 // Safe to sync since we have non-default weights
-                console.log('SyncManager: Local profile has non-default weights, safe to keep and sync');
+                // console.log('SyncManager: Local profile has non-default weights, safe to keep and sync');
                 dispatch(forceSyncProfile({ 
                   userId: user.id,
                   preventDefaultWeightSync: false
@@ -442,15 +442,15 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
           }
         } else {
           // If no remote profile exists, use the current one and upload it
-          console.log('SyncManager: No remote profile found, creating one from local profile');
+          // console.log('SyncManager: No remote profile found, creating one from local profile');
           
           // Only sync if we have non-default weights to avoid overwriting DB
           const preventDefaultWeightSync = hasAllDefaultWeights(userProfile);
           
           // If we have default weights, don't sync them back at this point
           if (preventDefaultWeightSync) {
-            console.log('SyncManager: Using default weights locally but NOT syncing them to database');
-            console.log('SyncManager: This prevents potentially overwriting personalized weights in the database');
+            // console.log('SyncManager: Using default weights locally but NOT syncing them to database');
+            // console.log('SyncManager: This prevents potentially overwriting personalized weights in the database');
           } else {
             // Otherwise it's safe to sync because we have custom weights
             await syncUserProfile(user.id, userProfile);
@@ -465,18 +465,18 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
           setProfileDataFetched(true);
         }
         
-        console.log('SyncManager: Initial data load complete - NO MORE READS');
+        // console.log('SyncManager: Initial data load complete - NO MORE READS');
         setInitialDataLoaded(true);
         
         // Only enter write-only mode if we have non-default weights 
         // or confirmed that no weights exist in the database
         const profileToCheck = remoteProfile || userProfile;
         if (!hasAllDefaultWeights(profileToCheck)) {
-          console.log('SyncManager: Non-default weights found, safe to enter write-only mode');
+          // console.log('SyncManager: Non-default weights found, safe to enter write-only mode');
           markInitialDataLoadComplete();
         } else {
-          console.log('SyncManager: WARNING - All weights are default!');
-          console.log('SyncManager: Staying in read-write mode until non-default weights are detected');
+          // console.log('SyncManager: WARNING - All weights are default!');
+          // console.log('SyncManager: Staying in read-write mode until non-default weights are detected');
           // Don't mark initial data load complete yet to allow future reads
         }
         
@@ -506,7 +506,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
     // Force immediate data load when the component mounts
     if (user && user.id && !initialDataLoaded) {
       // Force immediate database fetch on component mount
-      console.log('🔄 Forcing immediate database fetch on component mount');
+      // console.log('🔄 Forcing immediate database fetch on component mount');
       dispatch(loadUserDataStart());
       loadInitialData();
     }
@@ -531,7 +531,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
   useEffect(() => {
     // Only run this check after initial data load, not on first mount
     if (initialDataLoaded) {
-      console.log('🔍 Checking for remaining default weights after initial data load');
+      // console.log('🔍 Checking for remaining default weights after initial data load');
       checkDefaultWeights();
     }
   }, [user, initialDataLoaded, userProfile, dispatch, checkDefaultWeights]);
@@ -542,11 +542,11 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
       if (user && user.id && 
          (appStateRef.current === 'active' && 
           (nextAppState === 'background' || nextAppState === 'inactive'))) {
-        console.log('SyncManager: App going to background, writing data (WRITE-ONLY)');
+        // console.log('SyncManager: App going to background, writing data (WRITE-ONLY)');
         
         // Skip sync if we have default weights and haven't loaded from DB yet
         if (shouldPreventDefaultsSync) {
-          console.log('SyncManager: PREVENTED background sync due to default weights before profileDataFetched=true');
+          // console.log('SyncManager: PREVENTED background sync due to default weights before profileDataFetched=true');
           return;
         }
         
@@ -555,7 +555,7 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
         const preventDefaultWeightSync = !profileDataFetched && hasAllDefaultWeights(userProfile);
         
         if (preventDefaultWeightSync) {
-          console.log('SyncManager: Preventing sync of default weights before profileDataFetched=true');
+          // console.log('SyncManager: Preventing sync of default weights before profileDataFetched=true');
         }
         
         // Pass the flag to prevent syncing default weights back to database
@@ -580,11 +580,11 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
     return () => {
       const finalSync = async () => {
         if (user && user.id) {
-          console.log('SyncManager: Final data write before unmounting (WRITE-ONLY)');
+          // console.log('SyncManager: Final data write before unmounting (WRITE-ONLY)');
           
           // Skip sync if we have default weights and haven't loaded from DB yet
           if (shouldPreventDefaultsSync) {
-            console.log('SyncManager: PREVENTED final sync due to default weights before profileDataFetched=true');
+            // console.log('SyncManager: PREVENTED final sync due to default weights before profileDataFetched=true');
             return;
           }
           
@@ -619,8 +619,8 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
       user?.id && 
       !hasAllDefaultWeights(userProfile)
     ) {
-      console.log('🔄 Profile data has been fetched and non-default weights loaded');
-      console.log('🔄 Now safe to sync personalized data back to database');
+      // console.log('🔄 Profile data has been fetched and non-default weights loaded');
+      // console.log('🔄 Now safe to sync personalized data back to database');
       
       // This is a safe sync with confirmed non-default weights
       dispatch(forceSyncProfile({ 
@@ -634,8 +634,8 @@ export const SimplifiedSyncManager: React.FC<SyncManagerProps> = ({ children }) 
   useEffect(() => {
     // Only run this check when app first starts
     if (user?.id && hasAllDefaultWeights(userProfile) && !profileDataFetched) {
-      console.log('⚠️ App started with default weights - preventing any sync until real weights are loaded');
-      console.log('⚠️ This prevents overwriting personalized weights in the database');
+      // console.log('⚠️ App started with default weights - preventing any sync until real weights are loaded');
+      // console.log('⚠️ This prevents overwriting personalized weights in the database');
       
       // Force a check for default weights and load from database if needed
       checkDefaultWeights();

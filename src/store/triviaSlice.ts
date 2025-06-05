@@ -9,6 +9,7 @@ import { FeedItem } from '../lib/triviaService';
 import { recordUserAnswer } from '../lib/leaderboardService';
 import { syncUserProfile } from '../lib/simplifiedSyncService';
 import { InteractionLog, FeedChange, WeightChange } from '../types/trackerTypes';
+import { BannerState } from '../types/bannerTypes';
 import { RootState } from '../store';
 import { dbEventEmitter } from '../lib/syncService';
 
@@ -112,6 +113,7 @@ interface TriviaState {
   interactionCount: number; // Track number of interactions since last sync for batching
   firstInteractionProcessed: boolean; // Track if the first interaction has been processed
   questionsLoaded: boolean; // Track whether questions have been loaded from storage
+  banners: BannerState; // State for promotional banners
 }
 
 const initialState: TriviaState = {
@@ -129,6 +131,13 @@ const initialState: TriviaState = {
   interactionCount: 0,
   firstInteractionProcessed: false,
   questionsLoaded: false,
+  banners: {
+    activeBanners: [],
+    shownBanners: [],
+    dismissedBanners: [],
+    interactions: [],
+    lastFetch: null,
+  },
 };
 
 // Async thunk to load questions from storage
@@ -245,7 +254,7 @@ const triviaSlice = createSlice({
       const timeSpent = Date.now() - startTime;
       
       // Log the answered question and timing information
-      console.log(`[Redux] Answering question ${questionId}: answer=${answerIndex}, correct=${isCorrect}, time spent=${timeSpent}ms, previous state=${previousState}`);
+      // console.log(`[Redux] Answering question ${questionId}: answer=${answerIndex}, correct=${isCorrect}, time spent=${timeSpent}ms, previous state=${previousState}`);
       
       // Always update question state, regardless of previous status (answer overrides skip)
       state.questions[questionId] = { 
@@ -260,7 +269,7 @@ const triviaSlice = createSlice({
       
       // If this was previously skipped, let's log that we're overriding it
       if (previousState === 'skipped') {
-        console.log(`[Redux] Overriding previous 'skipped' state for question ${questionId} with 'answered' state`);
+        // console.log(`[Redux] Overriding previous 'skipped' state for question ${questionId} with 'answered' state`);
       }
       
       // Record interaction for sync AND update weights (same as skipQuestion)
@@ -278,7 +287,7 @@ const triviaSlice = createSlice({
         // Add to synced interactions
         state.syncedInteractions.push(interaction);
         
-        console.log(`[Redux] Added ${isCorrect ? 'correct' : 'incorrect'} interaction for question ${questionId} to syncedInteractions`);
+        // console.log(`[Redux] Added ${isCorrect ? 'correct' : 'incorrect'} interaction for question ${questionId} to syncedInteractions`);
         
         // Get the feed item for this question to update user profile (same as skipQuestion)
         const feedItem = state.personalizedFeed.find(item => item.id === questionId);
@@ -370,13 +379,13 @@ const triviaSlice = createSlice({
             
             // Add to synced weight changes
             state.syncedWeightChanges.push(weightChange);
-            console.log(`[Redux] Weight change details: ${weightChange.oldWeights.topicWeight.toFixed(4)} -> ${weightChange.newWeights.topicWeight.toFixed(4)}`);
+            // console.log(`[Redux] Weight change details: ${weightChange.oldWeights.topicWeight.toFixed(4)} -> ${weightChange.newWeights.topicWeight.toFixed(4)}`);
             
           } catch (error) {
             console.error(`[Redux] Error updating profile for answered question:`, error);
           }
         } else {
-          console.log(`[Redux] Could not find feed item for answered question ${questionId}`);
+          // console.log(`[Redux] Could not find feed item for answered question ${questionId}`);
         }
         
         // If user is logged in, only sync based on interaction threshold (BATCHED)
@@ -388,12 +397,12 @@ const triviaSlice = createSlice({
                             state.interactionCount >= SYNC_INTERACTION_THRESHOLD;
           
           if (shouldSync) {
-            console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via answerQuestion`);
+            // console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via answerQuestion`);
             safeSyncUserProfile(userId, state.userProfile);
             state.interactionCount = 0; // Reset counter after sync
             state.firstInteractionProcessed = true;
           } else {
-            console.log(`[Redux] Skipping database sync (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
+            // console.log(`[Redux] Skipping database sync (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
           }
         }
       }
@@ -573,25 +582,25 @@ const triviaSlice = createSlice({
                                 state.interactionCount >= SYNC_INTERACTION_THRESHOLD;
               
               if (shouldSync) {
-                console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via skipQuestion`);
+                // console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via skipQuestion`);
                 safeSyncUserProfile(userId, state.userProfile);
                 state.interactionCount = 0; // Reset counter after sync
                 state.firstInteractionProcessed = true;
               } else {
-                console.log(`[Redux] Skipping database sync (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
+                // console.log(`[Redux] Skipping database sync (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
               }
             }
             } else {
-              console.log(`[Redux] Could not find feed item for skipped question ${questionId}`);
+              // console.log(`[Redux] Could not find feed item for skipped question ${questionId}`);
             }
           } else {
-            console.log(`[Redux] Redundant skip for question ${questionId}: already in 'skipped' state`);
+            // console.log(`[Redux] Redundant skip for question ${questionId}: already in 'skipped' state`);
           }
         } else {
-          console.log(`[Redux] Skip ignored for question ${questionId}: already in '${state.questions[questionId].status}' state`);
+          // console.log(`[Redux] Skip ignored for question ${questionId}: already in '${state.questions[questionId].status}' state`);
         }
       } else {
-        console.log(`[Redux] Skip ignored for question ${questionId}: already in '${state.questions[questionId].status}' state`);
+        // console.log(`[Redux] Skip ignored for question ${questionId}: already in '${state.questions[questionId].status}' state`);
       }
     },
     startInteraction: (state, action: PayloadAction<{ questionId: string }>) => {
@@ -660,7 +669,7 @@ const triviaSlice = createSlice({
       if (weightChange) {
         const currentWeight = state.userProfile.topics[weightChange.topic]?.weight || 0.5;
         const newWeight = profile.topics[weightChange.topic]?.weight || 0.5;
-        console.log(`[Redux] Profile update: ${weightChange.topic} ${currentWeight.toFixed(2)} -> ${newWeight.toFixed(2)} (expected: ${weightChange.newWeights.topicWeight.toFixed(2)})`);
+        // console.log(`[Redux] Profile update: ${weightChange.topic} ${currentWeight.toFixed(2)} -> ${newWeight.toFixed(2)} (expected: ${weightChange.newWeights.topicWeight.toFixed(2)})`);
       }
       
       // Simply update the profile without timestamp manipulation
@@ -669,11 +678,11 @@ const triviaSlice = createSlice({
       // If we have a weight change, add it to the synced weight changes
       if (weightChange) {
         state.syncedWeightChanges.push(weightChange);
-        console.log(`[Redux] Weight change details: ${weightChange.oldWeights.topicWeight.toFixed(4)} -> ${weightChange.newWeights.topicWeight.toFixed(4)}`);
+        // console.log(`[Redux] Weight change details: ${weightChange.oldWeights.topicWeight.toFixed(4)} -> ${weightChange.newWeights.topicWeight.toFixed(4)}`);
       }
       
       // Log the update action
-      console.log('[Redux] User profile updated');
+      // console.log('[Redux] User profile updated');
       
       // Sync user profile with server if user is logged in
       if (action.payload.userId) {
@@ -684,12 +693,12 @@ const triviaSlice = createSlice({
                           state.interactionCount >= SYNC_INTERACTION_THRESHOLD;
         
         if (shouldSync) {
-          console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via updateUserProfile`);
+          // console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via updateUserProfile`);
           safeSyncUserProfile(action.payload.userId, state.userProfile);
           state.interactionCount = 0; // Reset counter after sync
           state.firstInteractionProcessed = true;
         } else {
-          console.log(`[Redux] Skipping database sync (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
+          // console.log(`[Redux] Skipping database sync (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
         }
       }
     },
@@ -703,15 +712,15 @@ const triviaSlice = createSlice({
     },
     resetPersonalization: (state, action: PayloadAction<{ userId?: string }>) => {
       const { userId } = action.payload;
-      console.log('[Redux] Resetting personalization');
+      // console.log('[Redux] Resetting personalization');
       
       // Use the createInitialUserProfile function to ensure proper defaults
       const freshProfile = createInitialUserProfile();
       
       // Log the fresh profile to verify weights
-      console.log('[Redux] Fresh profile topic weights:', 
-        `${Object.keys(freshProfile.topics).length} topics initialized with default weights (0.50)`
-      );
+      // console.log('[Redux] Fresh profile topic weights:', 
+      //   `${Object.keys(freshProfile.topics).length} topics initialized with default weights (0.50)`
+      // );
       
       // Set the state with deep clone to ensure no references are shared
       state.userProfile = JSON.parse(JSON.stringify(freshProfile));
@@ -721,7 +730,7 @@ const triviaSlice = createSlice({
       // Sync reset profile with server if user is logged in
       if (userId) {
         // Critical operation: Always sync immediately (no batching)
-        console.log('[Redux] IMMEDIATE sync for resetPersonalization (critical operation)');
+        // console.log('[Redux] IMMEDIATE sync for resetPersonalization (critical operation)');
         safeSyncUserProfile(userId, state.userProfile);
       }
     },
@@ -774,9 +783,9 @@ const triviaSlice = createSlice({
         // SMART LOGIC: Only preserve local weights if they are personalized AND we have unsaved changes
         // This allows loading database weights on fresh sessions while protecting active sessions
         if (localHasNonDefaultWeights && hasUnsavedChanges) {
-          console.log('[Redux] PRESERVING local profile: has personalized weights with unsaved changes');
-          console.log(`[Redux] Local has non-default weights: ${localHasNonDefaultWeights}, unsaved changes: ${hasUnsavedChanges}`);
-          console.log(`[Redux] Unsaved interactions: ${state.syncedInteractions.length}, weight changes: ${state.syncedWeightChanges.length}`);
+          // console.log('[Redux] PRESERVING local profile: has personalized weights with unsaved changes');
+          // console.log(`[Redux] Local has non-default weights: ${localHasNonDefaultWeights}, unsaved changes: ${hasUnsavedChanges}`);
+          // console.log(`[Redux] Unsaved interactions: ${state.syncedInteractions.length}, weight changes: ${state.syncedWeightChanges.length}`);
           // Keep the existing local profile - do not overwrite
         } else {
           // Use database profile in these cases:
@@ -786,20 +795,20 @@ const triviaSlice = createSlice({
           const reason = !localHasNonDefaultWeights ? 'local has default weights' :
                         !hasUnsavedChanges ? 'no unsaved changes' : 'no recent activity';
           
-          console.log(`[Redux] Using database profile: ${reason}`);
-          console.log(`[Redux] Local non-default weights: ${localHasNonDefaultWeights}, unsaved changes: ${hasUnsavedChanges}, recent activity: ${hasRecentActivity}`);
+          // console.log(`[Redux] Using database profile: ${reason}`);
+          // console.log(`[Redux] Local non-default weights: ${localHasNonDefaultWeights}, unsaved changes: ${hasUnsavedChanges}, recent activity: ${hasRecentActivity}`);
           
           // Log weight comparison for debugging
           const localTopicCount = Object.keys(state.userProfile.topics).length;
           const remoteTopicCount = Object.keys(profile.topics).length;
-          console.log(`[Redux] Weight comparison - Local topics: ${localTopicCount}, Remote topics: ${remoteTopicCount}`);
+          // console.log(`[Redux] Weight comparison - Local topics: ${localTopicCount}, Remote topics: ${remoteTopicCount}`);
           
           // Sample a few weights for comparison
           const sampleTopics = Object.keys(profile.topics).slice(0, 3);
           sampleTopics.forEach(topic => {
             const localWeight = state.userProfile.topics[topic]?.weight || 0.5;
             const remoteWeight = profile.topics[topic]?.weight || 0.5;
-            console.log(`[Redux] ${topic}: local=${localWeight.toFixed(3)}, remote=${remoteWeight.toFixed(3)}`);
+            // console.log(`[Redux] ${topic}: local=${localWeight.toFixed(3)}, remote=${remoteWeight.toFixed(3)}`);
           });
           
           state.userProfile = profile;
@@ -812,6 +821,36 @@ const triviaSlice = createSlice({
     },
     loadUserDataFailure: (state) => {
       state.isSyncing = false;
+    },
+    // Banner-related actions
+    setBanners: (state, action: PayloadAction<{ banners: any[], lastFetch: string }>) => {
+      const { banners, lastFetch } = action.payload;
+      state.banners.activeBanners = banners;
+      state.banners.lastFetch = lastFetch;
+    },
+    recordBannerInteraction: (state, action: PayloadAction<any>) => {
+      const interaction = action.payload;
+      state.banners.interactions.push(interaction);
+      
+      // Update shown banners list for session tracking
+      if (interaction.action === 'shown') {
+        if (!state.banners.shownBanners.includes(interaction.bannerId)) {
+          state.banners.shownBanners.push(interaction.bannerId);
+        }
+      }
+    },
+    dismissBanner: (state, action: PayloadAction<{ bannerId: string, persistDismissal: boolean }>) => {
+      const { bannerId, persistDismissal } = action.payload;
+      
+      if (persistDismissal) {
+        if (!state.banners.dismissedBanners.includes(bannerId)) {
+          state.banners.dismissedBanners.push(bannerId);
+        }
+      }
+    },
+    clearBannerSession: (state) => {
+      // Clear session-specific banner data (called on app start)
+      state.banners.shownBanners = [];
     },
   },
   extraReducers: (builder) => {
@@ -845,7 +884,11 @@ export const {
   syncFailed,
   loadUserDataStart,
   loadUserDataSuccess,
-  loadUserDataFailure
+  loadUserDataFailure,
+  setBanners,
+  recordBannerInteraction,
+  dismissBanner,
+  clearBannerSession
 } = triviaSlice.actions;
 
 export default triviaSlice.reducer;

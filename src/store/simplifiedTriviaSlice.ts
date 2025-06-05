@@ -84,7 +84,7 @@ const triviaSlice = createSlice({
       const { questionId, answerIndex, isCorrect, userId } = action.payload;
       
       // Log that we're answering the question, regardless of correctness
-      console.log(`[Redux] Processing ANSWER for question ${questionId}: answer=${answerIndex}, correct=${isCorrect}`);
+      // console.log(`[Redux] Processing ANSWER for question ${questionId}: answer=${answerIndex}, correct=${isCorrect}`);
       
       // Get previous state for logging
       const previousState = state.questions[questionId]?.status || 'unanswered';
@@ -94,7 +94,7 @@ const triviaSlice = createSlice({
       const timeSpent = Date.now() - startTime;
       
       // Log the answered question and timing information (same for correct/incorrect)
-      console.log(`[Redux] Answering question ${questionId}: answer=${answerIndex}, correct=${isCorrect}, time spent=${timeSpent}ms, previous state=${previousState}`);
+      // console.log(`[Redux] Answering question ${questionId}: answer=${answerIndex}, correct=${isCorrect}, time spent=${timeSpent}ms, previous state=${previousState}`);
       
       // Always update question state, regardless of correctness
       state.questions[questionId] = { 
@@ -106,7 +106,7 @@ const triviaSlice = createSlice({
       
       // If this was previously skipped, let's log that we're overriding it
       if (previousState === 'skipped') {
-        console.log(`[Redux] Overriding previous 'skipped' state for question ${questionId} with 'answered' state`);
+        // console.log(`[Redux] Overriding previous 'skipped' state for question ${questionId} with 'answered' state`);
       }
       
       // Increment interaction counter (same for correct/incorrect)
@@ -154,7 +154,7 @@ const triviaSlice = createSlice({
             
             if (shouldSync) {
               // Identical WRITE-ONLY behavior regardless of answer correctness
-              console.log(`[Redux] WRITE-ONLY profile update after ${state.interactionCount} interactions (correct=${isCorrect})`);
+              // console.log(`[Redux] WRITE-ONLY profile update after ${state.interactionCount} interactions (correct=${isCorrect})`);
               
               // This should use the exact same method for correct/incorrect answers
               safeSyncUserProfile(userId, state.userProfile);
@@ -162,7 +162,7 @@ const triviaSlice = createSlice({
               state.interactionCount = 0; // Reset counter after sync
               state.firstInteractionProcessed = true;
             } else {
-              console.log(`[Redux] Skipping update (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
+              // console.log(`[Redux] Skipping update (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
             }
           }
         }
@@ -173,7 +173,7 @@ const triviaSlice = createSlice({
       
       // Early return if already processed to avoid redundant work
       if (state.questions[questionId]?.status === 'skipped') {
-        console.log(`[Redux] Question ${questionId} already skipped, skipping duplicate processing`);
+        // console.log(`[Redux] Question ${questionId} already skipped, skipping duplicate processing`);
         return;
       }
       
@@ -213,7 +213,7 @@ const triviaSlice = createSlice({
                           state.interactionCount >= SYNC_INTERACTION_THRESHOLD;
           
           if (shouldSync) {
-            console.log(`[Redux] BATCHED profile sync after ${state.interactionCount} interactions`);
+            // console.log(`[Redux] BATCHED profile sync after ${state.interactionCount} interactions`);
             safeSyncUserProfile(userId, state.userProfile);
             state.interactionCount = 0; // Reset counter after sync
             state.firstInteractionProcessed = true;
@@ -225,7 +225,7 @@ const triviaSlice = createSlice({
     forceSyncProfile: (state, action: PayloadAction<{ userId: string; preventDefaultWeightSync?: boolean }>) => {
       const { userId, preventDefaultWeightSync = false } = action.payload;
       
-      console.log('[Redux] Force syncing profile to database');
+      // console.log('[Redux] Force syncing profile to database');
       
       // Check for default weights to avoid overwriting non-default weights in DB
       // Inline implementation since we can't import
@@ -257,18 +257,18 @@ const triviaSlice = createSlice({
       
       // Check if we should prevent syncing default weights
       if (preventDefaultWeightSync && allDefaultWeights) {
-        console.log('[Redux] PREVENTED syncing profile with default weights to database');
-        console.log('[Redux] This prevents overwriting personalized weights in the database');
+        // console.log('[Redux] PREVENTED syncing profile with default weights to database');
+        // console.log('[Redux] This prevents overwriting personalized weights in the database');
         return; // Skip the sync operation entirely
       }
       
       // Only sync if we have non-default weights or it's urgent (app background/close)
       if (!allDefaultWeights) {
-        console.log('[Redux] Profile has non-default weights, safe to sync');
+        // console.log('[Redux] Profile has non-default weights, safe to sync');
         safeSyncUserProfile(userId, state.userProfile);
       } else {
-        console.log('[Redux] WARNING: Profile has all default weights, sync may overwrite DB values');
-        console.log('[Redux] Proceeding with sync anyway in case of app close/background');
+        // console.log('[Redux] WARNING: Profile has all default weights, sync may overwrite DB values');
+        // console.log('[Redux] Proceeding with sync anyway in case of app close/background');
         safeSyncUserProfile(userId, state.userProfile);
       }
     },
@@ -280,7 +280,7 @@ const triviaSlice = createSlice({
       state.userProfile = action.payload.profile;
       
       // Log the update action
-      console.log('[Redux] User profile updated');
+      // console.log('[Redux] User profile updated');
       
       // If user is logged in, only sync based on interaction threshold (BATCHED)
       if (action.payload.userId) {
@@ -291,12 +291,12 @@ const triviaSlice = createSlice({
                           state.interactionCount >= SYNC_INTERACTION_THRESHOLD;
         
         if (shouldSync) {
-          console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via updateUserProfile`);
+          // console.log(`[Redux] BATCHED profile update after ${state.interactionCount} interactions via updateUserProfile`);
         safeSyncUserProfile(action.payload.userId, action.payload.profile);
           state.interactionCount = 0; // Reset counter after sync
           state.firstInteractionProcessed = true;
         } else {
-          console.log(`[Redux] Skipping database sync (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
+          // console.log(`[Redux] Skipping database sync (${state.interactionCount}/${SYNC_INTERACTION_THRESHOLD} interactions)`);
         }
       }
     },
@@ -362,29 +362,29 @@ const triviaSlice = createSlice({
         
         // If both profiles have non-default weights, use the newer one
         if (!newHasDefaultWeights && !currentHasDefaultWeights) {
-          console.log('Both profiles have non-default weights - using newer profile');
+          // console.log('Both profiles have non-default weights - using newer profile');
           if (newProfile.lastRefreshed > currentProfile.lastRefreshed) {
-            console.log('Remote profile is newer, using remote weights');
+            // console.log('Remote profile is newer, using remote weights');
             state.userProfile = newProfile;
           } else {
-            console.log('Local profile is newer, keeping local weights');
+            // console.log('Local profile is newer, keeping local weights');
           }
         }
         // If remote profile has custom weights but local has defaults, use remote
         else if (!newHasDefaultWeights && currentHasDefaultWeights) {
-          console.log('Remote profile has custom weights while local has defaults - using remote profile');
+          // console.log('Remote profile has custom weights while local has defaults - using remote profile');
           state.userProfile = newProfile;
         }
         // If local profile has custom weights but remote has defaults, keep local
         else if (newHasDefaultWeights && !currentHasDefaultWeights) {
-          console.log('Local profile has custom weights while remote has defaults - keeping local profile');
+          // console.log('Local profile has custom weights while remote has defaults - keeping local profile');
           // Merge to keep timestamps/metadata from remote but weights from local
           newProfile.topics = currentProfile.topics;
           state.userProfile = newProfile;
         }
         // If both have default weights, use the newer one
         else {
-          console.log('Both profiles have default weights - using newer profile');
+          // console.log('Both profiles have default weights - using newer profile');
           if (newProfile.lastRefreshed > currentProfile.lastRefreshed) {
             state.userProfile = newProfile;
           }
