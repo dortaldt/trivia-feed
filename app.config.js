@@ -103,7 +103,7 @@ export default {
       : `${currentTopic.displayName}`,
     slug: appSpecificConfig.slug,
     scheme: appSpecificConfig.scheme,
-    version: "1.0.0",
+    version: "1.1.2",
     icon: getTopicAsset('app-icon'),
     extra: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
@@ -120,7 +120,7 @@ export default {
       enabled: true,
       checkAutomatically: "ON_LOAD"
     },
-    runtimeVersion: "1.0.0",
+    runtimeVersion: "1.1.2",
     splash: {
       image: getTopicAsset('splash-icon'),
       resizeMode: "contain",
