@@ -176,7 +176,7 @@ class BannerService {
           targeting: {
             userTypes: ['guest', 'logged_in'],
             platforms: ['ios', 'android', 'web'],
-            minQuestionsAnswered: 10, // Show after answering 10 questions
+            minQuestionsAnswered: 1, // show after answering 1 question must be lower than afterQuestions!
             maxQuestionsAnswered: 999999,
           },
           display: {
@@ -187,7 +187,7 @@ class BannerService {
             },
             positioning: {
               strategy: 'after_questions',
-              afterQuestions: 3, // Show after 3rd question in session
+              afterQuestions: 10, // Show after 10th question in session must be higher than minQuestionsAnswered!
             },
           },
           behavior: {
