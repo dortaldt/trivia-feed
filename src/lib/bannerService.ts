@@ -86,7 +86,8 @@ class BannerService {
    */
   private getConfiguredBanners(): PromotionalBanner[] {
     const now = new Date().toISOString();
-    const { activeTopic } = Constants.expoConfig?.extra || {};
+    const expoExtra = Constants.expoConfig?.extra;
+    const activeTopic = expoExtra?.activeTopic;
     
     // Only show banners for non-default topic apps (music, etc.)
     const isNonDefaultTopicApp = activeTopic && activeTopic !== 'default';
