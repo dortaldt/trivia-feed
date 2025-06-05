@@ -133,6 +133,7 @@ export default {
       supportsTablet: true,
       bundleIdentifier: appSpecificConfig.bundleId,
       icon: getTopicAsset('app-icon'),
+      orientation: "portrait",
       infoPlist: {
         UIAppFonts: [
           "AntDesign.ttf",
@@ -142,7 +143,13 @@ export default {
         ],
         NSCameraUsageDescription: "This app needs access to your camera to take profile photos and capture images for your avatar.",
         NSPhotoLibraryUsageDescription: "This app needs access to your photo library to select images for your profile avatar.",
-        NSPhotoLibraryAddUsageDescription: "This app needs permission to save photos to your photo library."
+        NSPhotoLibraryAddUsageDescription: "This app needs permission to save photos to your photo library.",
+        UISupportedInterfaceOrientations: [
+          "UIInterfaceOrientationPortrait"
+        ],
+        "UISupportedInterfaceOrientations~iphone": [
+          "UIInterfaceOrientationPortrait"
+        ]
       }
     },
     android: {
