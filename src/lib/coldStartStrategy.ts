@@ -62,7 +62,9 @@ function groupQuestionsByTopic(allQuestions: FeedItem[]): Map<Topic, Map<Subtopi
   
   try {
     const Constants = require('expo-constants');
-    const { activeTopic, filterContentByTopic } = Constants.expoConfig?.extra || {};
+    const expoExtra = Constants.expoConfig?.extra;
+    const activeTopic = expoExtra?.activeTopic;
+    const filterContentByTopic = expoExtra?.filterContentByTopic;
     
     if (filterContentByTopic && activeTopic && activeTopic !== 'default') {
       filterByTopic = true;
@@ -130,7 +132,9 @@ function isTopicAllowedForDiversity(state: ColdStartState, topic: string): boole
   // Get topic configuration from app config as backup method - Skip diversity checks in single topic mode
   try {
     const Constants = require('expo-constants');
-    const { activeTopic, filterContentByTopic } = Constants.expoConfig?.extra || {};
+    const expoExtra = Constants.expoConfig?.extra;
+    const activeTopic = expoExtra?.activeTopic;
+    const filterContentByTopic = expoExtra?.filterContentByTopic;
     
     // If we're in single topic mode and this is the active topic, always allow it
     if (filterContentByTopic && activeTopic && activeTopic !== 'default' && topic === activeTopic) {
@@ -1375,7 +1379,9 @@ export function getColdStartFeed(
   
   try {
     const Constants = require('expo-constants');
-    const { activeTopic, filterContentByTopic } = Constants.expoConfig?.extra || {};
+    const expoExtra = Constants.expoConfig?.extra;
+    const activeTopic = expoExtra?.activeTopic;
+    const filterContentByTopic = expoExtra?.filterContentByTopic;
     
     if (filterContentByTopic && activeTopic && activeTopic !== 'default') {
       isInSingleTopicMode = true;

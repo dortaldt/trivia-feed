@@ -15,6 +15,11 @@ import { trackEvent } from './mixpanelAnalytics';
 const BANNER_STORAGE_KEY = 'promotional_banners_state';
 const SESSION_ID_KEY = 'banner_session_id';
 
+// Helper function to generate unique session ID
+function generateSessionId(): string {
+  return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
 class BannerService {
   private bannerState: BannerState = {
     activeBanners: [],
@@ -28,28 +33,60 @@ class BannerService {
   private initialized = false;
   private isLoadingBanners = false;
   private hasLoggedBannerConfig = false;
+  private currentSessionNumber: number = 1; // Track session number
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
+    this.sessionId = generateSessionId();
+    
     try {
-      // Load saved state
+      // Load saved banner state
       const savedState = await AsyncStorage.getItem(BANNER_STORAGE_KEY);
       if (savedState) {
-        this.bannerState = { ...this.bannerState, ...JSON.parse(savedState) };
+        const parsedState = JSON.parse(savedState);
+        this.bannerState.interactions = parsedState.interactions || [];
       }
 
-      // Generate or load session ID
-      let sessionId = await AsyncStorage.getItem(SESSION_ID_KEY);
-      if (!sessionId) {
-        sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        await AsyncStorage.setItem(SESSION_ID_KEY, sessionId);
-      }
-      this.sessionId = sessionId;
-
-      this.initialized = true;
+      // Load and increment session count
+      await this.loadAndIncrementSessionCount();
+      
+      console.log('🎯 Banner Service initialized', { 
+        sessionId: this.sessionId,
+        sessionNumber: this.currentSessionNumber,
+        savedInteractions: this.bannerState.interactions.length 
+      });
     } catch (error) {
-      console.error('Failed to initialize banner service:', error);
+      console.error('❌ Error initializing banner service:', error);
+    }
+
+    this.initialized = true;
+  }
+
+  /**
+   * Load and increment the session count from persistent storage
+   */
+  private async loadAndIncrementSessionCount(): Promise<void> {
+    try {
+      const SESSION_COUNT_KEY = 'banner_session_count';
+      const savedCount = await AsyncStorage.getItem(SESSION_COUNT_KEY);
+      const previousSessionCount = savedCount ? parseInt(savedCount, 10) : 0;
+      
+      // Increment session count
+      this.currentSessionNumber = previousSessionCount + 1;
+      
+      // Save the new session count
+      await AsyncStorage.setItem(SESSION_COUNT_KEY, this.currentSessionNumber.toString());
+      
+      console.log('📊 Session count updated:', {
+        previousCount: previousSessionCount,
+        currentSession: this.currentSessionNumber,
+        isFirstSession: this.currentSessionNumber === 1
+      });
+    } catch (error) {
+      console.error('❌ Error managing session count:', error);
+      // Fallback to session 1 if there's an error
+      this.currentSessionNumber = 1;
     }
   }
 
@@ -86,7 +123,20 @@ class BannerService {
    */
   private getConfiguredBanners(): PromotionalBanner[] {
     const now = new Date().toISOString();
-    const { activeTopic } = Constants.expoConfig?.extra || {};
+    const expoExtra = Constants.expoConfig?.extra;
+    let activeTopic = expoExtra?.activeTopic;
+    
+    // Fallback: If expo config is not available (production builds), import topic config directly
+    if (!activeTopic) {
+      try {
+        const topicConfig = require('../../app-topic-config');
+        activeTopic = topicConfig.activeTopic;
+        console.log('🔄 Banner Service: Using fallback topic config:', activeTopic);
+      } catch (error) {
+        console.warn('🔄 Banner Service: Could not load fallback topic config:', error);
+        activeTopic = 'music'; // Final fallback to music
+      }
+    }
     
     // Only show banners for non-default topic apps (music, etc.)
     const isNonDefaultTopicApp = activeTopic && activeTopic !== 'default';
@@ -96,13 +146,15 @@ class BannerService {
       console.log('🎯 Banner Service: getConfiguredBanners called', {
         activeTopic,
         isNonDefaultTopicApp,
-        returningBanners: isNonDefaultTopicApp
+        returningBanners: isNonDefaultTopicApp,
+        source: expoExtra?.activeTopic ? 'expo-config' : 'fallback'
       });
       this.hasLoggedBannerConfig = true;
     }
     
     if (!isNonDefaultTopicApp) {
       // Return empty array for default topic app - no banners
+      console.log('🎯 Banner Service: Not showing banners - default topic app or activeTopic is undefined');
       return [];
     }
     
@@ -124,23 +176,23 @@ class BannerService {
           targeting: {
             userTypes: ['guest', 'logged_in'],
             platforms: ['ios', 'android', 'web'],
-            minQuestionsAnswered: 25, // Show after answering 25 questions
+            minQuestionsAnswered: 1, // show after answering 1 question must be lower than afterQuestions!
             maxQuestionsAnswered: 999999,
           },
           display: {
             frequency: {
-              type: 'after_first_session', // Show only after first session
-              maxShows: 3, // Limit to 3 times per user
-              cooldownHours: 72, // Show every 3 days max
+              type: 'after_first_session', // Show from second session onwards
+              maxShows: 5, // Allow more shows
+              // No cooldown - banner can show immediately after conditions are met
             },
             positioning: {
               strategy: 'after_questions',
-              afterQuestions: 8, // Show after some engagement in session
+              afterQuestions: 10, // Show after 10th question in session must be higher than minQuestionsAnswered!
             },
           },
           behavior: {
             dismissible: true,
-            persistDismissal: true, // Remember dismissal to avoid annoying users
+            persistDismissal: false, // Allow banners to return even if dismissed
           },
         },
         createdAt: now,
@@ -258,11 +310,18 @@ class BannerService {
         break;
         
       case 'after_first_session':
-        // Check if this is NOT the first session by looking at interaction history
-        const hasAnyPreviousInteractions = this.bannerState.interactions.length > 0;
-        if (!hasAnyPreviousInteractions) {
-          return { eligible: false, reasons: ['Banner only shows after first session, this appears to be first session'] };
+        // Use persistent session count instead of in-memory interactions
+        if (this.currentSessionNumber <= 1) {
+          return { 
+            eligible: false, 
+            reasons: [`Banner only shows after first session. Current session: ${this.currentSessionNumber}`] 
+          };
         }
+        
+        console.log('✅ After first session check passed:', {
+          currentSession: this.currentSessionNumber,
+          isAfterFirstSession: this.currentSessionNumber > 1
+        });
         
         // Apply cooldown if specified
         if (banner.config.display.frequency.cooldownHours) {

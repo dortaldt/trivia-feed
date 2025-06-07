@@ -6,7 +6,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 // Get topic configuration from app config
-const { activeTopic, filterContentByTopic, topicDbName } = Constants.expoConfig?.extra || {};
+const expoExtra = Constants.expoConfig?.extra;
+const activeTopic = expoExtra?.activeTopic;
+const filterContentByTopic = expoExtra?.filterContentByTopic;
+const topicDbName = expoExtra?.topicDbName;
 console.log(`TriviaService initialized with topic: ${activeTopic || 'default'}`);
 console.log(`Content filtering: ${filterContentByTopic ? 'Enabled' : 'Disabled'}`);
 if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {

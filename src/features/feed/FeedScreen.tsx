@@ -1477,18 +1477,39 @@ const FeedScreen: React.FC = () => {
       console.log(`[Performance tracker ⏱️] Viewability Detection - Started: ${viewabilityStart.toFixed(2)}ms`);
       
       if (viewableItems.length > 0 && viewableItems[0].index !== null && personalizedFeed.length > 0) {
-        const newIndex = viewableItems[0].index;
-        const currentItem = personalizedFeed[newIndex];
+        const enhancedIndex = viewableItems[0].index;
+        
+        // Calculate how many banners appear before this index
+        let bannerOffset = 0;
+        for (const placement of bannerPlacements) {
+          if (placement.position <= enhancedIndex - bannerOffset) {
+            bannerOffset++;
+          }
+        }
+        
+        // Calculate the actual feed index by subtracting banner offset
+        const feedIndex = enhancedIndex - bannerOffset;
+        
+        // Skip if this points to a banner position (shouldn't happen with proper offset calculation)
+        if (feedIndex < 0 || feedIndex >= personalizedFeed.length) {
+          console.log(`[ViewableItemsChanged] Calculated feed index ${feedIndex} is out of bounds (enhanced index: ${enhancedIndex}, banner offset: ${bannerOffset}), skipping`);
+          // Performance tracker ⏱️ - Viewability Detection END (early return)
+          const viewabilityEnd = performance.now();
+          console.log(`[Performance tracker ⏱️] Viewability Detection - Ended (out of bounds): ${viewabilityEnd.toFixed(2)}ms | Duration: ${(viewabilityEnd - viewabilityStart).toFixed(2)}ms`);
+          return;
+        }
+        
+        const currentItem = personalizedFeed[feedIndex];
         
         // Start preloading next items immediately when a new item becomes visible
-        preloadNextItems(newIndex);
+        preloadNextItems(feedIndex);
         
         if (currentItem && currentItem.id) {
           const currentItemId = currentItem.id;
           const prevIndex = lastVisibleIndexRef.current;
           
           // Special case for first question skip detection
-          if (newIndex === 1 && (prevIndex === null || prevIndex === 0)) {
+          if (feedIndex === 1 && (prevIndex === null || prevIndex === 0)) {
             // We've moved directly to the second question - check if first question was processed
             const firstQuestionId = personalizedFeed[0].id;
             const firstQuestionState = questions[firstQuestionId];
@@ -1503,30 +1524,30 @@ const FeedScreen: React.FC = () => {
           }
           
           // Only process if we've actually moved to a new question
-          if (prevIndex !== newIndex) {
+          if (prevIndex !== feedIndex) {
             // Check if we're moving forward AND if prevIndex is not null (handles first question case)
-            if (prevIndex !== null && newIndex > prevIndex) {
-              // console.log(`[ViewableItemsChanged] Skipping detected: ${prevIndex} → ${newIndex}`);
-              markPreviousAsSkipped(prevIndex, newIndex);
-            } else if (prevIndex === null && newIndex > 0) {
+            if (prevIndex !== null && feedIndex > prevIndex) {
+              // console.log(`[ViewableItemsChanged] Skipping detected: ${prevIndex} → ${feedIndex}`);
+              markPreviousAsSkipped(prevIndex, feedIndex);
+            } else if (prevIndex === null && feedIndex > 0) {
               // Handle case where first question was skipped and prevIndex hasn't been set yet
               // console.log(`[ViewableItemsChanged] First question possibly skipped, marking index 0`);
-              markPreviousAsSkipped(0, newIndex);
+              markPreviousAsSkipped(0, feedIndex);
             } else {
               // console.log(`[ViewableItemsChanged] Moving backwards or special case, not marking as skipped`);
             }
             
-            // Update last visible index
-            lastVisibleIndexRef.current = newIndex;
+            // Update last visible index with the feed index (not enhanced feed index)
+            lastVisibleIndexRef.current = feedIndex;
             lastVisibleItemId.current = currentItemId;
             
             // Also update scrollBasedIndexRef to keep it in sync
-            scrollBasedIndexRef.current = newIndex;
+            scrollBasedIndexRef.current = feedIndex;
             
             // Update currentIndex state to match the visible item
             // This is critical for iOS to correctly detect skipped questions in onMomentumScrollEnd
-            // console.log(`[INDEX UPDATE] Setting currentIndex from ${currentIndex} to ${newIndex}`);
-            setCurrentIndex(newIndex);
+            // console.log(`[INDEX UPDATE] Setting currentIndex from ${currentIndex} to ${feedIndex}`);
+            setCurrentIndex(feedIndex);
             
             // Start tracking interaction with new question
             dispatch(startInteraction({ questionId: currentItemId }));
@@ -1561,7 +1582,7 @@ const FeedScreen: React.FC = () => {
       const viewabilityEnd = performance.now();
       console.log(`[Performance tracker ⏱️] Viewability Detection - Ended: ${viewabilityEnd.toFixed(2)}ms | Duration: ${(viewabilityEnd - viewabilityStart).toFixed(2)}ms`);
     },
-    [personalizedFeed, questions, preloadNextItems, markPreviousAsSkipped, currentIndex, setCurrentIndex, dispatch, debugPanelVisible, feedExplanations, activeTopic, setActiveTopic]
+    [personalizedFeed, bannerPlacements, questions, preloadNextItems, markPreviousAsSkipped, currentIndex, setCurrentIndex, dispatch, debugPanelVisible, feedExplanations, activeTopic, setActiveTopic]
   );
 
   useEffect(() => {
@@ -1759,14 +1780,25 @@ const FeedScreen: React.FC = () => {
       isMomentumScrolling.current = false; // Mark momentum as ended for iOS
       
       const finalScrollPos = event.nativeEvent.contentOffset.y;
-      const estimatedIndex = Math.round(finalScrollPos / viewportHeight);
-      // console.log(`[INDEX UPDATE] onMomentumScrollEnd iOS: finalScrollPos=${finalScrollPos}, estimatedIndex=${estimatedIndex}`);
+      const estimatedEnhancedIndex = Math.round(finalScrollPos / viewportHeight);
+      // console.log(`[INDEX UPDATE] onMomentumScrollEnd iOS: finalScrollPos=${finalScrollPos}, estimatedEnhancedIndex=${estimatedEnhancedIndex}`);
 
-      if (estimatedIndex >= 0 && estimatedIndex < personalizedFeed.length) {
-        // This estimatedIndex is the most accurate representation of where the scroll ended.
-        eventCorrectedCurrentIndex = estimatedIndex;
-        const item = personalizedFeed[estimatedIndex];
-        // console.log(`[INDEX UPDATE] Using iOS estimated index ${estimatedIndex} (topic: "${item?.topic}", id: ${item?.id})`);
+      // Calculate how many banners appear before this index
+      let bannerOffset = 0;
+      for (const placement of bannerPlacements) {
+        if (placement.position <= estimatedEnhancedIndex - bannerOffset) {
+          bannerOffset++;
+        }
+      }
+      
+      // Calculate the actual feed index by subtracting banner offset
+      const estimatedFeedIndex = estimatedEnhancedIndex - bannerOffset;
+
+      if (estimatedFeedIndex >= 0 && estimatedFeedIndex < personalizedFeed.length) {
+        // This estimatedFeedIndex is the most accurate representation of where the scroll ended.
+        eventCorrectedCurrentIndex = estimatedFeedIndex;
+        const item = personalizedFeed[estimatedFeedIndex];
+        // console.log(`[INDEX UPDATE] Using iOS estimated feed index ${estimatedFeedIndex} (enhanced index: ${estimatedEnhancedIndex}, banner offset: ${bannerOffset}, topic: "${item?.topic}", id: ${item?.id})`);
         
         // IMMEDIATE UPDATE: Update activeTopic right away for iOS
         if (item && item.topic && item.topic !== activeTopic && !isAnsweringRef.current) {
@@ -1774,7 +1806,7 @@ const FeedScreen: React.FC = () => {
           setActiveTopic(item.topic);
         }
       } else {
-        console.warn(`[INDEX UPDATE] iOS: Estimated index ${estimatedIndex} is out of bounds. Falling back to state currentIndex: ${currentIndex}`);
+        console.warn(`[INDEX UPDATE] iOS: Estimated feed index ${estimatedFeedIndex} is out of bounds. Falling back to state currentIndex: ${currentIndex}`);
         eventCorrectedCurrentIndex = currentIndex; // Fallback if calculation is odd
       }
     } else {
@@ -1828,7 +1860,7 @@ const FeedScreen: React.FC = () => {
         console.warn(`[onMomentumScrollEnd] (Else branch) No item in personalizedFeed at eventCorrectedCurrentIndex ${eventCorrectedCurrentIndex}.`);
       }
     }
-  }, [currentIndex, setCurrentIndex, handleFastScroll, isIOS, viewportHeight, personalizedFeed, dispatch, activeTopic, setActiveTopic]);
+  }, [currentIndex, setCurrentIndex, handleFastScroll, isIOS, viewportHeight, personalizedFeed, bannerPlacements, dispatch, activeTopic, setActiveTopic]);
 
   // Add this hook to handle question generation
   const { triggerQuestionGeneration, trackQuestionInteraction } = useQuestionGenerator();

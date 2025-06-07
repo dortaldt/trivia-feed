@@ -35,7 +35,9 @@ import { monitorTapResponse, measurePerformance } from '../../utils/performanceM
 const { width, height } = Dimensions.get('window');
 
 // Get topic configuration from expo config
-const { activeTopic, filterContentByTopic } = Constants.expoConfig?.extra || {};
+const expoExtra = Constants.expoConfig?.extra;
+const activeTopic = expoExtra?.activeTopic;
+const filterContentByTopic = expoExtra?.filterContentByTopic;
 const isTopicSpecificMode = activeTopic !== 'default' && filterContentByTopic;
 
 // Updated type to support multiple answers and add new props

@@ -1,7 +1,7 @@
 {
   "name": "trivia-universe-feed",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "1.1.2",
   "scripts": {
     "start": "expo start --dev-client",
     "reset-project": "node ./scripts/reset-project.js",
@@ -52,7 +52,7 @@
     "node-fetch": "^3.3.2",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "react-native": "0.79.2",
+    "react-native": "0.79.3",
     "react-native-bottom-sheet": "^1.0.3",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-paper": "^5.14.0",

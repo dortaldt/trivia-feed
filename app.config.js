@@ -103,7 +103,7 @@ export default {
       : `${currentTopic.displayName}`,
     slug: appSpecificConfig.slug,
     scheme: appSpecificConfig.scheme,
-    version: "1.0.0",
+    version: "1.1.2",
     icon: getTopicAsset('app-icon'),
     extra: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
@@ -120,7 +120,7 @@ export default {
       enabled: true,
       checkAutomatically: "ON_LOAD"
     },
-    runtimeVersion: "1.0.0",
+    runtimeVersion: "1.1.2",
     splash: {
       image: getTopicAsset('splash-icon'),
       resizeMode: "contain",
@@ -133,6 +133,7 @@ export default {
       supportsTablet: true,
       bundleIdentifier: appSpecificConfig.bundleId,
       icon: getTopicAsset('app-icon'),
+      orientation: "portrait",
       infoPlist: {
         UIAppFonts: [
           "AntDesign.ttf",
@@ -142,7 +143,13 @@ export default {
         ],
         NSCameraUsageDescription: "This app needs access to your camera to take profile photos and capture images for your avatar.",
         NSPhotoLibraryUsageDescription: "This app needs access to your photo library to select images for your profile avatar.",
-        NSPhotoLibraryAddUsageDescription: "This app needs permission to save photos to your photo library."
+        NSPhotoLibraryAddUsageDescription: "This app needs permission to save photos to your photo library.",
+        UISupportedInterfaceOrientations: [
+          "UIInterfaceOrientationPortrait"
+        ],
+        "UISupportedInterfaceOrientations~iphone": [
+          "UIInterfaceOrientationPortrait"
+        ]
       }
     },
     android: {
