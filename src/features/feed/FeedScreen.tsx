@@ -1870,8 +1870,43 @@ const FeedScreen: React.FC = () => {
   
   // For example:
   const handleAnswer = useCallback(async (questionId: string, answerIndex: number, isCorrect: boolean) => {
-    const questionItem = personalizedFeed.find(item => item.id === questionId);
-    if (!questionItem) return;
+    console.log('🎯 [FeedScreen] handleAnswer called with:', { questionId, answerIndex, isCorrect });
+    console.log('🎯 [FeedScreen] personalizedFeed length:', personalizedFeed.length);
+    console.log('🎯 [FeedScreen] enhancedFeed length:', enhancedFeed.length);
+    console.log('🎯 [FeedScreen] feedData length:', feedData.length);
+    
+    // Try to find the question in personalizedFeed first
+    let questionItem = personalizedFeed.find(item => item.id === questionId);
+    
+    // If not found in personalizedFeed, try enhancedFeed (fallback)
+    if (!questionItem) {
+      console.log('🎯 [FeedScreen] Question not found in personalizedFeed, checking enhancedFeed...');
+      const enhancedFeedItem = enhancedFeed.find(item => 'id' in item && item.id === questionId);
+      if (enhancedFeedItem && 'id' in enhancedFeedItem) {
+        questionItem = enhancedFeedItem as FeedItemType;
+        console.log('🎯 [FeedScreen] Found question in enhancedFeed:', questionItem.question?.substring(0, 50) + '...');
+      }
+    }
+    
+    // If not found in either, try feedData
+    if (!questionItem) {
+      console.log('🎯 [FeedScreen] Question not found in enhancedFeed, checking feedData...');
+      questionItem = feedData.find(item => item.id === questionId);
+      if (questionItem) {
+        console.log('🎯 [FeedScreen] Found question in feedData:', questionItem.question?.substring(0, 50) + '...');
+      }
+    }
+    
+    if (!questionItem) {
+      console.log('🎯 [FeedScreen] ERROR: Question item not found in ANY feed for ID:', questionId);
+      console.log('🎯 [FeedScreen] Available question IDs in personalizedFeed:', personalizedFeed.map(item => item.id));
+      console.log('🎯 [FeedScreen] Available question IDs in enhancedFeed:', enhancedFeed.filter(item => 'id' in item).map(item => ('id' in item) ? item.id : null));
+      console.log('🎯 [FeedScreen] Available question IDs in feedData:', feedData.slice(0, 5).map(item => item.id));
+      console.log('🎯 [FeedScreen] Active topic:', activeTopic);
+      return;
+    }
+    
+    console.log('🎯 [FeedScreen] Found question item:', questionItem.question?.substring(0, 50) + '...');
     
     // Set flag to prevent activeTopic updates during answer interaction
     isAnsweringRef.current = true;
@@ -2259,8 +2294,8 @@ const FeedScreen: React.FC = () => {
     // Handle regular feed items
     const feedItem = item as FeedItemType;
     // Add debug logging for duplicate detection and feed stability
-    // console.log(`Rendering item ${index}: ${feedItem.id} - "${feedItem.question.substring(0, 30)}..."`, 
-    //   questions[feedItem.id] ? `(Question status: ${questions[feedItem.id].status})` : '(No status yet)');
+    console.log(`🎯 [FeedScreen] Rendering item ${index}: ${feedItem.id} - "${feedItem.question.substring(0, 30)}..."`, 
+      questions[feedItem.id] ? `(Question status: ${questions[feedItem.id].status})` : '(No status yet)');
     
     // Get the next item's topic for gradient transition (if any)
     const nextItem = index < enhancedFeed.length - 1 ? enhancedFeed[index + 1] : undefined;

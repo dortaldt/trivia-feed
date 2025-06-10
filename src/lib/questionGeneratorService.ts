@@ -3,6 +3,7 @@ import { generateQuestions, generateQuestionFingerprint, checkQuestionExists, Ge
 import { dbEventEmitter, logGeneratorEvent } from './syncService';
 import { logDbOperation } from './simplifiedSyncService';
 import { UserProfile } from './personalizationService';
+import { getTriviaTableName } from '../utils/tableUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { logger } from '../utils/logger';
@@ -129,8 +130,9 @@ function getTopicMapper(): TopicMapper {
  */
 export async function getTopicQuestionCounts(): Promise<Record<string, number>> {
   try {
+    const tableName = getTriviaTableName();
     const { data, error } = await supabase
-      .from('trivia_questions')
+      .from(tableName)
       .select('topic');
     
     if (error) {
@@ -177,8 +179,9 @@ export async function getRecentAnsweredTopics(userId: string, count: number = 5)
     const questionIds = answerData.map((item: { question_id: string }) => item.question_id);
     
     // Now get the categories for these questions with a separate query
+    const tableName = getTriviaTableName();
     const { data: questionData, error: questionError } = await supabase
-      .from('trivia_questions')
+      .from(tableName)
       .select('id, topic')
       .in('id', questionIds);
     
@@ -288,8 +291,9 @@ async function getExistingTopicIntents(topics: string[]): Promise<Map<string, Se
     });
     
     // For each topic, get existing questions and extract their intents
+    const tableName = getTriviaTableName();
     const { data, error } = await supabase
-      .from('trivia_questions')
+      .from(tableName)
       .select('question_text, topic')
       .in('topic', topics);
       
@@ -468,8 +472,9 @@ export async function runQuestionGeneration(
           // Get question texts for these IDs
           const questionIds = answerData.map((a: any) => a.question_id);
           
+          const tableName = getTriviaTableName();
           const { data: questionData, error: questionError } = await supabase
-            .from('trivia_questions')
+            .from(tableName)
             .select('id, question_text, topic, subtopic, branch, tags')
             .in('id', questionIds);
             
@@ -517,8 +522,9 @@ export async function runQuestionGeneration(
         
         try {
           const questionIds = incompleteQuestions.map(q => q.id);
+          const tableName = getTriviaTableName();
           const { data, error } = await supabase
-            .from('trivia_questions')
+            .from(tableName)
             .select('id, topic, subtopic, branch, tags')
             .in('id', questionIds);
             
@@ -821,8 +827,9 @@ export async function runQuestionGeneration(
             const questionIds = answerData.map((item: { question_id: string }) => item.question_id);
             
             // Get tags from these questions
+            const tableName = getTriviaTableName();
             const { data: questionData } = await supabase
-              .from('trivia_questions')
+              .from(tableName)
               .select('tags')
               .in('id', questionIds);
             
@@ -960,8 +967,9 @@ export async function runQuestionGeneration(
               const questionIds = answerData.map((item: { question_id: string }) => item.question_id);
               
               // Get tags from these questions
+              const tableName = getTriviaTableName();
               const { data: questionData } = await supabase
-                .from('trivia_questions')
+                .from(tableName)
                 .select('tags')
                 .in('id', questionIds);
               
@@ -1284,8 +1292,9 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
       const correctAnswer = answers.find(a => a.isCorrect)?.text || answerChoices[0];
       
       // Insert the question
+      const tableName = getTriviaTableName();
       const { error } = await supabase
-        .from('trivia_questions')
+        .from(tableName)
         .insert({
           id: 'gen_' + Math.random().toString(36).substring(2, 10), // Generate a unique text ID
           question_text: questionText,
@@ -1309,7 +1318,7 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
       // Log the insert operation
       logDbOperation(
         'sent',
-        'trivia_questions',
+        tableName,
         'insert',
         1,
         {
@@ -1332,7 +1341,7 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
           
           // Retry insert without fingerprint column
           const { error: retryError } = await supabase
-            .from('trivia_questions')
+            .from(tableName)
             .insert({
               id: 'gen_' + Math.random().toString(36).substring(2, 10),
               question_text: questionText,
@@ -1355,7 +1364,7 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
           // Log the retry insert operation  
           logDbOperation(
             'sent',
-            'trivia_questions',
+            tableName,
             'insert',
             1,
             {

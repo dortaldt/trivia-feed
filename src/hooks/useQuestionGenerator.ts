@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { runQuestionGeneration } from '../lib/questionGeneratorService';
 import { logGeneratorEvent } from '../lib/syncService';
 import { supabase } from '../lib/supabaseClient';
+import { getTriviaTableName } from '../utils/tableUtils';
 
 // Interface for storing recent question data
 interface RecentQuestionData {
@@ -292,8 +293,9 @@ export function useQuestionGenerator() {
         const questionIds = answerData?.map((item: { question_id: string }) => item.question_id) || [];
         
         // Get topics from these questions
+        const tableName = getTriviaTableName();
         const { data: questionData } = await supabase
-          .from('trivia_questions')
+          .from(tableName)
           .select('topic')
           .in('id', questionIds);
           

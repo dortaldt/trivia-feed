@@ -108,9 +108,11 @@ export default {
     extra: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      openaiApiKey: openaiApiKey,
       activeTopic,
       filterContentByTopic,
       topicDbName: currentTopic.dbTopicName,
+      topics: topics, // Include the full topics configuration
       eas: {
         projectId: process.env.EAS_PROJECT_ID
       }

@@ -248,6 +248,13 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
 
   // Optimized selectAnswer function with performance improvements
   const selectAnswerCore = useCallback((index: number) => {
+    // Add debugging console logs
+    console.log('🎯 [FeedItem] selectAnswerCore called with index:', index);
+    console.log('🎯 [FeedItem] Current question ID:', item.id);
+    console.log('🎯 [FeedItem] Current question topic:', item.topic);
+    console.log('🎯 [FeedItem] Is already answered?', isAnswered());
+    console.log('🎯 [FeedItem] Answer options:', item.answers.map((a, i) => `${i}: ${a.text} (${a.isCorrect ? 'correct' : 'incorrect'})`));
+    
     // Performance tracker ⏱️ - Performance & Analytics Calculation START
     const analyticsStart = performance.now();
     console.log(`[Performance tracker ⏱️] Performance & Analytics Calculation - Started: ${analyticsStart.toFixed(2)}ms`);
@@ -257,11 +264,15 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
       // Performance tracker ⏱️ - Performance & Analytics Calculation END (early return)
       const analyticsEnd = performance.now();
       console.log(`[Performance tracker ⏱️] Performance & Analytics Calculation - Ended (early): ${analyticsEnd.toFixed(2)}ms | Duration: ${(analyticsEnd - analyticsStart).toFixed(2)}ms`);
+      console.log('🎯 [FeedItem] Early return - question already answered');
       return;
     }
     
+    console.log('🎯 [FeedItem] Proceeding with answer selection...');
+    
     // Set selected answer immediately for UI feedback
     setSelectedAnswerIndex(index);
+    console.log('🎯 [FeedItem] Set selectedAnswerIndex to:', index);
     
     // Haptic feedback for iOS
     if (isIOS) {
@@ -285,6 +296,7 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
     // Critical state update - do this immediately
     if (onAnswer) {
       const isCorrect = item.answers[index].isCorrect;
+      console.log('🎯 [FeedItem] Calling onAnswer callback with:', { index, isCorrect });
       onAnswer(index, isCorrect);
       
       // Defer non-critical operations using InteractionManager
@@ -322,11 +334,14 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
           }, 10);
         });
       }
+    } else {
+      console.log('🎯 [FeedItem] WARNING: onAnswer callback is null/undefined!');
     }
     
     // Performance tracker ⏱️ - Performance & Analytics Calculation END
     const analyticsEnd = performance.now();
     console.log(`[Performance tracker ⏱️] Performance & Analytics Calculation - Ended: ${analyticsEnd.toFixed(2)}ms | Duration: ${(analyticsEnd - analyticsStart).toFixed(2)}ms`);
+    console.log('🎯 [FeedItem] selectAnswerCore completed');
   }, [
     isAnswered, 
     isIOS, 
@@ -689,7 +704,12 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
                         ...getAnswerOptionStyle(index),
                         pressed && styles.pressedAnswerOption
                       ]}
-                      onPress={() => selectAnswer(index)}
+                      onPress={() => {
+                        console.log('🎯 [FeedItem] Pressable onPress fired for answer index:', index);
+                        console.log('🎯 [FeedItem] Question ID:', item.id);
+                        console.log('🎯 [FeedItem] Is disabled?', isAnswered());
+                        selectAnswer(index);
+                      }}
                       disabled={isAnswered()}
                       // iOS touch optimizations
                       {...(Platform.OS === 'ios' && {
@@ -699,8 +719,14 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
                       })}
                       // Remove onPressIn/Out animations on iOS to reduce lag
                       {...(Platform.OS !== 'ios' && {
-                        onPressIn: () => animateAnswerPress(index, true),
-                        onPressOut: () => animateAnswerPress(index, false),
+                        onPressIn: () => {
+                          console.log('🎯 [FeedItem] onPressIn for answer:', index);
+                          animateAnswerPress(index, true);
+                        },
+                        onPressOut: () => {
+                          console.log('🎯 [FeedItem] onPressOut for answer:', index);
+                          animateAnswerPress(index, false);
+                        },
                       })}
                       {...(Platform.OS === 'web' ? {
                         onMouseEnter: () => handleMouseEnter(index),

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabaseClient';
+import { getTriviaTableName } from '../utils/tableUtils';
 import Constants from 'expo-constants';
 import { createClient } from '@supabase/supabase-js'
 // OpenAI API key should be stored securely
@@ -648,8 +649,9 @@ function calculateLevenshteinSimilarity(str1: string, str2: string): number {
 export async function checkQuestionExists(fingerprint: string): Promise<boolean> {
   try {
     // First try to check by fingerprint for exact matches
+    const tableName = getTriviaTableName();
     const { data: fingerprintData, error: fingerprintError } = await supabase
-      .from('trivia_questions')
+      .from(tableName)
       .select('id')
       .eq('fingerprint', fingerprint)
       .limit(1);
@@ -700,8 +702,9 @@ async function checkQuestionSimilarity(fingerprint: string): Promise<boolean> {
     const questionWords = new Set(normalizedQuestion.split(' '));
 
     // Get all questions to check for similarity
+    const tableName = getTriviaTableName();
     const { data: questions, error } = await supabase
-      .from('trivia_questions')
+      .from(tableName)
       .select('id, question_text, fingerprint');
 
     if (error) {
@@ -788,8 +791,9 @@ async function fallbackQuestionCheck(fingerprint: string): Promise<boolean> {
     const normalizedQuestion = fingerprint.split('|')[0];
 
     // Check for similar questions by normalized text
+    const tableName = getTriviaTableName();
     const { data, error } = await supabase
-      .from('trivia_questions')
+      .from(tableName)
       .select('id, question_text')
       .limit(10); // Get a few questions to compare
 

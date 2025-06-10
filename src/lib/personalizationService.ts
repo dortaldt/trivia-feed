@@ -450,12 +450,27 @@ export function getPersonalizedFeed(
   userProfile: UserProfile,
   count: number = 20
 ): { items: FeedItem[], explanations: { [questionId: string]: string[] } } {
+  console.log('🎯 [getPersonalizedFeed] Starting with:', {
+    allItemsCount: allItems.length,
+    userProfileExists: !!userProfile,
+    totalQuestionsAnswered: userProfile?.totalQuestionsAnswered || 0,
+    coldStartComplete: userProfile?.coldStartComplete,
+    requestedCount: count
+  });
+  
   // Check if we should use cold start strategy
   const totalQuestionsAnswered = userProfile.totalQuestionsAnswered || 0;
   const shouldUseColdStart = !userProfile.coldStartComplete && totalQuestionsAnswered < 20;
   
+  console.log('🎯 [getPersonalizedFeed] shouldUseColdStart:', shouldUseColdStart);
+  
   if (shouldUseColdStart) {
-    const result = getColdStartFeed(allItems, userProfile, count);
+    console.log('🎯 [getPersonalizedFeed] Using cold start strategy');
+    const result = getColdStartFeed(allItems, userProfile);
+    console.log('🎯 [getPersonalizedFeed] Cold start result:', {
+      itemsCount: result.items.length,
+      explanationsCount: Object.keys(result.explanations).length
+    });
     
     return result;
   }
@@ -675,6 +690,12 @@ export function getPersonalizedFeed(
     }
     i++;
   }
+  
+  console.log('🎯 [getPersonalizedFeed] Normal personalization result:', {
+    selectedItemsCount: selectedItems.length,
+    explanationsCount: Object.keys(explanations).length,
+    requestedCount: count
+  });
   
   return { items: selectedItems, explanations };
 }

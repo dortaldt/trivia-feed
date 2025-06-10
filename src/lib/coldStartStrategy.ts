@@ -209,6 +209,12 @@ function getExplorationPhaseQuestions(
   state: ColdStartState,
   userProfile: UserProfile
 ): FeedItem[] {
+  console.log('🎯 [getExplorationPhaseQuestions] Starting with:', {
+    allQuestionsCount: allQuestions.length,
+    groupedQuestionsSize: groupedQuestions.size,
+    availableTopics: Array.from(groupedQuestions.keys()).slice(0, 5)
+  });
+  
   logger.info('ColdStart', "Getting Initial Exploration phase questions (1-5) - STRICT ONE PER TOPIC");
   
   // Initialize topic weights from userProfile
@@ -222,7 +228,45 @@ function getExplorationPhaseQuestions(
   
   // Create a prioritized list of initial topics to try
   // We want to try all initial topics first
-  const prioritizedTopics = [...INITIAL_EXPLORATION_TOPICS];
+  let prioritizedTopics = [...INITIAL_EXPLORATION_TOPICS];
+  
+  // Check if we're in single topic mode and add the active topic
+  const isInSingleTopicMode = (state as any).isInSingleTopicMode;
+  const activeTopicName = (state as any).activeTopicName;
+  
+  if (isInSingleTopicMode && activeTopicName) {
+    // In single topic mode, prioritize the active topic and include it in exploration
+    // Get the DB topic name from available topics in grouped questions
+    const availableTopics = Array.from(groupedQuestions.keys());
+    const activeDbTopic = availableTopics.find(topic => 
+      topic === activeTopicName || 
+      topic.toLowerCase().includes(activeTopicName.toLowerCase()) ||
+      activeTopicName.toLowerCase().includes(topic.toLowerCase())
+    );
+    
+    if (activeDbTopic && !prioritizedTopics.includes(activeDbTopic)) {
+      // Put the active topic first in the list
+      prioritizedTopics = [activeDbTopic, ...prioritizedTopics];
+      console.log('🎯 [getExplorationPhaseQuestions] Added active topic to exploration:', activeDbTopic);
+    }
+  }
+  
+  console.log('🎯 [getExplorationPhaseQuestions] Initial exploration topics:', {
+    INITIAL_EXPLORATION_TOPICS: INITIAL_EXPLORATION_TOPICS,
+    isInSingleTopicMode: isInSingleTopicMode,
+    activeTopicName: activeTopicName,
+    prioritizedTopics: prioritizedTopics,
+    availableInGrouped: prioritizedTopics.filter(topic => groupedQuestions.has(topic)),
+    actualAvailableTopics: Array.from(groupedQuestions.keys())
+  });
+  
+  // FALLBACK: If no initial exploration topics are available but we have grouped questions,
+  // use whatever topics are actually available (handles single topic mode when config detection fails)
+  if (prioritizedTopics.filter(topic => groupedQuestions.has(topic)).length === 0 && groupedQuestions.size > 0) {
+    const actualTopics = Array.from(groupedQuestions.keys());
+    console.log('🎯 [getExplorationPhaseQuestions] No initial topics available, using actual topics as fallback:', actualTopics);
+    prioritizedTopics = actualTopics;
+  }
   
   // Shuffle to get some randomness in selection order, while maintaining the priority of initial topics
   shuffleArray(prioritizedTopics);
@@ -1383,11 +1427,23 @@ export function getColdStartFeed(
     const activeTopic = expoExtra?.activeTopic;
     const filterContentByTopic = expoExtra?.filterContentByTopic;
     
+    console.log('🎯 [getColdStartFeed] Topic detection:', {
+      activeTopic: activeTopic,
+      filterContentByTopic: filterContentByTopic,
+      expoExtra: expoExtra
+    });
+    
     if (filterContentByTopic && activeTopic && activeTopic !== 'default') {
       isInSingleTopicMode = true;
       activeTopicName = activeTopic;
       console.log(`🔍 Cold start strategy: Operating in SINGLE TOPIC MODE (${activeTopic})`);
       console.log(`🔍 Diversity checks will be bypassed for topic ${activeTopic}`);
+    } else {
+      console.log('🎯 [getColdStartFeed] Not in single topic mode:', {
+        filterContentByTopic,
+        activeTopic,
+        isDefault: activeTopic === 'default'
+      });
     }
   } catch (e) {
     console.error('Error checking topic config in cold start feed:', e);
@@ -1469,11 +1525,22 @@ export function getColdStartFeed(
   
   // Filter questions by difficulty for the first 10 questions
   const filteredQuestions = filterByDifficulty(allQuestions, state);
+  console.log('🎯 [getColdStartFeed] After difficulty filtering:', {
+    originalCount: allQuestions.length,
+    filteredCount: filteredQuestions.length
+  });
   
   // Ensure we have a Map for grouped questions and that it's not empty
   const filteredGroupedQuestions = (groupedQuestions instanceof Map && Array.from(groupedQuestions.keys()).length > 0)
     ? groupedQuestions
     : groupQuestionsByTopic(filteredQuestions);
+  
+  console.log('🎯 [getColdStartFeed] Grouped questions:', {
+    isMap: filteredGroupedQuestions instanceof Map,
+    topicsCount: Array.from(filteredGroupedQuestions.keys()).length,
+    topics: Array.from(filteredGroupedQuestions.keys()).slice(0, 5),
+    allTopics: Array.from(filteredGroupedQuestions.keys())
+  });
   
   // Add debug logging to see if grouped questions is properly populated
   
@@ -1493,23 +1560,39 @@ export function getColdStartFeed(
   }
   
   
+  console.log('🎯 [getColdStartFeed] Determined phase:', {
+    phase: state.phase,
+    questionsShown: state.questionsShown,
+    forcedPhase: forcedPhase
+  });
+  
   // Get questions for the current phase
   let phaseQuestions: FeedItem[] = [];
   
   switch (state.phase) {
     case 'exploration':
+      console.log('🎯 [getColdStartFeed] Getting exploration phase questions...');
       phaseQuestions = getExplorationPhaseQuestions(filteredQuestions, filteredGroupedQuestions, state, userProfile);
       break;
     case 'branching':
+      console.log('🎯 [getColdStartFeed] Getting branching phase questions...');
       phaseQuestions = getBranchingPhaseQuestions(filteredQuestions, filteredGroupedQuestions, state, userProfile);
       break;
     case 'normal':
+      console.log('🎯 [getColdStartFeed] Getting normal phase questions...');
       phaseQuestions = getNormalPhaseQuestions(filteredQuestions, filteredGroupedQuestions, state, userProfile);
       break;
     default:
+      console.log('🎯 [getColdStartFeed] Getting default (exploration) phase questions...');
       phaseQuestions = getExplorationPhaseQuestions(filteredQuestions, filteredGroupedQuestions, state, userProfile);
       break;
   }
+  
+  console.log('🎯 [getColdStartFeed] Phase questions result:', {
+    phase: state.phase,
+    questionsCount: phaseQuestions.length,
+    questionIds: phaseQuestions.slice(0, 3).map(q => q.id)
+  });
   
   // Update question count
   state.questionsShown += phaseQuestions.length;

@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { getTopicColor } from './colors';
 import { getStandardizedTopicName } from '../constants/topics';
+import { getTriviaTableName } from '../utils/tableUtils';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
@@ -123,10 +124,11 @@ const mockFeedData: FeedItem[] = [
 // Function to inspect table structure
 async function inspectTableStructure() {
   try {
-    console.log('Inspecting trivia_questions table structure...');
+    const tableName = getTriviaTableName();
+    console.log(`Inspecting ${tableName} table structure...`);
     // Get a sample row to analyze the structure
     const { data, error } = await supabase
-      .from('trivia_questions')
+      .from(tableName)
       .select('*')
       .limit(1);
       
@@ -156,11 +158,12 @@ async function inspectTableStructure() {
 // Function to specifically analyze correct answers format in the database
 export async function analyzeCorrectAnswers() {
   try {
-    console.log('Analyzing correct answer formats in database...');
+    const tableName = getTriviaTableName();
+    console.log(`Analyzing correct answer formats in ${tableName} database...`);
     
     // Fetch a few questions to analyze
     const { data, error } = await supabase
-      .from('trivia_questions')
+      .from(tableName)
       .select('*')
       .limit(5);
     
@@ -265,8 +268,9 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
     
     try {
       // Test the connection with a simple query
+      const tableName = getTriviaTableName();
       const { count, error: pingError } = await supabase
-        .from('trivia_questions')
+        .from(tableName)
         .select('*', { count: 'exact', head: true });
         
       if (pingError) {
@@ -274,7 +278,7 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
         throw new Error(`Connection test failed: ${pingError.message}`);
       }
       
-      console.log(`DEBUG: Connection test successful! Database has ${count} records in trivia_questions table.`);
+      console.log(`DEBUG: Connection test successful! Database has ${count} records in ${tableName} table.`);
     } catch (pingError) {
       console.error('DEBUG: Connection test error:', pingError);
       console.log('DEBUG: Falling back to mock data due to connection error');
@@ -287,21 +291,22 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
       await inspectTableStructure();
       
       // Get total count of records in the database
+      const tableName = getTriviaTableName();
       const { count: totalCount, error: countError } = await supabase
-        .from('trivia_questions')
+        .from(tableName)
         .select('*', { count: 'exact', head: true });
         
       if (countError) {
         console.error('Error getting total count:', countError);
         return mockFeedData;
       } else {
-        console.log(`DEBUG: Total questions in database: ${totalCount}`);
+        console.log(`DEBUG: Total questions in ${tableName} database: ${totalCount}`);
       }
       
       // Start building the query
-      console.log('DEBUG: Fetching questions from database...');
+      console.log(`DEBUG: Fetching questions from ${tableName} database...`);
       let query = supabase
-        .from('trivia_questions')
+        .from(tableName)
         .select('*');
       
       // Apply topic filter if configured
@@ -505,7 +510,8 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
 // Function to fetch only new trivia questions that aren't in the provided IDs list
 export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTimestamp?: number): Promise<FeedItem[]> {
   try {
-    console.log(`Fetching new questions, excluding ${existingIds.length} existing IDs`);
+    const tableName = getTriviaTableName();
+    console.log(`Fetching new questions from ${tableName}, excluding ${existingIds.length} existing IDs`);
     if (lastFetchTimestamp) {
       console.log(`🕐 Using last fetch timestamp: ${new Date(lastFetchTimestamp).toISOString()}`);
     }
@@ -513,7 +519,7 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
     // First check if we can connect
     try {
       const { count, error: pingError } = await supabase
-        .from('trivia_questions')
+        .from(tableName)
         .select('*', { count: 'exact', head: true });
         
       if (pingError) {
@@ -534,7 +540,7 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
       console.log(`🚀 Using timestamp-only filtering - fetching questions created after ${new Date(lastFetchTimestamp).toISOString()}`);
       
       let query = supabase
-        .from('trivia_questions')
+        .from(tableName)
         .select('*')
         .gt('created_at', new Date(lastFetchTimestamp).toISOString())
         .limit(100);
@@ -576,7 +582,7 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
           try {
             // Build query for this chunk - exclude this specific chunk of IDs
             let query = supabase
-              .from('trivia_questions')
+              .from(tableName)
               .select('*')
               .not('id', 'in', `(${chunk.join(',')})`)
               .limit(100);
@@ -631,7 +637,7 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
         // For smaller sets, use the original efficient single query approach
         
         let query = supabase
-          .from('trivia_questions')
+          .from(tableName)
           .select('*')
           .not('id', 'in', `(${existingIds.join(',')})`)
           .limit(100);
@@ -651,7 +657,7 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
       console.log(`⚠️ No filtering criteria provided - fetching all questions`);
       
       let query = supabase
-        .from('trivia_questions')
+        .from(tableName)
         .select('*')
         .limit(100);
       
