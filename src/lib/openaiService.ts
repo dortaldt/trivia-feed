@@ -133,14 +133,14 @@ export async function generateQuestions(
   
   // Route to appropriate generation function based on mode
   if (config.mode === 'niche') {
-    return generateNicheQuestions(primaryTopics, preferredSubtopics, preferredBranches, preferredTags, recentQuestions, config);
+    return generateNicheQuestions(primaryTopics, preferredSubtopics, preferredBranches, preferredTags, recentQuestions, avoidIntentsSection, config);
   } else {
     return generateGeneralQuestions(primaryTopics, adjacentTopics, primaryCount, adjacentCount, preferredSubtopics, preferredBranches, preferredTags, recentQuestions, avoidIntentsSection);
   }
 }
 
 /**
- * Generate niche-focused questions using specialized prompts
+ * Generate niche-focused questions using specialized prompts with general mode logic
  */
 async function generateNicheQuestions(
   primaryTopics: string[],
@@ -148,20 +148,45 @@ async function generateNicheQuestions(
   preferredBranches: string[],
   preferredTags: string[],
   recentQuestions: any[],
+  avoidIntentsSection: string,
   config: GenerationConfig
 ): Promise<GeneratedQuestion[]> {
   try {
     console.log('\n\n====================== NICHE OPENAI SERVICE LOGS ======================');
-    console.log('[OPENAI] Starting NICHE question generation');
+    console.log('[OPENAI] Starting 100% CLIENT-SIDE NICHE question generation');
     console.log('[OPENAI] Niche topic focus:', config.nicheTopicFocus);
+    console.log('[OPENAI] Input preferred subtopics:', preferredSubtopics);
+    console.log('[OPENAI] Input preferred branches:', preferredBranches);
+    console.log('[OPENAI] Input preferred tags:', preferredTags);
+    console.log('[OPENAI] SKIPPING database queries - using pure client-side generation');
     
     // Use the niche topic as the primary focus
     const nicheTopic = config.nicheTopicFocus || primaryTopics[0] || 'General Knowledge';
     
-    // Build niche-specific prompt
-    const nichePrompt = buildNichePrompt(nicheTopic, preferredSubtopics, preferredBranches, preferredTags, recentQuestions);
+    // Process client-side recent questions data for duplication avoidance
+    console.log('[OPENAI] Processing client-side recent questions for duplication avoidance:', recentQuestions.length);
     
-    console.log('[OPENAI] Generated niche prompt structure successfully');
+    // Filter recent questions that are relevant to the niche topic for better duplication avoidance
+    const nicheRelevantQuestions = recentQuestions.filter(q => 
+      q.questionText && (
+        !q.topic || // Include questions without topic classification
+        q.topic.toLowerCase() === nicheTopic.toLowerCase() // Include questions from the same niche topic
+      )
+    ).slice(0, 10); // Limit to 10 most recent
+    
+    console.log(`[OPENAI] Found ${nicheRelevantQuestions.length} client-side questions relevant for duplication avoidance`);
+    
+    // Build niche-specific prompt with sophisticated logic
+    const nichePrompt = buildNichePrompt(
+      nicheTopic, 
+      preferredSubtopics, 
+      preferredBranches, 
+      preferredTags, 
+      nicheRelevantQuestions, // Use client-side questions for duplication avoidance
+      avoidIntentsSection
+    );
+    
+    console.log('[OPENAI] Generated niche prompt structure successfully using client-side data only');
     console.log('====================== END NICHE OPENAI SERVICE LOGS ======================\n\n');
     
     // Call OpenAI with niche-specific prompt
@@ -235,6 +260,8 @@ async function generateGeneralQuestions(
       // If we don't have enough interactions, use the available ones
       selectedInteractions = enhancedRecentQuestions;
     }
+    
+    // Continue with existing interactions
     
     // Build the prompt based on the new logic
     let mainPrompt = '';
@@ -321,6 +348,34 @@ async function generateGeneralQuestions(
     Build on the topic "${explorationTopics[2]}" while introducing novel concepts
     `);
     
+    // Create 2 random noun-inspired questions for Q7-8 (randomize themes)
+    const randomThemes = [
+      "cultural, technological, or social aspects",
+      "significance or evolution during the 1990s", 
+      "trends, innovations, or cultural phenomena",
+      "brands, products, or companies",
+      "entertainment, media, or pop culture",
+      "technology, science, or social changes"
+    ];
+    
+    const shuffledThemes = [...randomThemes].sort(() => Math.random() - 0.5);
+    
+    questionPrompts.push(`
+    // Question ${questionPrompts.length + 1}: Random noun inspiration
+    Choose 1 random noun (like "telephone", "hamburger", "bicycle", etc.) and create a unique question about how this item or concept relates to "${explorationTopic}"
+    Focus on ${shuffledThemes[0]} of "${explorationTopic}"
+    The question should explore the connection between this random noun and the topic
+    Make the connection surprising but factually accurate
+    `);
+    
+    questionPrompts.push(`
+    // Question ${questionPrompts.length + 1}: Random noun inspiration  
+    Choose 1 completely different random noun and create a unique question about its connection to "${explorationTopic}"
+    Focus on ${shuffledThemes[1]} from the topic
+    Test knowledge of "${explorationTopic}" through unexpected but factual connections
+    Explore how this item/concept relates to the chosen topic
+    `);
+    
     // Assemble the final prompt
     mainPrompt = `Generate 12 unique trivia questions for a trivia app, following these specific instructions:
 
@@ -391,29 +446,209 @@ async function generateGeneralQuestions(
 }
 
 /**
- * Build niche-focused prompt for specialized question generation
+ * Build niche-focused prompt using 100% client-side data - NO DATABASE QUERIES
  */
 function buildNichePrompt(
   nicheTopic: string,
   preferredSubtopics: string[],
   preferredBranches: string[],
   preferredTags: string[],
-  recentQuestions: any[]
+  recentQuestions: any[],
+  avoidIntentsSection: string
 ): string {
-  return `Generate 12 unique trivia questions EXCLUSIVELY about "${nicheTopic}".
+  console.log(`[OPENAI] 🔄 PURE CLIENT-SIDE MODE: Building niche prompt with actual answered questions`);
+  console.log(`[OPENAI] Recent questions available: ${recentQuestions.length}`);
+  console.log(`[OPENAI] Preferred data: ${preferredSubtopics.length} subtopics, ${preferredBranches.length} branches, ${preferredTags.length} tags`);
+  
+  // Use actual recent questions that the user answered
+  let selectedInteractions = [];
+  
+  // Filter recent questions that match the niche topic and have required data
+  const nicheRelevantQuestions = recentQuestions.filter(q => 
+    q.topic && 
+    q.topic.toLowerCase() === nicheTopic.toLowerCase() &&
+    q.subtopic && 
+    q.branch &&
+    q.tags && 
+    Array.isArray(q.tags) && 
+    q.tags.length > 0
+  );
+  
+  console.log(`[OPENAI] Found ${nicheRelevantQuestions.length} niche-relevant questions with complete data`);
+  
+  // Select up to 3 interactions from recent questions
+  if (nicheRelevantQuestions.length >= 3) {
+    selectedInteractions = nicheRelevantQuestions.slice(0, 3);
+  } else if (nicheRelevantQuestions.length > 0) {
+    // Use what we have and create synthetic ones for the rest
+    selectedInteractions = [...nicheRelevantQuestions];
+    
+    // Create synthetic interactions to fill up to 3
+    const needMore = 3 - selectedInteractions.length;
+    for (let i = 0; i < needMore; i++) {
+      const subtopic = preferredSubtopics[i % preferredSubtopics.length] || "General";
+      const branch = preferredBranches[i % preferredBranches.length] || "Overview";
+      
+      // Distribute tags among interactions
+      const tagChunkSize = Math.ceil(preferredTags.length / needMore);
+      const startIdx = i * tagChunkSize;
+      const interactionTags = preferredTags.slice(startIdx, startIdx + tagChunkSize);
+      
+      selectedInteractions.push({
+        topic: nicheTopic,
+        subtopic: subtopic,
+        branch: branch,
+        tags: interactionTags.length > 0 ? interactionTags : ['general']
+      });
+    }
+  } else {
+    // No recent questions, create synthetic interactions from client-side data
+    console.log(`[OPENAI] No recent questions found, creating synthetic interactions from preferences`);
+    
+    for (let i = 0; i < Math.min(3, Math.max(preferredSubtopics.length, preferredBranches.length, 1)); i++) {
+      const subtopic = preferredSubtopics[i % preferredSubtopics.length] || "General";
+      const branch = preferredBranches[i % preferredBranches.length] || "Overview";
+      
+      // Distribute tags among interactions
+      const tagChunkSize = Math.ceil(preferredTags.length / 3);
+      const startIdx = i * tagChunkSize;
+      const interactionTags = preferredTags.slice(startIdx, startIdx + tagChunkSize);
+      
+      selectedInteractions.push({
+        topic: nicheTopic,
+        subtopic: subtopic,
+        branch: branch,
+        tags: interactionTags.length > 0 ? interactionTags : ['general']
+      });
+    }
+  }
+  
+  console.log(`[OPENAI] Using ${selectedInteractions.length} interactions for question generation`);
+  
+  // Log the source of each interaction
+  selectedInteractions.forEach((interaction, i) => {
+    const isFromQuestion = nicheRelevantQuestions.includes(interaction);
+    console.log(`[OPENAI] Interaction ${i + 1}: ${isFromQuestion ? 'FROM ACTUAL QUESTION' : 'SYNTHETIC'}`);
+    console.log(`[OPENAI]   - Topic: ${interaction.topic}`);
+    console.log(`[OPENAI]   - Subtopic: ${interaction.subtopic}`);
+    console.log(`[OPENAI]   - Branch: ${interaction.branch}`);
+    console.log(`[OPENAI]   - Tags: [${interaction.tags?.join(', ')}]`);
+  });
+  
+  // Log recent questions being used for duplication avoidance
+  console.log(`\n[OPENAI] 📋 RECENT QUESTIONS FOR DUPLICATION AVOIDANCE:`);
+  console.log(`[OPENAI] Using ${recentQuestions.length} recent questions`);
+  recentQuestions.slice(0, 5).forEach((q, i) => {
+    console.log(`[OPENAI]   ${i + 1}. "${q.questionText || 'No text'}"`);
+  });
+  
+  // Build the prompt based on the same logic as general mode
+  const questionPrompts = [];
+  
+  // Create question sets for each interaction (2 questions per interaction instead of 3)
+  selectedInteractions.forEach((interaction, index) => {
+    console.log(`\n[OPENAI] 🎯 Processing Interaction ${index + 1}:`);
+    console.log(`[OPENAI]   Topic: "${interaction.topic}"`);
+    console.log(`[OPENAI]   Subtopic: "${interaction.subtopic}"`);
+    console.log(`[OPENAI]   Branch: "${interaction.branch}"`);
+    console.log(`[OPENAI]   Available Tags: [${interaction.tags?.join(', ') || 'none'}]`);
+    
+    // Create prompts for 2 question types per interaction (REMOVED adjacent subtopic questions)
+    
+    // 1. Preferred branch question - CSV logic: one tag becomes focal, rest become exclusion
+    let focalTag: string | null = null;
+    let exclusionTags = '';
+    
+    if (interaction.tags && interaction.tags.length > 0) {
+      // Pick a random tag to be the focal tag
+      focalTag = interaction.tags[Math.floor(Math.random() * interaction.tags.length)] as string;
+      // All other tags become exclusion tags
+      const otherTags = interaction.tags.filter((tag: any) => tag !== focalTag);
+      exclusionTags = otherTags.length > 0 ? otherTags.join('","') : '';
+    }
+    
+    console.log(`[OPENAI]   🎯 Q${questionPrompts.length + 1} (Preferred Branch): Focal="${focalTag || 'none'}", Exclusion=[${exclusionTags ? `"${exclusionTags}"` : 'none'}]`);
+    
+    questionPrompts.push(`
+    // Question ${questionPrompts.length + 1}: Preferred branch from interaction ${index + 1}
+    Create a question EXCLUSIVELY about topic "${nicheTopic}", subtopic "${interaction.subtopic}", branch "${interaction.branch}"${focalTag ? `
+    Focal tag: "${focalTag}"` : ''}${exclusionTags ? `
+    Exclusion tags: ["${exclusionTags}"]` : ''}
+    `);
+    
+    // 2. Adjacent branch question - CSV logic: NO focal tag, ALL tags become exclusion
+    const allTagsAsExclusion = interaction.tags && interaction.tags.length > 0 
+      ? interaction.tags.join('","') 
+      : '';
+    
+    console.log(`[OPENAI]   🚫 Q${questionPrompts.length + 1} (Adjacent Branch): Focal=none, Exclusion=[${allTagsAsExclusion ? `"${allTagsAsExclusion}"` : 'none'}]`);
+    
+    questionPrompts.push(`
+    // Question ${questionPrompts.length + 1}: Adjacent branch from interaction ${index + 1}
+    Create a question EXCLUSIVELY about topic "${nicheTopic}", subtopic "${interaction.subtopic}", with a NEW random branch (not "${interaction.branch}")${allTagsAsExclusion ? `
+    Exclusion tags: ["${allTagsAsExclusion}"]` : ''}
+    `);
+    
+    // REMOVED: Adjacent subtopic question (Q3, Q6, Q9) - no longer generating these
+  });
+  
+  // Create 2 random noun-inspired questions for Q7-8 (randomize themes)
+  const randomThemes = [
+    "cultural, technological, or social aspects",
+    "significance or evolution during the 1990s", 
+    "trends, innovations, or cultural phenomena",
+    "brands, products, or companies",
+    "entertainment, media, or pop culture",
+    "technology, science, or social changes"
+  ];
+  
+  const shuffledThemes = [...randomThemes].sort(() => Math.random() - 0.5);
+  
+  questionPrompts.push(`
+  // Question ${questionPrompts.length + 1}: Random noun inspiration
+  Choose 1 random noun (like "telephone", "hamburger", "bicycle", etc.) and create a unique question about how this item or concept relates to "${nicheTopic}"
+  Focus on ${shuffledThemes[0]} of "${nicheTopic}"
+  The question should explore the connection between this random noun and the 1990s era
+  Make the connection surprising but factually accurate
+  `);
+  
+  questionPrompts.push(`
+  // Question ${questionPrompts.length + 1}: Random noun inspiration  
+  Choose 1 completely different random noun and create a unique question about its connection to "${nicheTopic}"
+  Focus on ${shuffledThemes[1]} from the 1990s
+  Test knowledge of "${nicheTopic}" through unexpected but factual connections
+  Explore how this item/concept was important during the 1990s
+  `);
+  
+  // Assemble the final prompt (same structure as general mode but niche-focused)
+  return `Generate 8 unique trivia questions EXCLUSIVELY about "${nicheTopic}", following these specific instructions:
 
 CRITICAL NICHE REQUIREMENTS:
-- ALL 12 questions MUST be about "${nicheTopic}" specifically
+- ALL 8 questions MUST be about "${nicheTopic}" specifically
 - DO NOT generate questions about other topics, even if they seem related
+- Every question must have "${nicheTopic}" as its category/topic
 - Focus on deep, specialized knowledge within "${nicheTopic}"
 - Questions should test expertise and nuanced understanding of "${nicheTopic}"
-- Ensure questions cover different aspects, subtopics, and branches within "${nicheTopic}"
-- Every question must have "${nicheTopic}" as its category/topic
 
-PREFERRED FOCUS AREAS:
-${preferredSubtopics.length > 0 ? `- Subtopics: ${preferredSubtopics.join(', ')}` : ''}
-${preferredBranches.length > 0 ? `- Branches: ${preferredBranches.join(', ')}` : ''}
-${preferredTags.length > 0 ? `- Tags: ${preferredTags.join(', ')}` : ''}
+CRITICAL STRUCTURAL REQUIREMENTS:
+- Create EXACTLY 8 questions with detailed personalization
+- Each question must follow the exact JSON structure shown at the end
+- Make sure all questions are factually accurate with current information
+- Include 4 answer choices per question (exactly one correct)
+
+DISTRIBUTION:
+${questionPrompts.join('\n')}
+
+QUESTION UNIQUENESS RULES:
+- Each question must be completely distinct from all others
+- Avoid asking multiple questions about the same person, event, work, or concept within "${nicheTopic}"
+- Ensure questions test different knowledge points even when related to similar aspects of "${nicheTopic}"
+- Before finalizing, check that no two questions have the same answer
+${recentQuestions.length > 0 ? `
+RECENT QUESTIONS TO AVOID DUPLICATING:
+${recentQuestions.slice(0, 5).map((q, i) => `${i + 1}. "${q.questionText}"`).join('\n    ')}` : ''}
+${avoidIntentsSection ? `
+${avoidIntentsSection}` : ''}
 
 NICHE DEPTH REQUIREMENTS:
 - Include questions for both casual fans and deep experts of "${nicheTopic}"
@@ -422,17 +657,16 @@ NICHE DEPTH REQUIREMENTS:
 - Include questions about specific dates, people, events, or details unique to "${nicheTopic}"
 - Focus on trivia that only true enthusiasts of "${nicheTopic}" would know
 
-QUESTION DISTRIBUTION:
-- 4 questions: Easy level (accessible to casual fans)
-- 4 questions: Medium level (knowledgeable fans)
-- 4 questions: Hard level (expert enthusiasts)
-
-${recentQuestions.length > 0 ? `
-RECENT QUESTIONS TO AVOID DUPLICATING:
-${recentQuestions.slice(0, 5).map((q, i) => `${i + 1}. "${q.questionText}"`).join('\n')}` : ''}
-
-CRITICAL: Every question must have "${nicheTopic}" as its category/topic.
-All questions should contribute to a comprehensive "${nicheTopic}" quiz experience.
+For EACH question, include:
+1. A main topic (MUST be "${nicheTopic}")
+2. A specific subtopic that represents a specialized area within "${nicheTopic}"
+3. A precise branch that represents a very specific sub-area within the subtopic
+4. 3-5 specific, descriptive tags related to the question content within "${nicheTopic}"
+5. Four answer choices with only one correct
+6. Difficulty level (easy, medium, hard)
+7. A "learning capsule" providing interesting additional context about the answer
+8. The tone ("educational", "fun", "challenging", "neutral")
+9. Format ("multiple_choice")
 
 IMPORTANT: Respond ONLY with a valid JSON array containing the question objects.
 DO NOT include any text before or after the JSON array.
@@ -463,7 +697,7 @@ ONLY return a JSON array in this exact format:
  * Common function to call OpenAI for generation
  */
 async function callOpenAIForGeneration(prompt: string, mode: 'general' | 'niche'): Promise<GeneratedQuestion[]> {
-  const model = 'gpt-4o-mini'; // Make this easier to change if needed
+  const model = 'gpt-4.1-mini'; // Make this easier to change if needed
   console.log(`[GENERATOR] Making request to edge function for ${mode} generation`);
 
   // Get Supabase credentials from environment variables or Constants
@@ -491,6 +725,13 @@ async function callOpenAIForGeneration(prompt: string, mode: 'general' | 'niche'
   try {
     console.log(`\n\n====================== ${mode.toUpperCase()} OPENAI SERVICE LOGS ======================`);
     console.log(`[OPENAI] Starting ${mode} question generation`);
+    
+    // Log the entire prompt being sent to OpenAI
+    console.log(`\n\n🔥🔥🔥 COMPLETE PROMPT SENT TO OPENAI 🔥🔥🔥`);
+    console.log(`=====================================================`);
+    console.log(prompt);
+    console.log(`=====================================================`);
+    console.log(`🔥🔥🔥 END OF PROMPT 🔥🔥🔥\n\n`);
 
     const { data, error } = await supabase.functions.invoke('generateTriviaQuestions', {
       body: {

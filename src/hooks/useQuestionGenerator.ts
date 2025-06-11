@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { runQuestionGeneration } from '../lib/questionGeneratorService';
+import { runQuestionGeneration, shouldGenerateQuestions } from '../lib/questionGeneratorService';
 import { logGeneratorEvent } from '../lib/syncService';
 import { supabase } from '../lib/supabaseClient';
 import { getTriviaTableName } from '../utils/tableUtils';
@@ -20,6 +20,8 @@ interface RecentQuestionData {
  * This separates the generation logic from components for easier integration
  */
 export function useQuestionGenerator() {
+  console.log("🔥 HOOK LOADED: useQuestionGenerator hook is being executed");
+  
   // Use a ref to track when the last generation was attempted to prevent multiple calls
   const lastGenerationAttemptRef = useRef<number>(0);
   
@@ -74,29 +76,52 @@ export function useQuestionGenerator() {
    * Can be called after a user answers questions
    */
   const triggerQuestionGeneration = useCallback(async (userId: string) => {
-    // Performance tracker ⏱️ - Question Generation Trigger START
-    const questionGenStart = performance.now();
-    // console.log(`[Performance tracker ⏱️] Question Generation Trigger - Started: ${questionGenStart.toFixed(2)}ms`);
+    console.log("🔥🔥🔥 TRIGGER FUNCTION CALLED!!! 🔥🔥🔥");
+    console.log(`🚀 [GENERATOR_HOOK] triggerQuestionGeneration called with userId: ${userId}`);
     
-    if (!userId) {
-      // Performance tracker ⏱️ - Question Generation Trigger END (early return)
-      const questionGenEnd = performance.now();
-      // console.log(`[Performance tracker ⏱️] Question Generation Trigger - Ended (early): ${questionGenEnd.toFixed(2)}ms | Duration: ${(questionGenEnd - questionGenStart).toFixed(2)}ms`);
+    try {
+      // Performance tracker ⏱️ - Question Generation Trigger START
+      const questionGenStart = performance.now();
+      console.log(`[GENERATOR_HOOK] Performance tracker started at: ${questionGenStart.toFixed(2)}ms`);
+      
+      if (!userId) {
+        console.log(`[GENERATOR_HOOK] No userId provided, returning early`);
+        // Performance tracker ⏱️ - Question Generation Trigger END (early return)
+        const questionGenEnd = performance.now();
+        // console.log(`[Performance tracker ⏱️] Question Generation Trigger - Ended (early): ${questionGenEnd.toFixed(2)}ms | Duration: ${(questionGenEnd - questionGenStart).toFixed(2)}ms`);
+        return;
+      }
+      
+      console.log(`[GENERATOR_HOOK] Proceeding with generation for user: ${userId}`);
+    } catch (error) {
+      console.error(`[GENERATOR_HOOK] Error at start of triggerQuestionGeneration:`, error);
       return;
     }
     
-    // Check if we've attempted generation recently (within last 30 seconds)
-    const now = Date.now();
-    if (lastGenerationAttemptRef.current && (now - lastGenerationAttemptRef.current) < 30000) {
-      // console.log('[GENERATOR_HOOK] Skipping generation - attempted recently');
-      // Performance tracker ⏱️ - Question Generation Trigger END (recent attempt)
-      const questionGenEnd = performance.now();
-      // console.log(`[Performance tracker ⏱️] Question Generation Trigger - Ended (recent attempt): ${questionGenEnd.toFixed(2)}ms | Duration: ${(questionGenEnd - questionGenStart).toFixed(2)}ms`);
+    try {
+      // Check if we've attempted generation recently (within last 30 seconds)
+      console.log(`[GENERATOR_HOOK] Checking recent generation attempts...`);
+      const now = Date.now();
+      const lastAttempt = lastGenerationAttemptRef.current;
+      console.log(`[GENERATOR_HOOK] Last attempt: ${lastAttempt}, Now: ${now}, Diff: ${lastAttempt ? now - lastAttempt : 'N/A'}ms`);
+      
+      if (lastGenerationAttemptRef.current && (now - lastGenerationAttemptRef.current) < 30000) {
+        console.log('[GENERATOR_HOOK] Skipping generation - attempted recently (less than 30 seconds ago)');
+        // Performance tracker ⏱️ - Question Generation Trigger END (recent attempt)
+        const questionGenEnd = performance.now();
+        // console.log(`[Performance tracker ⏱️] Question Generation Trigger - Ended (recent attempt): ${questionGenEnd.toFixed(2)}ms | Duration: ${(questionGenEnd - questionGenStart).toFixed(2)}ms`);
+        return;
+      }
+      
+      console.log(`[GENERATOR_HOOK] Recent attempt check passed, proceeding...`);
+      
+      // Mark that we're attempting generation now
+      lastGenerationAttemptRef.current = now;
+      console.log(`[GENERATOR_HOOK] Marked generation attempt at: ${now}`);
+    } catch (error) {
+      console.error(`[GENERATOR_HOOK] Error in recent attempt check:`, error);
       return;
     }
-    
-    // Mark that we're attempting generation now
-    lastGenerationAttemptRef.current = now;
     
     try {
       // console.log('[GENERATOR_HOOK] Attempting to trigger question generation...');
@@ -211,18 +236,47 @@ export function useQuestionGenerator() {
         
         // console.log('[GENERATOR_HOOK] Enhanced topics with combinations:', enhancedTopics);
         
+        // Check if generation should happen based on the "every 6 questions" rule
+        const shouldGenerateResult = await shouldGenerateQuestions(userId);
+        console.log(`[GENERATOR_HOOK] shouldGenerateQuestions result:`, shouldGenerateResult);
+        if (!shouldGenerateResult.shouldGenerate) {
+          console.log(`[GENERATOR_HOOK] Skipping generation - ${shouldGenerateResult.reason}: ${shouldGenerateResult.answerCount} answers`);
+          return;
+        }
+        
+        // Prepare recent questions with full data for duplication avoidance and tag extraction
+        const recentQuestionsForGeneration = userInteractions.map(interaction => ({
+          id: interaction.id,
+          questionText: interaction.questionText || '',
+          topic: interaction.topic,
+          subtopic: interaction.subtopic,
+          branch: interaction.branch,
+          tags: interaction.tags
+        }));
+        
+        console.log(`[GENERATOR_HOOK] Passing ${recentQuestionsForGeneration.length} recent questions to generation`);
+        
         // Attempt question generation with enhanced topics and client-side preferences
         const success = await runQuestionGeneration(
           userId,
           enhancedTopics,  // Use enhanced topics
           clientRecentSubtopics,
           clientRecentBranches,
-          clientRecentTags
+          clientRecentTags,
+          recentQuestionsForGeneration // Pass recent questions with full data
         );
         
         // console.log('[GENERATOR_HOOK] Question generation result:', success);
       } else {
         // console.log('[GENERATOR_HOOK] No client-side interactions found, using basic generation');
+        
+        // Check if generation should happen based on the "every 6 questions" rule
+        const shouldGenerateResult = await shouldGenerateQuestions(userId);
+        console.log(`[GENERATOR_HOOK] shouldGenerateQuestions result (fallback):`, shouldGenerateResult);
+        if (!shouldGenerateResult.shouldGenerate) {
+          console.log(`[GENERATOR_HOOK] Skipping generation (fallback) - ${shouldGenerateResult.reason}: ${shouldGenerateResult.answerCount} answers`);
+          return;
+        }
         
         // Fallback to basic question generation if no client interactions
         const success = await runQuestionGeneration(userId);
@@ -230,11 +284,11 @@ export function useQuestionGenerator() {
       }
     } catch (error) {
       console.error('[GENERATOR_HOOK] Error during question generation:', error);
+      
+      // Performance tracker ⏱️ - Question Generation Trigger END (error)
+      const questionGenEnd = performance.now();
+      console.log(`[GENERATOR_HOOK] Performance tracker ended with error at: ${questionGenEnd.toFixed(2)}ms`);
     }
-    
-    // Performance tracker ⏱️ - Question Generation Trigger END
-    const questionGenEnd = performance.now();
-    // console.log(`[Performance tracker ⏱️] Question Generation Trigger - Ended: ${questionGenEnd.toFixed(2)}ms | Duration: ${(questionGenEnd - questionGenStart).toFixed(2)}ms`);
   }, []);
   
   /**

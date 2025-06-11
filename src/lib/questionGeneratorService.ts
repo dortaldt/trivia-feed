@@ -269,12 +269,26 @@ export function registerUserAnswer(userId: string): number {
   // Initialize if needed
   if (!clientSideAnswerCounts[userId]) {
     clientSideAnswerCounts[userId] = 0;
+    console.log(`[REGISTER_ANSWER] Initializing answer count for ${userId}`);
   }
+  
+  // Get the previous count
+  const previousCount = clientSideAnswerCounts[userId];
   
   // Increment and return the new count
   clientSideAnswerCounts[userId]++;
-  // console.log(`[GENERATOR] Client-side answer count for ${userId}: ${clientSideAnswerCounts[userId]}`);
-  return clientSideAnswerCounts[userId];
+  const newCount = clientSideAnswerCounts[userId];
+  
+  console.log(`[REGISTER_ANSWER] User ${userId}: ${previousCount} → ${newCount}`);
+  
+  // Special logging for important milestones
+  if (newCount === 6) {
+    console.log(`🎯 [REGISTER_ANSWER] MILESTONE: User ${userId} reached 6 answers - should trigger generation!`);
+  } else if (newCount % 6 === 0 && newCount > 6) {
+    console.log(`🎯 [REGISTER_ANSWER] MILESTONE: User ${userId} reached ${newCount} answers - should trigger generation!`);
+  }
+  
+  return newCount;
 }
 
 /**
@@ -410,7 +424,14 @@ export async function runQuestionGeneration(
   clientSubtopics?: string[],
   clientBranches?: string[],
   clientTags?: string[],
-  recentQuestions?: {id: string, questionText: string}[] // Add parameter for recent questions
+  recentQuestions?: {
+    id: string, 
+    questionText: string,
+    topic?: string,
+    subtopic?: string,
+    branch?: string,
+    tags?: string[]
+  }[] // Updated to accept full question structure from client
 ): Promise<boolean> {
   try {
     // Ensure user ID is valid
