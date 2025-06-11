@@ -1753,9 +1753,10 @@ const FeedScreen: React.FC = () => {
     preloadNextItems(0);
   }, [preloadNextItems]);
 
-  const viewabilityConfigCallbackPairs = useRef([
-    { viewabilityConfig, onViewableItemsChanged },
-  ]);
+  // DISABLED: viewabilityConfigCallbackPairs to prevent scroll interference
+  // const viewabilityConfigCallbackPairs = useRef([
+  //   { viewabilityConfig, onViewableItemsChanged },
+  // ]);
 
   const onMomentumScrollBegin = useCallback(() => {
     lastInteractionTime.current = Date.now();
@@ -3028,7 +3029,8 @@ const FeedScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         pagingEnabled={true}
         getItemLayout={getItemLayout}
-        viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
+        // DISABLED: viewabilityConfigCallbackPairs to prevent scroll interference
+        // viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
         onMomentumScrollBegin={onMomentumScrollBegin}
         onMomentumScrollEnd={onMomentumScrollEnd}
         onScroll={Platform.OS === 'web' ? undefined : handleScroll} // Disable React scroll handler on web - using DOM prevention instead

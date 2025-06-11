@@ -462,11 +462,19 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         // Process sub-topics that are both configured and have questions
         Object.keys(subTopicsConfig).forEach(subTopic => {
           if (availableSubTopics.has(subTopic)) {
-            const correctAnswersCount = getCorrectAnswersForSubTopic(subTopic);
+            const reduxCorrectCount = getCorrectAnswersForSubTopic(subTopic);
             const existingRing = ringsState.rings[subTopic];
             
-            if (!existingRing || existingRing.totalCorrectAnswers !== correctAnswersCount) {
-              const newRing = createSubTopicRingProgress(subTopic, correctAnswersCount, existingRing);
+            const correctAnswersToUse = Math.max(reduxCorrectCount, existingRing?.totalCorrectAnswers || 0);
+            
+            if (!existingRing || existingRing.totalCorrectAnswers !== correctAnswersToUse) {
+              const oldCount = existingRing?.totalCorrectAnswers || 0;
+              
+              if (correctAnswersToUse > oldCount) {
+                // console.log(`[SUB-TOPIC RING PROGRESS] ${subTopic}: Adding ${correctAnswersToUse - oldCount} new correct answers (${oldCount} → ${correctAnswersToUse})`);
+              }
+              
+              const newRing = createSubTopicRingProgress(subTopic, correctAnswersToUse, existingRing);
               // console.log(`[SUB-TOPIC RING UPDATE] "${subTopic}": ${newRing.totalCorrectAnswers} correct → Level ${newRing.level}, Progress ${newRing.currentProgress}/${newRing.targetAnswers}`);
               newRings[subTopic] = newRing;
               hasChanges = true;
@@ -478,11 +486,19 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         // This makes the system more robust
         availableSubTopics.forEach(subTopic => {
           if (!subTopicsConfig[subTopic]) {
-            const correctAnswersCount = getCorrectAnswersForSubTopic(subTopic);
+            const reduxCorrectCount = getCorrectAnswersForSubTopic(subTopic);
             const existingRing = ringsState.rings[subTopic];
             
-            if (correctAnswersCount > 0 && (!existingRing || existingRing.totalCorrectAnswers !== correctAnswersCount)) {
-              const newRing = createSubTopicRingProgress(subTopic, correctAnswersCount, existingRing);
+            const correctAnswersToUse = Math.max(reduxCorrectCount, existingRing?.totalCorrectAnswers || 0);
+            
+            if (correctAnswersToUse > 0 && (!existingRing || existingRing.totalCorrectAnswers !== correctAnswersToUse)) {
+              const oldCount = existingRing?.totalCorrectAnswers || 0;
+              
+              if (correctAnswersToUse > oldCount) {
+                // console.log(`[SUB-TOPIC RING PROGRESS] ${subTopic} (unconfigured): Adding ${correctAnswersToUse - oldCount} new correct answers (${oldCount} → ${correctAnswersToUse})`);
+              }
+              
+              const newRing = createSubTopicRingProgress(subTopic, correctAnswersToUse, existingRing);
               // console.log(`[SUB-TOPIC RING UPDATE] "${subTopic}" (unconfigured): ${newRing.totalCorrectAnswers} correct → Level ${newRing.level}, Progress ${newRing.currentProgress}/${newRing.targetAnswers}`);
               newRings[subTopic] = newRing;
               hasChanges = true;
@@ -530,17 +546,68 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
       .filter(ring => ring && ring.totalCorrectAnswers > 0);
 
     if (shouldUseSubTopics) {
-      // In sub-topic mode, only show sub-topic rings
+      // In sub-topic mode, use same logic as default: top 3 + most recent
       const subTopicRings = ringsWithProgress
         .filter(ring => ring.isSubTopic)
-        .sort((a, b) => b.totalCorrectAnswers - a.totalCorrectAnswers)
-        .slice(0, 4); // Show top 4 sub-topic rings
+        .sort((a, b) => b.totalCorrectAnswers - a.totalCorrectAnswers);
+
+      // Get top 3 sub-topic rings by progress
+      const top3SubTopicRings = subTopicRings.slice(0, 3);
+      const top3SubTopics = new Set(top3SubTopicRings.map(ring => ring.topic));
+
+      // Find the most recent sub-topic ring that's not in top 3
+      let recentSubTopicRing: TopicRingProgress | null = null;
       
-      console.log(`[SUB-TOPIC RINGS] Showing ${subTopicRings.length} sub-topic rings:`, 
-        subTopicRings.map(ring => `${ring.topic} (${ring.totalCorrectAnswers} correct)`).join(', ')
+      if (subTopicRings.length > 3) {
+        // Get all sub-topic rings not in top 3
+        const nonTop3SubTopicRings = subTopicRings.filter(ring => !top3SubTopics.has(ring.topic));
+        
+        if (nonTop3SubTopicRings.length > 0) {
+          // Find the most recently answered sub-topic by checking Redux questions
+          let mostRecentSubTopic: string | null = null;
+          
+          // Get all correct answers for non-top-3 sub-topics
+          const correctAnswersForNonTop3SubTopics: {topic: string, questionId: string}[] = [];
+          
+          Object.entries(questions).forEach(([questionId, questionState]) => {
+            if (questionState.status === 'answered' && questionState.isCorrect) {
+              const questionMapping = feedItemsMap.get(questionId);
+              if (questionMapping?.subtopic && !top3SubTopics.has(questionMapping.subtopic) &&
+                  questionMapping.topic === topics[activeTopic]?.dbTopicName) {
+                correctAnswersForNonTop3SubTopics.push({topic: questionMapping.subtopic, questionId});
+              }
+            }
+          });
+          
+          // If we have correct answers for non-top-3 sub-topics, take the last one
+          if (correctAnswersForNonTop3SubTopics.length > 0) {
+            const lastCorrectAnswer = correctAnswersForNonTop3SubTopics[correctAnswersForNonTop3SubTopics.length - 1];
+            mostRecentSubTopic = lastCorrectAnswer.topic;
+          }
+          
+          // If we found a recent sub-topic, find its ring
+          if (mostRecentSubTopic) {
+            recentSubTopicRing = nonTop3SubTopicRings.find(ring => ring.topic === mostRecentSubTopic) || null;
+          }
+          
+          // If no recent sub-topic found from questions, use the highest progress non-top-3 ring
+          if (!recentSubTopicRing && nonTop3SubTopicRings.length > 0) {
+            recentSubTopicRing = nonTop3SubTopicRings[0];
+          }
+        }
+      }
+
+      // Combine top 3 + recent sub-topic ring
+      const finalSubTopicRings = [...top3SubTopicRings];
+      if (recentSubTopicRing) {
+        finalSubTopicRings.push(recentSubTopicRing);
+      }
+      
+      console.log(`[SUB-TOPIC RINGS] Showing ${finalSubTopicRings.length} sub-topic rings (top 3 + recent):`, 
+        finalSubTopicRings.map(ring => `${ring.topic} (${ring.totalCorrectAnswers} correct)`).join(', ')
       );
       
-      return subTopicRings;
+      return finalSubTopicRings;
     } else {
       // Regular topic mode logic
       const regularRings = ringsWithProgress
