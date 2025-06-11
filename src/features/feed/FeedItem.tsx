@@ -164,7 +164,7 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
   const animateAnswerPress = useCallback((index: number, pressed: boolean) => {
     // Performance tracker ⏱️ - UI Animation Calculation START
     const animationStart = performance.now();
-    console.log(`[Performance tracker ⏱️] UI Animation Calculation - Started: ${animationStart.toFixed(2)}ms`);
+    // console.log(`[Performance tracker ⏱️] UI Animation Calculation - Started: ${animationStart.toFixed(2)}ms`);
     
     Animated.spring(answerAnimations[index], {
       toValue: pressed ? 0.98 : 1,
@@ -175,13 +175,13 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
     
     // Performance tracker ⏱️ - UI Animation Calculation END
     const animationEnd = performance.now();
-    console.log(`[Performance tracker ⏱️] UI Animation Calculation - Ended: ${animationEnd.toFixed(2)}ms | Duration: ${(animationEnd - animationStart).toFixed(2)}ms`);
+    // console.log(`[Performance tracker ⏱️] UI Animation Calculation - Ended: ${animationEnd.toFixed(2)}ms | Duration: ${(animationEnd - animationStart).toFixed(2)}ms`);
   }, [answerAnimations]);
 
   const calculateFontSize = useMemo(() => {
     // Performance tracker ⏱️ - UI Animation Calculation START (Font Size)
     const fontCalcStart = performance.now();
-    console.log(`[Performance tracker ⏱️] UI Animation Calculation (Font Size) - Started: ${fontCalcStart.toFixed(2)}ms`);
+    // console.log(`[Performance tracker ⏱️] UI Animation Calculation (Font Size) - Started: ${fontCalcStart.toFixed(2)}ms`);
     
     const textLength = item.question.length;
     const lineBreaks = (item.question.match(/\n/g) || []).length;
@@ -211,7 +211,7 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
     
     // Performance tracker ⏱️ - UI Animation Calculation END (Font Size)
     const fontCalcEnd = performance.now();
-    console.log(`[Performance tracker ⏱️] UI Animation Calculation (Font Size) - Ended: ${fontCalcEnd.toFixed(2)}ms | Duration: ${(fontCalcEnd - fontCalcStart).toFixed(2)}ms`);
+    // console.log(`[Performance tracker ⏱️] UI Animation Calculation (Font Size) - Ended: ${fontCalcEnd.toFixed(2)}ms | Duration: ${(fontCalcEnd - fontCalcStart).toFixed(2)}ms`);
     
     return fontSize;
   }, [item.question]);
@@ -257,13 +257,13 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
     
     // Performance tracker ⏱️ - Performance & Analytics Calculation START
     const analyticsStart = performance.now();
-    console.log(`[Performance tracker ⏱️] Performance & Analytics Calculation - Started: ${analyticsStart.toFixed(2)}ms`);
+    // console.log(`[Performance tracker ⏱️] Performance & Analytics Calculation - Started: ${analyticsStart.toFixed(2)}ms`);
     
     // Early return if already answered
     if (isAnswered()) {
       // Performance tracker ⏱️ - Performance & Analytics Calculation END (early return)
       const analyticsEnd = performance.now();
-      console.log(`[Performance tracker ⏱️] Performance & Analytics Calculation - Ended (early): ${analyticsEnd.toFixed(2)}ms | Duration: ${(analyticsEnd - analyticsStart).toFixed(2)}ms`);
+      // console.log(`[Performance tracker ⏱️] Performance & Analytics Calculation - Ended (early): ${analyticsEnd.toFixed(2)}ms | Duration: ${(analyticsEnd - analyticsStart).toFixed(2)}ms`);
       console.log('🎯 [FeedItem] Early return - question already answered');
       return;
     }
@@ -340,7 +340,7 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
     
     // Performance tracker ⏱️ - Performance & Analytics Calculation END
     const analyticsEnd = performance.now();
-    console.log(`[Performance tracker ⏱️] Performance & Analytics Calculation - Ended: ${analyticsEnd.toFixed(2)}ms | Duration: ${(analyticsEnd - analyticsStart).toFixed(2)}ms`);
+    // console.log(`[Performance tracker ⏱️] Performance & Analytics Calculation - Ended: ${analyticsEnd.toFixed(2)}ms | Duration: ${(analyticsEnd - analyticsStart).toFixed(2)}ms`);
     console.log('🎯 [FeedItem] selectAnswerCore completed');
   }, [
     isAnswered, 

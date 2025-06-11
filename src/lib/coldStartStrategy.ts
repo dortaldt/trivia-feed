@@ -107,14 +107,14 @@ function groupQuestionsByTopic(allQuestions: FeedItem[]): Map<Topic, Map<Subtopi
       topicMap.get(subtopic)!.push(question);
     });
 
-    // Log detailed structure of grouped questions
-    console.log('📊 [groupQuestionsByTopic] Final grouping structure:');
-    Array.from(groupedQuestions.entries()).forEach(([topic, subtopicMap]) => {
-      console.log(`  📂 Topic: ${topic} (${subtopicMap.size} subtopics)`);
-      Array.from(subtopicMap.entries()).forEach(([subtopic, questions]) => {
-        console.log(`    📝 Subtopic: ${subtopic} (${questions.length} questions)`);
-      });
-    });
+    // Log detailed structure of grouped questions (commented out to reduce spam)
+    // console.log('📊 [groupQuestionsByTopic] Final grouping structure:');
+    // Array.from(groupedQuestions.entries()).forEach(([topic, subtopicMap]) => {
+    //   console.log(`  📂 Topic: ${topic} (${subtopicMap.size} subtopics)`);
+    //   Array.from(subtopicMap.entries()).forEach(([subtopic, questions]) => {
+    //     console.log(`    📝 Subtopic: ${subtopic} (${questions.length} questions)`);
+    //   });
+    // });
 
     // Log how many questions were kept after filtering
     if (filterByTopic && topicToFilter) {
@@ -526,7 +526,7 @@ function getBranchingPhaseQuestions(
 ): FeedItem[] {
   // Performance tracker ⏱️ - Cold Start Phase Calculation START
   const coldStartPhaseStart = performance.now();
-  console.log(`[Performance tracker ⏱️] Cold Start Phase Calculation (Branching) - Started: ${coldStartPhaseStart.toFixed(2)}ms`);
+  // console.log(`[Performance tracker ⏱️] Cold Start Phase Calculation (Branching) - Started: ${coldStartPhaseStart.toFixed(2)}ms`);
   
   // Add detailed debug logging
   logger.info('ColdStart', "Getting Branching phase questions (6-12 answered)");
@@ -946,7 +946,7 @@ function getBranchingPhaseQuestions(
   
   // Performance tracker ⏱️ - Cold Start Phase Calculation END
   const coldStartPhaseEnd = performance.now();
-  console.log(`[Performance tracker ⏱️] Cold Start Phase Calculation (Branching) - Ended: ${coldStartPhaseEnd.toFixed(2)}ms | Duration: ${(coldStartPhaseEnd - coldStartPhaseStart).toFixed(2)}ms`);
+  // console.log(`[Performance tracker ⏱️] Cold Start Phase Calculation (Branching) - Ended: ${coldStartPhaseEnd.toFixed(2)}ms | Duration: ${(coldStartPhaseEnd - coldStartPhaseStart).toFixed(2)}ms`);
   
   return selectedQuestions;
 }
@@ -1945,12 +1945,12 @@ function selectQuestionsWithSubtopicVariety(
   state: ColdStartState,
   targetCount: number
 ): FeedItem[] {
-  console.log('🌈 SUBTOPIC VARIETY SELECTION START:', { targetCount });
-  console.log('📊 Grouped questions structure:', {
-    topicCount: groupedQuestions.size,
-    topics: Array.from(groupedQuestions.keys()),
-    shownQuestionIds: state.shownQuestionIds.size
-  });
+  // console.log('🌈 SUBTOPIC VARIETY SELECTION START:', { targetCount });
+  // console.log('📊 Grouped questions structure:', {
+  //   topicCount: groupedQuestions.size,
+  //   topics: Array.from(groupedQuestions.keys()),
+  //   shownQuestionIds: state.shownQuestionIds.size
+  // });
 
   const selectedQuestions: FeedItem[] = [];
   const usedSubtopics = new Set<string>();
@@ -1959,27 +1959,27 @@ function selectQuestionsWithSubtopicVariety(
   const subtopicData: { subtopic: string, questions: FeedItem[] }[] = [];
   
   Array.from(groupedQuestions.entries()).forEach(([topic, subtopicMap]) => {
-    console.log(`📂 Processing topic: ${topic}, subtopics: ${subtopicMap.size}`);
+    // console.log(`📂 Processing topic: ${topic}, subtopics: ${subtopicMap.size}`);
     Array.from(subtopicMap.entries()).forEach(([subtopic, questions]) => {
       const availableQuestions = questions.filter(q => !state.shownQuestionIds.has(q.id));
-      console.log(`  📝 Subtopic "${subtopic}": ${availableQuestions.length}/${questions.length} available questions`);
+      // console.log(`  📝 Subtopic "${subtopic}": ${availableQuestions.length}/${questions.length} available questions`);
       if (availableQuestions.length > 0) {
         subtopicData.push({ subtopic, questions: availableQuestions });
       }
     });
   });
   
-  console.log(`🎲 Found ${subtopicData.length} subtopics with available questions:`, 
-    subtopicData.map(s => `${s.subtopic}(${s.questions.length})`));
+  // console.log(`🎲 Found ${subtopicData.length} subtopics with available questions:`, 
+  //   subtopicData.map(s => `${s.subtopic}(${s.questions.length})`));
   
   if (subtopicData.length === 0) {
-    console.log('❌ No subtopics with available questions - returning empty array');
+    // console.log('❌ No subtopics with available questions - returning empty array');
     return selectedQuestions;
   }
   
   // Shuffle subtopics to randomize order
   shuffleArray(subtopicData);
-  console.log('🔀 Shuffled subtopic order:', subtopicData.map(s => s.subtopic));
+  // console.log('🔀 Shuffled subtopic order:', subtopicData.map(s => s.subtopic));
   
   // Strategy: Try to get one question from each different subtopic first
   for (const { subtopic, questions } of subtopicData) {
@@ -1996,13 +1996,13 @@ function selectQuestionsWithSubtopicVariety(
       state.topicsShown.add(question.topic);
       state.isExplorationQuestion.add(question.id);
       
-      console.log(`✅ Selected question ${selectedQuestions.length}/${targetCount} from subtopic "${subtopic}": "${question.question?.substring(0, 50)}..."`);
+      // console.log(`✅ Selected question ${selectedQuestions.length}/${targetCount} from subtopic "${subtopic}": "${question.question?.substring(0, 50)}..."`);
     }
   }
   
   // If we still need more questions, cycle through subtopics again
   if (selectedQuestions.length < targetCount) {
-    console.log(`🔄 Need ${targetCount - selectedQuestions.length} more questions, cycling through subtopics again`);
+    // console.log(`🔄 Need ${targetCount - selectedQuestions.length} more questions, cycling through subtopics again`);
     
     for (const { subtopic, questions } of subtopicData) {
       if (selectedQuestions.length >= targetCount) break;
@@ -2018,12 +2018,12 @@ function selectQuestionsWithSubtopicVariety(
         state.topicsShown.add(question.topic);
         state.isExplorationQuestion.add(question.id);
         
-        console.log(`🔄 Additional question ${selectedQuestions.length}/${targetCount} from subtopic "${subtopic}": "${question.question?.substring(0, 50)}..."`);
+        // console.log(`🔄 Additional question ${selectedQuestions.length}/${targetCount} from subtopic "${subtopic}": "${question.question?.substring(0, 50)}..."`);
       }
     }
   }
   
-  console.log(`🎯 SUBTOPIC VARIETY SELECTION COMPLETE: Selected ${selectedQuestions.length}/${targetCount} questions from ${usedSubtopics.size} different subtopics`);
+  // console.log(`🎯 SUBTOPIC VARIETY SELECTION COMPLETE: Selected ${selectedQuestions.length}/${targetCount} questions from ${usedSubtopics.size} different subtopics`);
   
   return selectedQuestions;
 }

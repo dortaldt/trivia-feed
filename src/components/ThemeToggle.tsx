@@ -63,17 +63,17 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ style, size = 'normal' }) => 
         const storedTheme = await AsyncStorage.getItem('app-theme');
         const storedColorScheme = await AsyncStorage.getItem('app-color-scheme');
         
-        console.log('ThemeToggle diagnostics:');
-        console.log('- Stored theme:', storedTheme);
-        console.log('- Stored color scheme:', storedColorScheme);
+        // console.log('ThemeToggle diagnostics:');
+        // console.log('- Stored theme:', storedTheme);
+        // console.log('- Stored color scheme:', storedColorScheme);
         
         // For web, check CSS variables
         if (Platform.OS === 'web') {
           const themeId = getComputedStyle(document.documentElement).getPropertyValue('--theme-id').trim();
           const dataTheme = document.documentElement.dataset.theme;
           
-          console.log('- CSS theme variable:', themeId);
-          console.log('- HTML data-theme attribute:', dataTheme);
+          // console.log('- CSS theme variable:', themeId);
+          // console.log('- HTML data-theme attribute:', dataTheme);
         }
       } catch (error) {
         console.error('Error checking theme status:', error);
@@ -92,10 +92,10 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ style, size = 'normal' }) => 
         currentTheme = themeContext.currentTheme;
         colorScheme = themeContext.colorScheme;
         
-        console.log('Successfully connected to ThemeContext:');
-        console.log('- Current theme:', currentTheme);
-        console.log('- Color scheme:', colorScheme);
-        console.log('- Is neon theme:', themeContext.isNeonTheme);
+        // console.log('Successfully connected to ThemeContext:');
+        // console.log('- Current theme:', currentTheme);
+        // console.log('- Color scheme:', colorScheme);
+        // console.log('- Is neon theme:', themeContext.isNeonTheme);
       }
     } catch (error) {
       console.warn('ThemeToggle: Could not access context/ThemeContext, trying theme/ThemeProvider', error);
@@ -121,9 +121,9 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ style, size = 'normal' }) => 
           // Update current values
           colorScheme = simpleThemeContext.theme as ColorSchemeType;
           
-          console.log('Using fallback UIThemeProvider:');
-          console.log('- UI theme:', simpleThemeContext.theme);
-          console.log('- Is dark mode:', simpleThemeContext.isDarkMode);
+          // console.log('Using fallback UIThemeProvider:');
+          // console.log('- UI theme:', simpleThemeContext.theme);
+          // console.log('- Is dark mode:', simpleThemeContext.isDarkMode);
         }
       } catch (secondError) {
         console.warn('ThemeToggle: Could not access theme/ThemeProvider either', secondError);
@@ -168,7 +168,7 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ style, size = 'normal' }) => 
   // Select a theme and close the modal
   const selectTheme = (themeId: ThemeName) => {
     if (themeContext && themeContext.setTheme) {
-      console.log(`ThemeToggle: Setting theme to ${themeId}`);
+      // console.log(`ThemeToggle: Setting theme to ${themeId}`);
       themeContext.setTheme(themeId);
       
       // Direct application for web platform
@@ -198,7 +198,7 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ style, size = 'normal' }) => 
           // Force apply theme variables
           const themeDefinition = themeMap[themeId];
           if (themeDefinition) {
-            console.log(`ThemeToggle: Directly applying ${themeId} theme variables`);
+            // console.log(`ThemeToggle: Directly applying ${themeId} theme variables`);
             applyThemeVariables(themeDefinition, colorScheme);
             setMetaThemeColor(themeDefinition, colorScheme);
             

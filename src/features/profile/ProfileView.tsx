@@ -58,11 +58,11 @@ const ProfileView: React.FC = () => {
   
   // Add debug log for current auth state
   useEffect(() => {
-    console.log('ProfileView - Auth state:', { 
-      user: user ? `User ID: ${user.id.substring(0, 5)}...` : 'No user', 
-      isGuest, 
-      authLoading 
-    });
+    // console.log('ProfileView - Auth state:', { 
+    //   user: user ? `User ID: ${user.id.substring(0, 5)}...` : 'No user', 
+    //   isGuest, 
+    //   authLoading 
+    // });
     
     // Check AsyncStorage directly for debugging
     const checkGuestMode = async () => {
@@ -84,7 +84,7 @@ const ProfileView: React.FC = () => {
   const fetchUserProfile = async () => {
     // MODIFIED: No longer fetch directly from database
     // User profile data should already be available from SimplifiedSyncManager
-    console.log('ProfileView - Avoiding direct database access, using SimplifiedSyncManager data instead');
+    // console.log('ProfileView - Avoiding direct database access, using SimplifiedSyncManager data instead');
     
     if (!user) return;
     

@@ -3,63 +3,47 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-console.log(`DEBUG: Initializing Supabase client on ${Platform.OS}`);
-
 let supabaseUrl = '';
 let supabaseAnonKey = '';
 
 // First check values in app.config.js (which can read from .env files during build)
 const extraFromConfig = Constants.expoConfig?.extra;
 
-// Debug what's available in Constants.expoConfig
-console.log('DEBUG: Constants.expoConfig =', JSON.stringify(Constants.expoConfig, null, 2));
-
 if (extraFromConfig) {
-  console.log('DEBUG: Checking app.config.js for Supabase credentials');
-  
   if (extraFromConfig.supabaseUrl) {
-    console.log(`DEBUG: Found Supabase URL in app.config.js: ${extraFromConfig.supabaseUrl}`);
     supabaseUrl = extraFromConfig.supabaseUrl;
   }
   
   if (extraFromConfig.supabaseAnonKey) {
-    console.log('DEBUG: Found Supabase key in app.config.js (key not shown for security)');
     supabaseAnonKey = extraFromConfig.supabaseAnonKey;
   }
 }
 
 // Fallback to Expo environment variables directly if needed
 if (!supabaseUrl && process.env.EXPO_PUBLIC_SUPABASE_URL) {
-  console.log(`DEBUG: Found Supabase URL in Expo env variables: ${process.env.EXPO_PUBLIC_SUPABASE_URL}`);
   supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 }
 
 if (!supabaseAnonKey && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
-  console.log('DEBUG: Found Supabase key in Expo env variables (key not shown for security)');
   supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 }
 
 // OVERRIDE URL FOR TESTING - FORCE THE CORRECT ONE
 supabaseUrl = "https://vdrmtsifivvpioonpqqc.supabase.co";
-console.log(`DEBUG: FORCING Supabase URL to: ${supabaseUrl}`);
 
 // Validate the URL format to catch obvious issues early
 if (supabaseUrl) {
   try {
     const url = new URL(supabaseUrl);
-    console.log(`DEBUG: Validated Supabase URL format, hostname: ${url.hostname}`);
     
     // Basic check to make sure it's a Supabase domain
     if (!url.hostname.includes('supabase.co')) {
-      console.warn('DEBUG: URL doesn\'t appear to be a supabase.co domain. This might be intentional for custom domains.');
+      console.warn('URL doesn\'t appear to be a supabase.co domain. This might be intentional for custom domains.');
     }
   } catch (error: any) {
-    console.error(`DEBUG: Invalid Supabase URL format: ${error.message}`);
+    console.error(`Invalid Supabase URL format: ${error.message}`);
   }
 }
-
-// Log final status
-console.log(`DEBUG: Final status - URL: ${supabaseUrl}, Key: ${supabaseAnonKey ? 'Key is set (not shown)' : 'Not set'}`);
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
@@ -102,8 +86,6 @@ let supabase: any;
 
 try {
   // Initialize the Supabase client
-  console.log('DEBUG: Creating Supabase client...');
-  console.log(`DEBUG: Using URL: ${supabaseUrl}`);
   
   // Check for network connectivity before creating client
   if (!supabaseUrl || !supabaseAnonKey) {
@@ -132,9 +114,8 @@ try {
     },
   });
   
-  console.log('DEBUG: Supabase client created successfully');
 } catch (error: any) {
-  console.error('DEBUG: Failed to create Supabase client:', error);
+  console.error('Failed to create Supabase client:', error);
   
   // Create a dummy client that logs errors but falls back gracefully
   supabase = new Proxy({}, {

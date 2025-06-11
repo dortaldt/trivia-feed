@@ -55,11 +55,11 @@ const Leaderboard = forwardRef<LeaderboardRef, LeaderboardProps>(({ limit = 10, 
 
   // Add debug log for auth state
   useEffect(() => {
-    console.log('Leaderboard - Auth state:', { 
-      hasUser: !!user, 
-      isGuest, 
-      activeTab 
-    });
+    // console.log('Leaderboard - Auth state:', { 
+    //   hasUser: !!user, 
+    //   isGuest, 
+    //   activeTab 
+    // });
     
     // Check AsyncStorage directly for debugging
     const checkGuestMode = async () => {

@@ -952,13 +952,13 @@ const FeedScreen: React.FC = () => {
   const markPreviousAsSkipped = useCallback((prevIndex: number, newIndex: number) => {
     // Performance tracker ⏱️ - Skip Detection START
     const skipDetectionStart = performance.now();
-    console.log(`[Performance tracker ⏱️] Skip Detection & Fast Scroll - Started: ${skipDetectionStart.toFixed(2)}ms`);
+    // console.log(`[Performance tracker ⏱️] Skip Detection & Fast Scroll - Started: ${skipDetectionStart.toFixed(2)}ms`);
     
     // Only mark as skipped when explicitly scrolling down past a question and if we have feed data
     if (newIndex <= prevIndex || personalizedFeed.length === 0) {
       // Performance tracker ⏱️ - Skip Detection END (early return)
       const skipDetectionEnd = performance.now();
-      console.log(`[Performance tracker ⏱️] Skip Detection & Fast Scroll - Ended (early): ${skipDetectionEnd.toFixed(2)}ms | Duration: ${(skipDetectionEnd - skipDetectionStart).toFixed(2)}ms`);
+      // console.log(`[Performance tracker ⏱️] Skip Detection & Fast Scroll - Ended (early): ${skipDetectionEnd.toFixed(2)}ms | Duration: ${(skipDetectionEnd - skipDetectionStart).toFixed(2)}ms`);
       return;
     }
     
@@ -977,7 +977,7 @@ const FeedScreen: React.FC = () => {
     
     // Performance tracker ⏱️ - Skip Detection END
     const skipDetectionEnd = performance.now();
-    console.log(`[Performance tracker ⏱️] Skip Detection & Fast Scroll - Ended: ${skipDetectionEnd.toFixed(2)}ms | Duration: ${(skipDetectionEnd - skipDetectionStart).toFixed(2)}ms`);
+    // console.log(`[Performance tracker ⏱️] Skip Detection & Fast Scroll - Ended: ${skipDetectionEnd.toFixed(2)}ms | Duration: ${(skipDetectionEnd - skipDetectionStart).toFixed(2)}ms`);
     
     // Only mark as skipped when explicitly scrolling down past a question and if we have feed data
     logger.debug('Feed', `markPreviousAsSkipped called with prevIndex=${prevIndex}, newIndex=${newIndex}`);
@@ -1403,7 +1403,7 @@ const FeedScreen: React.FC = () => {
     if (shouldLogPerformance) {
       // Performance tracker ⏱️ - Scroll Detection START
       scrollDetectionStart = performance.now();
-      console.log(`[Performance tracker ⏱️] Scroll Detection - Started: ${scrollDetectionStart.toFixed(2)}ms`);
+      // console.log(`[Performance tracker ⏱️] Scroll Detection - Started: ${scrollDetectionStart.toFixed(2)}ms`);
     }
     
     // Early return for tooltips - hide only on first scroll
@@ -1442,7 +1442,7 @@ const FeedScreen: React.FC = () => {
     if (shouldLogPerformance) {
       // Performance tracker ⏱️ - Scroll Detection END
       const scrollDetectionEnd = performance.now();
-      console.log(`[Performance tracker ⏱️] Scroll Detection - Ended: ${scrollDetectionEnd.toFixed(2)}ms | Duration: ${(scrollDetectionEnd - scrollDetectionStart).toFixed(2)}ms`);
+      // console.log(`[Performance tracker ⏱️] Scroll Detection - Ended: ${scrollDetectionEnd.toFixed(2)}ms | Duration: ${(scrollDetectionEnd - scrollDetectionStart).toFixed(2)}ms`);
     }
     
     // Only process "skipped" logic on desktop or when scrolling has ended
@@ -1464,9 +1464,9 @@ const FeedScreen: React.FC = () => {
   // Enhanced onViewableItemsChanged with preloading
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      // Performance tracker ⏱️ - Viewability Detection START
-      const viewabilityStart = performance.now();
-      console.log(`[Performance tracker ⏱️] Viewability Detection - Started: ${viewabilityStart.toFixed(2)}ms`);
+          // Performance tracker ⏱️ - Viewability Detection START
+    const viewabilityStart = performance.now();
+    // console.log(`[Performance tracker ⏱️] Viewability Detection - Started: ${viewabilityStart.toFixed(2)}ms`);
       
       if (viewableItems.length > 0 && viewableItems[0].index !== null && personalizedFeed.length > 0) {
         const enhancedIndex = viewableItems[0].index;
@@ -1485,9 +1485,9 @@ const FeedScreen: React.FC = () => {
         // Skip if this points to a banner position (shouldn't happen with proper offset calculation)
         if (feedIndex < 0 || feedIndex >= personalizedFeed.length) {
           console.log(`[ViewableItemsChanged] Calculated feed index ${feedIndex} is out of bounds (enhanced index: ${enhancedIndex}, banner offset: ${bannerOffset}), skipping`);
-          // Performance tracker ⏱️ - Viewability Detection END (early return)
-          const viewabilityEnd = performance.now();
-          console.log(`[Performance tracker ⏱️] Viewability Detection - Ended (out of bounds): ${viewabilityEnd.toFixed(2)}ms | Duration: ${(viewabilityEnd - viewabilityStart).toFixed(2)}ms`);
+                  // Performance tracker ⏱️ - Viewability Detection END (early return)
+        const viewabilityEnd = performance.now();
+        // console.log(`[Performance tracker ⏱️] Viewability Detection - Ended (out of bounds): ${viewabilityEnd.toFixed(2)}ms | Duration: ${(viewabilityEnd - viewabilityStart).toFixed(2)}ms`);
           return;
         }
         
@@ -1572,7 +1572,7 @@ const FeedScreen: React.FC = () => {
       
       // Performance tracker ⏱️ - Viewability Detection END
       const viewabilityEnd = performance.now();
-      console.log(`[Performance tracker ⏱️] Viewability Detection - Ended: ${viewabilityEnd.toFixed(2)}ms | Duration: ${(viewabilityEnd - viewabilityStart).toFixed(2)}ms`);
+      // console.log(`[Performance tracker ⏱️] Viewability Detection - Ended: ${viewabilityEnd.toFixed(2)}ms | Duration: ${(viewabilityEnd - viewabilityStart).toFixed(2)}ms`);
     },
     [personalizedFeed, bannerPlacements, questions, preloadNextItems, markPreviousAsSkipped, currentIndex, setCurrentIndex, dispatch, debugPanelVisible, feedExplanations, activeTopic, setActiveTopic]
   );
@@ -2287,8 +2287,8 @@ const FeedScreen: React.FC = () => {
     // Handle regular feed items
     const feedItem = item as FeedItemType;
     // Add debug logging for duplicate detection and feed stability
-    console.log(`🎯 [FeedScreen] Rendering item ${index}: ${feedItem.id} - "${feedItem.question.substring(0, 30)}..."`, 
-      questions[feedItem.id] ? `(Question status: ${questions[feedItem.id].status})` : '(No status yet)');
+                  // console.log(`🎯 [FeedScreen] Rendering item ${index}: ${feedItem.id} - "${feedItem.question.substring(0, 30)}..."`, 
+      //   questions[feedItem.id] ? `(Question status: ${questions[feedItem.id].status})` : '(No status yet)');
     
     // Get the next item's topic for gradient transition (if any)
     const nextItem = index < enhancedFeed.length - 1 ? enhancedFeed[index + 1] : undefined;

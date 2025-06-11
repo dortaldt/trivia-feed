@@ -259,12 +259,6 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
   // Note: Caching of trivia questions is implemented in the FeedScreen component
   // using AsyncStorage to improve loading performance and provide offline capability
   try {
-    console.log('DEBUG: Starting to fetch data from Supabase - requesting ALL questions');
-    
-    // Log basic info without accessing protected properties
-    // @ts-ignore - We need to access this for debugging
-    console.log(`DEBUG: Supabase URL being used: ${supabase?.url || supabase?.supabaseUrl || 'Unknown'}`);
-    console.log(`DEBUG: Attempting to connect to Supabase database`);
     
     try {
       // Test the connection with a simple query
@@ -273,15 +267,12 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
         .from(tableName)
         .select('*', { count: 'exact', head: true });
         
-      if (pingError) {
-        console.error('DEBUG: Connection test failed:', pingError);
+              if (pingError) {
+        console.error('Connection test failed:', pingError);
         throw new Error(`Connection test failed: ${pingError.message}`);
       }
-      
-      console.log(`DEBUG: Connection test successful! Database has ${count} records in ${tableName} table.`);
     } catch (pingError) {
-      console.error('DEBUG: Connection test error:', pingError);
-      console.log('DEBUG: Falling back to mock data due to connection error');
+      console.error('Connection test error:', pingError);
       return mockFeedData;
     }
     
@@ -299,20 +290,15 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
       if (countError) {
         console.error('Error getting total count:', countError);
         return mockFeedData;
-      } else {
-        console.log(`DEBUG: Total questions in ${tableName} database: ${totalCount}`);
       }
       
       // Start building the query
-      console.log(`DEBUG: Fetching questions from ${tableName} database...`);
       let query = supabase
         .from(tableName)
         .select('*');
       
       // Apply topic filter if configured
       if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
-        console.log(`DEBUG: Filtering questions by topic: ${topicDbName}`);
-        
         // Use the exact topic name from the database
         query = query.eq('topic', topicDbName);
       }
@@ -346,8 +332,7 @@ export async function fetchTriviaQuestions(limit: number = 20, language: string 
             question.tags.forEach(tag => allTags.add(tag));
           }
         });
-        
-        console.log(`DEBUG: Found content with ${subtopics.size} subtopics and ${allTags.size} tags`);
+
       }
       
       // Transform the Supabase data to match our app's format
@@ -547,7 +532,6 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
       
       // Apply topic filter if configured
       if (filterContentByTopic && activeTopic !== 'default' && topicDbName) {
-        console.log(`DEBUG: Filtering timestamp query by topic: ${topicDbName}`);
         query = query.eq('topic', topicDbName);
       }
       
@@ -555,15 +539,11 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
       data = response.data;
       error = response.error;
       
-      console.log(`Timestamp query returned ${data?.length || 0} questions`);
-      
     } else if (existingIds.length > 0) {
       // ID exclusion filtering (for first fetch or when timestamp not available)
-      console.log(`🆕 Using ID exclusion filtering for ${existingIds.length} existing IDs`);
       
       // Handle large ID sets with batched exclusions for better performance
       if (existingIds.length > 100) {
-        console.log(`Large exclusion list (${existingIds.length} IDs), using batched approach`);
         
         // Split IDs into chunks of 100 to avoid query size limits
         const chunkSize = 100;
@@ -631,7 +611,7 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
           return true;
         });
         
-        console.log(`Total new questions after batched exclusion: ${data.length}`);
+
         
       } else {
         // For smaller sets, use the original efficient single query approach
@@ -654,7 +634,6 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
       }
     } else {
       // No timestamp and no IDs to exclude - fetch all questions (fallback)
-      console.log(`⚠️ No filtering criteria provided - fetching all questions`);
       
       let query = supabase
         .from(tableName)
@@ -677,11 +656,8 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
     }
 
     if (!data || data.length === 0) {
-      console.log('No new trivia questions found');
       return [];
     }
-
-    console.log(`Found ${data.length} new questions`);
     
     // Log some stats about subtopics and tags when in topic-specific mode
     if (filterContentByTopic && activeTopic !== 'default') {
@@ -698,8 +674,7 @@ export async function fetchNewTriviaQuestions(existingIds: string[], lastFetchTi
           question.tags.forEach(tag => allTags.add(tag));
         }
       });
-      
-      console.log(`DEBUG: Found content with ${subtopics.size} subtopics and ${allTags.size} tags in new questions`);
+
     }
     
     // Transform the data same as in fetchTriviaQuestions

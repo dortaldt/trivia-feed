@@ -214,12 +214,12 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
   
   // Debug: Log when component mounts and Redux state
   useEffect(() => {
-    console.log(`[InteractionTracker] Component mounted/updated. Redux syncedWeightChanges: ${syncedWeightChanges.length}`);
+    // console.log(`[InteractionTracker] Component mounted/updated. Redux syncedWeightChanges: ${syncedWeightChanges.length}`);
   }, []);
   
   // Debug: Log current state periodically
   useEffect(() => {
-    console.log(`[InteractionTracker] State update - Local weightChanges: ${weightChanges.length}, Redux syncedWeightChanges: ${syncedWeightChanges.length}`);
+    // console.log(`[InteractionTracker] State update - Local weightChanges: ${weightChanges.length}, Redux syncedWeightChanges: ${syncedWeightChanges.length}`);
   }, [weightChanges.length, syncedWeightChanges.length]);
   
   // Store previous profile and feed to track changes
@@ -230,21 +230,21 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
   const loadWeightsFromDB = async () => {
     // DISABLED: No longer fetch weights directly from DB
     // This is now handled exclusively by SimplifiedSyncManager
-    console.log('InteractionTracker: loadWeightsFromDB has been DISABLED');
-    console.log('InteractionTracker: All database access is now handled by SimplifiedSyncManager');
+    // console.log('InteractionTracker: loadWeightsFromDB has been DISABLED');
+    // console.log('InteractionTracker: All database access is now handled by SimplifiedSyncManager');
     
     if (user?.id) {
       try {
         setIsLoadingWeights(true);
         
         // Just log current profile state but don't fetch
-        console.log('InteractionTracker: Using current Redux state:', {
-          topicCount: Object.keys(userProfile.topics || {}).length,
-          coldStartComplete: userProfile.coldStartComplete,
-          lastRefreshed: userProfile.lastRefreshed
-            ? new Date(userProfile.lastRefreshed).toISOString()
-            : 'none'
-        });
+        // console.log('InteractionTracker: Using current Redux state:', {
+        //   topicCount: Object.keys(userProfile.topics || {}).length,
+        //   coldStartComplete: userProfile.coldStartComplete,
+        //   lastRefreshed: userProfile.lastRefreshed
+        //     ? new Date(userProfile.lastRefreshed).toISOString()
+        //     : 'none'
+        // });
         
         // Set the updated timestamp without actually fetching
         setLastWeightUpdateTime(Date.now());
@@ -504,7 +504,7 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
         
         // If updating an existing interaction
         if (existingInteraction) {
-          console.log(`Updating interaction for ${id} from ${existingInteraction.type} to ${type}`);
+          // console.log(`Updating interaction for ${id} from ${existingInteraction.type} to ${type}`);
           
           // Update the interactions array by replacing the old interaction
           setInteractions(prev => 

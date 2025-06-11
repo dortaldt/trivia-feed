@@ -26,7 +26,7 @@ try {
   // Last resort for development - use the hardcoded key
   else if (process.env.NODE_ENV === 'development') {
     OPENAI_API_KEY = DEV_KEY;
-    console.log('[GENERATOR] Using temporary hardcoded development key');
+    // console.log('[GENERATOR] Using temporary hardcoded development key');
   }
 
   if (!OPENAI_API_KEY) {
@@ -128,8 +128,8 @@ export async function generateQuestions(
   // Determine generation mode if not provided
   const config = generationConfig || determineGenerationConfig();
   
-  console.log(`[OPENAI] Using ${config.mode} generation mode`);
-  console.log(`[OPENAI] Target table: ${config.targetTable}`);
+  // console.log(`[OPENAI] Using ${config.mode} generation mode`);
+  // console.log(`[OPENAI] Target table: ${config.targetTable}`);
   
   // Route to appropriate generation function based on mode
   if (config.mode === 'niche') {

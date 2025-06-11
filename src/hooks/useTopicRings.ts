@@ -603,9 +603,9 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         finalSubTopicRings.push(recentSubTopicRing);
       }
       
-      console.log(`[SUB-TOPIC RINGS] Showing ${finalSubTopicRings.length} sub-topic rings (top 3 + recent):`, 
-        finalSubTopicRings.map(ring => `${ring.topic} (${ring.totalCorrectAnswers} correct)`).join(', ')
-      );
+      // console.log(`[SUB-TOPIC RINGS] Showing ${finalSubTopicRings.length} sub-topic rings (top 3 + recent):`, 
+      //   finalSubTopicRings.map(ring => `${ring.topic} (${ring.totalCorrectAnswers} correct)`).join(', ')
+      // );
       
       return finalSubTopicRings;
     } else {
@@ -741,9 +741,9 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
   // Log discovered sub-topics when they change
   useEffect(() => {
     if (shouldUseSubTopics && availableSubTopics.size > 0) {
-      console.log(`[SUB-TOPIC DISCOVERY] Found ${availableSubTopics.size} sub-topics for ${activeTopic}:`, 
-        Array.from(availableSubTopics).sort().join(', ')
-      );
+      // console.log(`[SUB-TOPIC DISCOVERY] Found ${availableSubTopics.size} sub-topics for ${activeTopic}:`, 
+      //   Array.from(availableSubTopics).sort().join(', ')
+      // );
       
       // Check for missing icon mappings
       const missingIcons: string[] = [];
