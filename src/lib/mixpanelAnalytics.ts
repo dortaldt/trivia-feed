@@ -1,6 +1,7 @@
 import { Mixpanel } from 'mixpanel-react-native';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 // Mixpanel token
 const MIXPANEL_TOKEN = '96dae6cd094d82692a291ed838ab6272';
@@ -66,10 +67,24 @@ export const initMixpanel = async () => {
     sessionCount++;
     await AsyncStorage.setItem('mixpanel_session_count', sessionCount.toString());
     
+    // Get app version info with multiple fallbacks
+    let appVersion = process.env.EXPO_PUBLIC_APP_VERSION || 
+                     Constants.expoConfig?.extra?.appVersion || 
+                     '1.2.0'; // Default numeric version
+    let appTopic = 'default';
+    
+    try {
+      const topicConfig = require('../../app-topic-config');
+      appTopic = topicConfig.activeTopic || 'default';
+    } catch (error) {
+      console.warn('Could not load topic config for analytics:', error);
+    }
+    
     // Set global properties that will be sent with every event
     mixpanel.registerSuperProperties({
       platform: Platform.OS,
-      appVersion: process.env.EXPO_PUBLIC_APP_VERSION || 'unknown',
+      appVersion: appVersion, // Use the already resolved version
+      appTopic: appTopic,
       deviceType: Platform.OS === 'web' ? 'web' : Platform.OS,
     });
     
@@ -120,11 +135,26 @@ export const identifyUser = async (userId: string, userProperties: Record<string
     await mixpanel.identify(userId);
     currentUserId = userId;
     
+    // Get app version and topic info for user properties
+    let appVersion = process.env.EXPO_PUBLIC_APP_VERSION || 
+                     Constants.expoConfig?.extra?.appVersion || 
+                     '1.2.0';
+    let appTopic = 'default';
+    
+    try {
+      const topicConfig = require('../../app-topic-config');
+      appTopic = topicConfig.activeTopic || 'default';
+    } catch (error) {
+      console.warn('Could not load topic config for analytics:', error);
+    }
+    
     // Combine user properties with platform info
     const properties = {
       ...userProperties,
       platform: Platform.OS,
       deviceType: Platform.OS === 'web' ? 'web' : Platform.OS,
+      appVersion: process.env.EXPO_PUBLIC_APP_VERSION || appVersion,
+      appTopic: appTopic,
       $last_seen: new Date().toISOString(),
       sessionCount,
     };
@@ -156,14 +186,16 @@ export const trackEvent = async (eventName: string, properties: Record<string, a
       currentUserId = deviceId;
     }
     
-    // Get app version for all events
-    let appVersion = 'default';
+    // Get app version and topic info for all events
+    let appVersion = '1.2.0'; // Numeric version
+    let appTopic = 'default'; // Topic version
+    
     try {
       const topicConfig = require('../../app-topic-config');
-      appVersion = topicConfig.activeTopic || 'default';
+      appTopic = topicConfig.activeTopic || 'default';
     } catch (error) {
       // Fallback to default if config can't be loaded
-      appVersion = 'default';
+      console.warn('Could not load topic config for analytics:', error);
     }
     
     // Special handling for Question Answered events to ensure accurate counting
@@ -187,7 +219,8 @@ export const trackEvent = async (eventName: string, properties: Record<string, a
       ...properties,
       platform: Platform.OS,
       deviceType: Platform.OS === 'web' ? 'web' : Platform.OS,
-      appVersion, // Add app version to all events
+      appVersion: process.env.EXPO_PUBLIC_APP_VERSION || appVersion, // Numeric app version
+      appTopic: appTopic, // Topic version (default/nineties/music/etc.)
       timestamp: new Date().toISOString(),
     };
     
@@ -204,7 +237,8 @@ export const trackEvent = async (eventName: string, properties: Record<string, a
           isCorrect: properties.isCorrect,
           totalAnswered: localQuestionCounter,
           platform: Platform.OS,
-          appVersion, // Include app version in milestone events too
+          appVersion: process.env.EXPO_PUBLIC_APP_VERSION || appVersion, // Numeric app version
+          appTopic: appTopic, // Topic version
           timestamp: new Date().toISOString(),
         });
       }
@@ -244,18 +278,21 @@ export const trackButtonClick = async (buttonName: string, properties: Record<st
  * @param properties Additional properties for the ring interaction
  */
 export const trackTopicRingClick = async (ringTopic: string, properties: Record<string, any> = {}) => {
-  // Get app version from topic config
-  let appVersion = 'default';
+  // Get app version and topic info
+  let appVersion = '1.2.0';
+  let appTopic = 'default';
+  
   try {
     const topicConfig = require('../../app-topic-config');
-    appVersion = topicConfig.activeTopic || 'default';
+    appTopic = topicConfig.activeTopic || 'default';
   } catch (error) {
     console.warn('Could not load topic config for analytics:', error);
   }
 
   await trackEvent('Topic Ring Click', {
     ringTopic,
-    appVersion,
+    appVersion: process.env.EXPO_PUBLIC_APP_VERSION || appVersion,
+    appTopic: appTopic,
     timestamp: new Date().toISOString(),
     ...properties,
   });
@@ -268,11 +305,13 @@ export const trackTopicRingClick = async (ringTopic: string, properties: Record<
  * @param properties Additional properties for the modal interaction
  */
 export const trackTopicRingModal = async (action: string, ringTopic: string, properties: Record<string, any> = {}) => {
-  // Get app version from topic config
-  let appVersion = 'default';
+  // Get app version and topic info
+  let appVersion = '1.2.0';
+  let appTopic = 'default';
+  
   try {
     const topicConfig = require('../../app-topic-config');
-    appVersion = topicConfig.activeTopic || 'default';
+    appTopic = topicConfig.activeTopic || 'default';
   } catch (error) {
     console.warn('Could not load topic config for analytics:', error);
   }
@@ -280,7 +319,8 @@ export const trackTopicRingModal = async (action: string, ringTopic: string, pro
   await trackEvent('Topic Ring Modal', {
     action,
     ringTopic,
-    appVersion,
+    appVersion: process.env.EXPO_PUBLIC_APP_VERSION || appVersion,
+    appTopic: appTopic,
     timestamp: new Date().toISOString(),
     ...properties,
   });
@@ -292,18 +332,21 @@ export const trackTopicRingModal = async (action: string, ringTopic: string, pro
  * @param properties Additional properties for the interaction
  */
 export const trackAllRingsModal = async (action: string, properties: Record<string, any> = {}) => {
-  // Get app version from topic config
-  let appVersion = 'default';
+  // Get app version and topic info
+  let appVersion = '1.2.0';
+  let appTopic = 'default';
+  
   try {
     const topicConfig = require('../../app-topic-config');
-    appVersion = topicConfig.activeTopic || 'default';
+    appTopic = topicConfig.activeTopic || 'default';
   } catch (error) {
     console.warn('Could not load topic config for analytics:', error);
   }
 
   await trackEvent('All Rings Modal', {
     action,
-    appVersion,
+    appVersion: process.env.EXPO_PUBLIC_APP_VERSION || appVersion,
+    appTopic: appTopic,
     timestamp: new Date().toISOString(),
     ...properties,
   });

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Trivia Feed",
     "slug": "trivia-feed",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-nineties.png",
     "scheme": "trivia-feed",
@@ -17,7 +17,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.triviafeed",
+      "bundleIdentifier": "com.triviafeed.90s",
       "infoPlist": {
         "UIAppFonts": [
           "node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.ttf",
@@ -32,7 +32,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.triviafeed"
+      "package": "com.triviafeed.90s"
     },
     "web": {
       "bundler": "metro",
@@ -69,7 +69,7 @@
       "enabled": true,
       "checkAutomatically": "ON_LOAD"
     },
-    "runtimeVersion": "1.0.0",
+    "runtimeVersion": "1.2.0",
     "owner": "robodorx-2",
     "extra": {
       "eas": {

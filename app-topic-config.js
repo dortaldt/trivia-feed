@@ -202,7 +202,7 @@ module.exports = {
         'Fashion Trends of the 90s': {
           displayName: '90s Fashion',
           description: 'Style and trends of the decade',
-          icon: 'shirt'
+          icon: 'shopping-bag'
         },
         'Pop Culture Trends of the 90s': {
           displayName: '90s Pop Culture',

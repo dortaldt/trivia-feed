@@ -81,6 +81,11 @@ function getAppSpecificConfig(topic) {
       scheme: "trivia-feed",
       slug: "trivia-feed",
     },
+    nineties: {
+      bundleId: "com.triviafeed.90s",
+      scheme: "trivia-feed-90s",
+      slug: "trivia-feed-90s",
+    },
     music: {
       bundleId: "com.triviafeed.music",
       scheme: "trivia-feed-music",
@@ -103,12 +108,13 @@ export default {
       : `${currentTopic.displayName}`,
     slug: appSpecificConfig.slug,
     scheme: appSpecificConfig.scheme,
-    version: "1.1.2",
+    version: "1.2.0",
     icon: getTopicAsset('app-icon'),
     extra: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       openaiApiKey: openaiApiKey,
+      appVersion: "1.2.0", // App version for analytics
       activeTopic,
       filterContentByTopic,
       topicDbName: currentTopic.dbTopicName,
@@ -122,7 +128,7 @@ export default {
       enabled: true,
       checkAutomatically: "ON_LOAD"
     },
-    runtimeVersion: "1.1.2",
+    runtimeVersion: "1.2.0",
     splash: {
       image: getTopicAsset('splash-icon'),
       resizeMode: "contain",
