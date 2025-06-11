@@ -105,7 +105,9 @@ export default {
   expo: {
     name: activeTopic === 'default' 
       ? "Trivia Feed" 
-      : `${currentTopic.displayName}`,
+      : activeTopic === 'nineties'
+        ? "Trivia Feed 90s"
+        : `${currentTopic.displayName}`,
     slug: appSpecificConfig.slug,
     scheme: appSpecificConfig.scheme,
     version: "1.2.0",
@@ -114,7 +116,7 @@ export default {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       openaiApiKey: openaiApiKey,
-      appVersion: "1.2.0", // App version for analytics
+      appVersion: activeTopic, // Topic name for analytics segmentation (nineties, music, etc.)
       activeTopic,
       filterContentByTopic,
       topicDbName: currentTopic.dbTopicName,

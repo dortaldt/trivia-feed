@@ -7,29 +7,29 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0D795AA16D92E9EFFD4890E2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AB907B2007DEB65BEA49A898 /* PrivacyInfo.xcprivacy */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		3F080B0728C1C41C5E721A9D /* libPods-90sCulture.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 85A86AF0197B97E36F7DFC5F /* libPods-90sCulture.a */; };
-		99D1D2E85AE0654B33921299 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAE8AA062C22D58575B4BD23 /* ExpoModulesProvider.swift */; };
+		3F61A357CBC895AED3D9CF93 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9424B2B518C1E165D373AF27 /* ExpoModulesProvider.swift */; };
+		58E5D98DCA8C4A92789CA630 /* libPods-TriviaFeed90s.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB9108F7BD928DB243707209 /* libPods-TriviaFeed90s.a */; };
+		5E204DA62CC287ED6D18669A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4AB2332817AE2283C3081F40 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		13B07F961A680F5B00A75B9A /* 90sCulture.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = 90sCulture.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = 90sCulture/Images.xcassets; sourceTree = "<group>"; };
-		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = 90sCulture/Info.plist; sourceTree = "<group>"; };
-		40B928D835E291F37DD06D62 /* Pods-90sCulture.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-90sCulture.release.xcconfig"; path = "Target Support Files/Pods-90sCulture/Pods-90sCulture.release.xcconfig"; sourceTree = "<group>"; };
-		85A86AF0197B97E36F7DFC5F /* libPods-90sCulture.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-90sCulture.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = 90sCulture/SplashScreen.storyboard; sourceTree = "<group>"; };
-		AB907B2007DEB65BEA49A898 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = 90sCulture/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		13B07F961A680F5B00A75B9A /* TriviaFeed90s.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TriviaFeed90s.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = TriviaFeed90s/Images.xcassets; sourceTree = "<group>"; };
+		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = TriviaFeed90s/Info.plist; sourceTree = "<group>"; };
+		4AB2332817AE2283C3081F40 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = TriviaFeed90s/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		9424B2B518C1E165D373AF27 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-TriviaFeed90s/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		A7D86BC4271DDA66DF0F6096 /* Pods-TriviaFeed90s.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TriviaFeed90s.release.xcconfig"; path = "Target Support Files/Pods-TriviaFeed90s/Pods-TriviaFeed90s.release.xcconfig"; sourceTree = "<group>"; };
+		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = TriviaFeed90s/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		CAE8AA062C22D58575B4BD23 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-90sCulture/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		BB9108F7BD928DB243707209 /* libPods-TriviaFeed90s.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-TriviaFeed90s.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DC9E9C888E4D4B86D65AFE01 /* Pods-TriviaFeed90s.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TriviaFeed90s.debug.xcconfig"; path = "Target Support Files/Pods-TriviaFeed90s/Pods-TriviaFeed90s.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = 90sCulture/AppDelegate.swift; sourceTree = "<group>"; };
-		F11748442D0722820044C1D9 /* 90sCulture-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "90sCulture-Bridging-Header.h"; path = "90sCulture/90sCulture-Bridging-Header.h"; sourceTree = "<group>"; };
-		FFBEFF9A0F805A2986A38AF0 /* Pods-90sCulture.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-90sCulture.debug.xcconfig"; path = "Target Support Files/Pods-90sCulture/Pods-90sCulture.debug.xcconfig"; sourceTree = "<group>"; };
+		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = TriviaFeed90s/AppDelegate.swift; sourceTree = "<group>"; };
+		F11748442D0722820044C1D9 /* TriviaFeed90s-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "TriviaFeed90s-Bridging-Header.h"; path = "TriviaFeed90s/TriviaFeed90s-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,32 +37,32 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3F080B0728C1C41C5E721A9D /* libPods-90sCulture.a in Frameworks */,
+				58E5D98DCA8C4A92789CA630 /* libPods-TriviaFeed90s.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		13B07FAE1A68108700A75B9A /* 90sCulture */ = {
+		13B07FAE1A68108700A75B9A /* TriviaFeed90s */ = {
 			isa = PBXGroup;
 			children = (
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
-				F11748442D0722820044C1D9 /* 90sCulture-Bridging-Header.h */,
+				F11748442D0722820044C1D9 /* TriviaFeed90s-Bridging-Header.h */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				AB907B2007DEB65BEA49A898 /* PrivacyInfo.xcprivacy */,
+				4AB2332817AE2283C3081F40 /* PrivacyInfo.xcprivacy */,
 			);
-			name = 90sCulture;
+			name = TriviaFeed90s;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				85A86AF0197B97E36F7DFC5F /* libPods-90sCulture.a */,
+				BB9108F7BD928DB243707209 /* libPods-TriviaFeed90s.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -74,15 +74,23 @@
 			name = Libraries;
 			sourceTree = "<group>";
 		};
+		83B5FAE53F21C19D6793E612 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				BBAB0B2D5BB5B1012DFAE408 /* TriviaFeed90s */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
-				13B07FAE1A68108700A75B9A /* 90sCulture */,
+				13B07FAE1A68108700A75B9A /* TriviaFeed90s */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				AC2F973168AD83AF86E8F02F /* Pods */,
-				EF438A82CC6F0DBDE372CD7A /* ExpoModulesProviders */,
+				ED138D1804989465046C8149 /* Pods */,
+				83B5FAE53F21C19D6793E612 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -92,18 +100,9 @@
 		83CBBA001A601CBA00E9B192 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				13B07F961A680F5B00A75B9A /* 90sCulture.app */,
+				13B07F961A680F5B00A75B9A /* TriviaFeed90s.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		AC2F973168AD83AF86E8F02F /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				FFBEFF9A0F805A2986A38AF0 /* Pods-90sCulture.debug.xcconfig */,
-				40B928D835E291F37DD06D62 /* Pods-90sCulture.release.xcconfig */,
-			);
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
@@ -112,48 +111,49 @@
 				BB2F792C24A3F905000567C9 /* Expo.plist */,
 			);
 			name = Supporting;
-			path = 90sCulture/Supporting;
+			path = TriviaFeed90s/Supporting;
 			sourceTree = "<group>";
 		};
-		EB314077602C60A2F5A80A03 /* 90sCulture */ = {
+		BBAB0B2D5BB5B1012DFAE408 /* TriviaFeed90s */ = {
 			isa = PBXGroup;
 			children = (
-				CAE8AA062C22D58575B4BD23 /* ExpoModulesProvider.swift */,
+				9424B2B518C1E165D373AF27 /* ExpoModulesProvider.swift */,
 			);
-			name = 90sCulture;
+			name = TriviaFeed90s;
 			sourceTree = "<group>";
 		};
-		EF438A82CC6F0DBDE372CD7A /* ExpoModulesProviders */ = {
+		ED138D1804989465046C8149 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				EB314077602C60A2F5A80A03 /* 90sCulture */,
+				DC9E9C888E4D4B86D65AFE01 /* Pods-TriviaFeed90s.debug.xcconfig */,
+				A7D86BC4271DDA66DF0F6096 /* Pods-TriviaFeed90s.release.xcconfig */,
 			);
-			name = ExpoModulesProviders;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		13B07F861A680F5B00A75B9A /* 90sCulture */ = {
+		13B07F861A680F5B00A75B9A /* TriviaFeed90s */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "90sCulture" */;
+			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "TriviaFeed90s" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				CA060084791C84E7C952D3A0 /* [Expo] Configure project */,
+				D6DF00F8B1716A8B137BE706 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				E9BA5C1B90F07B3126F753C1 /* [CP] Embed Pods Frameworks */,
+				145916B152A33E354F6799C6 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = 90sCulture;
-			productName = 90sCulture;
-			productReference = 13B07F961A680F5B00A75B9A /* 90sCulture.app */;
+			name = TriviaFeed90s;
+			productName = TriviaFeed90s;
+			productReference = 13B07F961A680F5B00A75B9A /* TriviaFeed90s.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -169,7 +169,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "90sCulture" */;
+			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "TriviaFeed90s" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -182,7 +182,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				13B07F861A680F5B00A75B9A /* 90sCulture */,
+				13B07F861A680F5B00A75B9A /* TriviaFeed90s */,
 			);
 		};
 /* End PBXProject section */
@@ -195,7 +195,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				0D795AA16D92E9EFFD4890E2 /* PrivacyInfo.xcprivacy in Resources */,
+				5E204DA62CC287ED6D18669A /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -232,11 +232,29 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-90sCulture-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-TriviaFeed90s-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		145916B152A33E354F6799C6 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-TriviaFeed90s/Pods-TriviaFeed90s-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-TriviaFeed90s/Pods-TriviaFeed90s-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
@@ -245,7 +263,7 @@
 			files = (
 			);
 			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-90sCulture/Pods-90sCulture-resources.sh",
+				"${PODS_ROOT}/Target Support Files/Pods-TriviaFeed90s/Pods-TriviaFeed90s-resources.sh",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXApplication/ExpoApplication_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/EXConstants.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/ExpoConstants_privacy.bundle",
@@ -322,10 +340,10 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-90sCulture/Pods-90sCulture-resources.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-TriviaFeed90s/Pods-TriviaFeed90s-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		CA060084791C84E7C952D3A0 /* [Expo] Configure project */ = {
+		D6DF00F8B1716A8B137BE706 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -342,25 +360,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-90sCulture/expo-configure-project.sh\"\n";
-		};
-		E9BA5C1B90F07B3126F753C1 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-90sCulture/Pods-90sCulture-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-90sCulture/Pods-90sCulture-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-TriviaFeed90s/expo-configure-project.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -370,7 +370,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				99D1D2E85AE0654B33921299 /* ExpoModulesProvider.swift in Sources */,
+				3F61A357CBC895AED3D9CF93 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -379,11 +379,11 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = FFBEFF9A0F805A2986A38AF0 /* Pods-90sCulture.debug.xcconfig */;
+			baseConfigurationReference = DC9E9C888E4D4B86D65AFE01 /* Pods-TriviaFeed90s.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = 90sCulture/90sCulture.entitlements;
+				CODE_SIGN_ENTITLEMENTS = TriviaFeed90s/TriviaFeed90s.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = WFSU55LKRA;
 				ENABLE_BITCODE = NO;
@@ -391,7 +391,7 @@
 					"$(inherited)",
 					"FB_SONARKIT_ENABLED=1",
 				);
-				INFOPLIST_FILE = 90sCulture/Info.plist;
+				INFOPLIST_FILE = TriviaFeed90s/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -405,8 +405,8 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.triviafeed.90s;
-				PRODUCT_NAME = 90sCulture;
-				SWIFT_OBJC_BRIDGING_HEADER = "90sCulture/90sCulture-Bridging-Header.h";
+				PRODUCT_NAME = TriviaFeed90s;
+				SWIFT_OBJC_BRIDGING_HEADER = "TriviaFeed90s/TriviaFeed90s-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -416,14 +416,14 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 40B928D835E291F37DD06D62 /* Pods-90sCulture.release.xcconfig */;
+			baseConfigurationReference = A7D86BC4271DDA66DF0F6096 /* Pods-TriviaFeed90s.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = 90sCulture/90sCulture.entitlements;
+				CODE_SIGN_ENTITLEMENTS = TriviaFeed90s/TriviaFeed90s.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = WFSU55LKRA;
-				INFOPLIST_FILE = 90sCulture/Info.plist;
+				INFOPLIST_FILE = TriviaFeed90s/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -437,8 +437,8 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.triviafeed.90s;
-				PRODUCT_NAME = 90sCulture;
-				SWIFT_OBJC_BRIDGING_HEADER = "90sCulture/90sCulture-Bridging-Header.h";
+				PRODUCT_NAME = TriviaFeed90s;
+				SWIFT_OBJC_BRIDGING_HEADER = "TriviaFeed90s/TriviaFeed90s-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
@@ -566,7 +566,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "90sCulture" */ = {
+		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "TriviaFeed90s" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				13B07F941A680F5B00A75B9A /* Debug */,
@@ -575,7 +575,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "90sCulture" */ = {
+		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "TriviaFeed90s" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
