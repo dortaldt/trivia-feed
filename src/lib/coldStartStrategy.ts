@@ -54,6 +54,7 @@ function initColdStartState(): ColdStartState {
 
 // Group questions by topic and subtopic
 function groupQuestionsByTopic(allQuestions: FeedItem[]): Map<Topic, Map<Subtopic, FeedItem[]>> {
+  console.log('📊 [groupQuestionsByTopic] Starting with', allQuestions.length, 'questions');
   const groupedQuestions = new Map<Topic, Map<Subtopic, FeedItem[]>>();
 
   // Get topic configuration from app config
@@ -66,10 +67,17 @@ function groupQuestionsByTopic(allQuestions: FeedItem[]): Map<Topic, Map<Subtopi
     const activeTopic = expoExtra?.activeTopic;
     const filterContentByTopic = expoExtra?.filterContentByTopic;
     
+    console.log('📊 [groupQuestionsByTopic] App config:', {
+      activeTopic,
+      filterContentByTopic,
+      hasExtra: !!expoExtra
+    });
+    
     if (filterContentByTopic && activeTopic && activeTopic !== 'default') {
       filterByTopic = true;
       topicToFilter = activeTopic;
       logger.info('ColdStart', `Cold start strategy: Filtering questions by topic: ${topicToFilter}`);
+      console.log('🔍 [groupQuestionsByTopic] Topic filtering enabled for:', topicToFilter);
     }
   } catch (e) {
     logger.error('ColdStart', 'Error checking topic config in cold start strategy:', String(e));
@@ -99,6 +107,15 @@ function groupQuestionsByTopic(allQuestions: FeedItem[]): Map<Topic, Map<Subtopi
       topicMap.get(subtopic)!.push(question);
     });
 
+    // Log detailed structure of grouped questions
+    console.log('📊 [groupQuestionsByTopic] Final grouping structure:');
+    Array.from(groupedQuestions.entries()).forEach(([topic, subtopicMap]) => {
+      console.log(`  📂 Topic: ${topic} (${subtopicMap.size} subtopics)`);
+      Array.from(subtopicMap.entries()).forEach(([subtopic, questions]) => {
+        console.log(`    📝 Subtopic: ${subtopic} (${questions.length} questions)`);
+      });
+    });
+
     // Log how many questions were kept after filtering
     if (filterByTopic && topicToFilter) {
       let totalQuestions = 0;
@@ -108,11 +125,13 @@ function groupQuestionsByTopic(allQuestions: FeedItem[]): Map<Topic, Map<Subtopi
         });
       });
       logger.info('ColdStart', `Cold start strategy: After topic filtering - ${totalQuestions} questions match topic ${topicToFilter}`);
+      console.log('🔍 [groupQuestionsByTopic] After filtering:', totalQuestions, 'questions for topic', topicToFilter);
     }
     
+    console.log('📊 [groupQuestionsByTopic] COMPLETED - Total topics:', groupedQuestions.size);
     return groupedQuestions;
   } catch (error) {
-    console.error('Error grouping questions by topic:', error);
+    console.error('❌ [groupQuestionsByTopic] Error grouping questions by topic:', error);
     return new Map();
   }
 }
@@ -187,20 +206,7 @@ function isTopicAllowedForDiversity(state: ColdStartState, topic: string): boole
   return true;
 }
 
-// Helper function to update diversity trackers when a question is selected
-function trackTopicForDiversity(state: ColdStartState, topic: string): void {
-  // Update last selected topics
-  state.lastSelectedTopics.unshift(topic);
-  if (state.lastSelectedTopics.length > MAX_CONSECUTIVE_TOPIC * 2) {
-    state.lastSelectedTopics.pop();
-  }
-  
-  // Update count in current batch
-  const currentCount = state.topicCountInCurrentBatch.get(topic) || 0;
-  state.topicCountInCurrentBatch.set(topic, currentCount + 1);
-  
-  // logger.info(`Topic diversity tracking updated: ${topic} now has count ${currentCount + 1}, last topics: [${state.lastSelectedTopics.join(', ')}]`);
-}
+
 
 // Get questions for the exploration phase (1-5)
 function getExplorationPhaseQuestions(
@@ -220,11 +226,47 @@ function getExplorationPhaseQuestions(
   // Initialize topic weights from userProfile
   initializeTopicWeights(state, userProfile, Array.from(groupedQuestions.keys()));
 
-  const selectedQuestions: FeedItem[] = [];
-  const selectedTopics = new Set<string>(); // Track selected topics to ensure diversity
-  
   // Clear the topic count for this new batch
   state.topicCountInCurrentBatch.clear();
+  
+  // Check if this is a niche app and use subtopic variety from the start
+  const nicheAppCheck = isNicheApp();
+  const isSingleTopicMode = groupedQuestions.size === 1; // Fallback: if only 1 topic, treat as niche
+  const shouldUseSubtopicVariety = nicheAppCheck || isSingleTopicMode;
+  
+  console.log('🔍 [getExplorationPhaseQuestions] Niche detection:', {
+    nicheAppCheck,
+    isSingleTopicMode,
+    groupedTopicsCount: groupedQuestions.size,
+    shouldUseSubtopicVariety
+  });
+  
+  if (shouldUseSubtopicVariety) {
+    console.log('🎯 [getExplorationPhaseQuestions] Single topic/Niche mode detected - using subtopic variety selection');
+    
+    const nicheQuestions = selectQuestionsWithSubtopicVariety(groupedQuestions, state, 5);
+    
+    console.log(`📋 [getExplorationPhaseQuestions] Subtopic variety returned ${nicheQuestions.length} questions`);
+    
+    // Track diversity for all selected questions
+    nicheQuestions.forEach(question => {
+      trackTopicForDiversity(state, question.topic);
+      
+      // Add to recent topics for diversity tracking
+      state.recentTopics.unshift(question.topic);
+      if (state.recentTopics.length > 5) {
+        state.recentTopics.pop();
+      }
+    });
+    
+    console.log(`🎯 [getExplorationPhaseQuestions] Niche app: COMPLETED - Selected ${nicheQuestions.length} questions with subtopic variety`);
+    return nicheQuestions;
+  } else {
+    console.log('❌ [getExplorationPhaseQuestions] Not a niche app - using regular exploration logic');
+  }
+
+  const selectedQuestions: FeedItem[] = [];
+  const selectedTopics = new Set<string>(); // Track selected topics to ensure diversity
   
   // Create a prioritized list of initial topics to try
   // We want to try all initial topics first
@@ -492,19 +534,44 @@ function getBranchingPhaseQuestions(
   // Initialize or update topic weights
   initializeTopicWeights(state, userProfile, Array.from(groupedQuestions.keys()));
   
+  // Clear the topic count for this new batch
+  state.topicCountInCurrentBatch.clear();
+  
+  // Check if this is a niche app and use subtopic variety
+  const nicheAppCheck = isNicheApp();
+  const isSingleTopicMode = groupedQuestions.size === 1;
+  const shouldUseSubtopicVariety = nicheAppCheck || isSingleTopicMode;
+  
+  if (shouldUseSubtopicVariety) {
+    console.log('🎯 [getBranchingPhaseQuestions] Single topic/Niche mode detected - using subtopic variety selection');
+    
+    const nicheQuestions = selectQuestionsWithSubtopicVariety(groupedQuestions, state, 4);
+    
+    // Track diversity for all selected questions
+    nicheQuestions.forEach(question => {
+      trackTopicForDiversity(state, question.topic);
+      
+      // Add to recent topics for diversity tracking
+      state.recentTopics.unshift(question.topic);
+      if (state.recentTopics.length > 5) {
+        state.recentTopics.pop();
+      }
+    });
+    
+    console.log(`🎯 [getBranchingPhaseQuestions] Single topic/Niche mode: Selected ${nicheQuestions.length} questions with subtopic variety`);
+    return nicheQuestions;
+  }
+  
   // Log in-session weights
   // logger.info("Current in-session topic weights for normal phase:");
   // Array.from(state.topicWeights.entries()).forEach(([topic, weight]) => {
   //   logger.info(`  ${topic}: ${weight.toFixed(2)}`);
   // });
-  logger.info("===========================================");
+  logger.info('ColdStart', "===========================================");
 
-  logger.info("Getting Initial Branching phase questions (6-20)");
+  logger.info('ColdStart', "Getting Initial Branching phase questions (6-20)");
 
   const selectedQuestions: FeedItem[] = [];
-  
-  // Clear the topic count for this new batch
-  state.topicCountInCurrentBatch.clear();
   
   // Step 1: Select exactly 2 questions based on user interaction (topic/subtopic weights)
   const interactedTopics = new Set<string>();
@@ -679,13 +746,13 @@ function getBranchingPhaseQuestions(
           
         // Skip if this topic would violate diversity requirements
         if (!isTopicAllowedForDiversity(state, topic)) {
-          logger.info(`Skipping topic ${topic} for diversity reasons`);
+          logger.info('ColdStart', `Skipping topic ${topic} for diversity reasons`);
           continue;
         }
         
         const topicMap = groupedQuestions.get(topic);
         if (!topicMap) {
-          logger.info(`No questions available for topic ${topic}`);
+          logger.info('ColdStart', `No questions available for topic ${topic}`);
           continue;
         }
         
@@ -900,6 +967,34 @@ function getNormalPhaseQuestions(
   // Initialize or update topic weights
   initializeTopicWeights(state, userProfile, Array.from(groupedQuestions.keys()));
   
+  // Clear the topic count for this new batch
+  state.topicCountInCurrentBatch.clear();
+  
+  // Check if this is a niche app and use subtopic variety
+  const nicheAppCheck = isNicheApp();
+  const isSingleTopicMode = groupedQuestions.size === 1;
+  const shouldUseSubtopicVariety = nicheAppCheck || isSingleTopicMode;
+  
+  if (shouldUseSubtopicVariety) {
+    console.log('🎯 [getNormalPhaseQuestions] Single topic/Niche mode detected - using subtopic variety selection');
+    
+    const nicheQuestions = selectQuestionsWithSubtopicVariety(groupedQuestions, state, 4);
+    
+    // Track diversity for all selected questions
+    nicheQuestions.forEach(question => {
+      trackTopicForDiversity(state, question.topic);
+      
+      // Add to recent topics for diversity tracking
+      state.recentTopics.unshift(question.topic);
+      if (state.recentTopics.length > 5) {
+        state.recentTopics.pop();
+      }
+    });
+    
+    console.log(`🎯 [getNormalPhaseQuestions] Single topic/Niche mode: Selected ${nicheQuestions.length} questions with subtopic variety`);
+    return nicheQuestions;
+  }
+  
   // Log in-session weights
   // console.log("Current in-session topic weights for normal phase:");
   // Array.from(state.topicWeights.entries()).forEach(([topic, weight]) => {
@@ -907,9 +1002,6 @@ function getNormalPhaseQuestions(
   // });
 
   const selectedQuestions: FeedItem[] = [];
-  
-  // Clear the topic count for this new batch
-  state.topicCountInCurrentBatch.clear();
   
   // Get topics sorted by weight (descending)
   const sortedTopics = Array.from(state.topicWeights.entries())
@@ -1787,4 +1879,166 @@ function ensureTopicHasDefaultWeight(state: ColdStartState, userProfile: UserPro
   state.topicWeights.set(topic, topicWeight !== undefined ? topicWeight : 0.5);
   
   console.log(`Set default weight for topic ${topic}: ${state.topicWeights.get(topic)?.toFixed(2)}`);
+} 
+
+/**
+ * NICHE APP SUBTOPIC VARIETY FEATURE
+ * 
+ * For niche apps (apps focused on a single topic with isNiche: true), 
+ * this feature ensures variety in question selection by using subtopics 
+ * instead of topics for randomization from the very start.
+ * 
+ * Key benefits:
+ * - Prevents monotony in single-topic apps
+ * - Ensures diverse subtopic coverage from exploration phase onwards
+ * - Maintains personalization while adding variety
+ */
+
+// Helper function to check if we're in a niche app
+function isNicheApp(): boolean {
+  try {
+    const Constants = require('expo-constants');
+    const expoExtra = Constants.expoConfig?.extra;
+    const activeTopic = expoExtra?.activeTopic;
+    const topics = expoExtra?.topics || {};
+    const filterContentByTopic = expoExtra?.filterContentByTopic;
+    
+    console.log('🔍 NICHE APP CHECK:', {
+      activeTopic,
+      hasTopics: !!topics,
+      topicKeys: Object.keys(topics),
+      filterContentByTopic,
+      fullExpoExtra: expoExtra,
+      isNiche: activeTopic && activeTopic !== 'default' && topics[activeTopic] ? topics[activeTopic].isNiche === true : false
+    });
+    
+    // Method 1: Check if we have an activeTopic with isNiche flag
+    if (activeTopic && activeTopic !== 'default' && topics[activeTopic]) {
+      const isNiche = topics[activeTopic].isNiche === true;
+      console.log(`🎯 Method 1: Niche app detection result: ${isNiche} for topic: ${activeTopic}`);
+      return isNiche;
+    }
+    
+    // Method 2: Check if we're in single topic filtering mode (fallback for runtime detection)
+    if (filterContentByTopic && activeTopic && activeTopic !== 'default') {
+      console.log(`🎯 Method 2: Single topic filtering detected for: ${activeTopic} - treating as niche app`);
+      return true;
+    }
+    
+    // Method 3: Check if Constants has a different structure (debug what's actually there)
+    console.log('🔍 Debug Constants structure:', {
+      manifest: Constants.manifest,
+      manifest2: Constants.manifest2,
+      executionEnvironment: Constants.executionEnvironment
+    });
+    
+  } catch (e) {
+    console.error('❌ Error checking if niche app:', e);
+  }
+  console.log('❌ Not a niche app - fallback to false');
+  return false;
+}
+
+// Simple helper to select questions with subtopic variety for niche apps
+function selectQuestionsWithSubtopicVariety(
+  groupedQuestions: Map<Topic, Map<Subtopic, FeedItem[]>>,
+  state: ColdStartState,
+  targetCount: number
+): FeedItem[] {
+  console.log('🌈 SUBTOPIC VARIETY SELECTION START:', { targetCount });
+  console.log('📊 Grouped questions structure:', {
+    topicCount: groupedQuestions.size,
+    topics: Array.from(groupedQuestions.keys()),
+    shownQuestionIds: state.shownQuestionIds.size
+  });
+
+  const selectedQuestions: FeedItem[] = [];
+  const usedSubtopics = new Set<string>();
+  
+  // Get all available subtopics with their questions
+  const subtopicData: { subtopic: string, questions: FeedItem[] }[] = [];
+  
+  Array.from(groupedQuestions.entries()).forEach(([topic, subtopicMap]) => {
+    console.log(`📂 Processing topic: ${topic}, subtopics: ${subtopicMap.size}`);
+    Array.from(subtopicMap.entries()).forEach(([subtopic, questions]) => {
+      const availableQuestions = questions.filter(q => !state.shownQuestionIds.has(q.id));
+      console.log(`  📝 Subtopic "${subtopic}": ${availableQuestions.length}/${questions.length} available questions`);
+      if (availableQuestions.length > 0) {
+        subtopicData.push({ subtopic, questions: availableQuestions });
+      }
+    });
+  });
+  
+  console.log(`🎲 Found ${subtopicData.length} subtopics with available questions:`, 
+    subtopicData.map(s => `${s.subtopic}(${s.questions.length})`));
+  
+  if (subtopicData.length === 0) {
+    console.log('❌ No subtopics with available questions - returning empty array');
+    return selectedQuestions;
+  }
+  
+  // Shuffle subtopics to randomize order
+  shuffleArray(subtopicData);
+  console.log('🔀 Shuffled subtopic order:', subtopicData.map(s => s.subtopic));
+  
+  // Strategy: Try to get one question from each different subtopic first
+  for (const { subtopic, questions } of subtopicData) {
+    if (selectedQuestions.length >= targetCount) break;
+    
+    if (!usedSubtopics.has(subtopic)) {
+      // Randomly select a question from this subtopic
+      const question = questions[Math.floor(Math.random() * questions.length)];
+      selectedQuestions.push(question);
+      usedSubtopics.add(subtopic);
+      
+      // Mark as shown
+      state.shownQuestionIds.add(question.id);
+      state.topicsShown.add(question.topic);
+      state.isExplorationQuestion.add(question.id);
+      
+      console.log(`✅ Selected question ${selectedQuestions.length}/${targetCount} from subtopic "${subtopic}": "${question.question?.substring(0, 50)}..."`);
+    }
+  }
+  
+  // If we still need more questions, cycle through subtopics again
+  if (selectedQuestions.length < targetCount) {
+    console.log(`🔄 Need ${targetCount - selectedQuestions.length} more questions, cycling through subtopics again`);
+    
+    for (const { subtopic, questions } of subtopicData) {
+      if (selectedQuestions.length >= targetCount) break;
+      
+      // Get questions not already selected
+      const remainingQuestions = questions.filter(q => !state.shownQuestionIds.has(q.id));
+      if (remainingQuestions.length > 0) {
+        const question = remainingQuestions[Math.floor(Math.random() * remainingQuestions.length)];
+        selectedQuestions.push(question);
+        
+        // Mark as shown
+        state.shownQuestionIds.add(question.id);
+        state.topicsShown.add(question.topic);
+        state.isExplorationQuestion.add(question.id);
+        
+        console.log(`🔄 Additional question ${selectedQuestions.length}/${targetCount} from subtopic "${subtopic}": "${question.question?.substring(0, 50)}..."`);
+      }
+    }
+  }
+  
+  console.log(`🎯 SUBTOPIC VARIETY SELECTION COMPLETE: Selected ${selectedQuestions.length}/${targetCount} questions from ${usedSubtopics.size} different subtopics`);
+  
+  return selectedQuestions;
+}
+
+// Helper function to update diversity trackers when a question is selected
+function trackTopicForDiversity(state: ColdStartState, topic: string): void {
+  // Update last selected topics
+  state.lastSelectedTopics.unshift(topic);
+  if (state.lastSelectedTopics.length > MAX_CONSECUTIVE_TOPIC * 2) {
+    state.lastSelectedTopics.pop();
+  }
+  
+  // Update count in current batch
+  const currentCount = state.topicCountInCurrentBatch.get(topic) || 0;
+  state.topicCountInCurrentBatch.set(topic, currentCount + 1);
+  
+  // logger.info(`Topic diversity tracking updated: ${topic} now has count ${currentCount + 1}, last topics: [${state.lastSelectedTopics.join(', ')}]`);
 } 
