@@ -16,6 +16,7 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import { trackAllRingsModal } from '../lib/mixpanelAnalytics';
 import { useTheme } from '@/src/context/ThemeContext';
+import { getLevelName } from '../utils/levelNames';
 
 interface AllRingsModalProps {
   visible: boolean;
@@ -101,7 +102,7 @@ const RingItem: React.FC<RingItemProps> = ({ ring, onPress, isActive, index = 0 
             </View>
             
             <View style={styles.ringStats}>
-              <ThemedText style={styles.ringLevel}>Level {ring.level}</ThemedText>
+              <ThemedText style={styles.ringLevel}>{getLevelName(ring.parentTopic || ring.topic, ring.isSubTopic ? ring.topic : null, ring.level)}</ThemedText>
               <ThemedText style={styles.ringProgress}>
                 {ring.currentProgress}/{ring.targetAnswers} ({Math.round((ring.currentProgress / ring.targetAnswers) * 100)}%)
               </ThemedText>

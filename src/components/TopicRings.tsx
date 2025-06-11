@@ -31,6 +31,7 @@ import {
   trackTopicRingClick, 
   trackTopicRingModal 
 } from '../lib/mixpanelAnalytics';
+import { getLevelName } from '../utils/levelNames';
 // Import topic configuration
 const topicConfig = require('../../app-topic-config');
 const { activeTopic, topics } = topicConfig;
@@ -69,6 +70,10 @@ interface AppleActivityRingProps {
   level: number;
   isActive?: boolean;
   glowOpacity?: Animated.Value;
+  topic?: string;
+  subtopic?: string;
+  isSubTopic?: boolean;
+  parentTopic?: string;
 }
 
 // Ring Details Modal Component
@@ -285,7 +290,7 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
             <View style={styles.modalSection}>
               <ThemedText style={styles.modalSectionTitle}>Current Level</ThemedText>
               <ThemedText style={[styles.modalLevelText, { color: ringData.color }]}>
-                Level {ringData.level}
+                {getLevelName(ringData.parentTopic || ringData.topic, ringData.isSubTopic ? ringData.topic : null, ringData.level)}
               </ThemedText>
             </View>
 
@@ -412,7 +417,11 @@ const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, isActive, onPre
         .mass(1)}
       entering={FadeInLeft.duration(300).delay(index * 50)}
       exiting={FadeOutRight.duration(300)}
-      style={[styles.ringWrapper, { marginLeft: index > 0 ? 8 : 0 }]}
+      style={[styles.ringWrapper, { 
+        marginLeft: index > 0 ? 8 : 0,
+        paddingTop: 28,  // Space for ring name above (reduced since text is closer)
+        paddingBottom: 28, // Space for level name below
+      }]}
     >
       <TouchableOpacity 
         onPress={onPress}
@@ -434,6 +443,10 @@ const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, isActive, onPre
             level={ringData.level}
             isActive={isActive}
             glowOpacity={glowOpacity}
+            topic={ringData.topic}
+            subtopic={ringData.isSubTopic ? ringData.topic : undefined}
+            isSubTopic={ringData.isSubTopic}
+            parentTopic={ringData.parentTopic}
           />
         </Animated.View>
       </TouchableOpacity>
@@ -554,6 +567,10 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
   level = 1,
   isActive,
   glowOpacity,
+  topic,
+  subtopic,
+  isSubTopic,
+  parentTopic,
 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -735,10 +752,10 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
         </Animated.View>
       </View>
       
-      {/* Level below with animated properties */}
+      {/* Ring name above with animated properties */}
       <Animated.View style={{ 
         position: 'absolute', 
-        top: size + 2,
+        top: -24,
         left: 0, 
         right: 0, 
         alignItems: 'center',
@@ -747,7 +764,8 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
         <ThemedText style={{ 
           color: color, 
           fontWeight: 'bold',
-          fontSize: size * 0.16,
+          fontSize: size * 0.18,
+          textAlign: 'center',
           ...(isActive && Platform.OS === 'web' && {
             textShadow: `0 0 8px ${color}60`,
           }),
@@ -762,7 +780,50 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
             textShadowRadius: 4,
           })
         }}>
-          LVL{level}
+          {(() => {
+            const displayName = isSubTopic ? subtopic || topic : topic;
+            if (!displayName) return 'Topic';
+            
+            // Extract first word only and capitalize it
+            const firstWord = displayName.split(' ')[0] || displayName.split('&')[0] || displayName;
+            return firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
+          })()}
+        </ThemedText>
+      </Animated.View>
+
+      {/* Level name below with animated properties */}
+      <Animated.View style={{ 
+        position: 'absolute', 
+        top: size + 4,
+        left: 0, 
+        right: 0, 
+        alignItems: 'center',
+        opacity: ringOpacity
+      }}>
+        <ThemedText style={{ 
+          color: color, 
+          fontWeight: '600',
+          fontSize: size * 0.18,
+          textAlign: 'center',
+          ...(isActive && Platform.OS === 'web' && {
+            textShadow: `0 0 8px ${color}60`,
+          }),
+          ...(isActive && Platform.OS === 'ios' && {
+            textShadowColor: color + '60',
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 3,
+          }),
+          ...(isActive && Platform.OS === 'android' && {
+            textShadowColor: color + '80',
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 4,
+          })
+        }}>
+          {getLevelName(
+            isSubTopic ? parentTopic || topic || '' : topic || '',
+            isSubTopic ? subtopic || topic || '' : null,
+            level
+          )}
         </ThemedText>
       </Animated.View>
     </View>
