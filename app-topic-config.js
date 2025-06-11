@@ -131,7 +131,7 @@ module.exports = {
           description: 'High-octane cinema adventures',
           icon: 'zap'
         },
-        'Sitcoms of the 90s': {
+        'Sitcoms': {
           displayName: '90s Sitcoms',
           description: 'Classic television comedies',
           icon: 'smile'
@@ -179,45 +179,95 @@ module.exports = {
       dbTopicName: '90s',
       isNiche: true, // Use niche_trivia_questions table
       subTopics: {
-        'Music of the 90s': {
-          displayName: '90s Music',
-          description: 'Grunge, pop, and alternative hits',
-          icon: 'music'
+        '1990s Commercials and Ads': {
+          displayName: '90s Commercials',
+          description: 'Memorable advertisements and commercials',
+          icon: 'megaphone'
         },
-        'Films of the 90s': {
-          displayName: '90s Movies',
-          description: 'Cinema of the 1990s',
-          icon: 'film'
+        'Books & Literature of the 1990s': {
+          displayName: '90s Books & Literature',
+          description: 'Literature and bestsellers',
+          icon: 'book'
         },
-        'Television of the 90s': {
-          displayName: '90s TV',
-          description: 'Must-see television shows',
-          icon: 'tv'
+        'Comedy': {
+          displayName: '90s Comedy',
+          description: 'Stand-up comedy and comedic culture',
+          icon: 'smile'
         },
-        'Sports of the 90s': {
-          displayName: '90s Sports',
-          description: 'Athletic achievements and legends',
-          icon: 'target'
+        'Famous Scandals of the 1990s': {
+          displayName: '90s Scandals',
+          description: 'Notable controversies and scandals',
+          icon: 'alert-triangle'
         },
-        'Fashion Trends of the 90s': {
+        'Fashion Trends': {
           displayName: '90s Fashion',
           description: 'Style and trends of the decade',
           icon: 'shopping-bag'
         },
-        'Pop Culture Trends of the 90s': {
-          displayName: '90s Pop Culture',
-          description: 'Cultural phenomena and trends',
-          icon: 'trending-up'
+        'Film': {
+          displayName: '90s Movies',
+          description: 'Cinema of the 1990s',
+          icon: 'film'
         },
-        'Internet & Tech Trends of the 90s': {
+        'Films': {
+          displayName: '90s Movies',
+          description: 'Cinema of the 1990s',
+          icon: 'film'
+        },
+        'Internet & Tech Trends': {
           displayName: '90s Technology',
           description: 'Early internet and tech evolution',
           icon: 'wifi'
+        },
+        'Kids\' TV': {
+          displayName: '90s Kids TV',
+          description: 'Children\'s television programming',
+          icon: 'star'
+        },
+        'Music': {
+          displayName: '90s Music',
+          description: 'Grunge, pop, and alternative hits',
+          icon: 'music'
         },
         'Politics of the 1990s': {
           displayName: '90s Politics',
           description: 'Political events and figures',
           icon: 'flag'
+        },
+        'Pop Culture Trends': {
+          displayName: '90s Pop Culture',
+          description: 'Cultural phenomena and trends',
+          icon: 'trending-up'
+        },
+        'Records & Milestones of the 1990s': {
+          displayName: '90s Records & Milestones',
+          description: 'Historic achievements and records',
+          icon: 'award'
+        },
+        'Slang & Buzzwords': {
+          displayName: '90s Slang',
+          description: 'Popular slang and expressions',
+          icon: 'message-circle'
+        },
+        'Sports': {
+          displayName: '90s Sports',
+          description: 'Athletic achievements and legends',
+          icon: 'target'
+        },
+        'Television': {
+          displayName: '90s TV',
+          description: 'Must-see television shows',
+          icon: 'tv'
+        },
+        'U.S. Politics': {
+          displayName: '90s U.S. Politics',
+          description: 'American political events',
+          icon: 'flag'
+        },
+        'World Events of the 1990s': {
+          displayName: '90s World Events',
+          description: 'Global events and developments',
+          icon: 'globe'
         }
       }
     },
