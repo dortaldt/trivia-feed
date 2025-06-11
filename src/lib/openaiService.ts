@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabaseClient';
-import { getTriviaTableName } from '../utils/tableUtils';
+import { getTriviaTableName, isUsingNicheTable, getActiveTopicConfig } from '../utils/tableUtils';
 import Constants from 'expo-constants';
 import { createClient } from '@supabase/supabase-js'
 // OpenAI API key should be stored securely
@@ -78,6 +78,37 @@ export interface GeneratedQuestion {
   isDuplicate?: boolean; // Flag for marking duplicates when processing
 }
 
+// New interface for generation configuration
+export interface GenerationConfig {
+  mode: 'general' | 'niche';
+  targetTable: 'trivia_questions' | 'niche_trivia_questions';
+  nicheTopicFocus?: string; // The specific niche topic to focus on
+  useFocusedPrompt?: boolean; // Whether to use niche-focused prompting
+}
+
+/**
+ * Determine the generation configuration based on app settings
+ */
+export function determineGenerationConfig(): GenerationConfig {
+  const isNiche = isUsingNicheTable();
+  const activeTopicConfig = getActiveTopicConfig();
+  
+  if (isNiche && activeTopicConfig) {
+    return {
+      mode: 'niche',
+      targetTable: 'niche_trivia_questions',
+      nicheTopicFocus: activeTopicConfig.dbTopicName || activeTopicConfig.displayName,
+      useFocusedPrompt: true
+    };
+  }
+  
+  return {
+    mode: 'general',
+    targetTable: 'trivia_questions',
+    useFocusedPrompt: false
+  };
+}
+
 /**
  * Call Edge Function to generate trivia questions
  */
@@ -90,8 +121,73 @@ export async function generateQuestions(
   preferredBranches: string[] = [],
   preferredTags: string[] = [],
   recentQuestions: { id: string, questionText: string, topic?: string, subtopic?: string, branch?: string, tags?: string[] }[] = [],
-  avoidIntentsSection: string = '' // Add parameter for topic-intent combinations to avoid
+  avoidIntentsSection: string = '', // Add parameter for topic-intent combinations to avoid
+  generationConfig?: GenerationConfig // New parameter
 ): Promise<GeneratedQuestion[]> {
+  
+  // Determine generation mode if not provided
+  const config = generationConfig || determineGenerationConfig();
+  
+  console.log(`[OPENAI] Using ${config.mode} generation mode`);
+  console.log(`[OPENAI] Target table: ${config.targetTable}`);
+  
+  // Route to appropriate generation function based on mode
+  if (config.mode === 'niche') {
+    return generateNicheQuestions(primaryTopics, preferredSubtopics, preferredBranches, preferredTags, recentQuestions, config);
+  } else {
+    return generateGeneralQuestions(primaryTopics, adjacentTopics, primaryCount, adjacentCount, preferredSubtopics, preferredBranches, preferredTags, recentQuestions, avoidIntentsSection);
+  }
+}
+
+/**
+ * Generate niche-focused questions using specialized prompts
+ */
+async function generateNicheQuestions(
+  primaryTopics: string[],
+  preferredSubtopics: string[],
+  preferredBranches: string[],
+  preferredTags: string[],
+  recentQuestions: any[],
+  config: GenerationConfig
+): Promise<GeneratedQuestion[]> {
+  try {
+    console.log('\n\n====================== NICHE OPENAI SERVICE LOGS ======================');
+    console.log('[OPENAI] Starting NICHE question generation');
+    console.log('[OPENAI] Niche topic focus:', config.nicheTopicFocus);
+    
+    // Use the niche topic as the primary focus
+    const nicheTopic = config.nicheTopicFocus || primaryTopics[0] || 'General Knowledge';
+    
+    // Build niche-specific prompt
+    const nichePrompt = buildNichePrompt(nicheTopic, preferredSubtopics, preferredBranches, preferredTags, recentQuestions);
+    
+    console.log('[OPENAI] Generated niche prompt structure successfully');
+    console.log('====================== END NICHE OPENAI SERVICE LOGS ======================\n\n');
+    
+    // Call OpenAI with niche-specific prompt
+    return await callOpenAIForGeneration(nichePrompt, 'niche');
+    
+  } catch (error) {
+    console.error('[OPENAI] Error during niche question generation:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate general questions using the existing logic
+ */
+async function generateGeneralQuestions(
+  primaryTopics: string[],
+  adjacentTopics: string[],
+  primaryCount: number,
+  adjacentCount: number,
+  preferredSubtopics: string[],
+  preferredBranches: string[],
+  preferredTags: string[],
+  recentQuestions: any[],
+  avoidIntentsSection: string
+): Promise<GeneratedQuestion[]> {
+  // This contains the existing generateQuestions logic
   try {
     console.log('\n\n====================== OPENAI SERVICE LOGS ======================');
     console.log('[OPENAI] Starting question generation');
@@ -160,7 +256,7 @@ export async function generateQuestions(
         : null;
       
       const exclusionTags = focalTag && interaction.tags 
-        ? interaction.tags.filter(tag => tag !== focalTag).join('","') 
+        ? interaction.tags.filter((tag: any) => tag !== focalTag).join('","') 
         : '';
       
       questionPrompts.push(`
@@ -284,122 +380,199 @@ export async function generateQuestions(
     console.log('[OPENAI] Generated prompt structure successfully');
     console.log(`[OPENAI] Prompt has ${questionPrompts.length} question instructions`);
     console.log('====================== END OPENAI SERVICE LOGS ======================\n\n');
-    const model = 'gpt-4o-mini'; // Make this easier to change if needed
-    console.log('[GENERATOR] Making request to edge function');
+    
+    // Call OpenAI with general prompt
+    return await callOpenAIForGeneration(mainPrompt, 'general');
+    
+  } catch (error) {
+    console.error('[OPENAI] Error during general question generation:', error);
+    throw error;
+  }
+}
 
-    // Get Supabase credentials from environment variables or Constants
-    let SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-    let SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+/**
+ * Build niche-focused prompt for specialized question generation
+ */
+function buildNichePrompt(
+  nicheTopic: string,
+  preferredSubtopics: string[],
+  preferredBranches: string[],
+  preferredTags: string[],
+  recentQuestions: any[]
+): string {
+  return `Generate 12 unique trivia questions EXCLUSIVELY about "${nicheTopic}".
 
-    // Fallback to Constants.expoConfig if env vars are not available
-    if (!SUPABASE_URL || !SUPABASE_KEY) {
-      if (Constants.expoConfig?.extra?.supabaseUrl) {
-        SUPABASE_URL = Constants.expoConfig.extra.supabaseUrl;
+CRITICAL NICHE REQUIREMENTS:
+- ALL 12 questions MUST be about "${nicheTopic}" specifically
+- DO NOT generate questions about other topics, even if they seem related
+- Focus on deep, specialized knowledge within "${nicheTopic}"
+- Questions should test expertise and nuanced understanding of "${nicheTopic}"
+- Ensure questions cover different aspects, subtopics, and branches within "${nicheTopic}"
+- Every question must have "${nicheTopic}" as its category/topic
+
+PREFERRED FOCUS AREAS:
+${preferredSubtopics.length > 0 ? `- Subtopics: ${preferredSubtopics.join(', ')}` : ''}
+${preferredBranches.length > 0 ? `- Branches: ${preferredBranches.join(', ')}` : ''}
+${preferredTags.length > 0 ? `- Tags: ${preferredTags.join(', ')}` : ''}
+
+NICHE DEPTH REQUIREMENTS:
+- Include questions for both casual fans and deep experts of "${nicheTopic}"
+- Cover obscure facts, behind-the-scenes information, and expert-level details
+- Test knowledge of subtleties and nuances within "${nicheTopic}"
+- Include questions about specific dates, people, events, or details unique to "${nicheTopic}"
+- Focus on trivia that only true enthusiasts of "${nicheTopic}" would know
+
+QUESTION DISTRIBUTION:
+- 4 questions: Easy level (accessible to casual fans)
+- 4 questions: Medium level (knowledgeable fans)
+- 4 questions: Hard level (expert enthusiasts)
+
+${recentQuestions.length > 0 ? `
+RECENT QUESTIONS TO AVOID DUPLICATING:
+${recentQuestions.slice(0, 5).map((q, i) => `${i + 1}. "${q.questionText}"`).join('\n')}` : ''}
+
+CRITICAL: Every question must have "${nicheTopic}" as its category/topic.
+All questions should contribute to a comprehensive "${nicheTopic}" quiz experience.
+
+IMPORTANT: Respond ONLY with a valid JSON array containing the question objects.
+DO NOT include any text before or after the JSON array.
+ONLY return a JSON array in this exact format:
+[
+  {
+    "question": "Detailed question text about ${nicheTopic}?",
+    "answers": [
+      {"text": "Correct answer", "isCorrect": true},
+      {"text": "Wrong answer 1", "isCorrect": false},
+      {"text": "Wrong answer 2", "isCorrect": false},
+      {"text": "Wrong answer 3", "isCorrect": false}
+    ],
+    "category": "${nicheTopic}",
+    "subtopic": "Specific Subtopic within ${nicheTopic}",
+    "branch": "Precise Branch within the subtopic",
+    "difficulty": "easy|medium|hard",
+    "learningCapsule": "Fascinating fact about the answer that provides additional context",
+    "tags": ["specific_tag1", "specific_tag2", "specific_tag3", "specific_tag4"],
+    "tone": "educational|fun|challenging|neutral",
+    "format": "multiple_choice"
+  },
+  // more questions...
+]`;
+}
+
+/**
+ * Common function to call OpenAI for generation
+ */
+async function callOpenAIForGeneration(prompt: string, mode: 'general' | 'niche'): Promise<GeneratedQuestion[]> {
+  const model = 'gpt-4o-mini'; // Make this easier to change if needed
+  console.log(`[GENERATOR] Making request to edge function for ${mode} generation`);
+
+  // Get Supabase credentials from environment variables or Constants
+  let SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  let SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Fallback to Constants.expoConfig if env vars are not available
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    if (Constants.expoConfig?.extra?.supabaseUrl) {
+      SUPABASE_URL = Constants.expoConfig.extra.supabaseUrl;
+    }
+    if (Constants.expoConfig?.extra?.supabaseAnonKey) {
+      SUPABASE_KEY = Constants.expoConfig.extra.supabaseAnonKey;
+    }
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.error('[GENERATOR] Missing Supabase credentials. Check environment variables or app.config.js');
+    throw new Error('Missing Supabase credentials');
+  }
+
+  console.log('[GENERATOR] Using Supabase URL:', SUPABASE_URL);
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  try {
+    console.log(`\n\n====================== ${mode.toUpperCase()} OPENAI SERVICE LOGS ======================`);
+    console.log(`[OPENAI] Starting ${mode} question generation`);
+
+    const { data, error } = await supabase.functions.invoke('generateTriviaQuestions', {
+      body: {
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: mode === 'niche' 
+              ? `You are a specialized trivia question generator that creates high-quality, factually accurate questions focused exclusively on niche topics. You must ONLY respond with a valid JSON array without any additional text, formatting, or explanations. Focus deeply on the specified niche topic and ensure all questions remain within that domain.`
+              : 'You are a specialized trivia question generator that creates high-quality, factually accurate questions with detailed categorization for a trivia app. You must ONLY respond with a valid JSON array without any additional text, formatting, or explanations.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.8,
+        max_tokens: 4000
       }
-      if (Constants.expoConfig?.extra?.supabaseAnonKey) {
-        SUPABASE_KEY = Constants.expoConfig.extra.supabaseAnonKey;
-      }
+    });
+
+    console.log('[GENERATOR] Full response:', {
+      error: error
+    });
+
+    if (error) {
+      console.error('[GENERATOR] Edge function error:', error);
+      throw new Error(`Edge function error: ${error.message}`);
     }
 
-    if (!SUPABASE_URL || !SUPABASE_KEY) {
-      console.error('[GENERATOR] Missing Supabase credentials. Check environment variables or app.config.js');
-      throw new Error('Missing Supabase credentials');
+    // Parse the response data if it's a string
+    let parsedData;
+    try {
+      parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+      console.log('[GENERATOR] Parsed response data:', {
+        type: typeof parsedData,
+        hasChoices: !!parsedData?.choices,
+        choicesLength: parsedData?.choices?.length
+      });
+    } catch (parseError) {
+      console.error('[GENERATOR] Error parsing response data:', parseError);
+      console.error('[GENERATOR] Raw data:', data);
+      throw new Error('Failed to parse response from Edge Function');
     }
 
-    console.log('[GENERATOR] Using Supabase URL:', SUPABASE_URL);
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Extract content from the chat completion response
+    const content = parsedData?.choices?.[0]?.message?.content;
+    if (!content) {
+      console.error('[GENERATOR] Response data structure:', {
+        parsedData,
+        choices: parsedData?.choices,
+        firstChoice: parsedData?.choices?.[0],
+        message: parsedData?.choices?.[0]?.message
+      });
+      throw new Error('Missing content in OpenAI response');
+    }
 
     try {
-      console.log('\n\n====================== OPENAI SERVICE LOGS ======================');
-      console.log('[OPENAI] Starting question generation');
-      console.log('[OPENAI] Input primary topics:', primaryTopics);
-
-      const { data, error } = await supabase.functions.invoke('generateTriviaQuestions', {
-        body: {
-          model,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a specialized trivia question generator that creates high-quality, factually accurate questions with detailed categorization for a trivia app. You must ONLY respond with a valid JSON array without any additional text, formatting, or explanations.'
-            },
-            {
-              role: 'user',
-              content: mainPrompt
-            }
-          ],
-          temperature: 0.8,
-          max_tokens: 4000
-        }
-      });
-
-      console.log('[GENERATOR] Full response:', {
-        // hasData: !!data,
-        // dataType: typeof data,
-        // dataKeys: data ? Object.keys(data) : [],
-        error: error
-      });
-
-      if (error) {
-        console.error('[GENERATOR] Edge function error:', error);
-        throw new Error(`Edge function error: ${error.message}`);
+      // Parse the content as JSON
+      const questions = JSON.parse(content) as GeneratedQuestion[];
+      console.log(`[GENERATOR] Successfully parsed ${mode} questions:`, questions.length);
+      
+      // Validate the questions array
+      if (!Array.isArray(questions)) {
+        throw new Error('Response is not an array of questions');
       }
 
-      // Parse the response data if it's a string
-      let parsedData;
-      try {
-        parsedData = typeof data === 'string' ? JSON.parse(data) : data;
-        console.log('[GENERATOR] Parsed response data:', {
-          type: typeof parsedData,
-          hasChoices: !!parsedData?.choices,
-          choicesLength: parsedData?.choices?.length
-        });
-      } catch (parseError) {
-        console.error('[GENERATOR] Error parsing response data:', parseError);
-        console.error('[GENERATOR] Raw data:', data);
-        throw new Error('Failed to parse response from Edge Function');
-      }
-
-      // Extract content from the chat completion response
-      const content = parsedData?.choices?.[0]?.message?.content;
-      if (!content) {
-        console.error('[GENERATOR] Response data structure:', {
-          parsedData,
-          choices: parsedData?.choices,
-          firstChoice: parsedData?.choices?.[0],
-          message: parsedData?.choices?.[0]?.message
-        });
-        throw new Error('Missing content in OpenAI response');
-      }
-
-      try {
-        // Parse the content as JSON
-        const questions = JSON.parse(content) as GeneratedQuestion[];
-        console.log('[GENERATOR] Successfully parsed questions:', questions.length);
-        
-        // Validate the questions array
-        if (!Array.isArray(questions)) {
-          throw new Error('Response is not an array of questions');
-        }
-
-        // Add metadata to each question
-        return questions.map(q => ({
-          ...q,
-          source: 'generated',
-          created_at: new Date().toISOString()
-        }));
-      } catch (parseError) {
-        console.error('[GENERATOR] Error parsing questions:', parseError);
-        console.error('[GENERATOR] Raw content:', content);
-        throw new Error('Failed to parse questions from response');
-      }
-
-    } catch (e) {
-      console.error('[OPENAI SERVICE] Error generating questions:', e);
-      throw e;
+      // Add metadata to each question
+      return questions.map(q => ({
+        ...q,
+        source: 'generated',
+        created_at: new Date().toISOString()
+      }));
+    } catch (parseError) {
+      console.error('[GENERATOR] Error parsing questions:', parseError);
+      console.error('[GENERATOR] Raw content:', content);
+      throw new Error('Failed to parse questions from response');
     }
-  } catch (error) {
-    console.error('[GENERATOR] Error during question generation:', error);
-    throw error;
+
+  } catch (e) {
+    console.error(`[OPENAI SERVICE] Error generating ${mode} questions:`, e);
+    throw e;
   }
 }
 

@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { generateQuestions, generateQuestionFingerprint, checkQuestionExists, GeneratedQuestion } from './openaiService';
+import { generateQuestions, GeneratedQuestion, generateQuestionFingerprint, checkQuestionExists, GenerationConfig, determineGenerationConfig } from './openaiService';
 import { dbEventEmitter, logGeneratorEvent } from './syncService';
 import { logDbOperation } from './simplifiedSyncService';
 import { UserProfile } from './personalizationService';
@@ -1120,6 +1120,13 @@ export async function runQuestionGeneration(
       // Build avoid section for topic-intent combinations
       const avoidIntentsSection = await buildAvoidTopicIntentsSection(primaryTopics);
       
+      // Determine generation configuration based on app settings
+      const generationConfig = determineGenerationConfig();
+      
+      // Log the generation mode being used
+      logger.info('[GENERATOR]', `Using ${generationConfig.mode} generation mode`);
+      logger.info('[GENERATOR]', `Target table: ${generationConfig.targetTable}`);
+      
       // Generate questions
       logger.info('[GENERATOR]', 'Calling OpenAI with preferred subtopics:', preferredSubtopics.join(', '));
     const generatedQuestions = await generateQuestions(
@@ -1131,11 +1138,12 @@ export async function runQuestionGeneration(
         preferredBranches,
         preferredTags,
         enhancedRecentQuestions,
-        avoidIntentsSection
+        avoidIntentsSection,
+        generationConfig // Pass the generation configuration
     );
     
-      // Step 6: Filter out duplicates and save to database
-    const savedCount = await saveUniqueQuestions(generatedQuestions);
+      // Step 6: Filter out duplicates and save to database using the appropriate table
+    const savedCount = await saveUniqueQuestions(generatedQuestions, generationConfig.targetTable);
     
     logger.info('[GENERATOR]', `Generated ${generatedQuestions.length} questions, saved ${savedCount}`);
     
@@ -1187,7 +1195,7 @@ export async function runQuestionGeneration(
 /**
  * Save generated questions to the database, avoiding duplicates
  */
-async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<number> {
+async function saveUniqueQuestions(questions: GeneratedQuestion[], targetTable?: string): Promise<number> {
   try {
     let savedCount = 0;
     
@@ -1292,7 +1300,7 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[]): Promise<numb
       const correctAnswer = answers.find(a => a.isCorrect)?.text || answerChoices[0];
       
       // Insert the question
-      const tableName = getTriviaTableName();
+      const tableName = targetTable || getTriviaTableName();
       const { error } = await supabase
         .from(tableName)
         .insert({
