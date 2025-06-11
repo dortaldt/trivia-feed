@@ -10,7 +10,8 @@
     "web": "expo start --web",
     "web:build": "expo export --platform web",
     "test": "jest --watchAll",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "update-splash": "node ./scripts/update-all-splash-screens.js"
   },
   "jest": {
     "preset": "jest-expo"

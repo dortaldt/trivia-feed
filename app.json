@@ -4,11 +4,11 @@
     "slug": "trivia-feed",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/app-icon-nineties.png",
     "scheme": "trivia-feed",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/splash-icon-nineties.png",
       "resizeMode": "contain",
       "backgroundColor": "#151718"
     },
@@ -36,7 +36,7 @@
     },
     "web": {
       "bundler": "metro",
-      "favicon": "./assets/images/app-icon.png",
+      "favicon": "./assets/images/app-icon-nineties.png",
       "templatePath": "./web-build-template.html",
       "fonts": [
         "node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.ttf",

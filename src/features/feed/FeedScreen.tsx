@@ -100,36 +100,28 @@ const topicConfig = require('../../../app-topic-config.js');
 const FeedScreen: React.FC = () => {
   // Utility function to load topic-specific images with fallback
   const getTopicSpecificImage = (baseName: string) => {
-    // Use a static image mapping approach instead of dynamic requires
-    const imageMapping: Record<string, any> = {
-      // Default images
-      'app-icon': require('../../../assets/images/app-icon.png'),
-      'guest-avatar': require('../../../assets/images/guest-avatar.png'),
-      
-      // Music topic images
-      'app-icon-music': require('../../../assets/images/app-icon-music.png'),
-      
-      // Neon theme images
-      'app-icon-neon': require('../../../assets/images/app-icon-neon.png'),
-      
-      // Add more topic-specific images as needed
-      // 'app-icon-science': require('../../../assets/images/app-icon-science.png'),
-    };
-    
     // Get active topic from config
     const { activeTopic: configActiveTopic } = topicConfig;
     
-    // Try to get topic-specific image first
-    if (configActiveTopic && configActiveTopic !== 'default') {
-      const topicImageKey = `${baseName}-${configActiveTopic}`;
-      if (imageMapping[topicImageKey]) {
-        return imageMapping[topicImageKey];
+    // If baseName is 'app-icon', use our existing getAppIcon function
+    if (baseName === 'app-icon') {
+      try {
+        // Import the function from ThemedLoadingScreen
+        const { getAppIcon } = require('../../components/ThemedLoadingScreen');
+        return getAppIcon();
+      } catch (error) {
+        console.warn('Failed to use getAppIcon, falling back to manual mapping');
       }
-      console.warn(`Could not load ${topicImageKey}, using default image instead.`);
     }
     
-    // Fallback to default image
-    return imageMapping[baseName];
+    // For guest avatar, always use the default for now
+    // TODO: Add topic-specific guest avatars when they become available
+    if (baseName === 'guest-avatar') {
+      return require('../../../assets/images/guest-avatar.png');
+    }
+    
+    // Fallback for unknown base names
+    return require('../../../assets/images/app-icon.png');
   };
 
   const [currentIndex, setCurrentIndex] = useState(0);

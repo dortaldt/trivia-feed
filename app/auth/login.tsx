@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getAppIcon } from '@/src/components/ThemedLoadingScreen';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -125,7 +126,7 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.logoContainer}>
           <Image 
-            source={require('../../assets/images/app-icon.png')}
+            source={getAppIcon()}
             style={styles.logo}
             resizeMode="contain"
           />

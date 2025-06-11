@@ -14,27 +14,80 @@ interface ThemedLoadingScreenProps {
   style?: ViewStyle;
 }
 
-// Static mapping of all app icons - this ensures they're included in the bundle
-const APP_ICONS = {
-  default: require('../../assets/images/app-icon.png'),
-  music: require('../../assets/images/app-icon-music.png'),
-  science: require('../../assets/images/app-icon.png'), // Fallback to default if no science icon exists
-  history: require('../../assets/images/app-icon.png'), // Fallback to default if no history icon exists
-  // Add more topics as needed
-};
-
 // Function to get the appropriate app icon based on active topic
 const getAppIcon = () => {
   const { activeTopic } = topicConfig;
   
-  // Use topic-specific icon if available, otherwise use default
-  if (activeTopic && APP_ICONS[activeTopic as keyof typeof APP_ICONS]) {
-    return APP_ICONS[activeTopic as keyof typeof APP_ICONS];
+  // If no active topic or default, use default icon
+  if (!activeTopic || activeTopic === 'default') {
+    return require('../../assets/images/app-icon.png');
   }
   
-  // Default case
-  return APP_ICONS.default;
+  // Try to load topic-specific icon, fall back to default if not found
+  try {
+    // Following naming convention: app-icon-{topic}.png
+    switch (activeTopic) {
+      case 'music':
+        return require('../../assets/images/app-icon-music.png');
+      case 'nineties':
+        return require('../../assets/images/app-icon-nineties.png');
+      case 'friends':
+      case 'friends-tv':
+        return require('../../assets/images/app-icon-friends.png');
+      case 'science':
+        return require('../../assets/images/app-icon-science.png');
+      case 'history':
+        return require('../../assets/images/app-icon-history.png');
+      case 'movies-and-tv':
+        return require('../../assets/images/app-icon-movies-and-tv.png');
+      // Add new topics here following the pattern: app-icon-{topic}.png
+      default:
+        return require('../../assets/images/app-icon.png');
+    }
+  } catch (error) {
+    // If topic-specific icon doesn't exist, fall back to default
+    return require('../../assets/images/app-icon.png');
+  }
 };
+
+// Function to get the appropriate splash icon based on active topic
+export const getSplashIcon = () => {
+  const { activeTopic } = topicConfig;
+  
+  // If no active topic or default, use default splash icon
+  if (!activeTopic || activeTopic === 'default') {
+    return require('../../assets/images/splash-icon.png');
+  }
+  
+  // Try to load topic-specific splash icon, fall back to default if not found
+  try {
+    // Following naming convention: splash-icon-{topic}.png
+    switch (activeTopic) {
+      case 'music':
+        return require('../../assets/images/splash-icon-music.png');
+      case 'nineties':
+        return require('../../assets/images/splash-icon-nineties.png');
+      case 'friends':
+      case 'friends-tv':
+        return require('../../assets/images/splash-icon-friends.png');
+      case 'science':
+        return require('../../assets/images/splash-icon-science.png');
+      case 'history':
+        return require('../../assets/images/splash-icon-history.png');
+      case 'movies-and-tv':
+        return require('../../assets/images/splash-icon-movies-and-tv.png');
+      // Add new topics here following the pattern: splash-icon-{topic}.png
+      default:
+        return require('../../assets/images/splash-icon.png');
+    }
+  } catch (error) {
+    // If topic-specific splash icon doesn't exist, fall back to default
+    return require('../../assets/images/splash-icon.png');
+  }
+};
+
+// Export the app icon function for reuse
+export { getAppIcon };
 
 export const ThemedLoadingScreen: React.FC<ThemedLoadingScreenProps> = ({ 
   message = 'Loading...',
