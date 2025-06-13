@@ -159,6 +159,10 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
   const handleTopicWeightChange = (topic: string, weightChange: number) => {
     if (!userProfile || buttonsDisabled || !ringData) return;
 
+    // Check if we're in a single topic app (niche or regular single topic)
+    const isSingleTopicApp = activeTopic && activeTopic !== 'default';
+    const isSubTopicInSingleApp = isSingleTopicApp && ringData.isSubTopic;
+
     // Track feed control button click
     const actionType = weightChange > 0 ? 'feed_control_more' : 'feed_control_less';
     trackTopicRingModal(actionType, ringData.topic, {
@@ -170,58 +174,118 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
       currentWeight: userProfile.topics[ringData?.isSubTopic && ringData.parentTopic ? ringData.parentTopic : topic]?.weight || 0.5,
     });
 
-    // For sub-topics, use the parent topic for weight changes
-    const topicForWeight = ringData?.isSubTopic ? ringData.parentTopic : topic;
-    if (!topicForWeight) return;
+    if (isSubTopicInSingleApp) {
+      // For single topic apps, control subtopic weights
+      const parentTopic = ringData.parentTopic;
+      const subtopic = ringData.topic;
+      if (!parentTopic || !subtopic) return;
 
-    // Update the topic weight in Redux
-    const currentWeight = userProfile.topics[topicForWeight]?.weight || 0.5;
-    const newWeight = Math.max(0.1, Math.min(1.0, currentWeight + weightChange));
-    
-    // Create updated profile with new weight
-    const updatedProfile = {
-      ...userProfile,
-      topics: {
-        ...userProfile.topics,
-        [topicForWeight]: {
-          ...userProfile.topics[topicForWeight],
-          weight: newWeight
+      // Ensure the topic structure exists
+      const topicData = userProfile.topics[parentTopic] || { weight: 0.5, subtopics: {} };
+      const currentSubtopicWeight = topicData.subtopics?.[subtopic]?.weight || 0.5;
+      const newSubtopicWeight = Math.max(0.1, Math.min(1.0, currentSubtopicWeight + weightChange));
+
+      // Create updated profile with new subtopic weight
+      const updatedProfile = {
+        ...userProfile,
+        topics: {
+          ...userProfile.topics,
+          [parentTopic]: {
+            ...topicData,
+            subtopics: {
+              ...topicData.subtopics,
+              [subtopic]: {
+                ...topicData.subtopics?.[subtopic],
+                weight: newSubtopicWeight
+              }
+            }
+          }
+        },
+        lastRefreshed: Date.now()
+      };
+
+      // Create a weight change record for the manual adjustment
+      const weightChangeRecord = {
+        timestamp: Date.now(),
+        questionId: 'manual-adjustment',
+        interactionType: 'skipped' as const,
+        questionText: 'Manual subtopic weight adjustment',
+        topic: parentTopic,
+        subtopic: subtopic,
+        branch: 'General',
+        oldWeights: {
+          topicWeight: topicData.weight,
+          subtopicWeight: currentSubtopicWeight,
+          branchWeight: topicData.subtopics?.[subtopic]?.branches?.['General']?.weight || 0.5
+        },
+        newWeights: {
+          topicWeight: topicData.weight,
+          subtopicWeight: newSubtopicWeight,
+          branchWeight: topicData.subtopics?.[subtopic]?.branches?.['General']?.weight || 0.5
         }
-      },
-      lastRefreshed: Date.now()
-    };
+      };
 
-    // Create a weight change record for the manual adjustment
-    const weightChangeRecord = {
-      timestamp: Date.now(),
-      questionId: 'manual-adjustment',
-      interactionType: 'skipped' as const, // Use 'skipped' as closest to manual action
-      questionText: 'Manual topic weight adjustment',
-      topic: topicForWeight,
-      subtopic: 'General',
-      branch: 'General',
-      oldWeights: {
-        topicWeight: currentWeight,
-        subtopicWeight: userProfile.topics[topicForWeight]?.subtopics?.['General']?.weight || 0.5,
-        branchWeight: userProfile.topics[topicForWeight]?.subtopics?.['General']?.branches?.['General']?.weight || 0.5
-      },
-      newWeights: {
-        topicWeight: newWeight,
-        subtopicWeight: userProfile.topics[topicForWeight]?.subtopics?.['General']?.weight || 0.5,
-        branchWeight: userProfile.topics[topicForWeight]?.subtopics?.['General']?.branches?.['General']?.weight || 0.5
-      }
-    };
+      // Dispatch the update to Redux with weight change record
+      dispatch(updateUserProfile({ 
+        profile: updatedProfile,
+        weightChange: weightChangeRecord
+      }));
+      
+      console.log(`[Feed Control] Updated ${parentTopic} > ${subtopic} subtopic weight: ${currentSubtopicWeight.toFixed(3)} -> ${newSubtopicWeight.toFixed(3)} (change: ${weightChange > 0 ? '+' : ''}${weightChange})`);
+    } else {
+      // For multi-topic apps or regular topic rings, use the original logic
+      const topicForWeight = ringData?.isSubTopic ? ringData.parentTopic : topic;
+      if (!topicForWeight) return;
 
-    // Dispatch the update to Redux with weight change record
-    dispatch(updateUserProfile({ 
-      profile: updatedProfile,
-      weightChange: weightChangeRecord
-    }));
+      // Update the topic weight in Redux
+      const currentWeight = userProfile.topics[topicForWeight]?.weight || 0.5;
+      const newWeight = Math.max(0.1, Math.min(1.0, currentWeight + weightChange));
+      
+      // Create updated profile with new weight
+      const updatedProfile = {
+        ...userProfile,
+        topics: {
+          ...userProfile.topics,
+          [topicForWeight]: {
+            ...userProfile.topics[topicForWeight],
+            weight: newWeight
+          }
+        },
+        lastRefreshed: Date.now()
+      };
+
+      // Create a weight change record for the manual adjustment
+      const weightChangeRecord = {
+        timestamp: Date.now(),
+        questionId: 'manual-adjustment',
+        interactionType: 'skipped' as const,
+        questionText: 'Manual topic weight adjustment',
+        topic: topicForWeight,
+        subtopic: 'General',
+        branch: 'General',
+        oldWeights: {
+          topicWeight: currentWeight,
+          subtopicWeight: userProfile.topics[topicForWeight]?.subtopics?.['General']?.weight || 0.5,
+          branchWeight: userProfile.topics[topicForWeight]?.subtopics?.['General']?.branches?.['General']?.weight || 0.5
+        },
+        newWeights: {
+          topicWeight: newWeight,
+          subtopicWeight: userProfile.topics[topicForWeight]?.subtopics?.['General']?.weight || 0.5,
+          branchWeight: userProfile.topics[topicForWeight]?.subtopics?.['General']?.branches?.['General']?.weight || 0.5
+        }
+      };
+
+      // Dispatch the update to Redux with weight change record
+      dispatch(updateUserProfile({ 
+        profile: updatedProfile,
+        weightChange: weightChangeRecord
+      }));
+      
+      console.log(`[Feed Control] Updated ${topicForWeight} weight: ${currentWeight.toFixed(3)} -> ${newWeight.toFixed(3)} (change: ${weightChange > 0 ? '+' : ''}${weightChange})`);
+    }
     
     // Disable buttons until next question scroll
     setButtonsDisabled(true);
-    
-    console.log(`[Feed Control] Updated ${topicForWeight} weight: ${currentWeight.toFixed(3)} -> ${newWeight.toFixed(3)} (change: ${weightChange > 0 ? '+' : ''}${weightChange})`);
   };
 
   // Reset button state when modal opens/closes
@@ -332,7 +396,15 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
                     styles.feedControlButtonText,
                     { color: buttonsDisabled ? '#666' : '#00FF88' }
                   ]}>
-                    Show more from {ringData?.isSubTopic ? ringData.parentTopic : 'topic'}
+                    Show more from {(() => {
+                      // For single topic apps, show the specific subtopic name
+                      const isSingleTopicApp = activeTopic && activeTopic !== 'default';
+                      if (isSingleTopicApp && ringData?.isSubTopic) {
+                        return ringData.topic; // The subtopic name
+                      }
+                      // For multi-topic apps, show parent topic or topic
+                      return ringData?.isSubTopic ? ringData.parentTopic : ringData?.topic || 'topic';
+                    })()}
                   </ThemedText>
                 </TouchableOpacity>
                 
@@ -354,7 +426,15 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
                     styles.feedControlButtonText,
                     { color: buttonsDisabled ? '#666' : '#FF0080' }
                   ]}>
-                    Show less from {ringData?.isSubTopic ? ringData.parentTopic : 'topic'}
+                    Show less from {(() => {
+                      // For single topic apps, show the specific subtopic name
+                      const isSingleTopicApp = activeTopic && activeTopic !== 'default';
+                      if (isSingleTopicApp && ringData?.isSubTopic) {
+                        return ringData.topic; // The subtopic name
+                      }
+                      // For multi-topic apps, show parent topic or topic
+                      return ringData?.isSubTopic ? ringData.parentTopic : ringData?.topic || 'topic';
+                    })()}
                   </ThemedText>
                 </TouchableOpacity>
               </View>
