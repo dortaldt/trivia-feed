@@ -2131,55 +2131,62 @@ export function InteractionTracker({ feedData = [], debugEnabled = false }: Inte
             </TouchableOpacity>
           </View>
           
-          <View style={[styles.tabs, {borderBottomColor: '#e0e0e0'}]}>
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'interactions' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
-              onPress={() => setActiveTab('interactions')}
+          <View style={[styles.tabsContainer, {borderBottomColor: '#e0e0e0'}]}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.tabsScrollView}
+              contentContainerStyle={styles.tabsContentContainer}
             >
-              <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'interactions' && {color: '#3498db'}]}>
-                Interactions
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'feed' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
-              onPress={() => setActiveTab('feed')}
-            >
-              <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'feed' && {color: '#3498db'}]}>
-                Feed Status
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'feedList' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
-              onPress={() => setActiveTab('feedList')}
-            >
-              <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'feedList' && {color: '#3498db'}]}>
-                Feed List
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'dbLog' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
-              onPress={() => setActiveTab('dbLog')}
-            >
-              <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'dbLog' && {color: '#3498db'}]}>
-                DB Log
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'weights' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
-              onPress={() => setActiveTab('weights')}
-            >
-              <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'weights' && {color: '#3498db'}]}>
-                Weights
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'generator' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
-              onPress={() => setActiveTab('generator')}
-            >
-              <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'generator' && {color: '#3498db'}]}>
-                Generator
-              </ThemedText>
-            </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'interactions' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
+                onPress={() => setActiveTab('interactions')}
+              >
+                <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'interactions' && {color: '#3498db'}]}>
+                  Interactions
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'feed' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
+                onPress={() => setActiveTab('feed')}
+              >
+                <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'feed' && {color: '#3498db'}]}>
+                  Feed Status
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'feedList' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
+                onPress={() => setActiveTab('feedList')}
+              >
+                <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'feedList' && {color: '#3498db'}]}>
+                  Feed List
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'dbLog' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
+                onPress={() => setActiveTab('dbLog')}
+              >
+                <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'dbLog' && {color: '#3498db'}]}>
+                  DB Log
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'weights' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
+                onPress={() => setActiveTab('weights')}
+              >
+                <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'weights' && {color: '#3498db'}]}>
+                  Weights
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'generator' && [styles.activeTab, {borderBottomColor: '#3498db'}]]} 
+                onPress={() => setActiveTab('generator')}
+              >
+                <ThemedText style={[styles.tabText, {color: '#333333'}, activeTab === 'generator' && {color: '#3498db'}]}>
+                  Generator
+                </ThemedText>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
           
           {activeTab === 'interactions' ? renderInteractionsTab() : 
@@ -2250,10 +2257,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
+  tabsScrollView: {
+    flexGrow: 0,
+  },
+  tabsContentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 0,
+  },
   tab: {
     paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     marginRight: 5,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   activeTab: {
     borderBottomWidth: 2,
@@ -2262,6 +2280,8 @@ const styles = StyleSheet.create({
   tabText: {
     color: '#333333',
     fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
