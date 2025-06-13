@@ -545,17 +545,18 @@ function buildNichePrompt(
   // Build the prompt based on the same logic as general mode
   const questionPrompts = [];
   
-  // Create question sets for each interaction (2 questions per interaction instead of 3)
-  selectedInteractions.forEach((interaction, index) => {
-    console.log(`\n[OPENAI] 🎯 Processing Interaction ${index + 1}:`);
+  // Only generate questions 1, 3, and 5 (from 3 different interactions)
+  for (let i = 0; i < Math.min(3, selectedInteractions.length); i++) {
+    const interaction = selectedInteractions[i];
+    const questionIndex = i * 2 + 1; // Will be 1, 3, 5
+    
+    console.log(`\n[OPENAI] 🎯 Processing Interaction ${i + 1} for Question ${questionIndex}:`);
     console.log(`[OPENAI]   Topic: "${interaction.topic}"`);
     console.log(`[OPENAI]   Subtopic: "${interaction.subtopic}"`);
     console.log(`[OPENAI]   Branch: "${interaction.branch}"`);
     console.log(`[OPENAI]   Available Tags: [${interaction.tags?.join(', ') || 'none'}]`);
     
-    // Create prompts for 2 question types per interaction (REMOVED adjacent subtopic questions)
-    
-    // 1. Preferred branch question - CSV logic: one tag becomes focal, rest become exclusion
+    // Only create the preferred branch question (Question 1, 3, 5 pattern)
     let focalTag: string | null = null;
     let exclusionTags = '';
     
@@ -567,71 +568,28 @@ function buildNichePrompt(
       exclusionTags = otherTags.length > 0 ? otherTags.join('","') : '';
     }
     
-    console.log(`[OPENAI]   🎯 Q${questionPrompts.length + 1} (Preferred Branch): Focal="${focalTag || 'none'}", Exclusion=[${exclusionTags ? `"${exclusionTags}"` : 'none'}]`);
+    console.log(`[OPENAI]   🎯 Q${questionIndex} (Preferred Branch): Focal="${focalTag || 'none'}", Exclusion=[${exclusionTags ? `"${exclusionTags}"` : 'none'}]`);
     
     questionPrompts.push(`
-    // Question ${questionPrompts.length + 1}: Preferred branch from interaction ${index + 1}
+    // Question ${questionIndex}: Preferred branch from interaction ${i + 1}
     Create a question EXCLUSIVELY about topic "${nicheTopic}", subtopic "${interaction.subtopic}", branch "${interaction.branch}"${focalTag ? `
     Focal tag: "${focalTag}"` : ''}${exclusionTags ? `
     Exclusion tags: ["${exclusionTags}"]` : ''}
     `);
-    
-    // 2. Adjacent branch question - CSV logic: NO focal tag, ALL tags become exclusion
-    const allTagsAsExclusion = interaction.tags && interaction.tags.length > 0 
-      ? interaction.tags.join('","') 
-      : '';
-    
-    console.log(`[OPENAI]   🚫 Q${questionPrompts.length + 1} (Adjacent Branch): Focal=none, Exclusion=[${allTagsAsExclusion ? `"${allTagsAsExclusion}"` : 'none'}]`);
-    
-    questionPrompts.push(`
-    // Question ${questionPrompts.length + 1}: Adjacent branch from interaction ${index + 1}
-    Create a question EXCLUSIVELY about topic "${nicheTopic}", subtopic "${interaction.subtopic}", with a NEW random branch (not "${interaction.branch}")${allTagsAsExclusion ? `
-    Exclusion tags: ["${allTagsAsExclusion}"]` : ''}
-    `);
-    
-    // REMOVED: Adjacent subtopic question (Q3, Q6, Q9) - no longer generating these
-  });
-  
-  // Create 2 random noun-inspired questions for Q7-8 (randomize themes)
-  const randomThemes = [
-    "cultural, technological, or social aspects",
-    "significance or evolution during the 1990s", 
-    "trends, innovations, or cultural phenomena",
-    "brands, products, or companies",
-    "entertainment, media, or pop culture",
-    "technology, science, or social changes"
-  ];
-  
-  const shuffledThemes = [...randomThemes].sort(() => Math.random() - 0.5);
-  
-  questionPrompts.push(`
-  // Question ${questionPrompts.length + 1}: Random noun inspiration
-  Choose 1 random noun (like "telephone", "hamburger", "bicycle", etc.) and create a unique question about how this item or concept relates to "${nicheTopic}"
-  Focus on ${shuffledThemes[0]} of "${nicheTopic}"
-  The question should explore the connection between this random noun and the 1990s era
-  Make the connection surprising but factually accurate
-  `);
-  
-  questionPrompts.push(`
-  // Question ${questionPrompts.length + 1}: Random noun inspiration  
-  Choose 1 completely different random noun and create a unique question about its connection to "${nicheTopic}"
-  Focus on ${shuffledThemes[1]} from the 1990s
-  Test knowledge of "${nicheTopic}" through unexpected but factual connections
-  Explore how this item/concept was important during the 1990s
-  `);
+  }
   
   // Assemble the final prompt (same structure as general mode but niche-focused)
-  return `Generate 8 unique trivia questions EXCLUSIVELY about "${nicheTopic}", following these specific instructions:
+  return `Generate 3 unique trivia questions EXCLUSIVELY about "${nicheTopic}", following these specific instructions:
 
 CRITICAL NICHE REQUIREMENTS:
-- ALL 8 questions MUST be about "${nicheTopic}" specifically
+- ALL 3 questions MUST be about "${nicheTopic}" specifically
 - DO NOT generate questions about other topics, even if they seem related
 - Every question must have "${nicheTopic}" as its category/topic
 - Focus on deep, specialized knowledge within "${nicheTopic}"
 - Questions should test expertise and nuanced understanding of "${nicheTopic}"
 
 CRITICAL STRUCTURAL REQUIREMENTS:
-- Create EXACTLY 8 questions with detailed personalization
+- Create EXACTLY 3 questions with detailed personalization
 - Each question must follow the exact JSON structure shown at the end
 - Make sure all questions are factually accurate with current information
 - Include 4 answer choices per question (exactly one correct)
