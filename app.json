@@ -4,11 +4,11 @@
     "slug": "trivia-feed",
     "version": "1.2.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app-icon-nineties.png",
+    "icon": "./assets/images/app-icon-friends.png",
     "scheme": "trivia-feed",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/splash-icon-nineties.png",
+      "image": "./assets/images/splash-icon-friends.png",
       "resizeMode": "contain",
       "backgroundColor": "#151718"
     },
@@ -17,7 +17,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.triviafeed.90s",
+      "bundleIdentifier": "com.triviafeed.friends",
       "infoPlist": {
         "UIAppFonts": [
           "node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.ttf",
@@ -29,14 +29,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/adaptive-icon-friends.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.triviafeed.90s"
+      "package": "com.triviafeed.friends"
     },
     "web": {
       "bundler": "metro",
-      "favicon": "./assets/images/app-icon-nineties.png",
+      "favicon": "./assets/images/app-icon-friends.png",
       "templatePath": "./web-build-template.html",
       "fonts": [
         "node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.ttf",

@@ -13,7 +13,7 @@ module.exports = {
   // The active topic for this build (default, music, science, etc.)
   // Set to 'default' for the standard multi-topic experience
   // Set to a specific topic name for a focused single-topic experience
-  activeTopic: envTopic || 'nineties', // Set to 'default' for the standard multi-topic experience
+  activeTopic: envTopic || 'friends-tv', // Set to 'default' for the standard multi-topic experience
   
   // Whether to filter content based on the active topic
   // When true, only questions matching the active topic will be shown
@@ -283,27 +283,27 @@ module.exports = {
           icon: 'tv'
         },
         'Character Arcs': {
-          displayName: 'Character Stories',
+          displayName: 'Character Arcs',
           description: 'Character development and growth',
-          icon: 'users'
+          icon: 'user'
         },
         'Famous Quotes': {
-          displayName: 'Memorable Quotes',
+          displayName: 'Famous Quotes',
           description: 'Classic Friends one-liners',
           icon: 'message-circle'
         },
         'Relationships & Dating': {
-          displayName: 'Romance',
+          displayName: 'Relationships & Dating',
           description: 'Love stories and relationships',
           icon: 'heart'
         },
         'Jobs & Careers': {
-          displayName: 'Careers',
+          displayName: 'Jobs & Careers',
           description: 'The gang\'s professional lives',
           icon: 'briefcase'
         },
         'Apartments & Locations': {
-          displayName: 'Locations',
+          displayName: 'Apartments & Locations',
           description: 'Iconic NYC spots and apartments',
           icon: 'home'
         },
@@ -313,9 +313,19 @@ module.exports = {
           icon: 'star'
         },
         'Family & Backstories': {
-          displayName: 'Backstories',
+          displayName: 'Family & Backstories',
           description: 'Character histories and families',
           icon: 'book-open'
+        },
+        'Pop Culture References': {
+          displayName: 'Pop Culture References',
+          description: 'Cultural references and parodies',
+          icon: 'trending-up'
+        },
+        'Trivia & Goofs': {
+          displayName: 'Trivia & Goofs',
+          description: 'Fun facts and behind-the-scenes trivia',
+          icon: 'eye'
         }
       }
     },

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Script to test the app's runtime behavior with the nineties topic configuration
+ * Script to test the app's runtime behavior with the friends-tv topic configuration
  */
 
 const { createClient } = require('@supabase/supabase-js');
@@ -19,9 +19,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Load the app configuration
 const appConfig = require('../app-topic-config.js');
 
-async function testNinetiesConfiguration() {
+async function testFriendsConfiguration() {
   try {
-    console.log('🧪 Testing Nineties Topic Configuration\n');
+    console.log('🧪 Testing Friends-TV Topic Configuration\n');
 
     // 1. Test topic configuration
     console.log('📋 CONFIGURATION TEST:');
@@ -29,25 +29,25 @@ async function testNinetiesConfiguration() {
     console.log(`Active topic: ${appConfig.activeTopic}`);
     console.log(`Filter content by topic: ${appConfig.filterContentByTopic}`);
     
-    // Find the nineties topic configuration
-    const ninetiesTopic = appConfig.topics['nineties'];
-    if (!ninetiesTopic) {
-      console.error('❌ ERROR: nineties topic not found in configuration!');
+    // Find the friends-tv topic configuration
+    const friendsTopic = appConfig.topics['friends-tv'];
+    if (!friendsTopic) {
+      console.error('❌ ERROR: friends-tv topic not found in configuration!');
       return;
     }
     
-    console.log(`Nineties topic found: ${ninetiesTopic.displayName}`);
-    console.log(`Is niche: ${ninetiesTopic.isNiche}`);
-    console.log(`Database topic name: ${ninetiesTopic.dbTopicName}`);
-    console.log(`Description: ${ninetiesTopic.description}`);
-    console.log(`Subtopics: ${Object.keys(ninetiesTopic.subTopics || {}).length} defined`);
+    console.log(`Friends topic found: ${friendsTopic.displayName}`);
+    console.log(`Is niche: ${friendsTopic.isNiche}`);
+    console.log(`Database topic name: ${friendsTopic.dbTopicName}`);
+    console.log(`Description: ${friendsTopic.description}`);
+    console.log(`Subtopics: ${Object.keys(friendsTopic.subTopics || {}).length} defined`);
     
     // 2. Test database connection and data
     console.log('\n🔌 DATABASE CONNECTION TEST:');
     console.log('===============================');
     
     // Test table switching logic manually
-    const expectedTableName = ninetiesTopic.isNiche ? 'niche_trivia_questions' : 'trivia_questions';
+    const expectedTableName = friendsTopic.isNiche ? 'niche_trivia_questions' : 'trivia_questions';
     console.log(`Expected table name: ${expectedTableName}`);
     
     if (expectedTableName !== 'niche_trivia_questions') {
@@ -59,7 +59,7 @@ async function testNinetiesConfiguration() {
     const { data: questions, error } = await supabase
       .from(expectedTableName)
       .select('id, question_text, answer_choices, correct_answer, topic, subtopic')
-      .eq('topic', ninetiesTopic.dbTopicName)
+      .eq('topic', friendsTopic.dbTopicName)
       .limit(5);
     
     if (error) {
@@ -68,7 +68,7 @@ async function testNinetiesConfiguration() {
     }
     
     if (!questions || questions.length === 0) {
-      console.error('❌ ERROR: No questions found for topic:', ninetiesTopic.dbTopicName);
+      console.error('❌ ERROR: No questions found for topic:', friendsTopic.dbTopicName);
       return;
     }
     
@@ -155,7 +155,7 @@ async function testNinetiesConfiguration() {
     
     // Check if all required properties are present
     const requiredProps = ['displayName', 'description', 'isNiche', 'dbTopicName', 'subTopics'];
-    const missingProps = requiredProps.filter(prop => !(prop in ninetiesTopic));
+    const missingProps = requiredProps.filter(prop => !(prop in friendsTopic));
     
     if (missingProps.length > 0) {
       console.error('❌ Missing required properties:', missingProps);
@@ -164,16 +164,16 @@ async function testNinetiesConfiguration() {
     }
     
     // Check subtopic configuration
-    const subTopics = Object.keys(ninetiesTopic.subTopics || {});
+    const subTopics = Object.keys(friendsTopic.subTopics || {});
     if (subTopics.length === 0) {
-      console.warn('⚠️ No subtopics defined for nineties topic');
+      console.warn('⚠️ No subtopics defined for friends-tv topic');
     } else {
       console.log(`✅ ${subTopics.length} subtopics configured`);
       
       // List a few subtopics
       console.log('Sample subtopics:');
       subTopics.slice(0, 3).forEach(subtopicKey => {
-        const subtopic = ninetiesTopic.subTopics[subtopicKey];
+        const subtopic = friendsTopic.subTopics[subtopicKey];
         console.log(`  - ${subtopic.displayName} (icon: ${subtopic.icon})`);
       });
     }
@@ -208,4 +208,4 @@ async function testNinetiesConfiguration() {
 }
 
 // Run the test
-testNinetiesConfiguration(); 
+testFriendsConfiguration(); 

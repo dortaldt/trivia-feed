@@ -70,6 +70,9 @@ function getTopicAsset(assetName) {
   if (activeTopic === 'default') {
     return `./assets/images/${assetName}.png`;
   }
+  if (activeTopic === 'friends-tv') {
+    return `./assets/images/${assetName}-friends.png`;
+  }
   return `./assets/images/${assetName}-${activeTopic}.png`;
 }
 
@@ -90,6 +93,11 @@ function getAppSpecificConfig(topic) {
       bundleId: "com.triviafeed.music",
       scheme: "trivia-feed-music",
       slug: "trivia-feed-music",
+    },
+    'friends-tv': {
+      bundleId: "com.triviafeed.friends",
+      scheme: "trivia-feed-friends",
+      slug: "trivia-feed-friends",
     }
     // Add more topic-specific configurations as needed
   };
@@ -107,7 +115,9 @@ export default {
       ? "Trivia Feed" 
       : activeTopic === 'nineties'
         ? "Trivia Feed 90s"
-        : `${currentTopic.displayName}`,
+        : activeTopic === 'friends-tv'
+          ? "Trivia Feed Friends"
+          : `${currentTopic.displayName}`,
     slug: appSpecificConfig.slug,
     scheme: appSpecificConfig.scheme,
     version: "1.2.0",
@@ -172,11 +182,15 @@ export default {
     web: {
       favicon: activeTopic === 'default' 
         ? "./assets/images/app-icon.png" 
-        : `./assets/images/app-icon-${activeTopic}.png`,
+        : activeTopic === 'friends-tv'
+          ? "./assets/images/app-icon-friends.png"
+          : `./assets/images/app-icon-${activeTopic}.png`,
       meta: {
         title: activeTopic === 'default' 
           ? "Trivia Feed" 
-          : `${currentTopic.displayName}`,
+          : activeTopic === 'friends-tv'
+            ? "Trivia Feed Friends"
+            : `${currentTopic.displayName}`,
         description: currentTopic.description,
       }
     },
