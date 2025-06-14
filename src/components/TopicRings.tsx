@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Animated, Platform, Easing, ViewStyle, TouchableOpacity, Modal, Pressable , Animated as RNAnimated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/ThemedText';
 import {
   TopicRingProgress,
@@ -58,7 +59,11 @@ interface RingDetailsModalProps {
   onClose: () => void;
 }
 
-const AnimatedCircle = RNAnimated.createAnimatedComponent(Circle);
+interface RingHintPopoverProps {
+  visible: boolean;
+  onDismiss: () => void;
+  anchorPosition: { x: number; y: number };
+}
 
 interface AppleActivityRingProps {
   size: number;
@@ -70,6 +75,98 @@ interface AppleActivityRingProps {
   isActive?: boolean;
   glowOpacity?: Animated.Value;
 }
+
+// Fun Ring Hint Popover Component
+const RingHintPopover: React.FC<RingHintPopoverProps> = ({ visible, onDismiss, anchorPosition }) => {
+  const colorScheme = useColorScheme() ?? 'light';
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const { isNeonTheme } = useTheme();
+  const [popoverAnim] = useState(new Animated.Value(0));
+
+  const borderColor = isNeonTheme ? '#00FF88' : colorScheme === 'dark' ? '#333' : '#E0E0E0';
+  const popoverBgColor = isNeonTheme ? '#0A0A0A' : backgroundColor;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.spring(popoverAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 120,
+        friction: 8,
+        delay: 300, // Small delay for better UX
+      }).start();
+    } else {
+      Animated.timing(popoverAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+      }).start();
+    }
+  }, [visible]);
+
+  const animatedStyle = {
+    opacity: popoverAnim,
+    transform: [
+      {
+        scale: popoverAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.85, 1],
+        }),
+      },
+      {
+        translateY: popoverAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [15, 0],
+        }),
+      },
+    ],
+  };
+
+  if (!visible) return null;
+
+  return (
+    <Modal transparent visible={visible} animationType="none">
+      <Pressable style={styles.popoverOverlay} onPress={onDismiss}>
+        <Animated.View 
+          style={[
+            styles.popoverContainer,
+            {
+              backgroundColor: popoverBgColor,
+              borderColor: borderColor,
+              left: Math.max(20, Math.min(anchorPosition.x - 120, 250)),
+              top: anchorPosition.y + 70,
+            },
+            animatedStyle,
+          ]}
+        >
+          <View style={[styles.popoverArrow, { borderBottomColor: borderColor }]} />
+          <View style={styles.popoverContent}>
+            <View style={styles.popoverHeader}>
+              <Feather 
+                name="zap" 
+                size={18} 
+                color={isNeonTheme ? '#00FF88' : colorScheme === 'dark' ? '#4A90E2' : '#007AFF'} 
+              />
+              <ThemedText style={[styles.popoverTitle, { color: textColor }]}>
+                Ring Power! 🎯
+              </ThemedText>
+              <TouchableOpacity onPress={onDismiss} style={styles.popoverClose}>
+                <Feather name="x" size={16} color={textColor} />
+              </TouchableOpacity>
+            </View>
+            <ThemedText style={[styles.popoverText, { color: textColor }]}>
+              Tap rings to control topic frequency!
+            </ThemedText>
+          </View>
+        </Animated.View>
+      </Pressable>
+    </Modal>
+  );
+};
+
+const AnimatedCircle = RNAnimated.createAnimatedComponent(Circle);
 
 // Ring Details Modal Component
 const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, onClose }) => {
@@ -340,42 +437,26 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
               {getDisplayTitle()}
             </ThemedText>
 
-            {/* Description */}
-            <ThemedText style={styles.modalDescription}>
-              {getDescription()}
-            </ThemedText>
-
-            {/* Level Info */}
-            <View style={styles.modalSection}>
-              <ThemedText style={styles.modalSectionTitle}>Current Level</ThemedText>
-              <ThemedText style={[styles.modalLevelText, { color: ringData.color }]}>
-                Level {ringData.level}
-              </ThemedText>
+            {/* Stats Grid */}
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <ThemedText style={[styles.statValue, { color: ringData.color }]}>
+                  {ringData.level}
+                </ThemedText>
+                <ThemedText style={styles.statLabel}>Level</ThemedText>
+              </View>
+              <View style={styles.statItem}>
+                <ThemedText style={[styles.statValue, { color: ringData.color }]}>
+                  {ringData.totalCorrectAnswers}
+                </ThemedText>
+                <ThemedText style={styles.statLabel}>Correct</ThemedText>
+              </View>
             </View>
 
-            {/* Progress Info */}
-            <View style={styles.modalSection}>
-              <ThemedText style={styles.modalSectionTitle}>Progress</ThemedText>
-              <ThemedText style={styles.modalProgressText}>
-                {ringData.currentProgress} / {ringData.targetAnswers} correct answers
-              </ThemedText>
-              <ThemedText style={[styles.modalPercentageText, { color: ringData.color }]}>
-                {progressPercentage}% complete
-              </ThemedText>
-            </View>
-
-            {/* Total Stats */}
-            <View style={styles.modalSection}>
-              <ThemedText style={styles.modalSectionTitle}>Total Stats</ThemedText>
-              <ThemedText style={styles.modalTotalText}>
-                {ringData.totalCorrectAnswers} total correct answers in {getDisplayTitle()}
-              </ThemedText>
-            </View>
-
-            {/* Feed Control Buttons */}
+            {/* Feed Control */}
             <View style={styles.modalSection}>
               <ThemedText style={styles.modalSectionTitle}>
-                Feed Control {ringData?.isSubTopic && `(${ringData.parentTopic})`}
+                Show more or less of this topic
               </ThemedText>
               <View style={styles.feedControlButtons}>
                 <TouchableOpacity 
@@ -396,15 +477,7 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
                     styles.feedControlButtonText,
                     { color: buttonsDisabled ? '#666' : '#00FF88' }
                   ]}>
-                    Show more from {(() => {
-                      // For single topic apps, show the specific subtopic name
-                      const isSingleTopicApp = activeTopic && activeTopic !== 'default';
-                      if (isSingleTopicApp && ringData?.isSubTopic) {
-                        return ringData.topic; // The subtopic name
-                      }
-                      // For multi-topic apps, show parent topic or topic
-                      return ringData?.isSubTopic ? ringData.parentTopic : ringData?.topic || 'topic';
-                    })()}
+                    Show More
                   </ThemedText>
                 </TouchableOpacity>
                 
@@ -426,21 +499,13 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
                     styles.feedControlButtonText,
                     { color: buttonsDisabled ? '#666' : '#FF0080' }
                   ]}>
-                    Show less from {(() => {
-                      // For single topic apps, show the specific subtopic name
-                      const isSingleTopicApp = activeTopic && activeTopic !== 'default';
-                      if (isSingleTopicApp && ringData?.isSubTopic) {
-                        return ringData.topic; // The subtopic name
-                      }
-                      // For multi-topic apps, show parent topic or topic
-                      return ringData?.isSubTopic ? ringData.parentTopic : ringData?.topic || 'topic';
-                    })()}
+                    Show Less
                   </ThemedText>
                 </TouchableOpacity>
               </View>
               {buttonsDisabled && (
                 <ThemedText style={styles.disabledMessage}>
-                  Buttons will re-enable after scrolling to the next question
+                  Re-enabled after next question
                 </ThemedText>
               )}
             </View>
@@ -517,6 +582,15 @@ const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, isActive, onPre
           />
         </Animated.View>
       </TouchableOpacity>
+      
+      {/* Topic name under the ring */}
+      <View style={styles.ringLabelContainer}>
+        {ringData.topic.split(' ').slice(0, 2).map((word, index) => (
+          <ThemedText key={index} style={[styles.ringLabel, { color: 'rgba(255, 255, 255, 0.7)' }]}>
+            {word}
+          </ThemedText>
+        ))}
+      </View>
     </Reanimated.View>
   );
 };
@@ -533,6 +607,61 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
   const { topRings, onRingComplete: hookOnRingComplete, isSubTopicMode } = useTopicRings({ config, userId });
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedRing, setSelectedRing] = useState<TopicRingProgress | null>(null);
+  
+  // Popover state
+  const [showPopover, setShowPopover] = useState(false);
+  const [hasUserClickedRing, setHasUserClickedRing] = useState(false);
+  const [popoverDismissed, setPopoverDismissed] = useState(false);
+  const [anchorPosition, setAnchorPosition] = useState({ x: 0, y: 0 });
+
+  // Storage keys for persistent state
+  const RING_CLICK_KEY = 'topic_ring_clicked';
+  const POPOVER_DISMISSED_KEY = 'topic_ring_popover_dismissed';
+
+  // Load persistent state on mount
+  useEffect(() => {
+    const loadPopoverState = async () => {
+      try {
+        const [clickedValue, dismissedValue] = await Promise.all([
+          AsyncStorage.getItem(RING_CLICK_KEY),
+          AsyncStorage.getItem(POPOVER_DISMISSED_KEY),
+        ]);
+        
+        setHasUserClickedRing(clickedValue === 'true');
+        setPopoverDismissed(dismissedValue === 'true');
+      } catch (error) {
+        console.error('Error loading popover state:', error);
+      }
+    };
+    
+    loadPopoverState();
+  }, []);
+
+  // Check if we should show the popover
+  useEffect(() => {
+    const shouldShowPopover = topRings.length >= 3 && 
+                             !hasUserClickedRing && 
+                             !popoverDismissed &&
+                             !modalVisible;
+    
+    if (shouldShowPopover && !showPopover) {
+      // Calculate anchor position (center of the third ring)
+      const thirdRingIndex = 2;
+      const ringSpacing = size + 16; // Ring size + padding between rings
+      const containerPadding = 20; // Base container padding
+      
+      // Calculate horizontal position (center of third ring)
+      const anchorX = containerPadding + (thirdRingIndex * ringSpacing) + (size / 2);
+      
+      // Calculate vertical position (below the rings)
+      const anchorY = 30 + size; // Much closer to rings - reduced from 80
+      
+      setAnchorPosition({ x: anchorX, y: anchorY });
+      setShowPopover(true);
+    } else if (!shouldShowPopover && showPopover) {
+      setShowPopover(false);
+    }
+  }, [topRings.length, hasUserClickedRing, popoverDismissed, modalVisible, showPopover, size]);
 
   // Combine the external callback with the hook's callback
   const handleRingComplete = (topic: string, newLevel: number) => {
@@ -542,7 +671,22 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
     }
   };
 
-  const handleRingPress = (ring: TopicRingProgress) => {
+  const handleRingPress = async (ring: TopicRingProgress) => {
+    // Mark that user has clicked a ring
+    if (!hasUserClickedRing) {
+      setHasUserClickedRing(true);
+      try {
+        await AsyncStorage.setItem(RING_CLICK_KEY, 'true');
+      } catch (error) {
+        console.error('Error saving ring click state:', error);
+      }
+    }
+
+    // Hide popover if visible
+    if (showPopover) {
+      setShowPopover(false);
+    }
+
     // Track ring click
     trackTopicRingClick(ring.topic, {
       ringLevel: ring.level,
@@ -564,6 +708,17 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
   const handleCloseModal = () => {
     setModalVisible(false);
     setSelectedRing(null);
+  };
+
+  const handlePopoverDismiss = async () => {
+    setShowPopover(false);
+    setPopoverDismissed(true);
+    
+    try {
+      await AsyncStorage.setItem(POPOVER_DISMISSED_KEY, 'true');
+    } catch (error) {
+      console.error('Error saving popover dismissed state:', error);
+    }
   };
 
   if (topRings.length === 0) {
@@ -620,6 +775,12 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
         visible={modalVisible}
         ringData={selectedRing}
         onClose={handleCloseModal}
+      />
+      
+      <RingHintPopover
+        visible={showPopover}
+        onDismiss={handlePopoverDismiss}
+        anchorPosition={anchorPosition}
       />
     </Reanimated.View>
   );
@@ -815,36 +976,7 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
         </Animated.View>
       </View>
       
-      {/* Level below with animated properties */}
-      <Animated.View style={{ 
-        position: 'absolute', 
-        top: size + 2,
-        left: 0, 
-        right: 0, 
-        alignItems: 'center',
-        opacity: ringOpacity
-      }}>
-        <ThemedText style={{ 
-          color: color, 
-          fontWeight: 'bold',
-          fontSize: size * 0.16,
-          ...(isActive && Platform.OS === 'web' && {
-            textShadow: `0 0 8px ${color}60`,
-          }),
-          ...(isActive && Platform.OS === 'ios' && {
-            textShadowColor: color + '60',
-            textShadowOffset: { width: 0, height: 0 },
-            textShadowRadius: 3,
-          }),
-          ...(isActive && Platform.OS === 'android' && {
-            textShadowColor: color + '80',
-            textShadowOffset: { width: 0, height: 0 },
-            textShadowRadius: 4,
-          })
-        }}>
-          LVL{level}
-        </ThemedText>
-      </Animated.View>
+
     </View>
   );
 };
@@ -852,7 +984,7 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    alignItems: 'center', // Center align rings horizontally
+    alignItems: 'flex-start', // Align rings to top to match profile button
     justifyContent: 'flex-start',
     overflow: 'visible', // Ensure glow effects aren't clipped
   },
@@ -862,8 +994,19 @@ const styles = StyleSheet.create({
     // Add padding to accommodate glow effects on iOS
     ...(Platform.OS === 'ios' && {
       paddingHorizontal: 4,
-      paddingVertical: 4,
+      paddingVertical: 0, // Remove vertical padding to prevent upward shift
     }),
+  },
+  ringLabelContainer: {
+    alignItems: 'center',
+    marginTop: 8,
+    minWidth: 50,
+  },
+  ringLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 12,
   },
   singleRingContainer: {
     justifyContent: 'center',
@@ -921,7 +1064,7 @@ const styles = StyleSheet.create({
   modalSectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 12,
     opacity: 0.7,
   },
   modalLevelText: {
@@ -1046,5 +1189,81 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     textAlign: 'center',
     marginBottom: 20,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+    paddingHorizontal: 20,
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 14,
+    opacity: 0.7,
+    textAlign: 'center',
+  },
+  // Popover styles
+  popoverOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  popoverContainer: {
+    position: 'absolute',
+    minWidth: 220,
+    maxWidth: 300,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  popoverArrow: {
+    position: 'absolute',
+    top: -10,
+    left: '50%',
+    marginLeft: -10,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderBottomWidth: 10,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#00FF88', // Will be overridden by style prop
+  },
+  popoverContent: {
+    padding: 16,
+  },
+  popoverHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  popoverTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+    marginLeft: 8,
+  },
+  popoverClose: {
+    padding: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  popoverText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
   },
 }); 

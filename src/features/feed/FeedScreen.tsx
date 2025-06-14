@@ -3505,10 +3505,10 @@ const styles = StyleSheet.create({
   topicRingsContainer: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 66 : 41,
-    left: 78, // Profile button: left 20 + width 50 + small gap 8 = 78
+    left: 86, // Profile button: left 20 + width 50 + larger gap 16 = 86
     zIndex: 10,
     flexDirection: 'row',
-    alignItems: 'center', // Center-align the rings with the profile button
+    alignItems: 'flex-start', // Align rings to top
     justifyContent: 'flex-start',
     height: 50, // Match profile button height to ensure proper alignment
   },

@@ -19,6 +19,9 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { QuestionState } from '../../store/triviaSlice';
 import { FeatherIcon } from '@/components/FeatherIcon';
 import { ThemedText } from '@/components/ThemedText';
+import { LinearProgressBar } from '../../components/LinearProgressBar';
+import { useTopicRings } from '../../hooks/useTopicRings';
+import { TOPIC_ICONS, SUB_TOPIC_ICONS, getSubTopicIcon } from '../../types/topicRings';
 import { useIOSAnimations } from '@/hooks/useIOSAnimations';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -110,6 +113,8 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
   onToggleLeaderboard,
   debugMode = false // Add debugMode with default value
 }: FeedItemProps) => {
+  // Add topic rings hook to get progress data
+  const { topRings } = useTopicRings({});
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [showLearningCapsule, setShowLearningCapsule] = useState(false);
@@ -604,6 +609,31 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
+  // Get the ring progress data for this topic/subtopic
+  const getTopicRingData = () => {
+    const displayLabel = getDisplayLabel();
+    return topRings.find(ring => ring.topic === displayLabel) || null;
+  };
+
+  // Get the icon - always show icon even without ring data
+  const getTopicIcon = () => {
+    // First try to get from ring data if available
+    const ringData = getTopicRingData();
+    if (ringData && ringData.icon) {
+      return ringData.icon;
+    }
+    
+    // Always provide fallback icon based on topic/subtopic data
+    if (isTopicSpecificMode) {
+      if (item.subtopic) {
+        return getSubTopicIcon(item.subtopic, activeTopic);
+      } else if (item.tags && item.tags.length > 0) {
+        return SUB_TOPIC_ICONS[item.tags[0]] || getSubTopicIcon(item.tags[0], activeTopic);
+      }
+    }
+    return TOPIC_ICONS[item.topic] || TOPIC_ICONS.default;
+  };
+
   // Memoize the background component to prevent unnecessary re-renders
   const backgroundComponent = useMemo(() => {
     if (isNeonTheme) {
@@ -643,12 +673,33 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
 
         <View style={[styles.content, {zIndex: 2}]}>
           <View style={styles.header}>
-            <Text style={[
-              styles.topicLabel, 
-              isNeonTheme && { 
-                color: getTopicTitleColor()
-              }
-            ]}>{getDisplayLabel()}</Text>
+            <View style={styles.topicSection}>
+              <View style={styles.topicWithIcon}>
+                {/* Always show icon, even without ring data */}
+                <FeatherIcon 
+                  name={getTopicIcon() as any}
+                  size={20}
+                  color={getTopicTitleColor()}
+                  style={styles.topicIcon}
+                />
+                <Text style={[
+                  styles.topicLabel, 
+                  isNeonTheme && { 
+                    color: getTopicTitleColor()
+                  }
+                ]}>{getDisplayLabel()}</Text>
+              </View>
+              {/* Only show progress bar if we have ring data */}
+              {getTopicRingData() && (
+                <LinearProgressBar
+                  ringData={getTopicRingData()}
+                  width={120}
+                  height={4}
+                  showLabel={false}
+                  showPercentage={false}
+                />
+              )}
+            </View>
             <View style={[styles.difficulty, { 
               backgroundColor: 
                 item.difficulty?.toLowerCase() === 'easy' ? '#8BC34A' :
@@ -955,8 +1006,20 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 20,
+  },
+  topicSection: {
+    flex: 1,
+    marginRight: 16,
+  },
+  topicWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  topicIcon: {
+    marginRight: 8,
   },
   topicLabel: {
     color: 'white',
