@@ -384,6 +384,8 @@ async function generateGeneralQuestions(
     - Each question must follow the exact JSON structure shown at the end
     - Make sure all questions are factually accurate with current information
     - Include 4 answer choices per question (exactly one correct)
+    - Keep questions CONCISE and readable (aim for 1-2 sentences when possible)
+    - Keep answer choices SHORT and to the point (avoid overly long or wordy options)
     
     DISTRIBUTION:
     ${questionPrompts.join('\n')}
@@ -413,12 +415,12 @@ async function generateGeneralQuestions(
     ONLY return a JSON array in this exact format:
     [
       {
-        "question": "Detailed question text?",
+        "question": "Concise, clear question text?",
         "answers": [
-          {"text": "Correct answer", "isCorrect": true},
-          {"text": "Wrong answer 1", "isCorrect": false},
-          {"text": "Wrong answer 2", "isCorrect": false},
-          {"text": "Wrong answer 3", "isCorrect": false}
+          {"text": "Short correct answer", "isCorrect": true},
+          {"text": "Brief wrong answer 1", "isCorrect": false},
+          {"text": "Brief wrong answer 2", "isCorrect": false},
+          {"text": "Brief wrong answer 3", "isCorrect": false}
         ],
         "category": "Main Topic",
         "subtopic": "Specific Subtopic",
@@ -593,6 +595,8 @@ CRITICAL STRUCTURAL REQUIREMENTS:
 - Each question must follow the exact JSON structure shown at the end
 - Make sure all questions are factually accurate with current information
 - Include 4 answer choices per question (exactly one correct)
+- Keep questions CONCISE and readable (aim for 1-2 sentences when possible)
+- Keep answer choices SHORT and to the point (avoid overly long or wordy options)
 
 DISTRIBUTION:
 ${questionPrompts.join('\n')}
@@ -631,12 +635,12 @@ DO NOT include any text before or after the JSON array.
 ONLY return a JSON array in this exact format:
 [
   {
-    "question": "Detailed question text about ${nicheTopic}?",
+    "question": "Concise, clear question about ${nicheTopic}?",
     "answers": [
-      {"text": "Correct answer", "isCorrect": true},
-      {"text": "Wrong answer 1", "isCorrect": false},
-      {"text": "Wrong answer 2", "isCorrect": false},
-      {"text": "Wrong answer 3", "isCorrect": false}
+      {"text": "Short correct answer", "isCorrect": true},
+      {"text": "Brief wrong answer 1", "isCorrect": false},
+      {"text": "Brief wrong answer 2", "isCorrect": false},
+      {"text": "Brief wrong answer 3", "isCorrect": false}
     ],
     "category": "${nicheTopic}",
     "subtopic": "Specific Subtopic within ${nicheTopic}",
