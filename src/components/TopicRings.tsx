@@ -69,11 +69,13 @@ interface AppleActivityRingProps {
   size: number;
   strokeWidth: number;
   color: string;
-  progress: number; // 0 to 1
+  progress: number; // 0 to 1 (outer ring - current level progress)
+  levelProgress?: number; // 0 to 1 (inner ring - overall level progression)
   icon: string;
   level: number;
   isActive?: boolean;
   glowOpacity?: Animated.Value;
+  maxDisplayLevel?: number; // Maximum level for level progression calculation
 }
 
 // Fun Ring Hint Popover Component
@@ -576,10 +578,12 @@ const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, isActive, onPre
             strokeWidth={Math.max(6, size * 0.12)}
             color={ringData.color}
             progress={progressPercentage}
+            levelProgress={ringData.levelProgress}
             icon={ringData.icon}
             level={ringData.level}
             isActive={isActive}
             glowOpacity={glowOpacity}
+            maxDisplayLevel={ringData.maxDisplayLevel}
           />
         </Animated.View>
       </TouchableOpacity>
@@ -794,26 +798,50 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
   strokeWidth = 10,
   color = '#FF2D55',
   progress = 0.7,
+  levelProgress = 0.7,
   icon = 'activity',
   level = 1,
   isActive,
   glowOpacity,
+  maxDisplayLevel = 10,
 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const animatedProgress = React.useRef(new RNAnimated.Value(0)).current;
+  
+  // Add animation for level progress (inner ring)
+  const animatedLevelProgress = React.useRef(new RNAnimated.Value(0)).current;
+  
+  // Inner ring calculations - make it more prominent
+  const innerStrokeWidth = Math.max(6, strokeWidth * 0.8); // Inner ring is 80% of outer ring width (increased from 60%)
+  const innerRadius = radius - strokeWidth - 1; // Leave only 1px gap between rings (reduced from 2px)
+  const innerCircumference = 2 * Math.PI * innerRadius;
 
   React.useEffect(() => {
-    RNAnimated.timing(animatedProgress, {
-      toValue: progress,
-      duration: 1000,
-      useNativeDriver: true,
-    }).start();
-  }, [progress]);
+    // Animate both rings
+    RNAnimated.parallel([
+      RNAnimated.timing(animatedProgress, {
+        toValue: progress,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      RNAnimated.timing(animatedLevelProgress, {
+        toValue: levelProgress || 0,
+        duration: 1200, // Slightly slower for inner ring
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [progress, levelProgress]);
 
   const strokeDashoffset = animatedProgress.interpolate({
     inputRange: [0, 1],
     outputRange: [circumference, 0],
+  });
+  
+  // Inner ring animation
+  const innerStrokeDashoffset = animatedLevelProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [innerCircumference, 0],
   });
 
   // Create internal animations for ring properties
@@ -834,6 +862,26 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
       }),
     ]).start();
   }, [isActive, strokeWidth]);
+
+  // Calculate inner ring color (brighter and more prominent than outer ring)
+  const innerRingColor = color; // Use full opacity instead of 50%
+  
+  // Create a brighter version of the color for the inner ring
+  const brightenColor = (hexColor: string, factor: number = 1.2) => {
+    // Remove # if present
+    const hex = hexColor.replace('#', '');
+    
+    // Parse RGB values
+    const r = Math.min(255, Math.round(parseInt(hex.substring(0, 2), 16) * factor));
+    const g = Math.min(255, Math.round(parseInt(hex.substring(2, 4), 16) * factor));
+    const b = Math.min(255, Math.round(parseInt(hex.substring(4, 6), 16) * factor));
+    
+    // Convert back to hex
+    const toHex = (n: number) => n.toString(16).padStart(2, '0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  };
+  
+  const brighterInnerColor = brightenColor(color, 1.3); // 30% brighter
 
   return (
     <View style={{ alignItems: 'center', position: 'relative' }}>
@@ -941,6 +989,7 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
             />
           )}
           
+          {/* Outer ring (current level progress) */}
           {/* Background ring - more transparent for inactive rings */}
           <Circle
             cx={size / 2}
@@ -966,6 +1015,40 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
             origin={`${size / 2}, ${size / 2}`}
             opacity={ringOpacity}
           />
+          
+          {/* Inner ring (level progression) */}
+          {levelProgress !== undefined && levelProgress > 0 && (
+            <>
+              {/* Inner background ring */}
+              <Circle
+                cx={size / 2}
+                cy={size / 2}
+                r={innerRadius}
+                stroke={isActive ? brighterInnerColor + '60' : brighterInnerColor + '30'} // More transparent background
+                strokeWidth={innerStrokeWidth}
+                fill="none"
+              />
+              
+              {/* Inner progress ring */}
+              <AnimatedCircle
+                cx={size / 2}
+                cy={size / 2}
+                r={innerRadius}
+                stroke={brighterInnerColor}
+                strokeWidth={innerStrokeWidth}
+                fill="none"
+                strokeDasharray={innerCircumference}
+                strokeDashoffset={innerStrokeDashoffset}
+                strokeLinecap="round"
+                rotation="-90"
+                origin={`${size / 2}, ${size / 2}`}
+                opacity={ringOpacity.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.8, 1.0], // Inner ring is more visible (changed from 0.5, 0.8)
+                })}
+              />
+            </>
+          )}
         </Svg>
         
         {/* Center icon with animated opacity */}

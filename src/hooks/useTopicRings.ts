@@ -284,6 +284,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         totalCorrectAnswers: correctAnswers,
         color: getTopicColor(topic).hex,
         icon: TOPIC_ICONS[topic] || TOPIC_ICONS.default,
+        maxDisplayLevel: config.maxDisplayLevel,
       };
       
       // Check if we should level up immediately
@@ -301,6 +302,9 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         newRing.targetAnswers = calculateTargetAnswers(newRing.level);
       }
       
+      // Calculate level progression for inner ring
+      newRing.levelProgress = Math.min(newRing.level / config.maxDisplayLevel, 1);
+      
       return newRing;
     }
 
@@ -310,32 +314,30 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
       // Always update icon and color to ensure latest mappings
       icon: TOPIC_ICONS[topic] || TOPIC_ICONS.default,
       color: getTopicColor(topic).hex,
+      maxDisplayLevel: config.maxDisplayLevel,
     };
 
-    // MODIFIED: Only update progress if correctAnswers is actually higher than cached count
-    // This prevents unnecessary recalculation when preserving cached data
-    if (correctAnswers > existingRing.totalCorrectAnswers) {
-      const newCorrectAnswers = correctAnswers - existingRing.totalCorrectAnswers;
-      // console.log(`[RING PROGRESS] ${topic}: Adding ${newCorrectAnswers} new correct answers (${existingRing.totalCorrectAnswers} → ${correctAnswers})`);
-      
+    // Check if correct answers have changed
+    if (updatedRing.totalCorrectAnswers !== correctAnswers) {
       updatedRing.totalCorrectAnswers = correctAnswers;
-      updatedRing.currentProgress += newCorrectAnswers;
-
-      // Check if level should be increased
-      while (updatedRing.currentProgress >= updatedRing.targetAnswers && updatedRing.level < config.maxDisplayLevel) {
-        // console.log(`[RING LEVEL UP] ${topic}: Level ${updatedRing.level} → ${updatedRing.level + 1} (progress: ${updatedRing.currentProgress}/${updatedRing.targetAnswers})`);
-        updatedRing.currentProgress -= updatedRing.targetAnswers;
-        updatedRing.level += 1;
-        updatedRing.targetAnswers = calculateTargetAnswers(updatedRing.level);
+      
+      // Recalculate level and progress
+      let currentLevel = 1;
+      let remainingAnswers = correctAnswers;
+      
+      while (remainingAnswers >= calculateTargetAnswers(currentLevel)) {
+        remainingAnswers -= calculateTargetAnswers(currentLevel);
+        currentLevel++;
       }
-    } else if (correctAnswers === existingRing.totalCorrectAnswers) {
-      // Same count - this is normal when preserving cached data
-      // No need to log anything, just keep the existing progress
-    } else {
-      // This shouldn't happen with our new logic, but log it if it does
-      console.warn(`[RING WARNING] ${topic}: correctAnswers (${correctAnswers}) is less than existing total (${existingRing.totalCorrectAnswers}). This might indicate a data inconsistency.`);
+      
+      updatedRing.level = Math.min(currentLevel, config.maxDisplayLevel);
+      updatedRing.currentProgress = remainingAnswers;
+      updatedRing.targetAnswers = calculateTargetAnswers(updatedRing.level);
+      
+      // Update level progression for inner ring
+      updatedRing.levelProgress = Math.min(updatedRing.level / config.maxDisplayLevel, 1);
     }
-
+    
     return updatedRing;
   }, [calculateTargetAnswers, config.maxDisplayLevel]);
 
@@ -355,6 +357,7 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         icon: subTopicConfig?.icon || getSubTopicIcon(subTopic, activeTopic),
         isSubTopic: true,
         parentTopic: activeTopic,
+        maxDisplayLevel: config.maxDisplayLevel,
       };
       
       // Handle level ups for new rings
@@ -372,6 +375,9 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
         newRing.targetAnswers = calculateTargetAnswers(newRing.level);
       }
       
+      // Calculate level progression for inner ring
+      newRing.levelProgress = Math.min(newRing.level / config.maxDisplayLevel, 1);
+      
       return newRing;
     }
 
@@ -382,24 +388,30 @@ export const useTopicRings = ({ config = DEFAULT_RING_CONFIG, userId }: UseTopic
       color: subTopicConfig?.color || getTopicColor(subTopic).hex,
       isSubTopic: true,
       parentTopic: activeTopic,
+      maxDisplayLevel: config.maxDisplayLevel,
     };
 
-    if (correctAnswers > existingRing.totalCorrectAnswers) {
-      const newCorrectAnswers = correctAnswers - existingRing.totalCorrectAnswers;
-      // console.log(`[SUB-TOPIC RING PROGRESS] ${subTopic}: Adding ${newCorrectAnswers} new correct answers (${existingRing.totalCorrectAnswers} → ${correctAnswers})`);
-      
+    // Check if correct answers have changed
+    if (updatedRing.totalCorrectAnswers !== correctAnswers) {
       updatedRing.totalCorrectAnswers = correctAnswers;
-      updatedRing.currentProgress += newCorrectAnswers;
-
-      // Handle level ups
-      while (updatedRing.currentProgress >= updatedRing.targetAnswers && updatedRing.level < config.maxDisplayLevel) {
-        // console.log(`[SUB-TOPIC RING LEVEL UP] ${subTopic}: Level ${updatedRing.level} → ${updatedRing.level + 1} (progress: ${updatedRing.currentProgress}/${updatedRing.targetAnswers})`);
-        updatedRing.currentProgress -= updatedRing.targetAnswers;
-        updatedRing.level += 1;
-        updatedRing.targetAnswers = calculateTargetAnswers(updatedRing.level);
+      
+      // Recalculate level and progress for sub-topic
+      let currentLevel = 1;
+      let remainingAnswers = correctAnswers;
+      
+      while (remainingAnswers >= calculateTargetAnswers(currentLevel)) {
+        remainingAnswers -= calculateTargetAnswers(currentLevel);
+        currentLevel++;
       }
+      
+      updatedRing.level = Math.min(currentLevel, config.maxDisplayLevel);
+      updatedRing.currentProgress = remainingAnswers;
+      updatedRing.targetAnswers = calculateTargetAnswers(updatedRing.level);
+      
+      // Update level progression for inner ring
+      updatedRing.levelProgress = Math.min(updatedRing.level / config.maxDisplayLevel, 1);
     }
-
+    
     return updatedRing;
   }, [calculateTargetAnswers, config.maxDisplayLevel, activeTopic]);
 

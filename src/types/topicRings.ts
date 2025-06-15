@@ -9,6 +9,9 @@ export interface TopicRingProgress {
   // Add sub-topic support
   isSubTopic?: boolean;
   parentTopic?: string;
+  // Add dual ring support
+  levelProgress?: number; // 0 to 1 (inner ring - overall level progression)
+  maxDisplayLevel?: number; // Maximum level for level progression calculation
 }
 
 export interface TopicRingsState {
@@ -28,7 +31,7 @@ export interface RingConfig {
 export const DEFAULT_RING_CONFIG: RingConfig = {
   baseTargetAnswers: 5, // 5 correct answers for level 1
   scalingFactor: 1.2, // Each level requires 20% more answers
-  maxDisplayLevel: 50, // Show up to level 50
+  maxDisplayLevel: 5, // Show up to level 5 (changed from 50)
 };
 
 // Topic to icon mapping (using Feather icon names)

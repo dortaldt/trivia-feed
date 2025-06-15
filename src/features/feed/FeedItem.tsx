@@ -653,6 +653,7 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
     // Calculate current level progress
     const baseTargetAnswers = 5;
     const scalingFactor = 1.2;
+    const maxDisplayLevel = 5; // Maximum level for progression display (changed from 50)
     
     let currentLevel = 1;
     let remainingAnswers = totalCorrectAnswers;
@@ -665,6 +666,9 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
     
     const targetAnswers = Math.floor(baseTargetAnswers * Math.pow(scalingFactor, currentLevel - 1));
     const currentProgress = remainingAnswers;
+    
+    // Calculate level progression for inner ring (current level / max display level)
+    const levelProgress = Math.min(currentLevel / maxDisplayLevel, 1);
 
     return {
       topic: displayLabel,
@@ -674,6 +678,8 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
       totalCorrectAnswers: totalCorrectAnswers,
       color: getTopicColor(displayColor).hex,
       icon: getTopicIcon(),
+      levelProgress: levelProgress,
+      maxDisplayLevel: maxDisplayLevel,
     };
   };
 
@@ -775,14 +781,17 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
                   }
                 ]}>{getDisplayLabel()}</Text>
               </View>
-              {/* Always show progress bar - create empty ring data if none exists */}
+              {/* Progress bar hidden in questions */}
+              {/* 
                 <LinearProgressBar
                 ringData={calculateRealProgressData()}
                   width={120}
                   height={4}
                   showLabel={false}
                   showPercentage={false}
+                  showLevelProgress={true}
                 />
+              */}
             </View>
             <View style={[styles.difficulty, { 
               backgroundColor: 
