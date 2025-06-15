@@ -144,6 +144,10 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
   // Get user profile from Redux to access total answered questions
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   
+  // Get all questions and feed data from Redux for progress calculation
+  const allQuestions = useAppSelector(state => state.trivia.questions);
+  const feedData = useAppSelector(state => state.trivia.personalizedFeed);
+  
   const dispatch = useAppDispatch();
   
   const { 
@@ -615,6 +619,64 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
     return topRings.find(ring => ring.topic === displayLabel) || null;
   };
 
+  // Calculate real progress data from user's answer history
+  const calculateRealProgressData = () => {
+    const displayLabel = getDisplayLabel();
+    const displayColor = getDisplayColor();
+    
+    // Count correct answers for this topic/subtopic from the questions store
+    let totalCorrectAnswers = 0;
+    
+    // Get all answered questions from the Redux store
+    Object.entries(allQuestions).forEach(([questionId, questionState]) => {
+      if (questionState?.status === 'answered' && questionState?.isCorrect) {
+        // Find the question in the feed to check its topic/subtopic
+        const feedQuestion = feedData.find((feedItem: any) => feedItem.id === questionId);
+        if (feedQuestion) {
+          // Check if this question matches our current topic/subtopic
+          if (isTopicSpecificMode) {
+            // For sub-topic mode, match by subtopic
+            if (feedQuestion.subtopic === item.subtopic ||
+                (feedQuestion.tags && feedQuestion.tags.includes(item.subtopic || ''))) {
+              totalCorrectAnswers++;
+            }
+          } else {
+            // For main topic mode, match by topic
+            if (feedQuestion.topic === item.topic) {
+              totalCorrectAnswers++;
+            }
+          }
+        }
+      }
+    });
+
+    // Calculate current level progress
+    const baseTargetAnswers = 5;
+    const scalingFactor = 1.2;
+    
+    let currentLevel = 1;
+    let remainingAnswers = totalCorrectAnswers;
+    
+    // Calculate what level we should be at
+    while (remainingAnswers >= Math.floor(baseTargetAnswers * Math.pow(scalingFactor, currentLevel - 1))) {
+      remainingAnswers -= Math.floor(baseTargetAnswers * Math.pow(scalingFactor, currentLevel - 1));
+      currentLevel++;
+    }
+    
+    const targetAnswers = Math.floor(baseTargetAnswers * Math.pow(scalingFactor, currentLevel - 1));
+    const currentProgress = remainingAnswers;
+
+    return {
+      topic: displayLabel,
+      level: currentLevel,
+      currentProgress: currentProgress,
+      targetAnswers: targetAnswers,
+      totalCorrectAnswers: totalCorrectAnswers,
+      color: getTopicColor(displayColor).hex,
+      icon: getTopicIcon(),
+    };
+  };
+
   // Get the icon - always show correct icon regardless of ring status
   const getTopicIcon = () => {
     // Always prioritize static icon mappings based on topic/subtopic data
@@ -713,16 +775,14 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
                   }
                 ]}>{getDisplayLabel()}</Text>
               </View>
-              {/* Only show progress bar if we have ring data */}
-              {getTopicRingData() && (
+              {/* Always show progress bar - create empty ring data if none exists */}
                 <LinearProgressBar
-                  ringData={getTopicRingData()}
+                ringData={calculateRealProgressData()}
                   width={120}
                   height={4}
                   showLabel={false}
                   showPercentage={false}
                 />
-              )}
             </View>
             <View style={[styles.difficulty, { 
               backgroundColor: 

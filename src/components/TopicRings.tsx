@@ -127,42 +127,39 @@ const RingHintPopover: React.FC<RingHintPopoverProps> = ({ visible, onDismiss, a
   if (!visible) return null;
 
   return (
-    <Modal transparent visible={visible} animationType="none">
-      <Pressable style={styles.popoverOverlay} onPress={onDismiss}>
-        <Animated.View 
-          style={[
-            styles.popoverContainer,
-            {
-              backgroundColor: popoverBgColor,
-              borderColor: borderColor,
-              left: Math.max(20, Math.min(anchorPosition.x - 120, 250)),
-              top: anchorPosition.y + 70,
-            },
-            animatedStyle,
-          ]}
-        >
-          <View style={[styles.popoverArrow, { borderBottomColor: borderColor }]} />
-          <View style={styles.popoverContent}>
-            <View style={styles.popoverHeader}>
-              <Feather 
-                name="zap" 
-                size={18} 
-                color={isNeonTheme ? '#00FF88' : colorScheme === 'dark' ? '#4A90E2' : '#007AFF'} 
-              />
-              <ThemedText style={[styles.popoverTitle, { color: textColor }]}>
-                Ring Power! 🎯
-              </ThemedText>
-              <TouchableOpacity onPress={onDismiss} style={styles.popoverClose}>
-                <Feather name="x" size={16} color={textColor} />
-              </TouchableOpacity>
-            </View>
-            <ThemedText style={[styles.popoverText, { color: textColor }]}>
-              Tap rings to control topic frequency!
-            </ThemedText>
-          </View>
-        </Animated.View>
-      </Pressable>
-    </Modal>
+    <Animated.View 
+      style={[
+        styles.popoverContainer,
+        {
+          backgroundColor: popoverBgColor,
+          borderColor: borderColor,
+          left: Math.max(20, Math.min(anchorPosition.x - 120, 250)),
+          top: anchorPosition.y + 70,
+        },
+        animatedStyle,
+      ]}
+      pointerEvents="box-none"
+    >
+      <View style={[styles.popoverArrow, { borderBottomColor: borderColor }]} />
+      <View style={styles.popoverContent} pointerEvents="box-none">
+        <View style={styles.popoverHeader} pointerEvents="auto">
+          <Feather 
+            name="zap" 
+            size={18} 
+            color={isNeonTheme ? '#00FF88' : colorScheme === 'dark' ? '#4A90E2' : '#007AFF'} 
+          />
+          <ThemedText style={[styles.popoverTitle, { color: textColor }]}>
+            Ring Power! 🎯
+          </ThemedText>
+          <TouchableOpacity onPress={onDismiss} style={styles.popoverClose}>
+            <Feather name="x" size={16} color={textColor} />
+          </TouchableOpacity>
+        </View>
+        <ThemedText style={[styles.popoverText, { color: textColor }]}>
+          Tap rings to control topic frequency!
+        </ThemedText>
+      </View>
+    </Animated.View>
   );
 };
 
@@ -527,6 +524,10 @@ const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, isActive, onPre
   // Animation values for smooth transitions
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
   const glowOpacity = React.useRef(new Animated.Value(isActive ? 1 : 0)).current;
+  
+  // Add theme context for text color calculation
+  const { isNeonTheme } = useTheme();
+  const colorScheme = useColorScheme() ?? 'light';
 
   // Animate on active state change
   React.useEffect(() => {
@@ -585,8 +586,8 @@ const SingleRing: React.FC<SingleRingProps> = ({ ringData, size, isActive, onPre
       
       {/* Topic name under the ring */}
       <View style={styles.ringLabelContainer}>
-        {ringData.topic.split(' ').slice(0, 2).map((word, index) => (
-          <ThemedText key={index} style={[styles.ringLabel, { color: 'rgba(255, 255, 255, 0.7)' }]}>
+        {splitTopicForDisplay(ringData.topic).map((word, index) => (
+          <ThemedText key={index} style={[styles.ringLabel, { color: getReadableTextColor(ringData.color, isNeonTheme, colorScheme) }]}>
             {word}
           </ThemedText>
         ))}
@@ -745,31 +746,33 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
   );
 
   return (
-    <Reanimated.View 
-      style={styles.container}
-      layout={LinearTransition.springify()
-        .stiffness(250)
-        .damping(25)
-        .mass(0.8)}
-    >
-      {validRings.map((ring, index) => {
-        // For sub-topic rings, check if the current activeSubtopic matches this ring's topic
-        // For regular rings, check if the current activeTopic matches this ring's topic
-        const isRingActive = ring.isSubTopic 
-          ? !!(activeSubtopic && ring.topic.toLowerCase().trim() === activeSubtopic.toLowerCase().trim())
-          : !!(propActiveTopic && ring.topic.toLowerCase().trim() === propActiveTopic.toLowerCase().trim());
-        
-        return (
-          <SingleRing
-            key={ring.topic}
-            ringData={ring}
-            size={size}
-            isActive={isRingActive}
-            onPress={() => handleRingPress(ring)}
-            index={index}
-          />
-        );
-      })}
+    <View style={styles.mainContainer}>
+      <Reanimated.View 
+        style={styles.container}
+        layout={LinearTransition.springify()
+          .stiffness(250)
+          .damping(25)
+          .mass(0.8)}
+      >
+        {validRings.map((ring, index) => {
+          // For sub-topic rings, check if the current activeSubtopic matches this ring's topic
+          // For regular rings, check if the current activeTopic matches this ring's topic
+          const isRingActive = ring.isSubTopic 
+            ? !!(activeSubtopic && ring.topic.toLowerCase().trim() === activeSubtopic.toLowerCase().trim())
+            : !!(propActiveTopic && ring.topic.toLowerCase().trim() === propActiveTopic.toLowerCase().trim());
+          
+          return (
+            <SingleRing
+              key={ring.topic}
+              ringData={ring}
+              size={size}
+              isActive={isRingActive}
+              onPress={() => handleRingPress(ring)}
+              index={index}
+            />
+          );
+        })}
+      </Reanimated.View>
       
       <RingDetailsModal
         visible={modalVisible}
@@ -782,7 +785,7 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
         onDismiss={handlePopoverDismiss}
         anchorPosition={anchorPosition}
       />
-    </Reanimated.View>
+    </View>
   );
 };
 
@@ -981,7 +984,70 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
   );
 };
 
+// Helper function to ensure readable text color
+const getReadableTextColor = (ringColor: string, isNeonTheme: boolean, colorScheme: string) => {
+  // For neon theme, use the ring color with high opacity for good visibility
+  if (isNeonTheme) {
+    return ringColor;
+  }
+  
+  // For light theme, use the ring color but ensure it's dark enough
+  if (colorScheme === 'light') {
+    // Convert hex to RGB to check brightness
+    const hex = ringColor.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // Calculate brightness (0-255)
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    
+    // If color is too light, darken it for better contrast on light background
+    if (brightness > 180) {
+      return `rgba(${Math.max(0, r - 80)}, ${Math.max(0, g - 80)}, ${Math.max(0, b - 80)}, 0.9)`;
+    }
+    
+    return ringColor;
+  }
+  
+  // For dark theme, use the ring color with good opacity
+  return ringColor;
+};
+
+// Helper function to intelligently split topic names for display
+const splitTopicForDisplay = (topic: string): string[] => {
+  // Split by spaces first
+  const words = topic.split(' ');
+  
+  // If we have 2 or fewer words, return as is
+  if (words.length <= 2) {
+    return words;
+  }
+  
+  // Look for "&" and combine it with the following word
+  const result: string[] = [];
+  let i = 0;
+  
+  while (i < words.length && result.length < 2) {
+    const currentWord = words[i];
+    
+    // If current word is "&" and there's a next word, combine them
+    if (currentWord === '&' && i + 1 < words.length) {
+      result.push(`${currentWord} ${words[i + 1]}`);
+      i += 2; // Skip the next word since we combined it
+    } else {
+      result.push(currentWord);
+      i++;
+    }
+  }
+  
+  return result;
+};
+
 const styles = StyleSheet.create({
+  mainContainer: {
+    position: 'relative',
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'flex-start', // Align rings to top to match profile button
@@ -1007,6 +1073,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 12,
+    // Add subtle text shadow for better readability on any background
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   singleRingContainer: {
     justifyContent: 'center',
@@ -1214,6 +1284,7 @@ const styles = StyleSheet.create({
   popoverOverlay: {
     flex: 1,
     backgroundColor: 'transparent',
+    pointerEvents: 'box-none', // Allow interactions to pass through
   },
   popoverContainer: {
     position: 'absolute',
@@ -1227,6 +1298,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 12,
+    zIndex: 1000, // Ensure it appears above other content
+    pointerEvents: 'box-none', // Allow interactions to pass through except for interactive elements
   },
   popoverArrow: {
     position: 'absolute',
