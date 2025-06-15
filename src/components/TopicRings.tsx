@@ -76,6 +76,7 @@ interface AppleActivityRingProps {
   isActive?: boolean;
   glowOpacity?: Animated.Value;
   maxDisplayLevel?: number; // Maximum level for level progression calculation
+  highlightedRing?: 'level' | 'questions' | null;
 }
 
 // Fun Ring Hint Popover Component
@@ -180,6 +181,14 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   const [buttonsDisabled, setButtonsDisabled] = useState(false);
   const { isNeonTheme } = useTheme();
+  
+  // Add state to track which stat is being highlighted
+  const [highlightedStat, setHighlightedStat] = useState<'level' | 'questions' | null>(null);
+  
+  // Handle stat highlighting with toggle on tap
+  const handleStatHighlight = (stat: 'level' | 'questions') => {
+    setHighlightedStat(highlightedStat === stat ? null : stat);
+  };
 
   const progressPercentage = Math.round((ringData.currentProgress / ringData.targetAnswers) * 100);
   const nextLevelAnswers = ringData.targetAnswers - ringData.currentProgress;
@@ -251,6 +260,24 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
       };
     }
   }, [isNeonTheme]);
+
+  // Create a brighter version of the color for inner ring (level display)
+  const brightenColor = (hexColor: string, factor: number = 1.2) => {
+    // Remove # if present
+    const hex = hexColor.replace('#', '');
+    
+    // Parse RGB values
+    const r = Math.min(255, Math.round(parseInt(hex.substring(0, 2), 16) * factor));
+    const g = Math.min(255, Math.round(parseInt(hex.substring(2, 4), 16) * factor));
+    const b = Math.min(255, Math.round(parseInt(hex.substring(4, 6), 16) * factor));
+    
+    // Convert back to hex
+    const toHex = (n: number) => n.toString(16).padStart(2, '0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  };
+
+  const innerRingColor = brightenColor(ringData.color, 1.3); // 30% brighter for level
+  const outerRingColor = ringData.color; // Original color for questions counter
 
   const handleTopicWeightChange = (topic: string, weightChange: number) => {
     if (!userProfile || buttonsDisabled || !ringData) return;
@@ -417,7 +444,9 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
         <View style={[styles.modalContent, { backgroundColor: cardBackground }]}>
           <Pressable onPress={(e) => e.stopPropagation()}>
             {/* Header */}
-            <View style={styles.modalHeader}>
+            <View style={[styles.modalHeader, {
+              opacity: highlightedStat ? 0.3 : 1,
+            }]}>
               <View style={[styles.modalIconContainer, { backgroundColor: `${ringData.color}20` }]}>
                 <Feather name={ringData.icon as any} size={32} color={ringData.color} />
               </View>
@@ -432,28 +461,84 @@ const RingDetailsModal: React.FC<RingDetailsModalProps> = ({ visible, ringData, 
             </View>
 
             {/* Topic Name */}
-            <ThemedText style={[styles.modalTopicName, { color: ringData.color }]}>
+            <ThemedText style={[styles.modalTopicName, { 
+              color: ringData.color,
+              opacity: highlightedStat ? 0.3 : 1,
+            }]}>
               {getDisplayTitle()}
             </ThemedText>
 
+            {/* Ring Display in Modal */}
+            <View style={[styles.modalRingContainer, {
+              // Add padding and overflow to prevent glow clipping on iOS
+              paddingHorizontal: 30,
+              paddingVertical: 20,
+              overflow: 'visible',
+            }]}>
+              <AppleActivityRing
+                size={120}
+                strokeWidth={12}
+                color={ringData.color}
+                progress={Math.min(Math.max(ringData.currentProgress / ringData.targetAnswers, 0), 1)}
+                levelProgress={ringData.levelProgress}
+                icon={ringData.icon}
+                level={ringData.level}
+                isActive={true}
+                maxDisplayLevel={ringData.maxDisplayLevel}
+                highlightedRing={highlightedStat}
+              />
+            </View>
+
             {/* Stats Grid */}
             <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
-                <ThemedText style={[styles.statValue, { color: ringData.color }]}>
+              <TouchableOpacity 
+                style={styles.statItem}
+                onPress={() => handleStatHighlight('level')}
+                {...(Platform.OS === 'web' ? {
+                  onMouseEnter: () => setHighlightedStat('level'),
+                  onMouseLeave: () => setHighlightedStat(null)
+                } : {})}
+                activeOpacity={0.8}
+              >
+                <ThemedText style={[styles.statValue, { 
+                  color: innerRingColor,
+                  paddingTop: Platform.OS === 'ios' ? 6 : 0, // Fix iOS text cutting
+                  lineHeight: Platform.OS === 'ios' ? 44 : 40,
+                  opacity: highlightedStat === 'level' ? 1 : (highlightedStat ? 0.4 : 1)
+                }]}>
                   {ringData.level}
                 </ThemedText>
-                <ThemedText style={styles.statLabel}>Level</ThemedText>
-              </View>
-              <View style={styles.statItem}>
-                <ThemedText style={[styles.statValue, { color: ringData.color }]}>
+                <ThemedText style={[styles.statLabel, {
+                  opacity: highlightedStat === 'level' ? 1 : (highlightedStat ? 0.4 : 1)
+                }]}>Level</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.statItem}
+                onPress={() => handleStatHighlight('questions')}
+                {...(Platform.OS === 'web' ? {
+                  onMouseEnter: () => setHighlightedStat('questions'),
+                  onMouseLeave: () => setHighlightedStat(null)
+                } : {})}
+                activeOpacity={0.8}
+              >
+                <ThemedText style={[styles.statValue, { 
+                  color: outerRingColor,
+                  paddingTop: Platform.OS === 'ios' ? 6 : 0, // Fix iOS text cutting
+                  lineHeight: Platform.OS === 'ios' ? 44 : 40,
+                  opacity: highlightedStat === 'questions' ? 1 : (highlightedStat ? 0.4 : 1)
+                }]}>
                   {ringData.totalCorrectAnswers}
                 </ThemedText>
-                <ThemedText style={styles.statLabel}>Correct</ThemedText>
-              </View>
+                <ThemedText style={[styles.statLabel, {
+                  opacity: highlightedStat === 'questions' ? 1 : (highlightedStat ? 0.4 : 1)
+                }]}>Correct</ThemedText>
+              </TouchableOpacity>
             </View>
 
             {/* Feed Control */}
-            <View style={styles.modalSection}>
+            <View style={[styles.modalSection, {
+              opacity: highlightedStat ? 0.3 : 1,
+            }]}>
               <ThemedText style={styles.modalSectionTitle}>
                 Show more or less of this topic
               </ThemedText>
@@ -804,6 +889,7 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
   isActive,
   glowOpacity,
   maxDisplayLevel = 10,
+  highlightedRing,
 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -811,6 +897,12 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
   
   // Add animation for level progress (inner ring)
   const animatedLevelProgress = React.useRef(new RNAnimated.Value(0)).current;
+  
+  // Add animations for ring highlighting
+  const outerRingOpacity = React.useRef(new RNAnimated.Value(1)).current;
+  const innerRingOpacity = React.useRef(new RNAnimated.Value(1)).current;
+  const outerRingGlow = React.useRef(new RNAnimated.Value(0)).current;
+  const innerRingGlow = React.useRef(new RNAnimated.Value(0)).current;
   
   // Inner ring calculations - make it more prominent
   const innerStrokeWidth = Math.max(6, strokeWidth * 0.8); // Inner ring is 80% of outer ring width (increased from 60%)
@@ -843,6 +935,37 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
     inputRange: [0, 1],
     outputRange: [innerCircumference, 0],
   });
+
+  // Animate highlighting based on highlightedRing
+  React.useEffect(() => {
+    const duration = 300;
+    
+    if (highlightedRing === 'level') {
+      // Highlight inner ring (level)
+      RNAnimated.parallel([
+        RNAnimated.timing(outerRingOpacity, { toValue: 0.3, duration, useNativeDriver: true }),
+        RNAnimated.timing(innerRingOpacity, { toValue: 1.0, duration, useNativeDriver: true }),
+        RNAnimated.timing(outerRingGlow, { toValue: 0, duration, useNativeDriver: true }),
+        RNAnimated.timing(innerRingGlow, { toValue: 1, duration, useNativeDriver: true }),
+      ]).start();
+    } else if (highlightedRing === 'questions') {
+      // Highlight outer ring (questions)
+      RNAnimated.parallel([
+        RNAnimated.timing(outerRingOpacity, { toValue: 1.0, duration, useNativeDriver: true }),
+        RNAnimated.timing(innerRingOpacity, { toValue: 0.3, duration, useNativeDriver: true }),
+        RNAnimated.timing(outerRingGlow, { toValue: 1, duration, useNativeDriver: true }),
+        RNAnimated.timing(innerRingGlow, { toValue: 0, duration, useNativeDriver: true }),
+      ]).start();
+    } else {
+      // Normal state
+      RNAnimated.parallel([
+        RNAnimated.timing(outerRingOpacity, { toValue: 1.0, duration, useNativeDriver: true }),
+        RNAnimated.timing(innerRingOpacity, { toValue: 1.0, duration, useNativeDriver: true }),
+        RNAnimated.timing(outerRingGlow, { toValue: 0, duration, useNativeDriver: true }),
+        RNAnimated.timing(innerRingGlow, { toValue: 0, duration, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [highlightedRing]);
 
   // Create internal animations for ring properties
   const ringOpacity = React.useRef(new RNAnimated.Value(isActive ? 1 : 0.7)).current;
@@ -977,6 +1100,8 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
           />
         )}
         
+        {/* SVG-based glow effects that follow the ring progress */}
+        
         <Svg width={size} height={size}>
           {/* Active ring fill - subtle background fill when active */}
           {isActive && (
@@ -1013,7 +1138,45 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
             strokeLinecap="round"
             rotation="-90"
             origin={`${size / 2}, ${size / 2}`}
-            opacity={ringOpacity}
+            opacity={RNAnimated.multiply(ringOpacity, outerRingOpacity)}
+          />
+          
+          {/* Outer ring glow effect that follows progress */}
+          <AnimatedCircle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color}
+            strokeWidth={strokeWidth + 8}
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            rotation="-90"
+            origin={`${size / 2}, ${size / 2}`}
+            opacity={outerRingGlow.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 0.3],
+            })}
+          />
+          
+          {/* Outer ring glow effect with more blur */}
+          <AnimatedCircle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color}
+            strokeWidth={strokeWidth + 16}
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            rotation="-90"
+            origin={`${size / 2}, ${size / 2}`}
+            opacity={outerRingGlow.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 0.15],
+            })}
           />
           
           {/* Inner ring (level progression) */}
@@ -1042,9 +1205,44 @@ export const AppleActivityRing: React.FC<AppleActivityRingProps> = ({
                 strokeLinecap="round"
                 rotation="-90"
                 origin={`${size / 2}, ${size / 2}`}
-                opacity={ringOpacity.interpolate({
+                opacity={RNAnimated.multiply(ringOpacity, innerRingOpacity)}
+              />
+              
+              {/* Inner ring glow effect that follows progress */}
+              <AnimatedCircle
+                cx={size / 2}
+                cy={size / 2}
+                r={innerRadius}
+                stroke={brighterInnerColor}
+                strokeWidth={innerStrokeWidth + 6}
+                fill="none"
+                strokeDasharray={innerCircumference}
+                strokeDashoffset={innerStrokeDashoffset}
+                strokeLinecap="round"
+                rotation="-90"
+                origin={`${size / 2}, ${size / 2}`}
+                opacity={innerRingGlow.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [0.8, 1.0], // Inner ring is more visible (changed from 0.5, 0.8)
+                  outputRange: [0, 0.4],
+                })}
+              />
+              
+              {/* Inner ring glow effect with more blur */}
+              <AnimatedCircle
+                cx={size / 2}
+                cy={size / 2}
+                r={innerRadius}
+                stroke={brighterInnerColor}
+                strokeWidth={innerStrokeWidth + 12}
+                fill="none"
+                strokeDasharray={innerCircumference}
+                strokeDashoffset={innerStrokeDashoffset}
+                strokeLinecap="round"
+                rotation="-90"
+                origin={`${size / 2}, ${size / 2}`}
+                opacity={innerRingGlow.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 0.2],
                 })}
               />
             </>
@@ -1185,6 +1383,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    // Ensure glow effects aren't clipped
+    overflow: 'visible',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1421,5 +1621,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '500',
+  },
+  modalRingContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+    // Ensure glow effects aren't clipped
+    overflow: 'visible',
   },
 }); 
