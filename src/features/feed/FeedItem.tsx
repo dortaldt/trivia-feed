@@ -1261,7 +1261,7 @@ const styles = StyleSheet.create({
   },
   learningCapsule: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 140 : 124, // iOS: 40px down, others: 24px down from original position
+    top: Platform.OS === 'ios' ? 160 : 124, // iOS: 40px down, others: 24px down from original position
     alignSelf: 'center',
     width: '90%',
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
