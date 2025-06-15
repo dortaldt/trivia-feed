@@ -615,23 +615,47 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
     return topRings.find(ring => ring.topic === displayLabel) || null;
   };
 
-  // Get the icon - always show icon even without ring data
+  // Get the icon - always show correct icon regardless of ring status
   const getTopicIcon = () => {
-    // First try to get from ring data if available
+    // Always prioritize static icon mappings based on topic/subtopic data
+    if (isTopicSpecificMode) {
+      if (item.subtopic) {
+        // First check app-topic-config.js for sub-topic icons
+        const topicConfig = require('../../../app-topic-config');
+        const subTopicConfig = topicConfig.topics[activeTopic]?.subTopics?.[item.subtopic];
+        if (subTopicConfig?.icon) {
+          return subTopicConfig.icon;
+        }
+        
+        // Fallback to static mapping
+        return getSubTopicIcon(item.subtopic, activeTopic);
+      } else if (item.tags && item.tags.length > 0) {
+        // Check config for tag icons
+        const topicConfig = require('../../../app-topic-config');
+        const tagConfig = topicConfig.topics[activeTopic]?.subTopics?.[item.tags[0]];
+        if (tagConfig?.icon) {
+          return tagConfig.icon;
+        }
+        
+        // Fallback to static mapping
+        return SUB_TOPIC_ICONS[item.tags[0]] || getSubTopicIcon(item.tags[0], activeTopic);
+      }
+    }
+    
+    // For main topics, use the static mapping
+    const staticIcon = TOPIC_ICONS[item.topic];
+    if (staticIcon) {
+      return staticIcon;
+    }
+    
+    // Only as a last resort, try ring data (but this shouldn't be needed now)
     const ringData = getTopicRingData();
     if (ringData && ringData.icon) {
       return ringData.icon;
     }
     
-    // Always provide fallback icon based on topic/subtopic data
-    if (isTopicSpecificMode) {
-      if (item.subtopic) {
-        return getSubTopicIcon(item.subtopic, activeTopic);
-      } else if (item.tags && item.tags.length > 0) {
-        return SUB_TOPIC_ICONS[item.tags[0]] || getSubTopicIcon(item.tags[0], activeTopic);
-      }
-    }
-    return TOPIC_ICONS[item.topic] || TOPIC_ICONS.default;
+    // Final fallback
+    return TOPIC_ICONS.default;
   };
 
   // Memoize the background component to prevent unnecessary re-renders
