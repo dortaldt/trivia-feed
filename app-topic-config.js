@@ -13,7 +13,7 @@ module.exports = {
   // The active topic for this build (default, music, science, etc.)
   // Set to 'default' for the standard multi-topic experience
   // Set to a specific topic name for a focused single-topic experience
-  activeTopic: envTopic || 'friends-tv', // Set to 'default' for the standard multi-topic experience
+  activeTopic: envTopic || 'nineties', // Set to 'default' for the standard multi-topic experience
   
   // Whether to filter content based on the active topic
   // When true, only questions matching the active topic will be shown
@@ -179,95 +179,100 @@ module.exports = {
       dbTopicName: '90s',
       isNiche: true, // Use niche_trivia_questions table
       subTopics: {
-        '1990s Commercials and Ads': {
-          displayName: '90s Commercials',
-          description: 'Memorable advertisements and commercials',
-          icon: 'megaphone'
-        },
-        'Books & Literature of the 1990s': {
-          displayName: '90s Books & Literature',
-          description: 'Literature and bestsellers',
-          icon: 'book'
-        },
-        'Comedy': {
-          displayName: '90s Comedy',
-          description: 'Stand-up comedy and comedic culture',
-          icon: 'smile'
-        },
-        'Famous Scandals of the 1990s': {
-          displayName: '90s Scandals',
-          description: 'Notable controversies and scandals',
-          icon: 'alert-triangle'
-        },
         'Fashion Trends': {
           displayName: '90s Fashion',
           description: 'Style and trends of the decade',
           icon: 'shopping-bag'
-        },
-        'Film': {
-          displayName: '90s Movies',
-          description: 'Cinema of the 1990s',
-          icon: 'film'
-        },
-        'Films': {
-          displayName: '90s Movies',
-          description: 'Cinema of the 1990s',
-          icon: 'film'
-        },
-        'Internet & Tech Trends': {
-          displayName: '90s Technology',
-          description: 'Early internet and tech evolution',
-          icon: 'wifi'
-        },
-        'Kids\' TV': {
-          displayName: '90s Kids TV',
-          description: 'Children\'s television programming',
-          icon: 'star'
         },
         'Music': {
           displayName: '90s Music',
           description: 'Grunge, pop, and alternative hits',
           icon: 'music'
         },
-        'Politics of the 1990s': {
-          displayName: '90s Politics',
-          description: 'Political events and figures',
-          icon: 'flag'
+        'Television': {
+          displayName: '90s TV',
+          description: 'Must-see television shows',
+          icon: 'tv'
+        },
+        'Famous Scandals of the 1990s': {
+          displayName: '90s Scandals',
+          description: 'Notable controversies and scandals',
+          icon: 'alert-triangle'
+        },
+        'Films': {
+          displayName: '90s Movies',
+          description: 'Cinema of the 1990s',
+          icon: 'film'
+        },
+        'Books & Literature of the 1990s': {
+          displayName: '90s Books & Literature',
+          description: 'Literature and bestsellers',
+          icon: 'book'
+        },
+        'Kids\' TV': {
+          displayName: '90s Kids TV',
+          description: 'Children\'s television programming',
+          icon: 'star'
         },
         'Pop Culture Trends': {
           displayName: '90s Pop Culture',
           description: 'Cultural phenomena and trends',
           icon: 'trending-up'
         },
+        'Advanced Topics': {
+          displayName: '90s Advanced Topics',
+          description: 'Deep 90s knowledge and trivia',
+          icon: 'brain'
+        },
+        'Slogan': {
+          displayName: '90s Slogans',
+          description: 'Memorable advertising slogans',
+          icon: 'megaphone'
+        },
         'Records & Milestones of the 1990s': {
           displayName: '90s Records & Milestones',
           description: 'Historic achievements and records',
           icon: 'award'
         },
-        'Slang & Buzzwords': {
-          displayName: '90s Slang',
-          description: 'Popular slang and expressions',
-          icon: 'message-circle'
-        },
-        'Sports': {
-          displayName: '90s Sports',
-          description: 'Athletic achievements and legends',
-          icon: 'target'
-        },
-        'Television': {
-          displayName: '90s TV',
-          description: 'Must-see television shows',
-          icon: 'tv'
-        },
-        'U.S. Politics': {
-          displayName: '90s U.S. Politics',
-          description: 'American political events',
+        'Politics': {
+          displayName: '90s Politics',
+          description: 'Political events and figures',
           icon: 'flag'
         },
         'World Events of the 1990s': {
           displayName: '90s World Events',
           description: 'Global events and developments',
           icon: 'globe'
+        },
+        'Commercials and Ads': {
+          displayName: '90s Commercials',
+          description: 'Memorable advertisements and commercials',
+          icon: 'megaphone'
+        },
+        'Sports': {
+          displayName: '90s Sports',
+          description: 'Athletic achievements and legends',
+          icon: 'target'
+        },
+        'Pop Culture': {
+          displayName: '90s Pop Culture',
+          description: 'Cultural phenomena and trends',
+          icon: 'trending-up'
+        },
+        'Slang & Buzzwords': {
+          displayName: '90s Slang',
+          description: 'Popular slang and expressions',
+          icon: 'message-circle'
+        },
+        'Internet & Tech Trends': {
+          displayName: '90s Technology',
+          description: 'Early internet and tech evolution',
+          icon: 'wifi'
+        },
+        'Video Games': {
+          displayName: '90s Video Games',
+          description: 'Gaming culture and classics',
+          icon: 'gamepad'
         }
       }
     },

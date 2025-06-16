@@ -32,10 +32,33 @@
       "env": {
         "APP_TOPIC": "music"
       }
+    },
+    "nineties-development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "APP_TOPIC": "nineties"
+      }
+    },
+    "nineties-preview": {
+      "distribution": "internal",
+      "env": {
+        "APP_TOPIC": "nineties"
+      }
+    },
+    "nineties-production": {
+      "autoIncrement": true,
+      "env": {
+        "APP_TOPIC": "nineties"
+      },
+      "ios": {
+        "buildConfiguration": "Release"
+      }
     }
   },
   "submit": {
     "production": {},
-    "music-production": {}
+    "music-production": {},
+    "nineties-production": {}
   }
 }

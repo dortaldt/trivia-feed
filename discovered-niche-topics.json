@@ -1,0 +1,287 @@
+{
+  "90s": {
+    "displayName": "90s",
+    "description": "Advanced 90s concepts and specialized knowledge",
+    "dbTopicName": "90s",
+    "isNiche": true,
+    "subTopics": {
+      "Fashion Trends": {
+        "displayName": "Fashion Trends",
+        "description": "Fashion Trends concepts and principles",
+        "icon": "book-open"
+      },
+      "Music": {
+        "displayName": "Music",
+        "description": "Music concepts and principles",
+        "icon": "book-open"
+      },
+      "Television": {
+        "displayName": "Television",
+        "description": "Television concepts and principles",
+        "icon": "book-open"
+      },
+      "Famous Scandals of the 1990s": {
+        "displayName": "Famous Scandals of the 1990s",
+        "description": "Famous Scandals of the 1990s concepts and principles",
+        "icon": "book-open"
+      },
+      "Films": {
+        "displayName": "Films",
+        "description": "Films concepts and principles",
+        "icon": "book-open"
+      },
+      "Books & Literature of the 1990s": {
+        "displayName": "Books & Literature of the 1990s",
+        "description": "Books & Literature of the 1990s concepts and principles",
+        "icon": "book-open"
+      },
+      "Kids' TV": {
+        "displayName": "Kids' TV",
+        "description": "Kids' TV concepts and principles",
+        "icon": "book-open"
+      },
+      "Pop Culture Trends": {
+        "displayName": "Pop Culture Trends",
+        "description": "Pop Culture Trends concepts and principles",
+        "icon": "book-open"
+      },
+      "Advanced Topics": {
+        "displayName": "Advanced Topics",
+        "description": "Advanced Topics concepts and principles",
+        "icon": "book-open"
+      },
+      "Slogan": {
+        "displayName": "Slogan",
+        "description": "Slogan concepts and principles",
+        "icon": "book-open"
+      },
+      "Records & Milestones of the 1990s": {
+        "displayName": "Records & Milestones of the 1990s",
+        "description": "Records & Milestones of the 1990s concepts and principles",
+        "icon": "book-open"
+      },
+      "Politics": {
+        "displayName": "Politics",
+        "description": "Politics concepts and principles",
+        "icon": "book-open"
+      },
+      "World Events of the 1990s": {
+        "displayName": "World Events of the 1990s",
+        "description": "World Events of the 1990s concepts and principles",
+        "icon": "book-open"
+      },
+      "Commercials and Ads": {
+        "displayName": "Commercials and Ads",
+        "description": "Commercials and Ads concepts and principles",
+        "icon": "book-open"
+      },
+      "Sports": {
+        "displayName": "Sports",
+        "description": "Sports concepts and principles",
+        "icon": "book-open"
+      },
+      "Pop Culture": {
+        "displayName": "Pop Culture",
+        "description": "Pop Culture concepts and principles",
+        "icon": "book-open"
+      },
+      "Slang & Buzzwords": {
+        "displayName": "Slang & Buzzwords",
+        "description": "Slang & Buzzwords concepts and principles",
+        "icon": "book-open"
+      },
+      "Internet & Tech Trends": {
+        "displayName": "Internet & Tech Trends",
+        "description": "Internet & Tech Trends concepts and principles",
+        "icon": "book-open"
+      },
+      "Video Games": {
+        "displayName": "Video Games",
+        "description": "Video Games concepts and principles",
+        "icon": "book-open"
+      }
+    }
+  },
+  "movies-and-tv": {
+    "displayName": "Movies and TV",
+    "description": "Advanced movies and tv concepts and specialized knowledge",
+    "dbTopicName": "Movies and TV",
+    "isNiche": true,
+    "subTopics": {
+      "Oscar-Winning Performances": {
+        "displayName": "Oscar-Winning Performances",
+        "description": "Oscar-Winning Performances concepts and principles",
+        "icon": "book-open"
+      },
+      "Action Films": {
+        "displayName": "Action Films",
+        "description": "Action Films concepts and principles",
+        "icon": "book-open"
+      },
+      "Sitcoms of the 90s": {
+        "displayName": "Sitcoms of the 90s",
+        "description": "Sitcoms of the 90s concepts and principles",
+        "icon": "book-open"
+      },
+      "Cult Classics": {
+        "displayName": "Cult Classics",
+        "description": "Cult Classics concepts and principles",
+        "icon": "book-open"
+      },
+      "Streaming Originals": {
+        "displayName": "Streaming Originals",
+        "description": "Streaming Originals concepts and principles",
+        "icon": "book-open"
+      },
+      "Classic Hollywood": {
+        "displayName": "Classic Hollywood",
+        "description": "Classic Hollywood concepts and principles",
+        "icon": "book-open"
+      },
+      "Animated Films": {
+        "displayName": "Animated Films",
+        "description": "Animated Films concepts and principles",
+        "icon": "book-open"
+      },
+      "International Cinema": {
+        "displayName": "International Cinema",
+        "description": "International Cinema concepts and principles",
+        "icon": "book-open"
+      },
+      "Sci-Fi & Fantasy": {
+        "displayName": "Sci-Fi & Fantasy",
+        "description": "Sci-Fi & Fantasy concepts and principles",
+        "icon": "book-open"
+      },
+      "Horror Films": {
+        "displayName": "Horror Films",
+        "description": "Horror Films concepts and principles",
+        "icon": "book-open"
+      },
+      "Drama Films": {
+        "displayName": "Drama Films",
+        "description": "Drama Films concepts and principles",
+        "icon": "book-open"
+      },
+      "Comedy Films": {
+        "displayName": "Comedy Films",
+        "description": "Comedy Films concepts and principles",
+        "icon": "book-open"
+      },
+      "Musicals": {
+        "displayName": "Musicals",
+        "description": "Musicals concepts and principles",
+        "icon": "book-open"
+      },
+      "TV Dramas": {
+        "displayName": "TV Dramas",
+        "description": "TV Dramas concepts and principles",
+        "icon": "book-open"
+      },
+      "Reality TV": {
+        "displayName": "Reality TV",
+        "description": "Reality TV concepts and principles",
+        "icon": "book-open"
+      },
+      "Documentary Films": {
+        "displayName": "Documentary Films",
+        "description": "Documentary Films concepts and principles",
+        "icon": "book-open"
+      },
+      "Film Noir": {
+        "displayName": "Film Noir",
+        "description": "Film Noir concepts and principles",
+        "icon": "book-open"
+      },
+      "Independent Films": {
+        "displayName": "Independent Films",
+        "description": "Independent Films concepts and principles",
+        "icon": "book-open"
+      }
+    }
+  },
+  "friends": {
+    "displayName": "Friends",
+    "description": "Advanced friends concepts and specialized knowledge",
+    "dbTopicName": "Friends",
+    "isNiche": true,
+    "subTopics": {
+      "Iconic Episodes": {
+        "displayName": "Iconic Episodes",
+        "description": "Iconic Episodes concepts and principles",
+        "icon": "book-open"
+      },
+      "Character Arcs": {
+        "displayName": "Character Arcs",
+        "description": "Character Arcs concepts and principles",
+        "icon": "book-open"
+      },
+      "Famous Quotes": {
+        "displayName": "Famous Quotes",
+        "description": "Famous Quotes concepts and principles",
+        "icon": "book-open"
+      },
+      "Relationships & Dating": {
+        "displayName": "Relationships & Dating",
+        "description": "Relationships & Dating concepts and principles",
+        "icon": "book-open"
+      },
+      "Jobs & Careers": {
+        "displayName": "Jobs & Careers",
+        "description": "Jobs & Careers concepts and principles",
+        "icon": "book-open"
+      },
+      "Apartments & Locations": {
+        "displayName": "Apartments & Locations",
+        "description": "Apartments & Locations concepts and principles",
+        "icon": "book-open"
+      },
+      "Guest Stars": {
+        "displayName": "Guest Stars",
+        "description": "Guest Stars concepts and principles",
+        "icon": "book-open"
+      },
+      "Family & Backstories": {
+        "displayName": "Family & Backstories",
+        "description": "Family & Backstories concepts and principles",
+        "icon": "book-open"
+      },
+      "Pop Culture References": {
+        "displayName": "Pop Culture References",
+        "description": "Pop Culture References concepts and principles",
+        "icon": "book-open"
+      },
+      "Trivia & Goofs": {
+        "displayName": "Trivia & Goofs",
+        "description": "Trivia & Goofs concepts and principles",
+        "icon": "book-open"
+      }
+    }
+  },
+  "famous-quotes": {
+    "displayName": "Famous Quotes",
+    "description": "Advanced famous quotes concepts and specialized knowledge",
+    "dbTopicName": "Famous Quotes",
+    "isNiche": true,
+    "subTopics": {
+      "Sarcasm and Catchphrases": {
+        "displayName": "Sarcasm and Catchphrases",
+        "description": "Sarcasm and Catchphrases concepts and principles",
+        "icon": "book-open"
+      }
+    }
+  },
+  "guest-stars": {
+    "displayName": "Guest Stars",
+    "description": "Advanced guest stars concepts and specialized knowledge",
+    "dbTopicName": "Guest Stars",
+    "isNiche": true,
+    "subTopics": {
+      "Guest Stars": {
+        "displayName": "Guest Stars",
+        "description": "Guest Stars concepts and principles",
+        "icon": "book-open"
+      }
+    }
+  }
+}

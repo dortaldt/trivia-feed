@@ -120,7 +120,7 @@ export default {
           : `${currentTopic.displayName}`,
     slug: appSpecificConfig.slug,
     scheme: appSpecificConfig.scheme,
-    version: "1.2.0",
+    version: "1.2.1",
     icon: getTopicAsset('app-icon'),
     extra: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
@@ -140,7 +140,7 @@ export default {
       enabled: true,
       checkAutomatically: "ON_LOAD"
     },
-    runtimeVersion: "1.2.0",
+    runtimeVersion: "1.2.1",
     splash: {
       image: getTopicAsset('splash-icon'),
       resizeMode: "contain",
@@ -154,6 +154,7 @@ export default {
       bundleIdentifier: appSpecificConfig.bundleId,
       icon: getTopicAsset('app-icon'),
       orientation: "portrait",
+      buildNumber: "3",
       infoPlist: {
         UIAppFonts: [
           "AntDesign.ttf",
@@ -209,7 +210,8 @@ export default {
           photosPermission: "The app accesses your photos to let you select images for your profile avatar.",
           cameraPermission: "The app accesses your camera to let you take photos for your profile avatar."
         }
-      ]
+      ],
+      "./plugins/ios-dsym-plugin.js"
     ]
   }
 }; 
