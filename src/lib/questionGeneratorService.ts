@@ -1027,8 +1027,7 @@ export async function runQuestionGeneration(
       }
     }
     
-    // Step 4: Build topic-intent combinations to avoid
-    const avoidIntentsSection = await buildAvoidTopicIntentsSection(primaryTopics);
+    // Step 4: Removed topic-intent combinations section
     
     // Step 5: Call the OpenAI service for generation
     try {
@@ -1138,8 +1137,7 @@ export async function runQuestionGeneration(
         tags: q.tags || []
       }));
 
-      // Build avoid section for topic-intent combinations
-      const avoidIntentsSection = await buildAvoidTopicIntentsSection(primaryTopics);
+      // Removed topic-intent combinations section
       
       // Determine generation configuration based on app settings
       const generationConfig = determineGenerationConfig();
@@ -1159,7 +1157,6 @@ export async function runQuestionGeneration(
         preferredBranches,
         preferredTags,
         enhancedRecentQuestions,
-        avoidIntentsSection,
         generationConfig // Pass the generation configuration
     );
     
@@ -1428,38 +1425,4 @@ async function saveUniqueQuestions(questions: GeneratedQuestion[], targetTable?:
   }
 }
 
-/**
- * Build a section for the OpenAI prompt that lists topic-intent combinations to avoid
- */
-async function buildAvoidTopicIntentsSection(topics: string[]): Promise<string> {
-  try {
-    // Get existing topic-intent combinations
-    const topicIntents = await getExistingTopicIntents(topics);
-    
-    // Create intent avoidance section for the prompt
-    let avoidIntentsSection = '';
-    if (topicIntents.size > 0) {
-      const topicIntentStrings = [];
-      
-      for (const [topic, intents] of Array.from(topicIntents.entries())) {
-        if (intents.size > 0) {
-          topicIntentStrings.push(`${topic}: ${Array.from(intents).join(', ')}`);
-        }
-      }
-      
-      if (topicIntentStrings.length > 0) {
-        avoidIntentsSection = `
-    AVOID THESE TOPIC-INTENT COMBINATIONS (these already exist in our database):
-    ${topicIntentStrings.join('\n    ')}
-    
-    For these topics, create questions with DIFFERENT intents than those listed above.
-    `;
-      }
-    }
-    
-    return avoidIntentsSection;
-  } catch (error) {
-    logger.error('[GENERATOR]', 'Error building avoid intents section:', error instanceof Error ? error.message : String(error));
-    return '';
-  }
-} 
+ 

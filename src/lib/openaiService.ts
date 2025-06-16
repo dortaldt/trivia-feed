@@ -121,7 +121,6 @@ export async function generateQuestions(
   preferredBranches: string[] = [],
   preferredTags: string[] = [],
   recentQuestions: { id: string, questionText: string, topic?: string, subtopic?: string, branch?: string, tags?: string[] }[] = [],
-  avoidIntentsSection: string = '', // Add parameter for topic-intent combinations to avoid
   generationConfig?: GenerationConfig // New parameter
 ): Promise<GeneratedQuestion[]> {
   
@@ -133,9 +132,9 @@ export async function generateQuestions(
   
   // Route to appropriate generation function based on mode
   if (config.mode === 'niche') {
-    return generateNicheQuestions(primaryTopics, preferredSubtopics, preferredBranches, preferredTags, recentQuestions, avoidIntentsSection, config);
+    return generateNicheQuestions(primaryTopics, preferredSubtopics, preferredBranches, preferredTags, recentQuestions, config);
   } else {
-    return generateGeneralQuestions(primaryTopics, adjacentTopics, primaryCount, adjacentCount, preferredSubtopics, preferredBranches, preferredTags, recentQuestions, avoidIntentsSection);
+    return generateGeneralQuestions(primaryTopics, adjacentTopics, primaryCount, adjacentCount, preferredSubtopics, preferredBranches, preferredTags, recentQuestions);
   }
 }
 
@@ -148,7 +147,6 @@ async function generateNicheQuestions(
   preferredBranches: string[],
   preferredTags: string[],
   recentQuestions: any[],
-  avoidIntentsSection: string,
   config: GenerationConfig
 ): Promise<GeneratedQuestion[]> {
   try {
@@ -182,8 +180,7 @@ async function generateNicheQuestions(
       preferredSubtopics, 
       preferredBranches, 
       preferredTags, 
-      nicheRelevantQuestions, // Use client-side questions for duplication avoidance
-      avoidIntentsSection
+      nicheRelevantQuestions // Use client-side questions for duplication avoidance
     );
     
     console.log('[OPENAI] Generated niche prompt structure successfully using client-side data only');
@@ -209,8 +206,7 @@ async function generateGeneralQuestions(
   preferredSubtopics: string[],
   preferredBranches: string[],
   preferredTags: string[],
-  recentQuestions: any[],
-  avoidIntentsSection: string
+  recentQuestions: any[]
 ): Promise<GeneratedQuestion[]> {
   // This contains the existing generateQuestions logic
   try {
@@ -455,8 +451,7 @@ function buildNichePrompt(
   preferredSubtopics: string[],
   preferredBranches: string[],
   preferredTags: string[],
-  recentQuestions: any[],
-  avoidIntentsSection: string
+  recentQuestions: any[]
 ): string {
   console.log(`[OPENAI] 🔄 PURE CLIENT-SIDE MODE: Building niche prompt with actual answered questions`);
   console.log(`[OPENAI] Recent questions available: ${recentQuestions.length}`);
@@ -609,8 +604,6 @@ QUESTION UNIQUENESS RULES:
 ${recentQuestions.length > 0 ? `
 RECENT QUESTIONS TO AVOID DUPLICATING:
 ${recentQuestions.slice(0, 5).map((q, i) => `${i + 1}. "${q.questionText}"`).join('\n    ')}` : ''}
-${avoidIntentsSection ? `
-${avoidIntentsSection}` : ''}
 
 NICHE DEPTH REQUIREMENTS:
 - Include questions for both casual fans and deep experts of "${nicheTopic}"
