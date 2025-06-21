@@ -53,6 +53,8 @@ import { useIOSAnimations } from '@/hooks/useIOSAnimations';
 // Fix the import path
 import { fetchTriviaQuestions, fetchNewTriviaQuestions, FeedItem as FeedItemType, analyzeCorrectAnswers, getLastFetchTimestamp, setLastFetchTimestamp } from '../../lib/triviaService';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useTheme } from '@/src/context/ThemeContext';
+import { NeonTopicColors } from '@/constants/NeonColors';
 import { 
   updateUserProfile, 
   getPersonalizedFeed,
@@ -73,6 +75,7 @@ import LeaderboardBottomSheet from '../../components/LeaderboardBottomSheet';
 import { runQuestionGeneration } from '../../lib/questionGeneratorService';
 import { useQuestionGenerator } from '../../hooks/useQuestionGenerator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import { LoadingBar } from '../../components/ui';
 import { QuestionInteraction } from '../../lib/personalizationService';
 import { recordUserAnswer } from '../../lib/leaderboardService';
@@ -175,6 +178,40 @@ const FeedScreen: React.FC = () => {
 
   // Get a background color for the loading state
   const backgroundColor = useThemeColor({}, 'background');
+  
+  // Get theme for tooltip colors
+  const { isNeonTheme } = useTheme();
+  
+  // Get theme-appropriate colors for phone illustration
+  const getPhoneIllustrationColors = useCallback(() => {
+    if (isNeonTheme) {
+      return {
+        screen1Gradient: [
+          NeonTopicColors.Music.hex, 
+          NeonTopicColors.Entertainment.hex,
+        ] as const,
+        screen2Gradient: [
+          NeonTopicColors['Pop Culture'].hex,  
+          NeonTopicColors.Technology.hex,
+        ] as const,
+        buttonColor: NeonTopicColors.Technology.hex,
+      };
+    } else {
+      return {
+        screen1Gradient: [
+          colors.primary,
+          colors.secondary,
+        ] as const,
+        screen2Gradient: [
+          colors.accent,
+          colors.info,
+        ] as const,
+        buttonColor: colors.primary,
+      };
+    }
+  }, [isNeonTheme]);
+
+  const phoneColors = getPhoneIllustrationColors();
 
   // State to track viewport height on web for proper sizing
   const [viewportHeight, setViewportHeight] = useState(
@@ -183,6 +220,66 @@ const FeedScreen: React.FC = () => {
 
   // Use our custom iOS animations hook
   const { opacity, scale, animateIn, animateOut, resetAnimations } = useIOSAnimations();
+  
+  // Create custom slide animation for tooltip
+  const tooltipSlideY = useRef(new Animated.Value(100)).current; // Start 100px below
+  
+  // Initialize tooltip position
+  useEffect(() => {
+    tooltipSlideY.setValue(100);
+  }, []);
+  
+  // Custom tooltip animation functions
+  const animateTooltipIn = useCallback(() => {
+    // Reset values
+    opacity.setValue(0);
+    scale.setValue(0.8);
+    tooltipSlideY.setValue(100);
+    
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.back(1.1)), // Slight overshoot for bounce
+        useNativeDriver: true,
+      }),
+      Animated.timing(tooltipSlideY, {
+        toValue: 0,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [opacity, scale, tooltipSlideY]);
+
+  const animateTooltipOut = useCallback((callback?: () => void) => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 0.8,
+        duration: 300,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(tooltipSlideY, {
+        toValue: 100,
+        duration: 300,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(callback);
+  }, [opacity, scale, tooltipSlideY]);
 
   const dispatch = useAppDispatch();
   const hasViewedTooltip = useAppSelector(state => state.trivia.hasViewedTooltip);
@@ -655,10 +752,65 @@ const FeedScreen: React.FC = () => {
 
   const tikTokAnimation = useRef<Animated.CompositeAnimation | null>(null);
 
+  // Add state to track first question answered in this session
+  const [firstQuestionAnsweredInSession, setFirstQuestionAnsweredInSession] = useState(false);
+  const [isFirstEverSession, setIsFirstEverSession] = useState(false);
+  const tooltipTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScrollTimeRef = useRef<number>(0);
+
+  // Check if this is the user's first session on component mount
   useEffect(() => {
-    if (!hasViewedTooltip && !showTooltip) {
-      // Set up timer to show tooltip after 1.5 seconds of inactivity
-      const timer = setTimeout(() => {
+    const checkFirstSession = async () => {
+      try {
+        const hasEverViewedTooltip = await AsyncStorage.getItem('hasEverViewedTooltip');
+        setIsFirstEverSession(hasEverViewedTooltip === null);
+      } catch (error) {
+        console.error('Error checking first session:', error);
+        setIsFirstEverSession(true); // Assume first session on error
+      }
+    };
+    
+    checkFirstSession();
+  }, []);
+
+  // Track scrolling activity for tooltip timing
+  useEffect(() => {
+    // Set up scroll detection (this runs alongside existing handlers)
+    if (firstQuestionAnsweredInSession && !hasViewedTooltip && !showTooltip) {
+      lastScrollTimeRef.current = Date.now();
+    }
+
+    return () => {
+      if (tooltipTimerRef.current) {
+        clearTimeout(tooltipTimerRef.current);
+      }
+    };
+  }, [firstQuestionAnsweredInSession, hasViewedTooltip, showTooltip]);
+
+  // Cleanup tooltip timer on unmount
+  useEffect(() => {
+    return () => {
+      if (tooltipTimerRef.current) {
+        clearTimeout(tooltipTimerRef.current);
+      }
+    };
+  }, []);
+
+  // New tooltip logic - show only after answering first question
+  useEffect(() => {
+    if (!firstQuestionAnsweredInSession || hasViewedTooltip || showTooltip) {
+      return;
+    }
+
+    // Clear any existing timer
+    if (tooltipTimerRef.current) {
+      clearTimeout(tooltipTimerRef.current);
+    }
+
+    const showTooltipWithDelay = () => {
+      // For first ever session, show immediately
+      if (isFirstEverSession) {
+        console.log('[Tooltip] First session - showing tooltip immediately after first question');
         setShowTooltip(true);
         
         // Start the TikTok-style animation
@@ -672,33 +824,78 @@ const FeedScreen: React.FC = () => {
           setIsAnimationError(true);
         }
         
-        // Add spring animation for the tooltip
-        animateIn();
-      }, 1500);
+        // Add slide animation for the tooltip
+        animateTooltipIn();
+        return;
+      }
 
-      return () => {
-        clearTimeout(timer);
+      // For subsequent sessions, wait 5 seconds of no scrolling
+      const checkScrollInactivity = () => {
+        const timeSinceLastScroll = Date.now() - lastScrollTimeRef.current;
+        
+        if (timeSinceLastScroll >= 2000) { // 2 seconds of no scrolling
+                      console.log('[Tooltip] 2 seconds of no scrolling - showing tooltip');
+          setShowTooltip(true);
+          
+          // Start the TikTok-style animation
+          try {
+            tikTokAnimation.current = createTikTokAnimation();
+            if (tikTokAnimation.current) {
+              tikTokAnimation.current.start();
+            }
+          } catch (error) {
+            console.error('Error starting animation:', error);
+            setIsAnimationError(true);
+          }
+          
+                     // Add slide animation for the tooltip
+           animateTooltipIn();
+                  } else {
+            // Check again after remaining time
+            const remainingTime = 2000 - timeSinceLastScroll;
+            tooltipTimerRef.current = setTimeout(checkScrollInactivity, remainingTime);
+          }
       };
-    }
-  }, [hasViewedTooltip, isAnimationError]);
 
-  const hideTooltip = () => {
+              // Start checking for scroll inactivity
+        tooltipTimerRef.current = setTimeout(checkScrollInactivity, 2000);
+    };
+
+    showTooltipWithDelay();
+
+    return () => {
+      if (tooltipTimerRef.current) {
+        clearTimeout(tooltipTimerRef.current);
+      }
+    };
+  }, [firstQuestionAnsweredInSession, hasViewedTooltip, isAnimationError, isFirstEverSession, showTooltip]);
+
+  const hideTooltip = async () => {
     try {
       tikTokAnimation.current?.stop();
 
       // First set state updates before animation
       dispatch(markTooltipAsViewed());
       
+      // Mark that tooltip has been viewed ever (for first session detection)
+      try {
+        await AsyncStorage.setItem('hasEverViewedTooltip', 'true');
+      } catch (error) {
+        console.error('Error saving tooltip viewed state:', error);
+      }
+      
       // Create a separate function to handle animation completion
       const handleAnimationComplete = () => {
         resetAnimations();
+        // Reset tooltip slide position to start position
+        tooltipSlideY.setValue(100);
       };
       
       // Set the state directly first
       setShowTooltip(false);
       
       // Then run animation, state is already updated
-      animateOut(handleAnimationComplete);
+      animateTooltipOut(handleAnimationComplete);
     } catch (error) {
       console.error('Error hiding tooltip:', error);
     }
@@ -1396,6 +1593,9 @@ const FeedScreen: React.FC = () => {
     const currentScrollPos = event.nativeEvent.contentOffset.y;
     const scrollDelta = Math.abs(currentScrollPos - lastScrollPosition.current);
     
+    // Update scroll time for tooltip logic
+    lastScrollTimeRef.current = Date.now();
+    
     // Only log performance tracking for significant scroll movements (> 50px)
     const shouldLogPerformance = scrollDelta > 50;
     let scrollDetectionStart = 0;
@@ -1752,6 +1952,10 @@ const FeedScreen: React.FC = () => {
 
   const onMomentumScrollBegin = useCallback(() => {
     lastInteractionTime.current = Date.now();
+    
+    // Update scroll time for tooltip logic
+    lastScrollTimeRef.current = Date.now();
+    
     if (showTooltip) {
       hideTooltip();
     }
@@ -1989,6 +2193,12 @@ const FeedScreen: React.FC = () => {
       isCorrect,
       userId: user?.id // Pass user ID if available
     }));
+
+    // Track if this is the first question answered in this session
+    if (!firstQuestionAnsweredInSession) {
+      console.log('[Tooltip] First question answered in session - enabling tooltip logic');
+      setFirstQuestionAnsweredInSession(true);
+    }
     
     // Use setTimeout to ensure Redux state is updated first
     setTimeout(() => {
@@ -3149,7 +3359,10 @@ const FeedScreen: React.FC = () => {
             styles.tooltip,
             {
               opacity,
-              transform: [{ scale }],
+              transform: [
+                { scale },
+                { translateY: tooltipSlideY }
+              ],
             },
           ]}
         >
@@ -3164,17 +3377,29 @@ const FeedScreen: React.FC = () => {
                 <Animated.View
                   style={[
                     styles.mockScreen,
-                    styles.mockScreen1,
-                    { transform: [{ translateY: mockContent1 }] },
+                    { transform: [{ translateY: mockContent1 }] }
                   ]}
-                />
+                >
+                  <LinearGradient
+                    colors={phoneColors.screen1Gradient}
+                    style={StyleSheet.absoluteFill}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  />
+                </Animated.View>
                 <Animated.View
                   style={[
                     styles.mockScreen,
-                    styles.mockScreen2,
-                    { transform: [{ translateY: mockContent2 }] },
+                    { transform: [{ translateY: mockContent2 }] }
                   ]}
-                />
+                >
+                  <LinearGradient
+                    colors={phoneColors.screen2Gradient}
+                    style={StyleSheet.absoluteFill}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  />
+                </Animated.View>
               </View>
 
               <Animated.View
@@ -3199,6 +3424,8 @@ const FeedScreen: React.FC = () => {
           <PaperButton
             mode="contained"
             onPress={hideTooltip}
+            buttonColor={phoneColors.buttonColor}
+            textColor={isNeonTheme ? '#000000' : '#ffffff'}
           >
             Got it
           </PaperButton>
@@ -3315,12 +3542,7 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: borderRadius.sm,
   },
-  mockScreen1: {
-    backgroundColor: 'rgba(255, 100, 100, 0.6)',
-  },
-  mockScreen2: {
-    backgroundColor: 'rgba(100, 100, 255, 0.6)',
-  },
+  // mockScreen1 and mockScreen2 styles removed - now using dynamic theme colors
   finger: {
     position: 'absolute',
     right: -10,
