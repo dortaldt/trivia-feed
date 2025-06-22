@@ -94,6 +94,7 @@ import { logger, setLoggerDebugMode } from '../../utils/logger';
 import { useBanners } from '../../hooks/useBanners';
 import PromotionalBanner from '../../components/PromotionalBanner';
 import { BannerPlacement } from '../../types/bannerTypes';
+import { sessionManager } from '../../utils/sessionManager';
 
 const { width, height } = Dimensions.get('window');
 
@@ -758,19 +759,24 @@ const FeedScreen: React.FC = () => {
   const tooltipTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastScrollTimeRef = useRef<number>(0);
 
-  // Check if this is the user's first session on component mount
+  // Initialize session tracking and check if this is the user's first session
   useEffect(() => {
-    const checkFirstSession = async () => {
+    const initializeSessionAndCheckFirst = async () => {
       try {
+        // Initialize session tracking
+        await sessionManager.initializeSession();
+        console.log('Session tracking initialized');
+        
+        // Check if this is the first ever session for tooltip logic
         const hasEverViewedTooltip = await AsyncStorage.getItem('hasEverViewedTooltip');
         setIsFirstEverSession(hasEverViewedTooltip === null);
       } catch (error) {
-        console.error('Error checking first session:', error);
+        console.error('Error initializing session or checking first session:', error);
         setIsFirstEverSession(true); // Assume first session on error
       }
     };
     
-    checkFirstSession();
+    initializeSessionAndCheckFirst();
   }, []);
 
   // Track scrolling activity for tooltip timing

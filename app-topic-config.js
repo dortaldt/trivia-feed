@@ -13,7 +13,7 @@ module.exports = {
   // The active topic for this build (default, music, science, etc.)
   // Set to 'default' for the standard multi-topic experience
   // Set to a specific topic name for a focused single-topic experience
-  activeTopic: envTopic || 'nineties', // Set to 'default' for the standard multi-topic experience
+  activeTopic: envTopic || 'friends-tv', // Set to 'default' for the standard multi-topic experience
   
   // Whether to filter content based on the active topic
   // When true, only questions matching the active topic will be shown

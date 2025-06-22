@@ -34,6 +34,9 @@ import { trackEvent } from '../../lib/mixpanelAnalytics';
 import Constants from 'expo-constants';
 import { zIndex } from '@/src/design';
 import { monitorTapResponse, measurePerformance } from '../../utils/performanceMonitor';
+import FeedItemBanner, { BannerContent } from '../../components/FeedItemBanner';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { sessionManager } from '../../utils/sessionManager';
 
 const { width, height } = Dimensions.get('window');
 
@@ -147,6 +150,85 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
   // Get all questions and feed data from Redux for progress calculation
   const allQuestions = useAppSelector(state => state.trivia.questions);
   const feedData = useAppSelector(state => state.trivia.personalizedFeed);
+
+  // Banner logic - show swipe tip only once when reaching 5th and 25th questions during first two sessions
+  const [shouldShowSwipeTip, setShouldShowSwipeTip] = useState(false);
+  const [sessionCount, setSessionCount] = useState(0);
+
+  // Check if we should show the swipe tip banner
+  useEffect(() => {
+    const checkSwipeTipEligibility = async () => {
+      try {
+        const totalAnswered = userProfile?.totalQuestionsAnswered || 0;
+        const currentQuestionNumber = totalAnswered + 1; // 1-indexed question number
+        const isUnanswered = !questionState || questionState.status === 'unanswered';
+        
+        // Get session count from session manager
+        const currentSessionCount = await sessionManager.getCurrentSessionCount();
+        setSessionCount(currentSessionCount);
+        
+        // Check if banner was dismissed globally
+        const dismissedBanners = await AsyncStorage.getItem('dismissed_banners');
+        const dismissedIds = dismissedBanners ? JSON.parse(dismissedBanners) : [];
+        const wasDismissed = dismissedIds.includes('swipe-tip');
+        
+        // Check if banner was already shown for specific questions
+        const shownForQuestions = await AsyncStorage.getItem('swipe_tip_shown_questions');
+        const shownQuestionIds = shownForQuestions ? JSON.parse(shownForQuestions) : [];
+        
+        // Check if user has ever skipped a question before
+        const hasNeverSkipped = !Object.values(allQuestions).some(q => q && q.status === 'skipped');
+        
+        // Only show if:
+        // 1. User is in first or second session
+        // 2. User is on exactly the 5th or 25th question
+        // 3. Current question is unanswered
+        // 4. Banner was not globally dismissed
+        // 5. Banner was not already shown for this specific question number
+        // 6. User has never skipped a question before
+        const isTargetQuestion = currentQuestionNumber === 5 || currentQuestionNumber === 25;
+        const isEarlySession = currentSessionCount <= 2;
+        const notShownForThisQuestion = !shownQuestionIds.includes(currentQuestionNumber);
+        
+        const shouldShow = isTargetQuestion && isEarlySession && isUnanswered && !wasDismissed && notShownForThisQuestion && hasNeverSkipped;
+        
+        console.log('Swipe tip banner check:', {
+          currentQuestionNumber,
+          currentSessionCount,
+          isTargetQuestion,
+          isEarlySession,
+          isUnanswered,
+          wasDismissed,
+          notShownForThisQuestion,
+          hasNeverSkipped,
+          shownQuestionIds,
+          shouldShow
+        });
+        
+        setShouldShowSwipeTip(shouldShow);
+        
+        // If banner should show, mark this question as shown
+        if (shouldShow) {
+          const updatedShownQuestions = [...shownQuestionIds, currentQuestionNumber];
+          await AsyncStorage.setItem('swipe_tip_shown_questions', JSON.stringify(updatedShownQuestions));
+          console.log('Marked question', currentQuestionNumber, 'as shown for swipe tip banner');
+        }
+      } catch (error) {
+        console.error('Error checking swipe tip eligibility:', error);
+        setShouldShowSwipeTip(false);
+      }
+    };
+
+    checkSwipeTipEligibility();
+  }, [userProfile?.totalQuestionsAnswered, questionState?.status]);
+
+  const swipeTipBanner: BannerContent = {
+    id: 'swipe-tip',
+    title: 'Pro Tip',
+    description: "Don't like this question? Just swipe up to skip to the next one!",
+    icon: 'arrow-up',
+    type: 'tip',
+  };
   
   const dispatch = useAppDispatch();
   
@@ -1024,6 +1106,17 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
               ]}>Leaderboard</ThemedText>
             </TouchableOpacity>
           </View>
+
+          {/* Banner at the bottom of the content */}
+          {shouldShowSwipeTip && (
+            <FeedItemBanner
+              content={swipeTipBanner}
+              onDismiss={(bannerId) => {
+                console.log('Banner dismissed:', bannerId);
+              }}
+              style={{ marginTop: 20 }}
+            />
+          )}
         </View>
 
         {showLearningCapsule && (
