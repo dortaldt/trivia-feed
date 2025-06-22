@@ -48,6 +48,8 @@ export const FeedItemBanner: React.FC<FeedItemBannerProps> = ({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const borderOpacityAnim = useRef(new Animated.Value(1)).current;
   
   const { isNeonTheme } = useTheme();
   const colorScheme = useColorScheme();
@@ -101,23 +103,50 @@ export const FeedItemBanner: React.FC<FeedItemBannerProps> = ({
       Haptics.selectionAsync().catch(() => {});
     }
 
-    // Animate out
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 0.9,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 50,
-        duration: 300,
-        useNativeDriver: true,
-      }),
+    // Enhanced exit animation sequence
+    Animated.sequence([
+      // First: Quick pulse effect
+      Animated.parallel([
+        Animated.timing(scaleAnim, {
+          toValue: 1.05,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(borderOpacityAnim, {
+          toValue: 0.3,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Second: Dramatic exit with rotation and slide
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 0.8,
+          friction: 5,
+          tension: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 80,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(borderOpacityAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]),
     ]).start(() => {
       setVisible(false);
       setDismissed(true);
@@ -183,6 +212,11 @@ export const FeedItemBanner: React.FC<FeedItemBannerProps> = ({
   const typeColor = getTypeColor();
   const isDark = colorScheme === 'dark';
 
+  const rotateInterpolation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '5deg'],
+  });
+
   return (
     <Animated.View
       style={[
@@ -192,6 +226,7 @@ export const FeedItemBanner: React.FC<FeedItemBannerProps> = ({
           transform: [
             { scale: scaleAnim },
             { translateY: slideAnim },
+            { rotate: rotateInterpolation },
           ],
         },
         style,
@@ -224,11 +259,12 @@ export const FeedItemBanner: React.FC<FeedItemBannerProps> = ({
 
       {/* Neon glow border */}
       {isNeonTheme && (
-        <View
+        <Animated.View
           style={[
             styles.neonBorder,
             {
               borderColor: typeColor,
+              opacity: borderOpacityAnim,
               ...Platform.select({
                 ios: {
                   shadowColor: typeColor,

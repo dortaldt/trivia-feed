@@ -166,6 +166,7 @@ const FeedScreen: React.FC = () => {
   const previousIndex = useRef<number>(0);
   // Add ref to track previous userProfile for cold start updates
   const previousUserProfileRef = useRef<typeof userProfile | null>(null);
+  const hasFilteredAfterQuestionsLoaded = useRef(false);
   // Add this near the top of the component with other refs
   const lastVisibleIndexRef = useRef<number | null>(null);
   // Add ref to prevent duplicate profile button clicks
@@ -188,24 +189,32 @@ const FeedScreen: React.FC = () => {
     if (isNeonTheme) {
       return {
         screen1Gradient: [
-          NeonTopicColors.Music.hex, 
-          NeonTopicColors.Entertainment.hex,
+          '#1a1a1c', // Brighter base
+          '#2a2a2c', // Medium brightness
+          '#3a3a3c', // Even brighter
+          'rgba(0, 255, 136, 0.4)', // Much more prominent neon green
         ] as const,
         screen2Gradient: [
-          NeonTopicColors['Pop Culture'].hex,  
-          NeonTopicColors.Technology.hex,
+          '#151518', // Brighter base
+          '#252528', // Medium brightness  
+          '#353538', // Even brighter
+          'rgba(10, 239, 255, 0.35)', // Much more prominent neon cyan
         ] as const,
         buttonColor: NeonTopicColors.Technology.hex,
       };
     } else {
       return {
         screen1Gradient: [
-          colors.primary,
-          colors.secondary,
+          '#1c1c1c', // Brighter base
+          '#2c2c2c', // Medium brightness
+          '#3c3c3c', // Even brighter
+          'rgba(10, 126, 164, 0.3)', // More prominent primary tint
         ] as const,
         screen2Gradient: [
-          colors.accent,
-          colors.info,
+          '#18181b', // Brighter base
+          '#28282b', // Medium brightness
+          '#38383b', // Even brighter
+          'rgba(245, 158, 11, 0.25)', // More prominent accent tint
         ] as const,
         buttonColor: colors.primary,
       };
@@ -531,9 +540,10 @@ const FeedScreen: React.FC = () => {
 
   // Update effect to prevent reordering of feed after initial load
   useEffect(() => {
-    // Only refresh personalized feed when userProfile changes and we don't have a feed yet
-    // AND after questions have been loaded from storage
-    if (feedData.length > 0 && personalizedFeed.length === 0 && questionsLoaded) {
+    // Re-filter the feed when questions are loaded from storage to remove already answered questions
+    // This is especially important on web refresh when Redux state is rehydrated
+    if (feedData.length > 0 && questionsLoaded && !hasFilteredAfterQuestionsLoaded.current) {
+      hasFilteredAfterQuestionsLoaded.current = true;
       // Filter out questions that have already been answered or skipped from Redux state
       const answeredQuestionIds = new Set(
         Object.keys(questions).filter(id => 
@@ -582,10 +592,10 @@ const FeedScreen: React.FC = () => {
     const totalQuestionsAnswered = userProfile?.totalQuestionsAnswered || 0;
     const inColdStart = !userProfile?.coldStartComplete && totalQuestionsAnswered < 20;
     
-    // Only use this effect for initial feed generation
-    // Skip if we already have a feed and have answered questions
-    // AND only run after questions have been loaded from storage
-    if (inColdStart && feedData.length > 0 && personalizedFeed.length === 0 && questionsLoaded) {
+    // Only use this effect for initial feed generation during cold start
+    // Re-filter during cold start when questions are loaded from storage
+    if (inColdStart && feedData.length > 0 && questionsLoaded && !hasFilteredAfterQuestionsLoaded.current) {
+      hasFilteredAfterQuestionsLoaded.current = true;
       console.log('Initial feed creation during cold start phase');
       
       // Filter out questions that have already been answered or skipped from Redux state
@@ -3241,7 +3251,19 @@ const FeedScreen: React.FC = () => {
         // viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
         onMomentumScrollBegin={onMomentumScrollBegin}
         onMomentumScrollEnd={onMomentumScrollEnd}
-        onScroll={Platform.OS === 'web' ? undefined : handleScroll} // Disable React scroll handler on web - using DOM prevention instead
+        onScroll={(event) => {
+          // Dismiss tooltip when user starts scrolling
+          if (showTooltip) {
+            animateTooltipOut(() => {
+              setShowTooltip(false);
+            });
+          }
+          
+          // Call existing scroll handler (only on non-web platforms)
+          if (Platform.OS !== 'web' && handleScroll) {
+            handleScroll(event);
+          }
+        }}
         scrollEventThrottle={Platform.OS === 'ios' ? 200 : 100} // Significantly reduce frequency - was 32/16, now 200/100ms
         snapToAlignment="start"
         decelerationRate={getOptimalDecelerationRate()}
@@ -3374,7 +3396,7 @@ const FeedScreen: React.FC = () => {
         >
           <View style={styles.tooltipArrow} />
           <Text style={styles.tooltipText}>
-            Swipe up for next question!
+            Swipe up{'\n'}for next question!
           </Text>
 
           <View style={styles.tiktokAnimationContainer}>
@@ -3390,8 +3412,19 @@ const FeedScreen: React.FC = () => {
                     colors={phoneColors.screen1Gradient}
                     style={StyleSheet.absoluteFill}
                     start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                    end={{ x: 0.3, y: 1 }}
+                    locations={[0, 0.3, 0.7, 1]}
                   />
+                  {/* Mock feed item content */}
+                  <View style={styles.mockFeedContent}>
+                    <View style={styles.mockQuestionText} />
+                    <View style={styles.mockAnswerButtons}>
+                      <View style={styles.mockAnswerButton} />
+                      <View style={styles.mockAnswerButton} />
+                      <View style={styles.mockAnswerButton} />
+                      <View style={styles.mockAnswerButton} />
+                    </View>
+                  </View>
                 </Animated.View>
                 <Animated.View
                   style={[
@@ -3403,7 +3436,33 @@ const FeedScreen: React.FC = () => {
                     colors={phoneColors.screen2Gradient}
                     style={StyleSheet.absoluteFill}
                     start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                    end={{ x: 0.3, y: 1 }}
+                    locations={[0, 0.3, 0.7, 1]}
+                  />
+                  {/* Mock feed item content */}
+                  <View style={styles.mockFeedContent}>
+                    <View style={styles.mockQuestionText} />
+                    <View style={styles.mockAnswerButtons}>
+                      <View style={styles.mockAnswerButton} />
+                      <View style={styles.mockAnswerButton} />
+                      <View style={styles.mockAnswerButton} />
+                      <View style={styles.mockAnswerButton} />
+                    </View>
+                  </View>
+                </Animated.View>
+                
+                {/* Arrow up inside the phone - animated with the screens */}
+                <Animated.View 
+                  style={[
+                    styles.phoneArrow,
+                    { transform: [{ translateY: mockContent1 }] }
+                  ]}
+                >
+                  <FeatherIcon 
+                    name="arrow-up" 
+                    size={16} 
+                    color={isNeonTheme ? '#00FF88' : '#FFFFFF'} 
+                    style={styles.arrowIcon}
                   />
                 </Animated.View>
               </View>
@@ -3427,14 +3486,19 @@ const FeedScreen: React.FC = () => {
             </View>
           </View>
 
-          <PaperButton
-            mode="contained"
+          {/* Secondary 'Got it' button */}
+          <TouchableOpacity
+            style={styles.secondaryButton}
             onPress={hideTooltip}
-            buttonColor={phoneColors.buttonColor}
-            textColor={isNeonTheme ? '#000000' : '#ffffff'}
+            activeOpacity={0.7}
           >
-            Got it
-          </PaperButton>
+            <Text style={[
+              styles.secondaryButtonText,
+              { color: isNeonTheme ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)' }
+            ]}>
+              Got it
+            </Text>
+          </TouchableOpacity>
         </Animated.View>
       )}
     </View>
@@ -3467,27 +3531,30 @@ const styles = StyleSheet.create({
   },
   tooltip: {
     position: 'absolute',
-    bottom: 80,
+    // Improved spacing from bottom with safe area consideration
+    bottom: Platform.OS === 'web' ? 120 : (Platform.OS === 'ios' ? 150 : 120),
     // Centered tooltip for all platforms
     left: '50%',
-    marginLeft: -100, // Half the width for better position
-    backgroundColor: colors.card,
+    marginLeft: -90, // Adjusted for narrower tooltip
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', // More transparent background
     borderRadius: borderRadius.xl,
     padding: spacing[4],
-    width: 200, // Slightly wider for better text fit
+    width: 180, // More narrow tooltip
     alignItems: 'center',
     zIndex: 100,
+    // Ensure minimum distance from screen edges
+    marginBottom: 20,
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0 3px 10px rgba(0, 0, 0, 0.35)'
+      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.4)',
     } : {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.2,
-      shadowRadius: 5,
-      elevation: 6,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      elevation: 8,
     }),
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(255, 255, 255, 0.2)', // Semi-transparent border
   },
   tooltipArrow: {
     position: 'absolute',
@@ -3511,7 +3578,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 8,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: colors.card,
+    borderTopColor: 'rgba(0, 0, 0, 0.6)', // Match tooltip background
   },
   tooltipText: {
     color: colors.foreground,
@@ -3777,6 +3844,65 @@ const styles = StyleSheet.create({
     zIndex: 10000, // Highest z-index to ensure bottom sheets appear above all content
     elevation: 10000, // For Android
     pointerEvents: 'box-none', // Allow touch events to pass through to underlying content
+  },
+  phoneArrow: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginTop: -10,
+    marginLeft: -10,
+    zIndex: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  arrowIcon: {
+    opacity: 0.8,
+  },
+  secondaryButton: {
+    marginTop: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 15,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    opacity: 0.7,
+  },
+  mockFeedContent: {
+    flex: 1,
+    padding: 6,
+    justifyContent: 'space-between',
+  },
+  mockQuestionText: {
+    height: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    borderRadius: 2,
+    marginBottom: 8,
+    shadowColor: '#00FF88',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 3,
+  },
+  mockAnswerButtons: {
+    flexDirection: 'column',
+    gap: 2, // Reduced gap to fit 4 buttons better
+  },
+  mockAnswerButton: {
+    height: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 255, 136, 0.6)',
+    shadowColor: '#00FF88',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 2,
   },
 });
 
