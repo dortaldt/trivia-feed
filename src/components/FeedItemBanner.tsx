@@ -236,10 +236,13 @@ export const FeedItemBanner: React.FC<FeedItemBannerProps> = ({
       {isNeonTheme ? (
         <LinearGradient
           colors={[
-            'rgba(0, 0, 0, 0.85)',
-            'rgba(13, 13, 13, 0.85)',
-            'rgba(0, 0, 0, 0.85)',
+            '#1a0033', // Deep purple
+            '#2d1043', // Purple with blue
+            '#0a1a2e', // Dark blue
+            '#16213e', // Deeper blue
+            '#1a0033', // Back to deep purple
           ]}
+          locations={[0, 0.25, 0.5, 0.75, 1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.gradient}
@@ -254,6 +257,22 @@ export const FeedItemBanner: React.FC<FeedItemBannerProps> = ({
                 : 'rgba(255, 255, 255, 0.95)',
             },
           ]}
+        />
+      )}
+
+      {/* Neon glow overlay for extra visual flair */}
+      {isNeonTheme && (
+        <LinearGradient
+          colors={[
+            'rgba(0, 255, 255, 0.1)', // Cyan glow
+            'rgba(138, 43, 226, 0.08)', // Purple glow
+            'rgba(0, 191, 255, 0.06)', // Blue glow
+            'transparent',
+          ]}
+          locations={[0, 0.3, 0.7, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.glowOverlay}
         />
       )}
 
@@ -276,7 +295,7 @@ export const FeedItemBanner: React.FC<FeedItemBannerProps> = ({
                   elevation: 5,
                 },
                 web: {
-                  boxShadow: `0 0 10px ${typeColor}, inset 0 0 5px ${typeColor}30`,
+                  boxShadow: `0 0 15px ${typeColor}, inset 0 0 8px ${typeColor}40`,
                 } as any,
               }),
             },
@@ -286,7 +305,11 @@ export const FeedItemBanner: React.FC<FeedItemBannerProps> = ({
 
       <View style={styles.content}>
         {/* Header with icon and dismiss button */}
-        <View style={styles.header}>
+        <View style={[
+          styles.header,
+          // Remove bottom margin if no description
+          (!content.description || content.description.trim() === '') && { marginBottom: 0 }
+        ]}>
           <View style={styles.iconTitleContainer}>
             <View
               style={[
@@ -343,19 +366,21 @@ export const FeedItemBanner: React.FC<FeedItemBannerProps> = ({
           </TouchableOpacity>
         </View>
 
-        {/* Description */}
-        <Text
-          style={[
-            styles.description,
-            {
-              color: isNeonTheme 
-                ? 'rgba(255, 255, 255, 0.8)' 
-                : (isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
-            },
-          ]}
-        >
-          {content.description}
-        </Text>
+        {/* Description - only render if there's content */}
+        {content.description && content.description.trim() !== '' && (
+          <Text
+            style={[
+              styles.description,
+              {
+                color: isNeonTheme 
+                  ? 'rgba(255, 255, 255, 0.8)' 
+                  : (isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+              },
+            ]}
+          >
+            {content.description}
+          </Text>
+        )}
 
         {/* Action button */}
         {content.actionText && content.onActionPress && (
@@ -423,6 +448,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderRadius: 16,
   },
+  glowOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 16,
+  },
   neonBorder: {
     position: 'absolute',
     top: 0,
@@ -430,7 +463,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 2, // Increased border width for consistency with other UI elements
   },
   content: {
     padding: 16,

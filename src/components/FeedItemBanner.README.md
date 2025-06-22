@@ -20,9 +20,9 @@ import FeedItemBanner, { BannerContent } from './FeedItemBanner';
 
 const myBanner: BannerContent = {
   id: 'swipe-tip',
-  title: 'Pro Tip',
-  description: "Don't like this question? Just swipe up to skip to the next one!",
-  icon: 'arrow-up',
+  title: "Don't like a question? Swipe down",
+  description: "",
+  icon: 'arrow-down',
   type: 'tip',
 };
 
@@ -76,8 +76,9 @@ interface BannerContent {
 
 The component automatically adapts to:
 - **Regular Theme**: Semi-transparent backgrounds with subtle shadows
-- **Neon Theme**: Dark gradient backgrounds with neon borders and glow effects
+- **Neon Theme**: Vibrant gradient backgrounds with neon borders, glow effects, and dynamic overlays
 - **Dark/Light Mode**: Appropriate text colors for each color scheme
+- **Dynamic Layout**: Automatically removes description space when no description is provided
 
 ## Persistence
 
@@ -142,9 +143,9 @@ useEffect(() => {
 
 const swipeTipBanner: BannerContent = {
   id: 'swipe-tip',
-  title: 'Pro Tip',
-  description: "Don't like this question? Just swipe up to skip to the next one!",
-  icon: 'arrow-up',
+  title: "Don't like a question? Swipe down",
+  description: "",
+  icon: 'arrow-down',
   type: 'tip',
 };
 

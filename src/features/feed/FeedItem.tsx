@@ -266,9 +266,9 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
 
   const swipeTipBanner: BannerContent = {
     id: 'swipe-tip',
-    title: 'Pro Tip',
-    description: "Don't like this question? Just swipe up to skip to the next one!",
-    icon: 'arrow-up',
+    title: "Don't like a question? Swipe down",
+    description: "",
+    icon: 'arrow-down',
     type: 'tip',
   };
   
