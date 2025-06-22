@@ -3529,12 +3529,12 @@ const styles = StyleSheet.create({
   },
   tooltip: {
     position: 'absolute',
-    // Improved spacing from bottom with safe area consideration
-    bottom: Platform.OS === 'web' ? 120 : (Platform.OS === 'ios' ? 150 : 120),
+    // Closer to bottom of screen
+    bottom: Platform.OS === 'web' ? 60 : (Platform.OS === 'ios' ? 80 : 60),
     // Centered tooltip for all platforms
     left: '50%',
     marginLeft: -90, // Adjusted for narrower tooltip
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // More transparent background
+    backgroundColor: 'rgba(0, 0, 0, 0.85)', // Less transparent background
     borderRadius: borderRadius.xl,
     padding: spacing[4],
     width: 180, // More narrow tooltip
@@ -3576,7 +3576,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 8,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: 'rgba(0, 0, 0, 0.6)', // Match tooltip background
+    borderTopColor: 'rgba(0, 0, 0, 0.85)', // Match tooltip background
   },
   tooltipText: {
     color: colors.foreground,
