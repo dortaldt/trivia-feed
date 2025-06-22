@@ -118,7 +118,18 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
 }: FeedItemProps) => {
   // Add topic rings hook to get progress data
   const { topRings } = useTopicRings({});
-  const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
+  
+  // Get initial question state from Redux
+  const initialQuestionState = useAppSelector(state => 
+    state.trivia.questions[item.id] as QuestionState | undefined
+  );
+  
+  // Initialize selectedAnswerIndex with the correct value from Redux if available
+  const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(
+    initialQuestionState?.status === 'answered' && initialQuestionState?.answerIndex !== undefined
+      ? initialQuestionState.answerIndex
+      : null
+  );
   const [isLiked, setIsLiked] = useState(false);
   const [showLearningCapsule, setShowLearningCapsule] = useState(false);
   const [hoveredAnswerIndex, setHoveredAnswerIndex] = useState<number | null>(null);
@@ -140,22 +151,43 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
   const colorScheme = useColorScheme();
   const { isNeonTheme } = useTheme();
   
-  const questionState = useAppSelector(state => 
-    state.trivia.questions[item.id] as QuestionState | undefined
-  );
+  const questionState = initialQuestionState;
   
   // Get user profile from Redux to access total answered questions
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   
+  // Get questionsLoaded flag to ensure we only sync after questions are loaded from storage
+  const questionsLoaded = useAppSelector(state => state.trivia.questionsLoaded);
+  
   // Sync selectedAnswerIndex with questionState on mount and when questionState changes
   // This fixes the issue where answers appear selected on web refresh
   useEffect(() => {
+    // Only sync after questions have been loaded from storage to avoid race conditions
+    if (!questionsLoaded) {
+      return;
+    }
+    
     if (questionState?.status === 'answered' && questionState?.answerIndex !== undefined) {
       setSelectedAnswerIndex(questionState.answerIndex);
+      console.log(`🔄 [FeedItem] Synced selectedAnswerIndex for question ${item.id}: ${questionState.answerIndex}`);
     } else {
       setSelectedAnswerIndex(null);
+      console.log(`🔄 [FeedItem] Reset selectedAnswerIndex for question ${item.id}: unanswered`);
     }
-  }, [questionState?.status, questionState?.answerIndex]);
+  }, [questionState?.status, questionState?.answerIndex, questionsLoaded, item.id]);
+  
+  // Force clear any browser cached state on web when component mounts
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      // Force a micro-task to clear any browser cached pressed states
+      Promise.resolve().then(() => {
+        // This ensures the component re-evaluates its state after mount
+        if (!questionState || questionState.status === 'unanswered') {
+          setSelectedAnswerIndex(null);
+        }
+      });
+    }
+  }, []); // Only run once on mount
   
   // Get all questions and feed data from Redux for progress calculation
   const allQuestions = useAppSelector(state => state.trivia.questions);
@@ -947,6 +979,12 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
                         selectAnswer(index);
                       }}
                       disabled={isAnswered()}
+                      // Prevent browser form persistence on web
+                      {...(Platform.OS === 'web' ? {
+                        'data-no-persist': true,
+                        'autoComplete': 'off',
+                        'aria-pressed': selectedAnswerIndex === index,
+                      } as any : {})}
                       // iOS touch optimizations
                       {...(Platform.OS === 'ios' && {
                         delayPressIn: 0,
