@@ -147,6 +147,16 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
   // Get user profile from Redux to access total answered questions
   const userProfile = useAppSelector(state => state.trivia.userProfile);
   
+  // Sync selectedAnswerIndex with questionState on mount and when questionState changes
+  // This fixes the issue where answers appear selected on web refresh
+  useEffect(() => {
+    if (questionState?.status === 'answered' && questionState?.answerIndex !== undefined) {
+      setSelectedAnswerIndex(questionState.answerIndex);
+    } else {
+      setSelectedAnswerIndex(null);
+    }
+  }, [questionState?.status, questionState?.answerIndex]);
+  
   // Get all questions and feed data from Redux for progress calculation
   const allQuestions = useAppSelector(state => state.trivia.questions);
   const feedData = useAppSelector(state => state.trivia.personalizedFeed);

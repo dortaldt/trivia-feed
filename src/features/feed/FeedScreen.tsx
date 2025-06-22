@@ -166,7 +166,6 @@ const FeedScreen: React.FC = () => {
   const previousIndex = useRef<number>(0);
   // Add ref to track previous userProfile for cold start updates
   const previousUserProfileRef = useRef<typeof userProfile | null>(null);
-  const hasFilteredAfterQuestionsLoaded = useRef(false);
   // Add this near the top of the component with other refs
   const lastVisibleIndexRef = useRef<number | null>(null);
   // Add ref to prevent duplicate profile button clicks
@@ -540,10 +539,9 @@ const FeedScreen: React.FC = () => {
 
   // Update effect to prevent reordering of feed after initial load
   useEffect(() => {
-    // Re-filter the feed when questions are loaded from storage to remove already answered questions
-    // This is especially important on web refresh when Redux state is rehydrated
-    if (feedData.length > 0 && questionsLoaded && !hasFilteredAfterQuestionsLoaded.current) {
-      hasFilteredAfterQuestionsLoaded.current = true;
+    // Only refresh personalized feed when userProfile changes and we don't have a feed yet
+    // AND after questions have been loaded from storage
+    if (feedData.length > 0 && personalizedFeed.length === 0 && questionsLoaded) {
       // Filter out questions that have already been answered or skipped from Redux state
       const answeredQuestionIds = new Set(
         Object.keys(questions).filter(id => 
@@ -592,10 +590,10 @@ const FeedScreen: React.FC = () => {
     const totalQuestionsAnswered = userProfile?.totalQuestionsAnswered || 0;
     const inColdStart = !userProfile?.coldStartComplete && totalQuestionsAnswered < 20;
     
-    // Only use this effect for initial feed generation during cold start
-    // Re-filter during cold start when questions are loaded from storage
-    if (inColdStart && feedData.length > 0 && questionsLoaded && !hasFilteredAfterQuestionsLoaded.current) {
-      hasFilteredAfterQuestionsLoaded.current = true;
+    // Only use this effect for initial feed generation
+    // Skip if we already have a feed and have answered questions
+    // AND only run after questions have been loaded from storage
+    if (inColdStart && feedData.length > 0 && personalizedFeed.length === 0 && questionsLoaded) {
       console.log('Initial feed creation during cold start phase');
       
       // Filter out questions that have already been answered or skipped from Redux state
