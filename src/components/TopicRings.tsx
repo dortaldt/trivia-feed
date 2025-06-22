@@ -136,8 +136,10 @@ const RingHintPopover: React.FC<RingHintPopoverProps> = ({ visible, onDismiss, a
         {
           backgroundColor: popoverBgColor,
           borderColor: borderColor,
-          left: Math.max(20, Math.min(anchorPosition.x - 120, 250)),
-          top: anchorPosition.y + 70,
+          left: Platform.OS === 'web' 
+            ? Math.max(20, Math.min(anchorPosition.x - 80, 400)) // Adjust for first ring on web
+            : Math.max(20, Math.min(anchorPosition.x - 110, 300)), // Keep centered on mobile
+          top: anchorPosition.y + 20, // Much closer to rings
         },
         animatedStyle,
       ]}
@@ -735,16 +737,24 @@ export const TopicRings: React.FC<TopicRingsProps> = ({
                              !modalVisible;
     
     if (shouldShowPopover && !showPopover) {
-      // Calculate anchor position (center of the third ring)
-      const thirdRingIndex = 2;
       const ringSpacing = size + 16; // Ring size + padding between rings
       const containerPadding = 20; // Base container padding
       
-      // Calculate horizontal position (center of third ring)
-      const anchorX = containerPadding + (thirdRingIndex * ringSpacing) + (size / 2);
+      let anchorX;
+      let anchorY;
       
-      // Calculate vertical position (below the rings)
-      const anchorY = 30 + size; // Much closer to rings - reduced from 80
+      if (Platform.OS === 'web') {
+        // Web: Point to the first ring
+        const firstRingIndex = 0;
+        anchorX = containerPadding + (firstRingIndex * ringSpacing) + (size / 2);
+        anchorY = 20 + size; // Closer to rings for web
+      } else {
+        // Mobile: Horizontally centered but still pointing to rings area
+        const totalRingsWidth = (topRings.length * ringSpacing) - 16; // Remove last padding
+        const centerX = containerPadding + (totalRingsWidth / 2);
+        anchorX = centerX;
+        anchorY = 15 + size; // Even closer to rings for mobile
+      }
       
       setAnchorPosition({ x: anchorX, y: anchorY });
       setShowPopover(true);

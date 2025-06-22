@@ -3642,6 +3642,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
     elevation: 5,
+    // Web-specific positioning to align with main content
+    ...(Platform.OS === 'web' ? {
+      left: 'max(20px, calc(50% - 300px + 20px))', // Ensure minimum 20px from left edge, or centered within content width
+    } as any : {}),
   },
   avatarCircle: {
     width: 50,
@@ -3697,6 +3701,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
     elevation: 5,
+    // Web-specific positioning to align with main content
+    ...(Platform.OS === 'web' ? {
+      right: 'max(20px, calc(50% - 300px + 20px))', // Ensure minimum 20px from right edge, or centered within content width
+    } as any : {}),
   },
   debugButtonInner: {
     width: 60,
@@ -3739,6 +3747,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start', // Align rings to top
     justifyContent: 'flex-start',
     height: 50, // Match profile button height to ensure proper alignment
+    // Web-specific positioning to align with main content
+    ...(Platform.OS === 'web' ? {
+      left: 'max(86px, calc(50% - 300px + 86px))', // Ensure minimum 86px from left edge, or centered within content width
+    } as any : {}),
   },
   showAllRingsButton: {
     width: 36,
