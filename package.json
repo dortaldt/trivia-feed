@@ -1,7 +1,7 @@
 {
   "name": "trivia-universe-feed",
   "main": "expo-router/entry",
-  "version": "1.2.0",
+  "version": "1.2.2",
   "scripts": {
     "start": "expo start --dev-client",
     "reset-project": "node ./scripts/reset-project.js",
