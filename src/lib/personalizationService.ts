@@ -9,8 +9,8 @@ const scoreCache = new Map<string, { score: number; explanations: string[]; prof
 // Helper function to create a hash of relevant user profile parts for a question
 function getProfileHashForQuestion(userProfile: UserProfile, question: FeedItem): string {
   const topic = question.topic;
-  const subtopic = question.tags?.[0] || 'General';
-  const branch = question.tags?.[1] || 'General';
+  const subtopic = question.subtopic || 'General';
+  const branch = question.branch || 'General';
   
   const topicData = userProfile.topics[topic];
   const interaction = userProfile.interactions[question.id];
@@ -116,8 +116,8 @@ export function calculateQuestionScore(
   
   // Get topic structure from question
   const topic = question.topic;
-  const subtopic = question.tags?.[0] || 'General';
-  const branch = question.tags?.[1] || 'General';
+  const subtopic = question.subtopic || 'General';
+  const branch = question.branch || 'General';
   
   // 1. Topic Affinity
   const topicWeight = userProfile.topics[topic]?.weight || DEFAULT_TOPIC_WEIGHT;
@@ -214,8 +214,8 @@ export function updateUserProfile(
   
   // 2. Update topic weights based on interaction
   const topic = question.topic;
-  const subtopic = question.tags?.[0] || 'General';
-  const branch = question.tags?.[1] || 'General';
+  const subtopic = question.subtopic || 'General';
+  const branch = question.branch || 'General';
   
   // Ensure topic tree structure exists - use explicit default values
   let topicData = updatedProfile.topics[topic];

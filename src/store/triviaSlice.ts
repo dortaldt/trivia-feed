@@ -294,8 +294,8 @@ const triviaSlice = createSlice({
         if (feedItem) {
           // Extract topic information for better logging
           const topic = feedItem.topic;
-          const subtopic = feedItem.tags?.[0] || 'General';
-          const branch = feedItem.tags?.[1] || 'General';
+          const subtopic = feedItem.subtopic || 'General';
+          const branch = feedItem.branch || 'General';
           
           // Store original weights before any changes
           const originalTopicWeight = state.userProfile.topics?.[topic]?.weight || 0.5;
@@ -457,8 +457,8 @@ const triviaSlice = createSlice({
             if (feedItem && state.userProfile) {
               // Extract topic information for better logging
               const topic = feedItem.topic;
-              const subtopic = feedItem.tags?.[0] || 'General';
-              const branch = feedItem.tags?.[1] || 'General';
+              const subtopic = feedItem.subtopic || 'General';
+              const branch = feedItem.branch || 'General';
               
               // Store original weights before any changes
               const originalTopicWeight = state.userProfile.topics?.[topic]?.weight || 0.5;

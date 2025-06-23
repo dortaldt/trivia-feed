@@ -92,7 +92,7 @@ function groupQuestionsByTopic(allQuestions: FeedItem[]): Map<Topic, Map<Subtopi
         return;
       }
       
-      const subtopic = question.tags?.[0] || 'General';
+      const subtopic = question.subtopic || 'General';
       
       if (!groupedQuestions.has(topic)) {
         groupedQuestions.set(topic, new Map<Subtopic, FeedItem[]>());
