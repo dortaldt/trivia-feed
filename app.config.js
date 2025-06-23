@@ -154,7 +154,11 @@ export default {
       bundleIdentifier: appSpecificConfig.bundleId,
       icon: getTopicAsset('app-icon'),
       orientation: "portrait",
-      buildNumber: "3",
+      buildNumber: "4",
+      config: {
+        usesNonExemptEncryption: false
+      },
+      jsEngine: "hermes",
       infoPlist: {
         UIAppFonts: [
           "AntDesign.ttf",
@@ -166,7 +170,10 @@ export default {
         NSPhotoLibraryUsageDescription: "This app needs access to your photo library to select images for your profile avatar.",
         NSPhotoLibraryAddUsageDescription: "This app needs permission to save photos to your photo library.",
         UISupportedInterfaceOrientations: [
-          "UIInterfaceOrientationPortrait"
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
         ],
         "UISupportedInterfaceOrientations~iphone": [
           "UIInterfaceOrientationPortrait"
