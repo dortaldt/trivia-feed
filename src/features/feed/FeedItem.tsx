@@ -614,7 +614,7 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
       Platform.OS === 'web' && ({ transition: 'all 0.2s ease-in-out' } as any),
     ];
     
-    // Add neon-specific styles when neon theme is active
+    // Add theme-specific styles
     if (isNeonTheme) {
       const neonStyle: any = {
         borderWidth: 1,
@@ -678,6 +678,51 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
       }
       
       baseStyles.push(neonStyle);
+    } else {
+      // Default theme optimizations for better visibility on brighter backgrounds
+      const defaultStyle: any = {
+        borderWidth: 2,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 4,
+        shadowOpacity: 0.15,
+      };
+      
+      if (isSelectedCorrect) {
+        // Correct answer - stronger green with better contrast
+        defaultStyle.backgroundColor = 'rgba(27, 94, 32, 0.8)'; // Dark green background
+        defaultStyle.borderColor = '#1B5E20'; // Dark green border
+        defaultStyle.shadowColor = '#1B5E20';
+        if (Platform.OS === 'web') {
+          defaultStyle.transition = 'all 0.2s ease-in-out';
+        }
+      } else if (isSelectedIncorrect) {
+        // Incorrect answer - stronger red with better contrast
+        defaultStyle.backgroundColor = 'rgba(183, 28, 28, 0.8)'; // Dark red background
+        defaultStyle.borderColor = '#B71C1C'; // Dark red border
+        defaultStyle.shadowColor = '#B71C1C';
+        if (Platform.OS === 'web') {
+          defaultStyle.transition = 'all 0.2s ease-in-out';
+        }
+      } else if (shouldShowCorrectAnswer) {
+        // Show correct answer when user was wrong - softer green
+        defaultStyle.backgroundColor = 'rgba(27, 94, 32, 0.6)'; // Lighter dark green
+        defaultStyle.borderColor = '#2E7D32'; // Medium green border
+        defaultStyle.borderStyle = 'dashed';
+        defaultStyle.shadowColor = '#2E7D32';
+        if (Platform.OS === 'web') {
+          defaultStyle.transition = 'all 0.2s ease-in-out';
+        }
+      } else {
+        // Default style for unanswered questions - subtle styling
+        defaultStyle.backgroundColor = 'rgba(0, 0, 0, 0.4)'; // Slightly more opaque for better contrast
+        defaultStyle.borderColor = hoveredAnswerIndex === index ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.4)';
+        defaultStyle.shadowColor = '#000000';
+        if (Platform.OS === 'web') {
+          defaultStyle.transition = 'all 0.2s ease-in-out';
+        }
+      }
+      
+      baseStyles.push(defaultStyle);
     }
     
     return baseStyles;
@@ -1018,11 +1063,14 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
                           // Apply color based on answer correctness after selection
                           // Selected answer - correct (green) or incorrect (red)
                           isAnswered() && questionState?.answerIndex === index && (
-                            answer.isCorrect ? styles.correctAnswerText : styles.incorrectAnswerText
+                            answer.isCorrect 
+                              ? (isNeonTheme ? styles.correctAnswerText : styles.defaultCorrectAnswerText)
+                              : (isNeonTheme ? styles.incorrectAnswerText : styles.defaultIncorrectAnswerText)
                           ),
                           
                           // Highlight correct answer when user selected wrong
-                          isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && styles.correctAnswerText,
+                          isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && 
+                            (isNeonTheme ? styles.correctAnswerText : styles.defaultCorrectAnswerText),
                           
                           // Base color for neon theme
                           !isAnswered() && isNeonTheme && { color: '#FFFFFF' }
@@ -1041,10 +1089,10 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
                         {/* Show regular answer feedback after question is answered */}
                         {(isAnswered() && questionState?.answerIndex === index && (
                           answer.isCorrect ? 
-                          <FeatherIcon name="check-square" size={24} color="#4CAF50" /> : 
-                          <FeatherIcon name="x-circle" size={24} color="#F44336" />
+                          <FeatherIcon name="check-square" size={24} color={isNeonTheme ? "#4CAF50" : "#FFFFFF"} /> : 
+                          <FeatherIcon name="x-circle" size={24} color={isNeonTheme ? "#F44336" : "#FFFFFF"} />
                         )) || (isAnswered() && !isSelectedAnswerCorrect() && answer.isCorrect && (
-                          <FeatherIcon name="square" size={24} color="#4CAF50" />
+                          <FeatherIcon name="square" size={24} color={isNeonTheme ? "#4CAF50" : "#FFFFFF"} />
                         ))}
                       </View>
                     </Pressable>
@@ -1486,6 +1534,15 @@ const styles = StyleSheet.create({
   },
   incorrectAnswerText: {
     color: '#F44336',
+    fontWeight: 'bold',
+  },
+  // Default theme specific text colors for better contrast
+  defaultCorrectAnswerText: {
+    color: '#FFFFFF', // White text on dark green background
+    fontWeight: 'bold',
+  },
+  defaultIncorrectAnswerText: {
+    color: '#FFFFFF', // White text on dark red background
     fontWeight: 'bold',
   },
   nonSelectedAnswerOption: {

@@ -29,7 +29,7 @@ const themeMap: Record<ThemeName, ThemeDefinition> = {
 };
 
 // Default theme cycling order
-const themeCycleOrder: ThemeName[] = ['neon', 'default', 'retro', 'modern'];
+const themeCycleOrder: ThemeName[] = ['default', 'neon', 'retro', 'modern'];
 
 // App icon mapping based on theme
 const themeAppIconMap: Record<ThemeName, string> = {
@@ -43,19 +43,19 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Ignore device color scheme, always use dark mode
-  const [currentTheme, setCurrentTheme] = useState<ThemeName>('neon');
+  const [currentTheme, setCurrentTheme] = useState<ThemeName>('default');
   const [colorScheme, setColorScheme] = useState<ColorSchemeType>('dark');
-  const [themeDefinition, setThemeDefinition] = useState<ThemeDefinition>(neonTheme);
+  const [themeDefinition, setThemeDefinition] = useState<ThemeDefinition>(defaultTheme);
 
-  // Initialize the theme to neon if no theme is set yet
+  // Initialize the theme to default if no theme is set yet
   useEffect(() => {
     const initializeTheme = async () => {
       try {
         const savedTheme = await AsyncStorage.getItem('app-theme');
         if (!savedTheme) {
-          // If no theme is saved, set to neon by default
-          await AsyncStorage.setItem('app-theme', 'neon');
-          console.log('Initialized default theme to neon');
+          // If no theme is saved, set to default by default
+          await AsyncStorage.setItem('app-theme', 'default');
+          console.log('Initialized default theme to default');
         }
       } catch (error) {
         console.error('Failed to initialize theme:', error);

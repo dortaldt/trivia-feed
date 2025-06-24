@@ -3159,25 +3159,25 @@ const FeedScreen: React.FC = () => {
       {/* Topic Rings next to profile button */}
       {(() => {
         const shouldShowRings = userProfile?.topics && Object.keys(userProfile.topics).length > 0;
-        // console.log('=== TopicRings Visibility Debug ===');
-        // console.log('TopicRings condition check:', {
-        //   isGuest,
-        //   hasUserProfile: !!userProfile,
-        //   hasTopics: !!(userProfile?.topics),
-        //   topicsCount: Object.keys(userProfile?.topics || {}).length,
-        //   shouldShowRings,
-        //   platform: Platform.OS,
-        //   userId: user?.id
-        // });
+        console.log('=== TopicRings Visibility Debug ===');
+        console.log('TopicRings condition check:', {
+          isGuest,
+          hasUserProfile: !!userProfile,
+          hasTopics: !!(userProfile?.topics),
+          topicsCount: Object.keys(userProfile?.topics || {}).length,
+          shouldShowRings,
+          platform: Platform.OS,
+          userId: user?.id
+        });
         
         if (userProfile?.topics) {
-          // console.log('User profile topics:', Object.keys(userProfile.topics));
-          // console.log('Topic weights:', Object.entries(userProfile.topics).map(([topic, data]) => 
-          //   `${topic}: ${data.weight}`
-          // ));
+          console.log('User profile topics:', Object.keys(userProfile.topics));
+          console.log('Topic weights:', Object.entries(userProfile.topics).map(([topic, data]) => 
+            `${topic}: ${data.weight}`
+          ));
         }
         
-        // console.log('==============================');
+        console.log('==============================');
         return shouldShowRings;
       })() && (
         <View style={styles.topicRingsContainer}>
