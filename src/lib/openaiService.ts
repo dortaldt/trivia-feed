@@ -375,6 +375,17 @@ async function generateGeneralQuestions(
     // Assemble the final prompt
     mainPrompt = `Generate 12 unique trivia questions for a trivia app, following these specific instructions:
 
+    CRITICAL ACCURACY & VALIDATION REQUIREMENTS:
+    - ALL questions and answers MUST be 100% factually accurate, valid, and verifiable
+    - VERIFY every fact, date, name, and detail before including it in a question - ensure all information is valid
+    - DO NOT include any speculative, uncertain, or potentially incorrect information
+    - Cross-reference multiple reliable sources to ensure accuracy and validity
+    - If you're not 100% certain about a fact being valid, DO NOT use it in a question
+    - All correct answers must be definitively and unambiguously correct with valid, verified information
+    - All incorrect answers must be definitively wrong (not just less likely) but still contain valid information structure
+    - Double-check that the correct answer is actually correct and all answers contain valid information
+    - Avoid questions based on rumors, unverified claims, or disputed facts - only use valid, established facts
+
     CRITICAL STRUCTURAL REQUIREMENTS:
     - Create EXACTLY 12 questions with detailed personalization
     - Each question must follow the exact JSON structure shown at the end
@@ -578,6 +589,17 @@ function buildNichePrompt(
   // Assemble the final prompt (same structure as general mode but niche-focused)
   return `Generate 3 unique trivia questions EXCLUSIVELY about "${nicheTopic}", following these specific instructions:
 
+CRITICAL ACCURACY & VALIDATION REQUIREMENTS:
+- ALL questions and answers MUST be 100% factually accurate, valid, and verifiable
+- VERIFY every fact, date, name, and detail before including it in a question - ensure all information is valid
+- DO NOT include any speculative, uncertain, or potentially incorrect information
+- Cross-reference multiple reliable sources to ensure accuracy and validity
+- If you're not 100% certain about a fact being valid, DO NOT use it in a question
+- All correct answers must be definitively and unambiguously correct with valid, verified information
+- All incorrect answers must be definitively wrong (not just less likely) but still contain valid information structure
+- Double-check that the correct answer is actually correct and all answers contain valid information
+- Avoid questions based on rumors, unverified claims, or disputed facts - only use valid, established facts
+
 CRITICAL NICHE REQUIREMENTS:
 - ALL 3 questions MUST be about "${nicheTopic}" specifically
 - DO NOT generate questions about other topics, even if they seem related
@@ -695,8 +717,8 @@ async function callOpenAIForGeneration(prompt: string, mode: 'general' | 'niche'
           {
             role: 'system',
             content: mode === 'niche' 
-              ? `You are a specialized trivia question generator that creates high-quality, factually accurate questions focused exclusively on niche topics. You must ONLY respond with a valid JSON array without any additional text, formatting, or explanations. Focus deeply on the specified niche topic and ensure all questions remain within that domain.`
-              : 'You are a specialized trivia question generator that creates high-quality, factually accurate questions with detailed categorization for a trivia app. You must ONLY respond with a valid JSON array without any additional text, formatting, or explanations.'
+              ? `You are a specialized trivia question generator that creates high-quality, factually accurate questions focused exclusively on niche topics. ACCURACY IS PARAMOUNT - every single fact, date, name, and detail must be 100% verified and correct. You must ONLY respond with a valid JSON array without any additional text, formatting, or explanations. Focus deeply on the specified niche topic and ensure all questions remain within that domain. Never include unverified information.`
+              : 'You are a specialized trivia question generator that creates high-quality, factually accurate questions with detailed categorization for a trivia app. ACCURACY IS PARAMOUNT - every single fact, date, name, and detail must be 100% verified and correct. You must ONLY respond with a valid JSON array without any additional text, formatting, or explanations. Never include unverified information.'
           },
           {
             role: 'user',
