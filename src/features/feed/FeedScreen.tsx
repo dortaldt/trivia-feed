@@ -176,12 +176,22 @@ const FeedScreen: React.FC = () => {
   const lastActiveTopicUpdateRef = useRef<number>(0);
   // Add ref to track if we're currently in an answer interaction
   const isAnsweringRef = useRef<boolean>(false);
+  // Add ref for intersection observers on web
+  const itemObserversRef = useRef<Map<string, IntersectionObserver>>(new Map());
 
   // Get a background color for the loading state
   const backgroundColor = useThemeColor({}, 'background');
   
   // Get theme for tooltip colors
   const { isNeonTheme } = useTheme();
+  
+  // Cleanup observers on unmount
+  useEffect(() => {
+    return () => {
+      itemObserversRef.current.forEach(observer => observer.disconnect());
+      itemObserversRef.current.clear();
+    };
+  }, []);
   
   // Get theme-appropriate colors for phone illustration
   const getPhoneIllustrationColors = useCallback(() => {
@@ -1635,16 +1645,38 @@ const FeedScreen: React.FC = () => {
     // Update scrollBasedIndexRef with the current estimated index
     scrollBasedIndexRef.current = estimatedIndex;
     
-    // For iOS, update activeTopic during scroll for immediate feedback
-    if (isIOS && estimatedIndex >= 0 && estimatedIndex < personalizedFeed.length && !isAnsweringRef.current) {
-      const item = personalizedFeed[estimatedIndex];
-      if (item && item.topic && item.topic !== activeTopic) {
-        // Debounce updates to prevent too many rapid changes
-        const now = Date.now();
-        if (now - lastActiveTopicUpdateRef.current > 100) { // 100ms debounce
-          console.log(`[iOS SCROLL] Updating active topic during scroll from "${activeTopic}" to "${item.topic}" (index: ${estimatedIndex})`);
-          setActiveTopic(item.topic);
-          lastActiveTopicUpdateRef.current = now;
+    // Update activeTopic during scroll for immediate feedback (both iOS and web)
+    if (estimatedIndex >= 0 && estimatedIndex < personalizedFeed.length && !isAnsweringRef.current) {
+      // Calculate how many banners appear before this index for more accurate topic detection
+      let bannerOffset = 0;
+      for (const placement of bannerPlacements) {
+        if (placement.position <= estimatedIndex - bannerOffset) {
+          bannerOffset++;
+        }
+      }
+      
+      // Calculate the actual feed index by subtracting banner offset
+      const feedIndex = estimatedIndex - bannerOffset;
+      
+      if (feedIndex >= 0 && feedIndex < personalizedFeed.length) {
+        const item = personalizedFeed[feedIndex];
+        if (item && item.topic) {
+          // Debounce updates to prevent too many rapid changes
+          const now = Date.now();
+          const debounceTime = Platform.OS === 'web' ? 50 : 100; // Faster updates on web for better responsiveness
+          
+          if (item.topic !== activeTopic && now - lastActiveTopicUpdateRef.current > debounceTime) {
+            console.log(`[${Platform.OS === 'web' ? 'WEB' : 'iOS'} SCROLL] Updating active topic during scroll from "${activeTopic}" to "${item.topic}" (index: ${feedIndex})`);
+            setActiveTopic(item.topic);
+            lastActiveTopicUpdateRef.current = now;
+          }
+          
+          // Also update subtopic
+          const newSubtopic = item.subtopic || '';
+          if (newSubtopic !== activeSubtopic && now - lastActiveTopicUpdateRef.current > debounceTime) {
+            console.log(`[${Platform.OS === 'web' ? 'WEB' : 'iOS'} SCROLL] Updating active subtopic during scroll from "${activeSubtopic}" to "${newSubtopic}" (index: ${feedIndex})`);
+            setActiveSubtopic(newSubtopic);
+          }
         }
       }
     }
@@ -1673,7 +1705,7 @@ const FeedScreen: React.FC = () => {
         }
       });
     }
-  }, [currentIndex, viewportHeight, showTooltip, hideTooltip, isActivelyScrolling, handleFastScroll, isIOS, setCurrentIndex, personalizedFeed, activeTopic, setActiveTopic]);
+  }, [currentIndex, viewportHeight, showTooltip, hideTooltip, isActivelyScrolling, handleFastScroll, isIOS, setCurrentIndex, personalizedFeed, activeTopic, setActiveTopic, activeSubtopic, setActiveSubtopic, bannerPlacements]);
 
   // Enhanced onViewableItemsChanged with preloading
   const onViewableItemsChanged = useCallback(
@@ -2016,15 +2048,53 @@ const FeedScreen: React.FC = () => {
           console.log(`[iOS MOMENTUM END] Immediately updating active topic from "${activeTopic}" to "${item.topic}"`);
           setActiveTopic(item.topic);
         }
+        
+        // Also update subtopic for iOS
+        if (item && item.subtopic !== undefined && item.subtopic !== activeSubtopic && !isAnsweringRef.current) {
+          console.log(`[iOS MOMENTUM END] Immediately updating active subtopic from "${activeSubtopic}" to "${item.subtopic}"`);
+          setActiveSubtopic(item.subtopic);
+        }
       } else {
         console.warn(`[INDEX UPDATE] iOS: Estimated feed index ${estimatedFeedIndex} is out of bounds. Falling back to state currentIndex: ${currentIndex}`);
         eventCorrectedCurrentIndex = currentIndex; // Fallback if calculation is odd
       }
     } else {
-      // For non-iOS, onMomentumScrollEnd might not be triggered by this exact callback signature from FlatList if not defined to take an event,
-      // or we might rely on onViewableItemsChanged for index updates.
-      // For safety, use the current state index if not iOS.
-      eventCorrectedCurrentIndex = currentIndex;
+      // For non-iOS (web), calculate position from scroll event
+      const finalScrollPos = event.nativeEvent.contentOffset.y;
+      const estimatedEnhancedIndex = Math.round(finalScrollPos / viewportHeight);
+      
+      // Calculate how many banners appear before this index
+      let bannerOffset = 0;
+      for (const placement of bannerPlacements) {
+        if (placement.position <= estimatedEnhancedIndex - bannerOffset) {
+          bannerOffset++;
+        }
+      }
+      
+      // Calculate the actual feed index by subtracting banner offset
+      const estimatedFeedIndex = estimatedEnhancedIndex - bannerOffset;
+      
+      if (estimatedFeedIndex >= 0 && estimatedFeedIndex < personalizedFeed.length) {
+        eventCorrectedCurrentIndex = estimatedFeedIndex;
+        const item = personalizedFeed[estimatedFeedIndex];
+        
+        // Update activeTopic and activeSubtopic for web
+        if (item && !isAnsweringRef.current) {
+          if (item.topic && item.topic !== activeTopic) {
+            console.log(`[WEB MOMENTUM END] Updating active topic from "${activeTopic}" to "${item.topic}"`);
+            setActiveTopic(item.topic);
+          }
+          
+          const newSubtopic = item.subtopic || '';
+          if (newSubtopic !== activeSubtopic) {
+            console.log(`[WEB MOMENTUM END] Updating active subtopic from "${activeSubtopic}" to "${newSubtopic}"`);
+            setActiveSubtopic(newSubtopic);
+          }
+        }
+      } else {
+        // Fallback to current index if calculation is out of bounds
+        eventCorrectedCurrentIndex = currentIndex;
+      }
     }
 
     // Perform skip logic using the eventCorrectedCurrentIndex
@@ -2071,7 +2141,7 @@ const FeedScreen: React.FC = () => {
         console.warn(`[onMomentumScrollEnd] (Else branch) No item in personalizedFeed at eventCorrectedCurrentIndex ${eventCorrectedCurrentIndex}.`);
       }
     }
-  }, [currentIndex, setCurrentIndex, handleFastScroll, isIOS, viewportHeight, personalizedFeed, bannerPlacements, dispatch, activeTopic, setActiveTopic]);
+  }, [currentIndex, setCurrentIndex, handleFastScroll, isIOS, viewportHeight, personalizedFeed, bannerPlacements, dispatch, activeTopic, setActiveTopic, activeSubtopic, setActiveSubtopic]);
 
   // Add this hook to handle question generation
   const { triggerQuestionGeneration, trackQuestionInteraction } = useQuestionGenerator();
@@ -2519,7 +2589,59 @@ const FeedScreen: React.FC = () => {
     const nextItemTopic = nextItem && 'type' in nextItem && nextItem.type === 'banner' ? undefined : (nextItem as FeedItemType)?.topic;
     
     return (
-      <View style={[styles.itemContainer, { width, height: viewportHeight }]}>
+      <View 
+        style={[styles.itemContainer, { width, height: viewportHeight }]}
+        ref={(element) => {
+          // Set up Intersection Observer for web to detect visible items
+          if (Platform.OS === 'web' && element) {
+            const htmlElement = element as any;
+            
+            // Clean up existing observer for this item
+            const existingObserver = itemObserversRef.current.get(feedItem.id);
+            if (existingObserver) {
+              existingObserver.disconnect();
+            }
+            
+            // Create new observer
+            const observer = new IntersectionObserver(
+              (entries) => {
+                entries.forEach((entry) => {
+                  if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                    // This item is more than 50% visible
+                    const item = feedItem;
+                    if (item && !isAnsweringRef.current) {
+                      const now = Date.now();
+                      const debounceTime = 100; // 100ms debounce
+                      
+                      if (item.topic && item.topic !== activeTopic && now - lastActiveTopicUpdateRef.current > debounceTime) {
+                        console.log(`[WEB INTERSECTION OBSERVER] Updating active topic from "${activeTopic}" to "${item.topic}"`);
+                        setActiveTopic(item.topic);
+                        lastActiveTopicUpdateRef.current = now;
+                      }
+                      
+                      const newSubtopic = item.subtopic || '';
+                      if (newSubtopic !== activeSubtopic && now - lastActiveTopicUpdateRef.current > debounceTime) {
+                        console.log(`[WEB INTERSECTION OBSERVER] Updating active subtopic from "${activeSubtopic}" to "${newSubtopic}"`);
+                        setActiveSubtopic(newSubtopic);
+                      }
+                    }
+                  }
+                });
+              },
+              {
+                threshold: 0.5, // Trigger when 50% visible
+                rootMargin: '0px',
+              }
+            );
+            
+            // Start observing
+            observer.observe(htmlElement);
+            
+            // Store observer reference
+            itemObserversRef.current.set(feedItem.id, observer);
+          }
+        }}
+      >
         <FeedItem 
           item={feedItem} 
           nextTopic={nextItemTopic}
