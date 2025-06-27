@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TriviaFeed - Social Share Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+        .test-url {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        .preview-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 15px 0;
+            background: white;
+        }
+        .preview-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #ffc107, #ff6b35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .preview-content {
+            padding: 15px;
+        }
+        .preview-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .preview-description {
+            color: #666;
+            line-height: 1.4;
+        }
+        .preview-url {
+            color: #999;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .instruction {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border-left: 4px solid #2196f3;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .tools-section {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin-top: 30px;
+        }
+        .tool-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .tool-link {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #333;
+            border: 1px solid #ddd;
+            transition: transform 0.2s;
+        }
+        .tool-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .tool-name {
+            font-weight: bold;
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 TriviaFeed - Social Share Test</h1>
+        
+        <div class="test-section">
+            <h2>📱 Your App URL</h2>
+            <div class="test-url">https://trivia-feed-friends.vercel.app/feed</div>
+            <div class="instruction">
+                <strong>✅ Perfect!</strong> This is your primary sharing URL. When someone shares this link, they'll see the preview below.
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎨 Social Preview (How it appears when shared)</h2>
+            <div class="preview-card">
+                <div class="preview-image">
+                    TriviaFeed Preview
+                </div>
+                <div class="preview-content">
+                    <div class="preview-title">TriviaFeed - Challenge Your Knowledge</div>
+                    <div class="preview-description">Get personalized trivia questions on TriviaFeed. Test your knowledge, compete with friends, and improve your score!</div>
+                    <div class="preview-url">trivia-feed-friends.vercel.app</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔧 What We've Set Up</h2>
+            <ul>
+                <li><span class="success">✅</span> Open Graph meta tags for Facebook, LinkedIn</li>
+                <li><span class="success">✅</span> Twitter Card meta tags for Twitter/X</li>
+                <li><span class="success">✅</span> Proper image dimensions (1200x630)</li>
+                <li><span class="success">✅</span> SEO-friendly structured data</li>
+                <li><span class="success">✅</span> Mobile-optimized meta tags</li>
+                <li><span class="success">✅</span> Theme-aware social images</li>
+            </ul>
+        </div>
+
+        <div class="tools-section">
+            <h2>🧪 Test Your Social Sharing</h2>
+            <p>Use these tools to verify how your link appears on different platforms:</p>
+            <div class="tool-links">
+                <a href="https://developers.facebook.com/tools/debug/" target="_blank" class="tool-link">
+                    <div class="tool-name">Facebook Debugger</div>
+                    <div>Test how your link appears on Facebook & LinkedIn</div>
+                </a>
+                <a href="https://cards-dev.twitter.com/validator" target="_blank" class="tool-link">
+                    <div class="tool-name">Twitter Card Validator</div>
+                    <div>Preview your Twitter card appearance</div>
+                </a>
+                <a href="https://www.linkedin.com/post-inspector/" target="_blank" class="tool-link">
+                    <div class="tool-name">LinkedIn Post Inspector</div>
+                    <div>Check LinkedIn preview quality</div>
+                </a>
+                <a href="https://socialsharepreview.com/" target="_blank" class="tool-link">
+                    <div class="tool-name">Social Share Preview</div>
+                    <div>Test multiple platforms at once</div>
+                </a>
+            </div>
+        </div>
+
+        <div class="instruction">
+            <strong>💡 Pro Tip:</strong> After making changes, it may take a few minutes for social platforms to update their cached previews. Use the debugging tools above to force a refresh!
+        </div>
+    </div>
+</body>
+</html> 

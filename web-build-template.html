@@ -86,15 +86,47 @@
     <!-- Open Graph Meta Tags for social sharing -->
     <meta property="og:title" content="TriviaFeed - Test Your Knowledge" />
     <meta property="og:description" content="Challenge yourself with personalized trivia questions and compete with friends. TriviaFeed adapts to your interests and knowledge level." />
-    <meta property="og:image" content="https://trivia-feed.vercel.app/social-preview.png" />
-    <meta property="og:url" content="https://trivia-feed.vercel.app/" />
+    <meta property="og:image" content="https://trivia-feed-friends.vercel.app/social-preview.png" />
+    <meta property="og:url" content="https://trivia-feed-friends.vercel.app/feed" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="TriviaFeed" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="TriviaFeed - Test your knowledge with personalized trivia questions" />
     
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="TriviaFeed - Test Your Knowledge" />
     <meta name="twitter:description" content="Challenge yourself with personalized trivia questions and compete with friends. TriviaFeed adapts to your interests and knowledge level." />
-    <meta name="twitter:image" content="https://trivia-feed.vercel.app/social-preview.png" />
+    <meta name="twitter:image" content="https://trivia-feed-friends.vercel.app/social-preview.png" />
+    <meta name="twitter:image:alt" content="TriviaFeed - Test your knowledge with personalized trivia questions" />
+    
+    <!-- Additional Meta Tags for better SEO and sharing -->
+    <meta name="theme-color" content="#ffc107" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="TriviaFeed" />
+    
+    <!-- LinkedIn specific -->
+    <meta property="article:author" content="TriviaFeed" />
+    
+    <!-- Additional structured data for rich snippets -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "TriviaFeed",
+      "url": "https://trivia-feed-friends.vercel.app/feed",
+      "description": "Challenge yourself with personalized trivia questions and compete with friends. TriviaFeed adapts to your interests and knowledge level.",
+      "applicationCategory": "Game",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
     
     <!-- Initialize social sharing metadata on page load -->
     <script>
@@ -115,10 +147,28 @@
           twitterImage.content = baseUrl + twitterImage.content;
         }
         
-        // Update og:url to current page URL
+        // Update og:url to current page URL for dynamic routing
         var ogUrl = document.querySelector('meta[property="og:url"]');
         if (ogUrl) {
-          ogUrl.content = window.location.href;
+          // Ensure the URL always points to the feed page
+          var currentUrl = window.location.href;
+          if (currentUrl.includes('/feed')) {
+            ogUrl.content = currentUrl;
+          } else {
+            ogUrl.content = baseUrl + '/feed';
+          }
+        }
+        
+        // Update structured data URL
+        var structuredDataScript = document.querySelector('script[type="application/ld+json"]');
+        if (structuredDataScript) {
+          try {
+            var data = JSON.parse(structuredDataScript.textContent);
+            data.url = ogUrl ? ogUrl.content : (baseUrl + '/feed');
+            structuredDataScript.textContent = JSON.stringify(data, null, 2);
+          } catch (e) {
+            console.warn('Failed to update structured data:', e);
+          }
         }
       });
     </script>

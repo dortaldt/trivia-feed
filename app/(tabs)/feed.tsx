@@ -9,7 +9,8 @@ export default function Feed() {
   useSocialMeta({
     title: 'TriviaFeed - Challenge Your Knowledge',
     description: 'Get personalized trivia questions on TriviaFeed. Test your knowledge, compete with friends, and improve your score!',
-    image: '/social-preview.png'
+    image: '/social-preview.png',
+    url: '/feed'
   });
 
   // For web, use a modern layout approach with full-width content
