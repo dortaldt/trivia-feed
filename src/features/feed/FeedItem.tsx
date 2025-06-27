@@ -460,12 +460,22 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
       
       // Learning capsule logic - also deferred
       if (!isCorrect) {
-        InteractionManager.runAfterInteractions(() => {
-          setShowLearningCapsule(true);
+        if (Platform.OS === 'web') {
+          // For web, use setTimeout instead of InteractionManager
           setTimeout(() => {
-            animateIn();
-          }, 10);
-        });
+            setShowLearningCapsule(true);
+            setTimeout(() => {
+              animateIn();
+            }, 10);
+          }, 100);
+        } else {
+          InteractionManager.runAfterInteractions(() => {
+            setShowLearningCapsule(true);
+            setTimeout(() => {
+              animateIn();
+            }, 10);
+          });
+        }
       }
     } else {
       console.log('🎯 [FeedItem] WARNING: onAnswer callback is null/undefined!');
