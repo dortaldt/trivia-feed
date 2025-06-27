@@ -2,7 +2,7 @@
   "expo": {
     "name": "Trivia Feed",
     "slug": "trivia-feed",
-    "version": "1.2.0",
+    "version": "1.2.3",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-friends.png",
     "scheme": "trivia-feed",
@@ -69,7 +69,7 @@
       "enabled": true,
       "checkAutomatically": "ON_LOAD"
     },
-    "runtimeVersion": "1.2.0",
+    "runtimeVersion": "1.2.3",
     "owner": "robodorx-2",
     "extra": {
       "eas": {
