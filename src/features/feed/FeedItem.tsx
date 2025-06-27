@@ -432,31 +432,60 @@ const FeedItem: React.FC<FeedItemProps> = React.memo(({
       console.log('🎯 [FeedItem] Calling onAnswer callback with:', { index, isCorrect });
       onAnswer(index, isCorrect);
       
-      // Defer non-critical operations using InteractionManager
-      InteractionManager.runAfterInteractions(() => {
-        // Analytics tracking - deferred to not block UI
-        const currentTotalAnswered = userProfile?.totalQuestionsAnswered || 0;
-        const newTotalAnswered = currentTotalAnswered + 1;
-        
-        trackEvent('Question Answered', {
-          questionId: item.id,
-          isCorrect,
-          answerIndex: index + 1,
-          selectedAnswer: `Option ${index + 1}`,
-          topic: item.topic,
-          difficulty: item.difficulty,
-          totalAnswered: newTotalAnswered,
-        });
-        
-        // Track milestone events
-        if (newTotalAnswered === 1 || newTotalAnswered % 50 === 0) {
-          trackEvent('Question Milestone Reached', {
-            milestone: newTotalAnswered === 1 ? 'First Question' : `${newTotalAnswered} Questions`,
-            totalAnswered: newTotalAnswered,
+      // Platform-specific deferred operations
+      if (Platform.OS === 'web') {
+        // For web, use setTimeout instead of InteractionManager
+        setTimeout(() => {
+          // Analytics tracking - deferred to not block UI
+          const currentTotalAnswered = userProfile?.totalQuestionsAnswered || 0;
+          const newTotalAnswered = currentTotalAnswered + 1;
+          
+          trackEvent('Question Answered', {
+            questionId: item.id,
             isCorrect,
+            answerIndex: index + 1,
+            selectedAnswer: `Option ${index + 1}`,
+            topic: item.topic,
+            difficulty: item.difficulty,
+            totalAnswered: newTotalAnswered,
           });
-        }
-      });
+          
+          // Track milestone events
+          if (newTotalAnswered === 1 || newTotalAnswered % 50 === 0) {
+            trackEvent('Question Milestone Reached', {
+              milestone: newTotalAnswered === 1 ? 'First Question' : `${newTotalAnswered} Questions`,
+              totalAnswered: newTotalAnswered,
+              isCorrect,
+            });
+          }
+        }, 50); // Small delay to not block UI
+      } else {
+        // For mobile, use InteractionManager as before
+        InteractionManager.runAfterInteractions(() => {
+          // Analytics tracking - deferred to not block UI
+          const currentTotalAnswered = userProfile?.totalQuestionsAnswered || 0;
+          const newTotalAnswered = currentTotalAnswered + 1;
+          
+          trackEvent('Question Answered', {
+            questionId: item.id,
+            isCorrect,
+            answerIndex: index + 1,
+            selectedAnswer: `Option ${index + 1}`,
+            topic: item.topic,
+            difficulty: item.difficulty,
+            totalAnswered: newTotalAnswered,
+          });
+          
+          // Track milestone events
+          if (newTotalAnswered === 1 || newTotalAnswered % 50 === 0) {
+            trackEvent('Question Milestone Reached', {
+              milestone: newTotalAnswered === 1 ? 'First Question' : `${newTotalAnswered} Questions`,
+              totalAnswered: newTotalAnswered,
+              isCorrect,
+            });
+          }
+        });
+      }
       
       // Learning capsule logic - also deferred
       if (!isCorrect) {
