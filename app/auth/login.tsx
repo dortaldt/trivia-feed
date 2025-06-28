@@ -9,6 +9,7 @@ import { getTopicTheme, getTopicColors, getTopicAppIcon } from '../../src/utils/
 import { NeonAuthContainer } from '../../src/components/auth/NeonAuthContainer';
 import { NeonAuthButton } from '../../src/components/auth/NeonAuthButton';
 import { NeonAuthInput } from '../../src/components/auth/NeonAuthInput';
+import { trackEvent, trackScreenView, trackButtonClick } from '../../src/lib/mixpanelAnalytics';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -38,6 +39,13 @@ export default function LoginScreen() {
       try {
         await AsyncStorage.setItem('currentlyViewingAuthScreen', 'true');
         console.log('📱 Marked user as currently viewing auth screen');
+        
+        // Track screen view with Mixpanel
+        await trackScreenView('Login Screen', {
+          direct_navigation: isDirectNavigation,
+          platform: Platform.OS,
+          topic: topicTheme.displayName
+        });
       } catch (e) {
         console.error('Error setting auth screen marker:', e);
       }
@@ -54,7 +62,20 @@ export default function LoginScreen() {
   }, [isDirectNavigation]);
 
   const handleLogin = async () => {
+    // Track login attempt
+    await trackEvent('Login Attempt', {
+      platform: Platform.OS,
+      topic: topicTheme.displayName,
+      email_provided: !!email,
+      password_provided: !!password
+    });
+
     if (!email || !password) {
+      await trackEvent('Login Error', {
+        error_type: 'missing_credentials',
+        platform: Platform.OS,
+        topic: topicTheme.displayName
+      });
       alert('Please enter your email and password');
       return;
     }
@@ -65,10 +86,20 @@ export default function LoginScreen() {
       // Show loading state immediately for better feedback
       setIsLoggingIn(true);
       
+      await trackEvent('Login Submit', {
+        platform: Platform.OS,
+        topic: topicTheme.displayName
+      });
+      
       // Call signIn method from auth context with proper await and error handling
       await signIn(email, password);
       
       console.log('✅ Sign in API call completed');
+      
+      await trackEvent('Login Success', {
+        platform: Platform.OS,
+        topic: topicTheme.displayName
+      });
       
       // If we're on iOS, perform an explicit navigation to ensure the app updates
       if (Platform.OS === 'ios') {
@@ -80,6 +111,13 @@ export default function LoginScreen() {
     } catch (error) {
       console.error('❌ Login error:', error);
       
+      await trackEvent('Login Error', {
+        error_type: 'login_failed',
+        platform: Platform.OS,
+        topic: topicTheme.displayName,
+        error_message: error instanceof Error ? error.message : 'Unknown error'
+      });
+      
       // Show a user-friendly error message
       alert('Login failed. Please check your email and password and try again.');
     } finally {
@@ -88,6 +126,12 @@ export default function LoginScreen() {
   };
   
   const handleGuestMode = async () => {
+    await trackButtonClick('Continue as Guest', {
+      platform: Platform.OS,
+      topic: topicTheme.displayName,
+      source: 'login_screen'
+    });
+    
     await continueAsGuest();
     router.replace('/');
   };
@@ -95,6 +139,12 @@ export default function LoginScreen() {
   const handleGoBack = async () => {
     // Only available on mobile platforms - web users must sign up/in
     if (Platform.OS !== 'web') {
+      await trackButtonClick('Back to Feed', {
+        platform: Platform.OS,
+        topic: topicTheme.displayName,
+        source: 'login_screen'
+      });
+      
       // Go back to feed in guest mode
       await continueAsGuest();
       // Use router.replace consistently across platforms
@@ -102,11 +152,23 @@ export default function LoginScreen() {
     }
   };
 
-  const navigateToSignUp = () => {
+  const navigateToSignUp = async () => {
+    await trackButtonClick('Navigate to Signup', {
+      platform: Platform.OS,
+      topic: topicTheme.displayName,
+      source: 'login_screen'
+    });
+    
     router.push('/auth/signup');
   };
 
-  const navigateToForgotPassword = () => {
+  const navigateToForgotPassword = async () => {
+    await trackButtonClick('Forgot Password', {
+      platform: Platform.OS,
+      topic: topicTheme.displayName,
+      source: 'login_screen'
+    });
+    
     router.push('/auth/forgot-password');
   };
 

@@ -9,6 +9,7 @@ import { getTopicTheme, getTopicColors, getTopicAppIcon } from '../../src/utils/
 import { NeonAuthContainer } from '../../src/components/auth/NeonAuthContainer';
 import { NeonAuthButton } from '../../src/components/auth/NeonAuthButton';
 import { NeonAuthInput } from '../../src/components/auth/NeonAuthInput';
+import { trackEvent, trackScreenView, trackButtonClick } from '../../src/lib/mixpanelAnalytics';
 
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');
@@ -37,6 +38,13 @@ export default function SignUpScreen() {
       try {
         await AsyncStorage.setItem('currentlyViewingAuthScreen', 'true');
         console.log('📱 Marked user as currently viewing auth screen');
+        
+        // Track screen view with Mixpanel
+        await trackScreenView('Signup Screen', {
+          direct_navigation: isDirectNavigation,
+          platform: Platform.OS,
+          topic: topicTheme.displayName
+        });
       } catch (e) {
         console.error('Error setting auth screen marker:', e);
       }
@@ -53,25 +61,75 @@ export default function SignUpScreen() {
   }, [isDirectNavigation]);
 
   const handleSignUp = async () => {
+    // Track signup attempt
+    await trackEvent('Signup Attempt', {
+      platform: Platform.OS,
+      topic: topicTheme.displayName,
+      email_provided: !!email,
+      password_provided: !!password,
+      confirm_password_provided: !!confirmPassword
+    });
+
     if (!email || !password || !confirmPassword) {
+      await trackEvent('Signup Error', {
+        error_type: 'missing_fields',
+        platform: Platform.OS,
+        topic: topicTheme.displayName
+      });
       alert('Please fill in all fields');
       return;
     }
     
     if (password !== confirmPassword) {
+      await trackEvent('Signup Error', {
+        error_type: 'password_mismatch',
+        platform: Platform.OS,
+        topic: topicTheme.displayName
+      });
       alert('Passwords do not match');
       return;
     }
     
     if (password.length < 6) {
+      await trackEvent('Signup Error', {
+        error_type: 'password_too_short',
+        platform: Platform.OS,
+        topic: topicTheme.displayName
+      });
       alert('Password must be at least 6 characters long');
       return;
     }
     
-    await signUp(email, password);
+    try {
+      await trackEvent('Signup Submit', {
+        platform: Platform.OS,
+        topic: topicTheme.displayName
+      });
+      
+      await signUp(email, password);
+      
+      await trackEvent('Signup Success', {
+        platform: Platform.OS,
+        topic: topicTheme.displayName
+      });
+    } catch (error) {
+      await trackEvent('Signup Error', {
+        error_type: 'signup_failed',
+        platform: Platform.OS,
+        topic: topicTheme.displayName,
+        error_message: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw error;
+    }
   };
 
-  const navigateToLogin = () => {
+  const navigateToLogin = async () => {
+    await trackButtonClick('Navigate to Login', {
+      platform: Platform.OS,
+      topic: topicTheme.displayName,
+      source: 'signup_screen'
+    });
+    
     router.push({
       pathname: '/auth/login',
       params: { direct: 'true' }

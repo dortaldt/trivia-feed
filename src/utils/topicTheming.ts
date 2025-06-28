@@ -41,39 +41,39 @@ export const getTopicTheme = (): TopicTheme => {
       return {
         displayName: topicData.displayName,
         description: topicData.description,
-        authTitle: 'Join the Friends Community',
-        authSubtitle: 'Test your knowledge of the iconic sitcom',
-        signupPrompt: '', // Removed Friends-specific signup prompt
-        loginPrompt: 'Welcome back, Friend!',
-        signupButtonText: 'Join the Gang',
-        loginButtonText: 'Sign In', // Changed from "I'll Be There For You" to "Sign In"
-        welcomeMessage: 'Could this BE any more exciting? Join thousands of Friends fans!'
+        authTitle: 'How much do you know Friends?',
+        authSubtitle: 'could you BE a more friends fan?',
+        signupPrompt: 'Ready to hang out at Central Perk with trivia? Sign up now!',
+        loginPrompt: 'Welcome back! Ready for more Friends trivia?',
+        signupButtonText: 'Start playing!',
+        loginButtonText: 'Sign In',
+        welcomeMessage: 'Join thousands of Friends fans - we\'ll be there for you!'
       };
 
     case 'music':
       return {
         displayName: topicData.displayName,
         description: topicData.description,
-        authTitle: 'Join the Music Community',
-        authSubtitle: 'Test your knowledge of music, artists, and songs',
-        signupPrompt: 'Ready to rock your music knowledge?',
-        loginPrompt: 'Welcome back, music lover!',
-        signupButtonText: 'Start Jamming',
-        loginButtonText: 'Turn Up The Volume',
-        welcomeMessage: 'Join thousands of music enthusiasts and test your musical knowledge!'
+        authTitle: 'Start Playing Music Trivia!',
+        authSubtitle: 'Test your knowledge of artists, songs, and musical legends',
+        signupPrompt: 'Ready to rock? Sign up and start your music trivia adventure!',
+        loginPrompt: 'Ready to continue jamming with music trivia?',
+        signupButtonText: 'Start Playing Now!',
+        loginButtonText: 'Continue Playing',
+        welcomeMessage: 'Turn up the volume and show off your musical knowledge!'
       };
 
     case 'nineties':
       return {
         displayName: topicData.displayName,
         description: topicData.description,
-        authTitle: 'Welcome to the 90s',
-        authSubtitle: 'Relive the most radical decade',
-        signupPrompt: 'Ready to get nostalgic with 90s trivia?',
-        loginPrompt: 'Welcome back to the 90s!',
-        signupButtonText: 'Take Me Back',
-        loginButtonText: 'That\'s So 90s',
-        welcomeMessage: 'As if! Join the ultimate 90s nostalgia experience!'
+        authTitle: 'Start Playing 90s Trivia!',
+        authSubtitle: 'Test your knowledge of the most radical decade',
+        signupPrompt: 'Ready for a blast from the past? Start playing 90s trivia!',
+        loginPrompt: 'Ready to continue your totally awesome 90s journey?',
+        signupButtonText: 'Start Playing Now!',
+        loginButtonText: 'Continue Playing',
+        welcomeMessage: 'As if you wouldn\'t want to play! Show off your 90s knowledge!'
       };
 
     case 'movies-and-tv':
