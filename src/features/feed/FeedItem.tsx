@@ -40,6 +40,11 @@ import { sessionManager } from '../../utils/sessionManager';
 
 const { width, height } = Dimensions.get('window');
 
+// Responsive spacing for small screens
+const isSmallScreen = height < 750; // Consider screens shorter than 750px as small
+const isVerySmallScreen = height < 650; // Extra small screens
+const isTinyScreen = height < 600; // Extremely small screens
+
 // Get topic configuration from expo config
 const expoExtra = Constants.expoConfig?.extra;
 const activeTopic = expoExtra?.activeTopic;
@@ -1268,8 +1273,14 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-    paddingTop: 20,
+    paddingBottom: isTinyScreen 
+      ? (Platform.OS === 'ios' ? 20 : 10) 
+      : isVerySmallScreen 
+        ? (Platform.OS === 'ios' ? 25 : 12) 
+        : isSmallScreen 
+          ? (Platform.OS === 'ios' ? 30 : 15) 
+          : (Platform.OS === 'ios' ? 40 : 20),
+    paddingTop: isTinyScreen ? 10 : isVerySmallScreen ? 12 : isSmallScreen ? 15 : 20,
     ...(Platform.OS === 'web' ? {
       maxWidth: 600,
       alignSelf: 'center',
@@ -1280,7 +1291,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: isTinyScreen ? 8 : isVerySmallScreen ? 10 : isSmallScreen ? 14 : 20,
   },
   topicSection: {
     flex: 1,
@@ -1312,16 +1323,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   questionContainer: {
-    marginBottom: 20,
+    marginBottom: isTinyScreen ? 8 : isVerySmallScreen ? 10 : isSmallScreen ? 14 : 20,
   },
   questionText: {
     color: 'white',
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: isTinyScreen ? 12 : isVerySmallScreen ? 14 : isSmallScreen ? 16 : 20,
     ...(Platform.OS === 'web' ? { textShadow: '0px 2px 4px rgba(0, 0, 0, 0.5)' } as any : {}),
   },
   answersContainer: {
-    marginTop: 10,
+    marginTop: isTinyScreen ? 4 : isVerySmallScreen ? 6 : isSmallScreen ? 8 : 10,
     // Use flexGrow and flexShrink to ensure the container takes a proportional space
     // but doesn't shrink or grow beyond limits
     flexGrow: 0,
@@ -1330,8 +1341,8 @@ const styles = StyleSheet.create({
   answerOption: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    padding: isTinyScreen ? 10 : isVerySmallScreen ? 12 : isSmallScreen ? 14 : 16,
+    marginBottom: isTinyScreen ? 6 : isVerySmallScreen ? 7 : isSmallScreen ? 9 : 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -1340,7 +1351,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 1.5,
     elevation: 2,
-    minHeight: 56, // Add fixed minimum height
+    minHeight: isTinyScreen ? 44 : isVerySmallScreen ? 46 : isSmallScreen ? 50 : 56, // Reduce minimum height on small screens
   },
   selectedAnswerOption: {
     borderWidth: 2,
@@ -1381,11 +1392,11 @@ const styles = StyleSheet.create({
   skippedContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: isTinyScreen ? 6 : isVerySmallScreen ? 8 : isSmallScreen ? 9 : 10,
+    paddingHorizontal: isTinyScreen ? 12 : isVerySmallScreen ? 14 : 16,
     backgroundColor: 'rgba(255, 193, 7, 0.2)',
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: isTinyScreen ? 10 : isVerySmallScreen ? 12 : isSmallScreen ? 14 : 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 193, 7, 0.5)',
   },
@@ -1401,7 +1412,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: isTinyScreen ? 4 : isVerySmallScreen ? 6 : isSmallScreen ? 10 : 20,
   },
   actionButton: {
     flexDirection: 'row',
