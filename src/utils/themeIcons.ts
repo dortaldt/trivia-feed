@@ -1,5 +1,6 @@
 import { ThemeName } from '../context/ThemeContext';
 import { Platform } from 'react-native';
+import { getActiveTopicConfig } from './topicTheming';
 
 /**
  * Helper utility to get theme-appropriate icons and favicon paths
@@ -21,6 +22,14 @@ const faviconMap: Record<ThemeName, string> = {
   modern: 'favicon.png', // Fallback to default if no dedicated icon
 };
 
+// Static Supabase URLs for social media preview images based on topic
+const topicSocialImageMap: Record<string, string> = {
+  'friends-tv': 'https://vdrmtsifivvpioonpqqc.supabase.co/storage/v1/object/sign/app-icons/app-icon-friends.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85NGZkZTU2MC02YTNiLTQ3ZDMtOWJhMy0yNjhhZmQ1ODBkZDYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHAtaWNvbnMvYXBwLWljb24tZnJpZW5kcy5wbmciLCJpYXQiOjE3NTExMDQ0OTUsImV4cCI6MjA2NjQ2NDQ5NX0.8H6MFvj4fQwJTfRNy5HmGRT-mdEKAKBaBdGSn-9OElY',
+  'music': 'https://vdrmtsifivvpioonpqqc.supabase.co/storage/v1/object/sign/app-icons/app-icon-music.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85NGZkZTU2MC02YTNiLTQ3ZDMtOWJhMy0yNjhhZmQ1ODBkZDYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHAtaWNvbnMvYXBwLWljb24tbXVzaWMucG5nIiwiaWF0IjoxNzUxMTA0NTQwLCJleHAiOjIwNjY0NjQ1NDB9.wlVTTGsKE8fZFZXb4GQPaNNd27eyNADaadg2FKU0VE4',
+  'nineties': 'https://vdrmtsifivvpioonpqqc.supabase.co/storage/v1/object/sign/app-icons/app-icon-nineties.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85NGZkZTU2MC02YTNiLTQ3ZDMtOWJhMy0yNjhhZmQ1ODBkZDYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHAtaWNvbnMvYXBwLWljb24tbmluZXRpZXMucG5nIiwiaWF0IjoxNzUxMTA0NTYwLCJleHAiOjIwNjY0NjQ1NjB9.NYKMSVB9KFpPla8_dvc0RNxYbg0tYk9FWAFHYFEjO1I',
+  'default': 'https://vdrmtsifivvpioonpqqc.supabase.co/storage/v1/object/sign/app-icons/app-icon-neon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85NGZkZTU2MC02YTNiLTQ3ZDMtOWJhMy0yNjhhZmQ1ODBkZDYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHAtaWNvbnMvYXBwLWljb24tbmVvbi5wbmciLCJpYXQiOjE3NTExMDQ1NzksImV4cCI6MjA2NjQ2NDU3OX0.P3XnLbRjFzwBfgEsxjy_c4IE_JujXaCwUPOLHazMwrs'
+};
+
 // Get app icon based on theme
 export const getAppIcon = (theme: ThemeName): string => {
   return appIconMap[theme] || appIconMap.default;
@@ -32,8 +41,23 @@ export const getFavicon = (theme: ThemeName): string => {
   return faviconMap[theme] || faviconMap.default;
 };
 
-// Get social preview image based on theme
-export const getSocialPreviewImage = (theme: ThemeName): string => {
+// Get social preview image based on current topic (using static Supabase URLs)
+export const getSocialPreviewImage = (): string => {
+  try {
+    const activeConfig = getActiveTopicConfig();
+    const activeTopic = activeConfig.activeTopic || 'default';
+    
+    // Return the appropriate static Supabase URL for the topic
+    return topicSocialImageMap[activeTopic] || topicSocialImageMap['default'];
+  } catch (error) {
+    console.error('Error getting active topic for social image:', error);
+    // Fallback to Friends theme if there's any error
+    return topicSocialImageMap['friends-tv'];
+  }
+};
+
+// Get social preview image based on theme (legacy function - kept for backward compatibility)
+export const getSocialPreviewImageLegacy = (theme: ThemeName): string => {
   switch (theme) {
     case 'neon':
       return '/social-preview-neon.png';
@@ -91,9 +115,10 @@ export const updateFavicon = (theme: ThemeName): void => {
       appleIcon.setAttribute('href', `${appleIconPath}${cacheBuster}`);
     }
     
-    // Also update social preview images for Open Graph and Twitter
-    const socialPath = theme === 'neon' ? '/social-preview-neon.png' : '/social-preview.png';
-    const absoluteSocialPath = `${baseUrl}${socialPath}${cacheBuster}`;
+    // Update social preview images for Open Graph and Twitter
+    // *** IMPORTANT: NO cache busters for social media images ***
+    // Social platforms don't like URLs with query parameters
+    const socialImageUrl = getSocialPreviewImage();
     
     // Helper function to create or update meta tags
     const createOrUpdateMetaTag = (type: string, property: string, content: string) => {
@@ -103,9 +128,10 @@ export const updateFavicon = (theme: ThemeName): void => {
       }
     };
     
-    // Update only if tags already exist
-    createOrUpdateMetaTag('property', 'og:image', absoluteSocialPath);
-    createOrUpdateMetaTag('name', 'twitter:image', absoluteSocialPath);
+    // Update social media images with static URLs (NO cache busters)
+    createOrUpdateMetaTag('property', 'og:image', socialImageUrl);
+    createOrUpdateMetaTag('property', 'og:image:secure_url', socialImageUrl);
+    createOrUpdateMetaTag('name', 'twitter:image', socialImageUrl);
     
     // Create a test element to force favicon reload
     const testLink = document.createElement('link');
@@ -130,8 +156,9 @@ export const updateSocialMetaTags = (title?: string, description?: string): void
     // Default values if not provided
     const finalTitle = title || 'TriviaFeed';
     const finalDescription = description || 'Test your knowledge with TriviaFeed - The ultimate trivia experience';
-    const baseUrl = window.location.origin;
-    const imageUrl = `${baseUrl}/social-preview.png`;
+    
+    // Get the appropriate social image URL for the current topic
+    const imageUrl = getSocialPreviewImage();
     
     // Helper function to create or update meta tags
     const createOrUpdateMetaTag = (type: string, property: string, content: string) => {
@@ -150,6 +177,7 @@ export const updateSocialMetaTags = (title?: string, description?: string): void
     createOrUpdateMetaTag('property', 'og:title', finalTitle);
     createOrUpdateMetaTag('property', 'og:description', finalDescription);
     createOrUpdateMetaTag('property', 'og:image', imageUrl);
+    createOrUpdateMetaTag('property', 'og:image:secure_url', imageUrl);
     createOrUpdateMetaTag('property', 'og:url', window.location.href);
     createOrUpdateMetaTag('property', 'og:type', 'website');
     
