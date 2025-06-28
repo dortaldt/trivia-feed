@@ -20,6 +20,9 @@ This document tracks the implementation of mandatory signup for web users while 
 7. **NEW**: Added rounded corners to app icons with subtle shadow effects
 8. **NEW**: Implemented responsive, mobile-first layout that works without scrolling
 9. **NEW**: Created adaptive sizing for small and large screens with proper spacing
+10. **NEW**: Added animated floating background assets that "fly" behind auth content
+11. **NEW**: Topic-aware floating elements (Friends assets for friends-tv topic)
+12. **NEW**: Organic animation with randomized movement, rotation, and timing
 
 ## Requirements Summary
 
@@ -153,6 +156,13 @@ export const getTopicTheme = (): TopicTheme => {
 - ✅ **NEW**: Replaced ScrollView with responsive flex layout for no-scroll experience
 - ✅ **NEW**: Implemented mobile-first responsive design with screen size detection
 - ✅ **NEW**: Created adaptive spacing and sizing for small screens (height < 700px)
+- ✅ **NEW**: Added FloatingBackground component with animated topic assets:
+  - 6 different Friends assets floating from all screen edges (top, bottom, left, right, corners)
+  - Large, prominent images (150px-220px) with full-color visibility  
+  - Slow, continuous movement (40s-65s duration) for peaceful atmosphere
+  - Multi-directional entry points create dynamic, immersive background
+- ✅ **NEW**: Fixed Safari compatibility for rounded app icon corners using View wrapper
+- ✅ **NEW**: Ensured floating elements properly start from different screen positions
 
 ### Phase 3: Neon Theme Integration
 
@@ -170,6 +180,7 @@ export const getTopicTheme = (): TopicTheme => {
 - [x] `src/components/auth/NeonAuthContainer.tsx` - Neon background container
 - [x] `src/components/auth/NeonAuthButton.tsx` - Neon-styled buttons
 - [x] `src/components/auth/NeonAuthInput.tsx` - Neon-styled input fields
+- [x] `src/components/auth/FloatingBackground.tsx` - Animated floating background assets
 
 **Design Requirements**:
 - Use existing `NeonColors` constants

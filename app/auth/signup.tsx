@@ -14,8 +14,6 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { signUp, isLoading } = useAuth();
   
   // Get topic-specific theming
@@ -97,11 +95,13 @@ export default function SignUpScreen() {
       >
         <View style={[styles.contentContainer, isSmallScreen && styles.contentContainerSmall]}>
           <View style={[styles.logoContainer, isSmallScreen && styles.logoContainerSmall]}>
-            <Image 
-              source={getTopicAppIcon()}
-              style={[styles.logo, isSmallScreen && styles.logoSmall]}
-              resizeMode="contain"
-            />
+            <View style={[styles.logoWrapper, isSmallScreen && styles.logoWrapperSmall]}>
+              <Image 
+                source={getTopicAppIcon()}
+                style={[styles.logo, isSmallScreen && styles.logoSmall]}
+                resizeMode="contain"
+              />
+            </View>
           </View>
 
           <View style={[styles.formContainer, isSmallScreen && styles.formContainerSmall]}>
@@ -111,26 +111,36 @@ export default function SignUpScreen() {
             <NeonAuthInput
               value={email}
               onChangeText={setEmail}
-              placeholder="Email"
+              placeholder="your@email.com"
+              label="Email"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoComplete="email"
+              inputMode="email"
               topicColor={topicColors.primary}
+              required
             />
 
             <NeonAuthInput
               value={password}
               onChangeText={setPassword}
-              placeholder="Password"
-              secureTextEntry={!showPassword}
+              placeholder="Min 6 characters"
+              label="Password"
+              secureTextEntry
+              autoComplete="new-password"
               topicColor={topicColors.primary}
+              required
             />
             
             <NeonAuthInput
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="Confirm Password"
-              secureTextEntry={!showConfirmPassword}
+              placeholder="Same password again"
+              label="Confirm"
+              secureTextEntry
+              autoComplete="new-password"
               topicColor={topicColors.primary}
+              required
             />
 
             <Text style={[styles.termsText, isSmallScreen && styles.termsTextSmall]}>
@@ -175,25 +185,27 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingTop: 50,
+    paddingBottom: 30,
     minHeight: '100%',
   },
   contentContainerSmall: {
-    paddingTop: 40,
-    paddingBottom: 20,
+    paddingTop: 20,
+    paddingBottom: 15,
+    padding: 16,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 25,
   },
   logoContainerSmall: {
-    marginBottom: 20,
+    marginBottom: 10,
   },
-  logo: {
+  logoWrapper: {
     width: 100,
     height: 100,
-    borderRadius: 20, // Added rounded corners
+    borderRadius: 20,
+    overflow: 'hidden', // This ensures rounded corners work in Safari
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -203,10 +215,19 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8, // Android shadow
   },
+  logoWrapperSmall: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
+  },
   logoSmall: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
+    width: '100%',
+    height: '100%',
   },
   formContainer: {
     flex: 1,
@@ -217,9 +238,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   subtitle: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 8,
     color: '#FFFFFF',
     textAlign: 'center',
     textShadowColor: 'rgba(0, 255, 255, 0.5)',
@@ -227,29 +248,29 @@ const styles = StyleSheet.create({
     textShadowRadius: 10,
   },
   subtitleSmall: {
-    fontSize: 22,
-    marginBottom: 8,
+    fontSize: 20,
+    marginBottom: 5,
   },
   welcomeMessage: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#AAAAAA',
-    marginBottom: 30,
+    marginBottom: 20,
     textAlign: 'center',
     fontStyle: 'italic',
   },
   welcomeMessageSmall: {
     fontSize: 12,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   termsText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#CCCCCC',
-    marginBottom: 24,
+    marginBottom: 18,
     textAlign: 'center',
   },
   termsTextSmall: {
-    fontSize: 11,
-    marginBottom: 16,
+    fontSize: 10,
+    marginBottom: 12,
   },
   termsLink: {
     textDecorationLine: 'underline',

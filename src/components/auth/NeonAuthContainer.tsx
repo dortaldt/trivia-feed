@@ -3,6 +3,7 @@ import { View, StyleSheet, Platform, ViewStyle } from 'react-native';
 import { NeonColors } from '../../../constants/NeonColors';
 import NeonGradientBackground from '../NeonGradientBackground';
 import { getActiveTopicConfig } from '../../utils/topicTheming';
+import { FloatingBackground } from './FloatingBackground';
 
 interface NeonAuthContainerProps {
   children: React.ReactNode;
@@ -73,17 +74,19 @@ export const NeonAuthContainer: React.FC<NeonAuthContainerProps> = ({
     return (
       <View style={[styles.container, style]}>
         <NeonGradientBackground topic={topicData?.dbTopicName || activeTopic} />
-        <View 
-          style={styles.authContainer}
-          {...(Platform.OS === 'web' ? { className: 'neon-auth-container' } : {})}
-        >
+        <FloatingBackground>
           <View 
-            style={styles.innerContainer}
-            {...(Platform.OS === 'web' ? { className: 'neon-auth-inner' } : {})}
+            style={styles.authContainer}
+            {...(Platform.OS === 'web' ? { className: 'neon-auth-container' } : {})}
           >
-            {children}
+            <View 
+              style={styles.innerContainer}
+              {...(Platform.OS === 'web' ? { className: 'neon-auth-inner' } : {})}
+            >
+              {children}
+            </View>
           </View>
-        </View>
+        </FloatingBackground>
       </View>
     );
   }
@@ -92,11 +95,13 @@ export const NeonAuthContainer: React.FC<NeonAuthContainerProps> = ({
   return (
     <View style={[styles.container, style]}>
       <NeonGradientBackground topic={topicData?.dbTopicName || activeTopic} />
-      <View style={[styles.authContainer, styles.mobileGlow, { borderColor: topicColor || NeonColors.dark.primary }]}>
-        <View style={styles.innerContainer}>
-          {children}
+      <FloatingBackground>
+        <View style={[styles.authContainer, styles.mobileGlow, { borderColor: topicColor || NeonColors.dark.primary }]}>
+          <View style={styles.innerContainer}>
+            {children}
+          </View>
         </View>
-      </View>
+      </FloatingBackground>
     </View>
   );
 };
