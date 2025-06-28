@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, TextInput, Text, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, TextInput, Text, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Dimensions } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAppIcon } from '@/src/components/ThemedLoadingScreen';
+import { getTopicTheme, getTopicColors, getTopicAppIcon } from '../../src/utils/topicTheming';
+import { NeonAuthContainer } from '../../src/components/auth/NeonAuthContainer';
+import { NeonAuthButton } from '../../src/components/auth/NeonAuthButton';
+import { NeonAuthInput } from '../../src/components/auth/NeonAuthInput';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -13,6 +16,15 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { signIn, isLoading, continueAsGuest, isAuthenticated } = useAuth();
+  
+  // Get topic-specific theming
+  const topicTheme = getTopicTheme();
+  const topicColors = getTopicColors();
+  
+  // Get screen dimensions for responsive design
+  const { height: screenHeight } = Dimensions.get('window');
+  const isSmallScreen = screenHeight < 700; // Determine if we need compact layout
+  
   // Get search params to check if we deliberately navigated here
   const params = useLocalSearchParams();
   const isDirectNavigation = params.direct === 'true';
@@ -81,10 +93,13 @@ export default function LoginScreen() {
   };
   
   const handleGoBack = async () => {
-    // Go back to feed in guest mode
-    await continueAsGuest();
-    // Use router.replace consistently across platforms
-    router.replace('/');
+    // Only available on mobile platforms - web users must sign up/in
+    if (Platform.OS !== 'web') {
+      // Go back to feed in guest mode
+      await continueAsGuest();
+      // Use router.replace consistently across platforms
+      router.replace('/');
+    }
   };
 
   const navigateToSignUp = () => {
@@ -104,132 +119,117 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <StatusBar style="dark" />
+    <NeonAuthContainer topicColor={topicColors.primary}>
+      <StatusBar style="light" />
       
-      {/* Back button at the top */}
-      <View style={styles.headerContainer}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={handleGoBack}
-          accessibilityLabel="Go back to feed"
-          accessibilityHint="Returns to the feed in guest mode"
-        >
-          <Ionicons name="arrow-back" size={24} color="#333" />
-          <Text style={styles.backButtonText}>Back to Feed</Text>
-        </TouchableOpacity>
-      </View>
-      
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.logoContainer}>
-          <Image 
-            source={getAppIcon()}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.title}>Trivia Universe</Text>
+      {/* Back button only on mobile platforms */}
+      {Platform.OS !== 'web' && (
+        <View style={styles.headerContainer}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={handleGoBack}
+            accessibilityLabel="Go back to feed"
+            accessibilityHint="Returns to the feed in guest mode"
+          >
+            <Ionicons name="arrow-back" size={24} color={topicColors.primary} />
+            <Text style={[styles.backButtonText, { color: topicColors.primary }]}>Back to Feed</Text>
+          </TouchableOpacity>
         </View>
+      )}
+      
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <View style={[styles.contentContainer, isSmallScreen && styles.contentContainerSmall]}>
+          <View style={[styles.logoContainer, isSmallScreen && styles.logoContainerSmall]}>
+            <Image 
+              source={getTopicAppIcon()}
+              style={[styles.logo, isSmallScreen && styles.logoSmall]}
+              resizeMode="contain"
+            />
+          </View>
 
-        <View style={styles.formContainer}>
-          <Text style={styles.subtitle}>Welcome back</Text>
-          <Text style={styles.description}>Sign in to continue your trivia adventure</Text>
+          <View style={[styles.formContainer, isSmallScreen && styles.formContainerSmall]}>
+            <Text style={[styles.subtitle, isSmallScreen && styles.subtitleSmall]}>{topicTheme.authTitle}</Text>
+            <Text style={[styles.description, isSmallScreen && styles.descriptionSmall]}>{topicTheme.loginPrompt}</Text>
 
-          <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
+            <NeonAuthInput
               value={email}
               onChangeText={setEmail}
+              placeholder="Email"
               keyboardType="email-address"
               autoCapitalize="none"
+              topicColor={topicColors.primary}
             />
-          </View>
 
-          <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
+            <NeonAuthInput
               value={password}
               onChangeText={setPassword}
+              placeholder="Password"
               secureTextEntry={!showPassword}
+              topicColor={topicColors.primary}
             />
-            <TouchableOpacity 
-              onPress={() => setShowPassword(!showPassword)}
-              style={styles.eyeIcon}
-            >
-              <Ionicons 
-                name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                size={20} 
-                color="#999" 
+            
+            <TouchableOpacity onPress={navigateToForgotPassword} style={[styles.forgotPasswordContainer, isSmallScreen && styles.forgotPasswordContainerSmall]}>
+              <Text style={[styles.forgotPasswordText, { color: topicColors.primary }]}>Forgot Password?</Text>
+            </TouchableOpacity>
+
+            <NeonAuthButton
+              onPress={handleLogin}
+              title={topicTheme.loginButtonText}
+              loading={isLoggingIn}
+              variant="primary"
+              topicColor={topicColors.primary}
+            />
+            
+            {/* Guest mode button - only show on mobile platforms */}
+            {Platform.OS !== 'web' && (
+              <NeonAuthButton
+                onPress={handleGuestMode}
+                title="Continue as Guest"
+                variant="secondary"
+                topicColor={topicColors.primary}
               />
+            )}
+          </View>
+
+          <View style={[styles.createAccountContainer, isSmallScreen && styles.createAccountContainerSmall]}>
+            <Text style={styles.createAccountText}>Don't have an account?</Text>
+            <TouchableOpacity onPress={navigateToSignUp}>
+              <Text style={[styles.createAccountLink, { color: topicColors.primary }]}>Sign Up</Text>
             </TouchableOpacity>
           </View>
-          
-          <TouchableOpacity onPress={navigateToForgotPassword} style={styles.forgotPasswordContainer}>
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            onPress={handleLogin} 
-            style={[
-              styles.signInButton,
-              isLoggingIn && styles.signInButtonDisabled
-            ]}
-            disabled={isLoggingIn}
-            activeOpacity={0.7}
-          >
-            {isLoggingIn ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.signInButtonText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
-          
-          <TouchableOpacity onPress={handleGuestMode} style={styles.guestModeButton}>
-            <Ionicons name="person-outline" size={18} color="#666" style={{ marginRight: 8 }} />
-            <Text style={styles.guestModeButtonText}>Continue as Guest</Text>
-          </TouchableOpacity>
         </View>
-
-        <View style={styles.createAccountContainer}>
-          <Text style={styles.createAccountText}>Don't have an account?</Text>
-          <TouchableOpacity onPress={navigateToSignUp}>
-            <Text style={styles.createAccountLink}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </NeonAuthContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
   },
   headerContainer: {
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     paddingHorizontal: 16,
     paddingBottom: 8,
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f4f4f4',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
     alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 255, 255, 0.3)',
   },
   backButtonText: {
     marginLeft: 6,
-    color: '#333',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -237,117 +237,103 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
   },
-  scrollContainer: {
-    flexGrow: 1,
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'space-between',
     padding: 20,
     paddingTop: 20,
     paddingBottom: 40,
+    minHeight: '100%',
+  },
+  contentContainerSmall: {
+    paddingTop: 10,
+    paddingBottom: 20,
   },
   logoContainer: {
     alignItems: 'center',
     marginBottom: 40,
   },
+  logoContainerSmall: {
+    marginBottom: 20,
+  },
   logo: {
     width: 100,
     height: 100,
-    marginBottom: 16,
+    borderRadius: 20, // Added rounded corners
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8, // Android shadow
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+  logoSmall: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
   },
   formContainer: {
-    marginBottom: 30,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  formContainerSmall: {
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   subtitle: {
     fontSize: 26,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#333',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 255, 255, 0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  subtitleSmall: {
+    fontSize: 22,
+    marginBottom: 8,
   },
   description: {
     fontSize: 16,
-    color: '#666',
+    color: '#CCCCCC',
     marginBottom: 30,
+    textAlign: 'center',
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 50,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  eyeIcon: {
-    padding: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    height: '100%',
+  descriptionSmall: {
+    fontSize: 14,
+    marginBottom: 20,
   },
   forgotPasswordContainer: {
     alignSelf: 'flex-end',
     marginBottom: 24,
   },
-  forgotPasswordText: {
-    color: '#3498db',
-    fontSize: 14,
-  },
-  signInButton: {
-    backgroundColor: '#3498db',
-    borderRadius: 8,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
+  forgotPasswordContainerSmall: {
     marginBottom: 16,
   },
-  signInButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  guestModeButton: {
-    backgroundColor: '#f4f4f4',
-    borderRadius: 8,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  guestModeButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '500',
+  forgotPasswordText: {
+    fontSize: 14,
   },
   createAccountContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 20,
+  },
+  createAccountContainerSmall: {
     marginTop: 10,
   },
   createAccountText: {
-    color: '#666',
+    color: '#CCCCCC',
     fontSize: 14,
   },
   createAccountLink: {
-    color: '#3498db',
     fontSize: 14,
     fontWeight: 'bold',
     marginLeft: 5,
-  },
-  signInButtonDisabled: {
-    backgroundColor: '#97c4e3',
   },
 }); 
