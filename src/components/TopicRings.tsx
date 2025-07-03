@@ -1305,26 +1305,86 @@ const getReadableTextColor = (ringColor: string, isNeonTheme: boolean, colorSche
   return ringColor;
 };
 
+// Mapping for shortening common category names in ring labels
+const CATEGORY_ABBREVIATIONS: { [key: string]: string } = {
+  'Technology': 'Tech',
+  'Miscellaneous': 'Misc',
+  'Geography': 'Geo',
+  'Mathematics': 'Math',
+  'Entertainment': 'Entertain',
+  'Literature': 'Lit',
+  'Television': 'TV',
+  'Science': 'Science', // Keep as is
+  'History': 'History', // Keep as is
+  'Music': 'Music', // Keep as is
+  'Sports': 'Sports', // Keep as is
+  'Movies': 'Movies', // Keep as is
+  'Art': 'Art', // Keep as is
+  'Politics': 'Politics', // Keep as is
+  'Biology': 'Bio',
+  'Chemistry': 'Chem',
+  'Physics': 'Physics', // Keep as is
+  'Engineering': 'Engineer',
+  'General Knowledge': 'General',
+  'Pop Culture': 'Pop Culture', // Keep as is
+  'Food & Drink': 'Food',
+  'Video Games': 'Games',
+  'Internet & Tech Trends': 'Internet',
+  'Slang & Buzzwords': 'Slang',
+  'Classical Composers': 'Classical',
+  'Rock & Roll History': 'Rock',
+  'Pop Music Trends': 'Pop Music',
+  'Jazz & Blues': 'Jazz',
+  'Music Theory': 'Theory',
+  'Theater & Musicals': 'Theater',
+  'Ancient History': 'Ancient',
+  'Modern History': 'Modern',
+  'Astronomy': 'Astro',
+  'Computers': 'Computers', // Keep as is
+};
+
 // Helper function to intelligently split topic names for display
 const splitTopicForDisplay = (topic: string): string[] => {
+  // First, check if we have a direct abbreviation for the entire topic
+  if (CATEGORY_ABBREVIATIONS[topic]) {
+    const abbreviated = CATEGORY_ABBREVIATIONS[topic];
+    // If the abbreviated version is short enough, return it as a single word
+    if (abbreviated.length <= 8) {
+      return [abbreviated];
+    }
+    // Otherwise, split the abbreviated version
+    const words = abbreviated.split(' ');
+    return words.length <= 2 ? words : words.slice(0, 2);
+  }
+  
   // Split by spaces first
   const words = topic.split(' ');
   
+  // Apply abbreviations to individual words
+  const abbreviatedWords = words.map(word => {
+    // Check for exact match first
+    if (CATEGORY_ABBREVIATIONS[word]) {
+      return CATEGORY_ABBREVIATIONS[word];
+    }
+    // Return original word if no abbreviation found
+    return word;
+  });
+  
   // If we have 2 or fewer words, return as is
-  if (words.length <= 2) {
-    return words;
+  if (abbreviatedWords.length <= 2) {
+    return abbreviatedWords;
   }
   
   // Look for "&" and combine it with the following word
   const result: string[] = [];
   let i = 0;
   
-  while (i < words.length && result.length < 2) {
-    const currentWord = words[i];
+  while (i < abbreviatedWords.length && result.length < 2) {
+    const currentWord = abbreviatedWords[i];
     
     // If current word is "&" and there's a next word, combine them
-    if (currentWord === '&' && i + 1 < words.length) {
-      result.push(`${currentWord} ${words[i + 1]}`);
+    if (currentWord === '&' && i + 1 < abbreviatedWords.length) {
+      result.push(`${currentWord} ${abbreviatedWords[i + 1]}`);
       i += 2; // Skip the next word since we combined it
     } else {
       result.push(currentWord);
