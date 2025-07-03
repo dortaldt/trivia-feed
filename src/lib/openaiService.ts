@@ -376,18 +376,11 @@ async function generateGeneralQuestions(
     mainPrompt = `Generate 12 unique trivia questions for a trivia app, following these specific instructions:
 
     CRITICAL ACCURACY & VALIDATION REQUIREMENTS:
-    - ALL questions and answers MUST be 100% factually accurate, valid, and verifiable through reliable sources
-    - FACT-CHECK every single statement, date, name, statistic, and detail before including it in a question
-    - VERIFY information against multiple authoritative sources (encyclopedias, academic sources, official records)
-    - DO NOT include any speculative, uncertain, potentially incorrect, or unconfirmed information
-    - Cross-reference all facts with at least 2-3 reliable, independent sources to ensure accuracy and validity
-    - If you're not 100% certain about a fact being valid and verifiable, DO NOT use it in a question
-    - All correct answers must be definitively and unambiguously correct with valid, verified, and fact-checked information
-    - All incorrect answers must be definitively wrong (not just less likely) but still contain valid, fact-checked information structure
-    - Double-check that the correct answer is actually correct and that all answer choices contain valid information
-    - Avoid questions based on rumors, unverified claims, disputed facts, or controversial information - only use established, fact-checked facts
-    - Ensure dates, names, numbers, and specific details are accurate and have been fact-checked against authoritative sources
-    - When in doubt about any factual claim, err on the side of caution and choose a different, verifiable fact instead
+    - ALL questions and answers MUST be 100% factually accurate and verifiable through reliable sources
+    - FACT-CHECK every statement, date, name, and statistic against multiple authoritative sources
+    - DO NOT include speculative, uncertain, or unconfirmed information
+    - Correct answers must be definitively correct; incorrect answers must be definitively wrong
+    - When uncertain about any fact, choose a different, verifiable fact instead
 
     CRITICAL STRUCTURAL REQUIREMENTS:
     - Create EXACTLY 12 questions with detailed personalization
@@ -593,18 +586,11 @@ function buildNichePrompt(
   return `Generate 3 unique trivia questions EXCLUSIVELY about "${nicheTopic}", following these specific instructions:
 
 CRITICAL ACCURACY & VALIDATION REQUIREMENTS:
-- ALL questions and answers MUST be 100% factually accurate, valid, and verifiable through reliable sources
-- FACT-CHECK every single statement, date, name, statistic, and detail before including it in a question
-- VERIFY information against multiple authoritative sources (encyclopedias, academic sources, official records)
-- DO NOT include any speculative, uncertain, potentially incorrect, or unconfirmed information
-- Cross-reference all facts with at least 2-3 reliable, independent sources to ensure accuracy and validity
-- If you're not 100% certain about a fact being valid and verifiable, DO NOT use it in a question
-- All correct answers must be definitively and unambiguously correct with valid, verified, and fact-checked information
-- All incorrect answers must be definitively wrong (not just less likely) but still contain valid, fact-checked information structure
-- Double-check that the correct answer is actually correct and that all answer choices contain valid information
-- Avoid questions based on rumors, unverified claims, disputed facts, or controversial information - only use established, fact-checked facts
-- Ensure dates, names, numbers, and specific details are accurate and have been fact-checked against authoritative sources
-- When in doubt about any factual claim, err on the side of caution and choose a different, verifiable fact instead
+- ALL questions and answers MUST be 100% factually accurate and verifiable through reliable sources
+- FACT-CHECK every statement, date, name, and statistic against multiple authoritative sources
+- DO NOT include speculative, uncertain, or unconfirmed information
+- Correct answers must be definitively correct; incorrect answers must be definitively wrong
+- When uncertain about any fact, choose a different, verifiable fact instead
 
 CRITICAL NICHE REQUIREMENTS:
 - ALL 3 questions MUST be about "${nicheTopic}" specifically
@@ -723,8 +709,8 @@ async function callOpenAIForGeneration(prompt: string, mode: 'general' | 'niche'
           {
             role: 'system',
             content: mode === 'niche' 
-              ? `You are a specialized trivia question generator that creates high-quality, factually accurate questions focused exclusively on niche topics. ACCURACY IS PARAMOUNT - every single fact, date, name, statistic, and detail must be 100% verified and fact-checked against multiple reliable, authoritative sources before inclusion. Cross-reference all information with encyclopedias, academic sources, and official records. You must ONLY respond with a valid JSON array without any additional text, formatting, or explanations. Focus deeply on the specified niche topic and ensure all questions remain within that domain. Never include unverified, speculative, or potentially incorrect information. When in doubt about any fact, choose a different, verifiable fact instead.`
-              : 'You are a specialized trivia question generator that creates high-quality, factually accurate questions with detailed categorization for a trivia app. ACCURACY IS PARAMOUNT - every single fact, date, name, statistic, and detail must be 100% verified and fact-checked against multiple reliable, authoritative sources before inclusion. Cross-reference all information with encyclopedias, academic sources, and official records. You must ONLY respond with a valid JSON array without any additional text, formatting, or explanations. Never include unverified, speculative, or potentially incorrect information. When in doubt about any fact, choose a different, verifiable fact instead.'
+              ? `You are a specialized trivia question generator focused exclusively on niche topics. ACCURACY IS PARAMOUNT - fact-check all information against reliable sources. Respond ONLY with valid JSON array, no additional text. Focus deeply on the specified niche topic and avoid unverified information.`
+              : 'You are a specialized trivia question generator that creates factually accurate questions for a trivia app. ACCURACY IS PARAMOUNT - fact-check all information against reliable sources. Respond ONLY with valid JSON array, no additional text. Avoid unverified information.'
           },
           {
             role: 'user',

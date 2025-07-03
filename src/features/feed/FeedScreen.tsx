@@ -41,7 +41,6 @@ import FeedItem from './FeedItem';
 // import { mockFeedData } from '../../data/mockData';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { 
-  markTooltipAsViewed, 
   skipQuestion, 
   startInteraction,
   setPersonalizedFeed,
@@ -301,7 +300,6 @@ const FeedScreen: React.FC = () => {
   }, [opacity, scale, tooltipSlideY]);
 
   const dispatch = useAppDispatch();
-  const hasViewedTooltip = useAppSelector(state => state.trivia.hasViewedTooltip);
   const questions = useAppSelector(state => state.trivia.questions);
   const questionsLoaded = useAppSelector(state => state.trivia.questionsLoaded);
   const userProfile = useAppSelector(state => state.trivia.userProfile);
@@ -774,8 +772,40 @@ const FeedScreen: React.FC = () => {
   // Add state to track first question answered in this session
   const [firstQuestionAnsweredInSession, setFirstQuestionAnsweredInSession] = useState(false);
   const [isFirstEverSession, setIsFirstEverSession] = useState(false);
+  const [hasViewedTooltipThisSession, setHasViewedTooltipThisSession] = useState(false);
   const tooltipTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastScrollTimeRef = useRef<number>(0);
+
+  // Session-specific tooltip tracking
+  const checkTooltipSessionState = async (): Promise<boolean> => {
+    try {
+      const currentSessionId = await sessionManager.getCurrentSessionCount();
+      const dismissedSessionsStr = await AsyncStorage.getItem('tooltip_dismissed_sessions');
+      const dismissedSessions = dismissedSessionsStr ? JSON.parse(dismissedSessionsStr) : [];
+      return dismissedSessions.includes(currentSessionId);
+    } catch (error) {
+      console.error('Error checking tooltip session state:', error);
+      return false;
+    }
+  };
+
+  const markTooltipDismissedForSession = async () => {
+    try {
+      const currentSessionId = await sessionManager.getCurrentSessionCount();
+      const dismissedSessionsStr = await AsyncStorage.getItem('tooltip_dismissed_sessions');
+      const dismissedSessions = dismissedSessionsStr ? JSON.parse(dismissedSessionsStr) : [];
+      
+      if (!dismissedSessions.includes(currentSessionId)) {
+        dismissedSessions.push(currentSessionId);
+        await AsyncStorage.setItem('tooltip_dismissed_sessions', JSON.stringify(dismissedSessions));
+        console.log(`[Tooltip] Marked session ${currentSessionId} as dismissed`);
+      }
+      
+      setHasViewedTooltipThisSession(true);
+    } catch (error) {
+      console.error('Error marking tooltip dismissed for session:', error);
+    }
+  };
 
   // Initialize session tracking and check if this is the user's first session
   useEffect(() => {
@@ -788,6 +818,14 @@ const FeedScreen: React.FC = () => {
         // Check if this is the first ever session for tooltip logic
         const hasEverViewedTooltip = await AsyncStorage.getItem('hasEverViewedTooltip');
         setIsFirstEverSession(hasEverViewedTooltip === null);
+        
+        // Check if tooltip was already dismissed in this session
+        const dismissedThisSession = await checkTooltipSessionState();
+        setHasViewedTooltipThisSession(dismissedThisSession);
+        
+        if (dismissedThisSession) {
+          console.log('[Tooltip] Already dismissed in this session');
+        }
       } catch (error) {
         console.error('Error initializing session or checking first session:', error);
         setIsFirstEverSession(true); // Assume first session on error
@@ -800,7 +838,7 @@ const FeedScreen: React.FC = () => {
   // Track scrolling activity for tooltip timing
   useEffect(() => {
     // Set up scroll detection (this runs alongside existing handlers)
-    if (firstQuestionAnsweredInSession && !hasViewedTooltip && !showTooltip) {
+    if (firstQuestionAnsweredInSession && !hasViewedTooltipThisSession && !showTooltip) {
       lastScrollTimeRef.current = Date.now();
     }
 
@@ -809,7 +847,7 @@ const FeedScreen: React.FC = () => {
         clearTimeout(tooltipTimerRef.current);
       }
     };
-  }, [firstQuestionAnsweredInSession, hasViewedTooltip, showTooltip]);
+  }, [firstQuestionAnsweredInSession, hasViewedTooltipThisSession, showTooltip]);
 
   // Cleanup tooltip timer on unmount
   useEffect(() => {
@@ -822,7 +860,7 @@ const FeedScreen: React.FC = () => {
 
   // New tooltip logic - show only after answering first question
   useEffect(() => {
-    if (!firstQuestionAnsweredInSession || hasViewedTooltip || showTooltip) {
+    if (!firstQuestionAnsweredInSession || hasViewedTooltipThisSession || showTooltip) {
       return;
     }
 
@@ -892,14 +930,14 @@ const FeedScreen: React.FC = () => {
         clearTimeout(tooltipTimerRef.current);
       }
     };
-  }, [firstQuestionAnsweredInSession, hasViewedTooltip, isAnimationError, isFirstEverSession, showTooltip]);
+  }, [firstQuestionAnsweredInSession, hasViewedTooltipThisSession, isAnimationError, isFirstEverSession, showTooltip]);
 
   const hideTooltip = async () => {
     try {
       tikTokAnimation.current?.stop();
 
-      // First set state updates before animation
-      dispatch(markTooltipAsViewed());
+      // Mark tooltip as dismissed for this session only
+      await markTooltipDismissedForSession();
       
       // Mark that tooltip has been viewed ever (for first session detection)
       try {
