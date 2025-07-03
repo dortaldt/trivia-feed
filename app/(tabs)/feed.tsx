@@ -5,10 +5,10 @@ import { Platform, View, StyleSheet } from 'react-native';
 import useSocialMeta from '@/src/hooks/useSocialMeta';
 
 export default function Feed() {
-  // Use the social meta hook for the feed page
+  // Use the social meta hook for the Friends-themed feed page
   useSocialMeta({
-    title: 'TriviaFeed - Challenge Your Knowledge',
-    description: 'Get personalized trivia questions on TriviaFeed. Test your knowledge, compete with friends, and improve your score!',
+    title: 'Trivia Feed Friends - How much do you know Friends?',
+    description: 'Could you BE a more Friends fan? Test your knowledge of Central Perk, the gang, and all those iconic moments. Join thousands of Friends fans in epic trivia battles!',
     image: '/social-preview.png',
     url: '/feed'
   });

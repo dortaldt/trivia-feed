@@ -1,5 +1,6 @@
 import { ThemeName } from '../context/ThemeContext';
 import { Platform } from 'react-native';
+import { getActiveTopicConfig } from './topicTheming';
 
 /**
  * Helper utility to get theme-appropriate icons and favicon paths
@@ -21,6 +22,14 @@ const faviconMap: Record<ThemeName, string> = {
   modern: 'favicon.png', // Fallback to default if no dedicated icon
 };
 
+// Local social preview images based on topic (hosted in public folder for better accessibility)
+const topicSocialImageMap: Record<string, string> = {
+  'friends-tv': '/social-preview.png',
+  'music': '/social-preview.png', // TODO: Create music-specific social preview
+  'nineties': '/social-preview.png', // TODO: Create 90s-specific social preview  
+  'default': '/social-preview-neon.png'
+};
+
 // Get app icon based on theme
 export const getAppIcon = (theme: ThemeName): string => {
   return appIconMap[theme] || appIconMap.default;
@@ -32,8 +41,23 @@ export const getFavicon = (theme: ThemeName): string => {
   return faviconMap[theme] || faviconMap.default;
 };
 
-// Get social preview image based on theme
-export const getSocialPreviewImage = (theme: ThemeName): string => {
+// Get social preview image based on current topic (using local files for better social media accessibility)
+export const getSocialPreviewImage = (): string => {
+  try {
+    const activeConfig = getActiveTopicConfig();
+    const activeTopic = activeConfig.activeTopic || 'default';
+    
+    // Return the appropriate local social preview image for the topic
+    return topicSocialImageMap[activeTopic] || topicSocialImageMap['default'];
+  } catch (error) {
+    console.error('Error getting active topic for social image:', error);
+    // Fallback to Friends theme if there's any error
+    return topicSocialImageMap['friends-tv'];
+  }
+};
+
+// Get social preview image based on theme (legacy function - kept for backward compatibility)
+export const getSocialPreviewImageLegacy = (theme: ThemeName): string => {
   switch (theme) {
     case 'neon':
       return '/social-preview-neon.png';
@@ -91,9 +115,11 @@ export const updateFavicon = (theme: ThemeName): void => {
       appleIcon.setAttribute('href', `${appleIconPath}${cacheBuster}`);
     }
     
-    // Also update social preview images for Open Graph and Twitter
-    const socialPath = theme === 'neon' ? '/social-preview-neon.png' : '/social-preview.png';
-    const absoluteSocialPath = `${baseUrl}${socialPath}${cacheBuster}`;
+    // Update social preview images for Open Graph and Twitter
+    // *** IMPORTANT: NO cache busters for social media images ***
+    // Social platforms don't like URLs with query parameters
+    const socialImagePath = getSocialPreviewImage();
+    const absoluteSocialImageUrl = `${baseUrl}${socialImagePath}`;
     
     // Helper function to create or update meta tags
     const createOrUpdateMetaTag = (type: string, property: string, content: string) => {
@@ -103,9 +129,10 @@ export const updateFavicon = (theme: ThemeName): void => {
       }
     };
     
-    // Update only if tags already exist
-    createOrUpdateMetaTag('property', 'og:image', absoluteSocialPath);
-    createOrUpdateMetaTag('name', 'twitter:image', absoluteSocialPath);
+    // Update social media images with local URLs (NO cache busters)
+    createOrUpdateMetaTag('property', 'og:image', absoluteSocialImageUrl);
+    createOrUpdateMetaTag('property', 'og:image:secure_url', absoluteSocialImageUrl);
+    createOrUpdateMetaTag('name', 'twitter:image', absoluteSocialImageUrl);
     
     // Create a test element to force favicon reload
     const testLink = document.createElement('link');
@@ -128,10 +155,13 @@ export const updateSocialMetaTags = (title?: string, description?: string): void
   
   try {
     // Default values if not provided
-    const finalTitle = title || 'TriviaFeed';
-    const finalDescription = description || 'Test your knowledge with TriviaFeed - The ultimate trivia experience';
+    const finalTitle = title || 'Trivia Feed Friends - Ultimate Friends TV Show Quiz Game';
+    const finalDescription = description || 'Could you BE a more Friends fan? Test your knowledge of Central Perk, the gang, and all those iconic moments from the beloved TV series. Join thousands of Friends fans in epic trivia battles!';
+    
+    // Get the appropriate social image URL for the current topic (local file)
     const baseUrl = window.location.origin;
-    const imageUrl = `${baseUrl}/social-preview.png`;
+    const socialImagePath = getSocialPreviewImage();
+    const imageUrl = `${baseUrl}${socialImagePath}`;
     
     // Helper function to create or update meta tags
     const createOrUpdateMetaTag = (type: string, property: string, content: string) => {
@@ -150,6 +180,7 @@ export const updateSocialMetaTags = (title?: string, description?: string): void
     createOrUpdateMetaTag('property', 'og:title', finalTitle);
     createOrUpdateMetaTag('property', 'og:description', finalDescription);
     createOrUpdateMetaTag('property', 'og:image', imageUrl);
+    createOrUpdateMetaTag('property', 'og:image:secure_url', imageUrl);
     createOrUpdateMetaTag('property', 'og:url', window.location.href);
     createOrUpdateMetaTag('property', 'og:type', 'website');
     

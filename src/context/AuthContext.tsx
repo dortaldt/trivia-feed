@@ -6,6 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { identifyUser, trackEvent, resetUser } from '../lib/mixpanelAnalytics';
+import { router } from 'expo-router';
 
 // Define the shape of our auth context
 type AuthContextType = {
@@ -45,7 +46,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const guestMode = await AsyncStorage.getItem('guestMode');
       // console.log('Guest mode AsyncStorage value:', guestMode);
       
-      if (guestMode === 'true') {
+      // Clear guest mode for web users regardless of what's stored
+      if (Platform.OS === 'web' && guestMode === 'true') {
+        console.log('Web platform detected with guest mode - clearing guest mode and proceeding with auth check');
+        await AsyncStorage.removeItem('guestMode');
+        // Continue to Supabase auth check instead of enabling guest mode
+      } else if (guestMode === 'true') {
         // console.log('Found guest mode flag, initializing as guest');
         setIsGuest(true);
         setIsLoading(false);
@@ -61,13 +67,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
-        // If no session, set guest mode automatically
+        // If no session, set guest mode automatically (mobile only)
         if (!currentSession) {
-          console.log('No active session found, enabling guest mode');
-          setIsGuest(true);
-          AsyncStorage.setItem('guestMode', 'true')
-            .then(() => console.log('Guest mode flag set in AsyncStorage'))
-            .catch(err => console.error('Failed to set guest mode flag:', err));
+          if (Platform.OS === 'web') {
+            console.log('Web platform - no guest mode, user will be redirected to signup');
+            // Don't set guest mode for web users - they'll be redirected by _layout.tsx
+          } else {
+            console.log('No active session found, enabling guest mode (mobile)');
+            setIsGuest(true);
+            AsyncStorage.setItem('guestMode', 'true')
+              .then(() => console.log('Guest mode flag set in AsyncStorage'))
+              .catch(err => console.error('Failed to set guest mode flag:', err));
+          }
         }
         
         setIsLoading(false);
@@ -108,18 +119,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           .then(() => console.log('Guest mode flag cleared'))
           .catch(err => console.error('Failed to clear guest mode flag:', err));
       }
-      // If user logs out, enable guest mode
+      // If user logs out, enable guest mode (mobile only)
       else if (_event === 'SIGNED_OUT') {
-        console.log('User signed out, enabling guest mode');
+        console.log('User signed out');
         
-        // Update all state together
-        setIsGuest(true);
+        // Update state
         setUser(null);
         setSession(null);
         
-        AsyncStorage.setItem('guestMode', 'true')
-          .then(() => console.log('Guest mode flag set on sign out'))
-          .catch(err => console.error('Failed to set guest mode flag on sign out:', err));
+        // Only enable guest mode on mobile platforms
+        if (Platform.OS === 'web') {
+          console.log('Web platform - redirecting to signup instead of guest mode');
+          setIsGuest(false);
+          // Web users will be redirected to signup by _layout.tsx
+        } else {
+          console.log('Mobile platform - enabling guest mode');
+          setIsGuest(true);
+          AsyncStorage.setItem('guestMode', 'true')
+            .then(() => console.log('Guest mode flag set on sign out'))
+            .catch(err => console.error('Failed to set guest mode flag on sign out:', err));
+        }
       } else {
         // For any other events, make sure we update the state
         setSession(newSession);
@@ -707,6 +726,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const continueAsGuest = async () => {
     try {
       setIsLoading(true);
+      
+      // NEW: Block guest mode for web platform - redirect to signup instead
+      if (Platform.OS === 'web') {
+        console.log('Web platform detected - redirecting to signup instead of guest mode');
+        setIsLoading(false);
+        router.replace('/auth/signup');
+        return;
+      }
+      
       console.log('Setting up guest mode');
       
       // Only sign out if we're authenticated to avoid unnecessary operations
