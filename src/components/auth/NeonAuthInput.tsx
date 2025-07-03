@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { TextInput, StyleSheet, Platform, ViewStyle, TextStyle, View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NeonColors } from '../../../constants/NeonColors';
@@ -43,116 +43,28 @@ export const NeonAuthInput: React.FC<NeonAuthInputProps> = ({
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const primaryColor = topicColor || NeonColors.dark.primary;
-  const secondaryColor = NeonColors.dark.secondary;
   const errorColor = '#FF6B6B';
   const hasError = !!error;
 
-  // Enhanced CSS styling for web platform with better visibility and accessibility
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      const styleEl = document.createElement('style');
-              styleEl.innerHTML = `
-        .neon-auth-input {
-          background: rgba(0, 0, 0, 0.85);
-          border: 3px solid ${hasError ? errorColor : primaryColor}80;
-          box-shadow: 
-            0 0 15px ${hasError ? errorColor : primaryColor}50,
-            0 0 25px ${hasError ? errorColor : primaryColor}30,
-            inset 0 0 10px rgba(0, 0, 0, 0.7);
-          transition: all 0.3s ease;
-          outline: none;
-          font-size: 16px !important; /* Prevents zoom on iOS Safari */
-          min-height: 48px; /* Compact but touch-friendly */
-          font-weight: 500 !important;
-        }
-        
-        .neon-auth-input:focus {
-          border-color: ${hasError ? errorColor : primaryColor};
-          box-shadow: 
-            0 0 25px ${hasError ? errorColor : primaryColor}70,
-            0 0 40px ${hasError ? errorColor : primaryColor}50,
-            0 0 60px ${hasError ? errorColor : primaryColor}30,
-            inset 0 0 15px rgba(0, 0, 0, 0.5);
-          background: rgba(0, 0, 0, 0.9);
-        }
-        
-        .neon-auth-input::placeholder {
-          color: ${hasError ? errorColor + '90' : primaryColor + '90'};
-          opacity: 0.8;
-        }
-        
-        .neon-auth-input:focus::placeholder {
-          color: ${hasError ? errorColor + '70' : primaryColor + '70'};
-          opacity: 0.6;
-        }
-        
-        /* Enhanced autofill styling */
-        .neon-auth-input:-webkit-autofill {
-          -webkit-box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.9) inset !important;
-          -webkit-text-fill-color: #FFFFFF !important;
-          border-color: ${primaryColor} !important;
-          transition: background-color 5000s ease-in-out 0s;
-        }
-        
-        .neon-auth-input:-webkit-autofill:focus {
-          -webkit-box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.95) inset !important;
-          -webkit-text-fill-color: #FFFFFF !important;
-        }
-        
-        /* Improved contrast for better readability */
-        .neon-auth-input {
-          color: #FFFFFF !important;
-          font-weight: 400;
-        }
-        
-        /* Error state styling */
-        .neon-auth-input.error {
-          border-color: ${errorColor};
-          box-shadow: 
-            0 0 20px ${errorColor}60,
-            0 0 35px ${errorColor}40,
-            inset 0 0 10px rgba(255, 107, 107, 0.3);
-        }
-        
-        .neon-auth-input.error:focus {
-          box-shadow: 
-            0 0 30px ${errorColor}80,
-            0 0 50px ${errorColor}60,
-            0 0 70px ${errorColor}40,
-            inset 0 0 15px rgba(255, 107, 107, 0.4);
-        }
-      `;
-      document.head.appendChild(styleEl);
-      
-      return () => {
-        if (document.head.contains(styleEl)) {
-          document.head.removeChild(styleEl);
-        }
-      };
-    }
-  }, [primaryColor, hasError, errorColor]);
-
   const inputStyle = [
     styles.input,
-    isFocused && styles.focusedInput,
-    hasError && styles.errorInput,
+    isFocused && [styles.focusedInput, { borderColor: primaryColor }],
+    hasError && [styles.errorInput, { borderColor: errorColor }],
     !editable && styles.disabledInput,
     style
   ];
 
   const containerStyle = [
     styles.container,
-    hasError && styles.errorContainer
+    style
   ];
 
-  // Determine web-specific props
+  // Simplified web props without complex CSS class manipulation
   const webProps = Platform.OS === 'web' ? {
-    className: `neon-auth-input ${hasError ? 'error' : ''}`,
     autoComplete,
     inputMode,
     'aria-label': label || placeholder,
     'aria-invalid': hasError,
-    'aria-describedby': error ? `${placeholder}-error` : undefined,
     'aria-required': required,
   } : {};
 
@@ -161,7 +73,7 @@ export const NeonAuthInput: React.FC<NeonAuthInputProps> = ({
       {label && (
         <Text style={[styles.label, { color: hasError ? errorColor : primaryColor }]}>
           {label}
-          {required && <Text style={styles.required}> *</Text>}
+          {required && <Text style={[styles.required, { color: errorColor }]}> *</Text>}
         </Text>
       )}
       
@@ -174,7 +86,7 @@ export const NeonAuthInput: React.FC<NeonAuthInputProps> = ({
           secureTextEntry={secureTextEntry && !showPassword}
           autoCapitalize={autoCapitalize}
           keyboardType={keyboardType}
-          style={inputStyle}
+          style={[inputStyle, textStyle]}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           editable={editable}
@@ -204,9 +116,8 @@ export const NeonAuthInput: React.FC<NeonAuthInputProps> = ({
       
       {error && (
         <Text 
-          style={styles.errorText}
+          style={[styles.errorText, { color: errorColor }]}
           accessibilityLiveRegion="polite"
-          {...(Platform.OS === 'web' ? { id: `${placeholder}-error` } : {})}
         >
           {error}
         </Text>
@@ -217,19 +128,13 @@ export const NeonAuthInput: React.FC<NeonAuthInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 6,
-  },
-  errorContainer: {
-    // Additional styling for error container if needed
+    marginVertical: 8,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 6,
     color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 255, 255, 0.3)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
   },
   required: {
     color: '#FF6B6B',
@@ -241,60 +146,39 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    minHeight: Platform.OS === 'web' ? 48 : 46, // Compact but touch-friendly
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingRight: 46, // Space for eye icon
-    fontSize: Platform.OS === 'web' ? 16 : 17, // Prevents zoom on iOS
+    minHeight: 48,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingRight: 48, // Space for eye icon
+    fontSize: 16,
     color: '#FFFFFF',
-    backgroundColor: Platform.OS === 'web' ? 'transparent' : 'rgba(0, 0, 0, 0.85)',
-    borderWidth: 3,
-    borderColor: NeonColors.dark.primary + '80',
-    fontWeight: '500',
-    ...(Platform.OS !== 'web' && {
-      shadowColor: NeonColors.dark.primary,
-      shadowOffset: {
-        width: 0,
-        height: 0,
-      },
-      shadowOpacity: 0.6,
-      shadowRadius: 12,
-      elevation: 8,
-    }),
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    fontWeight: '400',
   },
   focusedInput: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderColor: NeonColors.dark.primary,
-    backgroundColor: Platform.OS === 'web' ? 'transparent' : 'rgba(0, 0, 0, 0.9)',
-    ...(Platform.OS !== 'web' && {
-      shadowOpacity: 0.8,
-      shadowRadius: 18,
-      elevation: 12,
-    }),
   },
   errorInput: {
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
     borderColor: '#FF6B6B',
-    backgroundColor: Platform.OS === 'web' ? 'transparent' : 'rgba(255, 107, 107, 0.15)',
-    ...(Platform.OS !== 'web' && {
-      shadowColor: '#FF6B6B',
-      shadowOpacity: 0.7,
-      shadowRadius: 15,
-    }),
   },
   disabledInput: {
     opacity: 0.6,
-    backgroundColor: Platform.OS === 'web' ? 'transparent' : 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
   },
   eyeIcon: {
     position: 'absolute',
-    right: 14,
-    padding: 3,
+    right: 16,
+    padding: 4,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
   },
   errorText: {
     fontSize: 12,
-    color: '#FF6B6B',
     marginTop: 4,
     marginLeft: 4,
     fontWeight: '500',

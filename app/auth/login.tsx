@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, TextInput, Text, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, TextInput, Text, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Dimensions, SafeAreaView } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,17 +14,12 @@ import { trackEvent, trackScreenView, trackButtonClick } from '../../src/lib/mix
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { signIn, isLoading, continueAsGuest, isAuthenticated } = useAuth();
   
   // Get topic-specific theming
   const topicTheme = getTopicTheme();
   const topicColors = getTopicColors();
-  
-  // Get screen dimensions for responsive design
-  const { height: screenHeight } = Dimensions.get('window');
-  const isSmallScreen = screenHeight < 700; // Determine if we need compact layout
   
   // Get search params to check if we deliberately navigated here
   const params = useLocalSearchParams();
@@ -174,126 +169,147 @@ export default function LoginScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#3498db" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <NeonAuthContainer topicColor={topicColors.primary}>
-      <StatusBar style="light" />
-      
-      {/* Back button only on mobile platforms */}
-      {Platform.OS !== 'web' && (
-        <View style={styles.headerContainer}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={handleGoBack}
-            accessibilityLabel="Go back to feed"
-            accessibilityHint="Returns to the feed in guest mode"
+    <SafeAreaView style={styles.safeArea}>
+      <NeonAuthContainer topicColor={topicColors.primary}>
+        <StatusBar style="light" />
+        
+        {/* Back button only on mobile platforms */}
+        {Platform.OS !== 'web' && (
+          <View style={styles.headerContainer}>
+            <TouchableOpacity 
+              style={styles.backButton} 
+              onPress={handleGoBack}
+              accessibilityLabel="Go back to feed"
+              accessibilityHint="Returns to the feed in guest mode"
+            >
+              <Ionicons name="arrow-back" size={24} color={topicColors.primary} />
+              <Text style={[styles.backButtonText, { color: topicColors.primary }]}>Back to Feed</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardContainer}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          <ScrollView 
+            contentContainerStyle={styles.scrollContainer}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            <Ionicons name="arrow-back" size={24} color={topicColors.primary} />
-            <Text style={[styles.backButtonText, { color: topicColors.primary }]}>Back to Feed</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
-        <View style={[styles.contentContainer, isSmallScreen && styles.contentContainerSmall]}>
-          <View style={[styles.logoContainer, isSmallScreen && styles.logoContainerSmall]}>
-            <View style={[styles.logoWrapper, isSmallScreen && styles.logoWrapperSmall]}>
-              <Image 
-                source={getTopicAppIcon()}
-                style={[styles.logo, isSmallScreen && styles.logoSmall]}
-                resizeMode="contain"
-              />
+            <View style={styles.contentContainer}>
+              {/* Logo Section */}
+              <View style={styles.logoContainer}>
+                <View style={styles.logoWrapper}>
+                  <Image 
+                    source={getTopicAppIcon()}
+                    style={styles.logo}
+                    resizeMode="contain"
+                  />
+                </View>
+              </View>
+
+              {/* Form Section */}
+              <View style={styles.formContainer}>
+                <Text style={styles.subtitle}>{topicTheme.authTitle}</Text>
+                <Text style={styles.description}>{topicTheme.loginPrompt}</Text>
+
+                <NeonAuthInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="your@email.com"
+                  label="Email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  inputMode="email"
+                  topicColor={topicColors.primary}
+                  required
+                />
+
+                <NeonAuthInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Password"
+                  label="Password"
+                  secureTextEntry
+                  autoComplete="current-password"
+                  topicColor={topicColors.primary}
+                  required
+                />
+                
+                <TouchableOpacity onPress={navigateToForgotPassword} style={styles.forgotPasswordContainer}>
+                  <Text style={[styles.forgotPasswordText, { color: topicColors.primary }]}>Forgot Password?</Text>
+                </TouchableOpacity>
+
+                <NeonAuthButton
+                  onPress={handleLogin}
+                  title={topicTheme.loginButtonText}
+                  loading={isLoggingIn}
+                  variant="primary"
+                  topicColor={topicColors.primary}
+                />
+                
+                {/* Guest mode button - only show on mobile platforms */}
+                {Platform.OS !== 'web' && (
+                  <NeonAuthButton
+                    onPress={handleGuestMode}
+                    title="Continue as Guest"
+                    variant="secondary"
+                    topicColor={topicColors.primary}
+                  />
+                )}
+              </View>
+
+              {/* Footer Section */}
+              <View style={styles.createAccountContainer}>
+                <Text style={styles.createAccountText}>Don't have an account?</Text>
+                <TouchableOpacity onPress={navigateToSignUp}>
+                  <Text style={[styles.createAccountLink, { color: topicColors.primary }]}>Sign Up</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-
-          <View style={[styles.formContainer, isSmallScreen && styles.formContainerSmall]}>
-            <Text style={[styles.subtitle, isSmallScreen && styles.subtitleSmall]}>{topicTheme.authTitle}</Text>
-            <Text style={[styles.description, isSmallScreen && styles.descriptionSmall]}>{topicTheme.loginPrompt}</Text>
-
-            <NeonAuthInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="your@email.com"
-              label="Email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              inputMode="email"
-              topicColor={topicColors.primary}
-              required
-            />
-
-            <NeonAuthInput
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Password"
-              label="Password"
-              secureTextEntry
-              autoComplete="current-password"
-              topicColor={topicColors.primary}
-              required
-            />
-            
-            <TouchableOpacity onPress={navigateToForgotPassword} style={[styles.forgotPasswordContainer, isSmallScreen && styles.forgotPasswordContainerSmall]}>
-              <Text style={[styles.forgotPasswordText, { color: topicColors.primary }]}>Forgot Password?</Text>
-            </TouchableOpacity>
-
-            <NeonAuthButton
-              onPress={handleLogin}
-              title={topicTheme.loginButtonText}
-              loading={isLoggingIn}
-              variant="primary"
-              topicColor={topicColors.primary}
-            />
-            
-            {/* Guest mode button - only show on mobile platforms */}
-            {Platform.OS !== 'web' && (
-              <NeonAuthButton
-                onPress={handleGuestMode}
-                title="Continue as Guest"
-                variant="secondary"
-                topicColor={topicColors.primary}
-              />
-            )}
-          </View>
-
-          <View style={[styles.createAccountContainer, isSmallScreen && styles.createAccountContainerSmall]}>
-            <Text style={styles.createAccountText}>Don't have an account?</Text>
-            <TouchableOpacity onPress={navigateToSignUp}>
-              <Text style={[styles.createAccountLink, { color: topicColors.primary }]}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </NeonAuthContainer>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </NeonAuthContainer>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: 'transparent',
   },
+  keyboardContainer: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    minHeight: '100%',
+  },
   headerContainer: {
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    backgroundColor: 'transparent',
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 10 : 20,
+    left: 20,
+    right: 20,
+    zIndex: 10,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderRadius: 20,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     alignSelf: 'flex-start',
     borderWidth: 1,
@@ -313,28 +329,20 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS !== 'web' ? 80 : 20, // Account for back button on mobile
+    paddingBottom: 20,
     minHeight: '100%',
-  },
-  contentContainerSmall: {
-    paddingTop: 5,
-    paddingBottom: 15,
-    padding: 16,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 30,
-  },
-  logoContainerSmall: {
-    marginBottom: 12,
+    marginBottom: 40,
   },
   logoWrapper: {
-    width: 100,
-    height: 100,
-    borderRadius: 20,
-    overflow: 'hidden', // This ensures rounded corners work in Safari
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -342,32 +350,21 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 8, // Android shadow
-  },
-  logoWrapperSmall: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    overflow: 'hidden',
+    elevation: 8,
   },
   logo: {
-    width: '100%',
-    height: '100%',
-  },
-  logoSmall: {
     width: '100%',
     height: '100%',
   },
   formContainer: {
     flex: 1,
     justifyContent: 'center',
-  },
-  formContainerSmall: {
-    flex: 1,
-    justifyContent: 'flex-start',
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
   },
   subtitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 8,
     color: '#FFFFFF',
@@ -376,45 +373,35 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
-  subtitleSmall: {
-    fontSize: 20,
-    marginBottom: 6,
-  },
   description: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#CCCCCC',
-    marginBottom: 20,
+    marginBottom: 32,
     textAlign: 'center',
-  },
-  descriptionSmall: {
-    fontSize: 13,
-    marginBottom: 12,
+    lineHeight: 22,
   },
   forgotPasswordContainer: {
     alignSelf: 'flex-end',
-    marginBottom: 20,
-  },
-  forgotPasswordContainerSmall: {
-    marginBottom: 12,
+    marginBottom: 24,
+    marginTop: 8,
   },
   forgotPasswordText: {
     fontSize: 14,
+    fontWeight: '500',
   },
   createAccountContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
-  },
-  createAccountContainerSmall: {
-    marginTop: 10,
+    marginTop: 24,
+    paddingVertical: 16,
   },
   createAccountText: {
     color: '#CCCCCC',
-    fontSize: 14,
+    fontSize: 16,
   },
   createAccountLink: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 5,
   },

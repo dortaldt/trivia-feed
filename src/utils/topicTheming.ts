@@ -120,7 +120,7 @@ export const getTopicTheme = (): TopicTheme => {
       return {
         displayName: 'Trivia Universe',
         description: 'Test your knowledge across all topics',
-        authTitle: 'Welcome to Trivia Universe',
+        authTitle: 'Welcome to Trivia Feed',
         authSubtitle: 'Challenge yourself with questions from every topic',
         signupPrompt: 'Ready to explore the universe of knowledge?',
         loginPrompt: 'Welcome back, trivia master!',

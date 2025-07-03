@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, TextInput, Text, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, TextInput, Text, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,62 +57,69 @@ export default function ForgotPasswordScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#3498db" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <StatusBar style="dark" />
-      <View style={styles.content}>
-        <TouchableOpacity style={styles.backButton} onPress={navigateToLogin}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        
-        <View style={styles.logoContainer}>
-          <Image 
-            source={require('../../assets/images/app-icon.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.title}>Trivia Universe</Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          <Text style={styles.subtitle}>Forgot Password</Text>
-          <Text style={styles.description}>Enter your email address and we'll send you instructions to reset your password</Text>
-
-          <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          <TouchableOpacity onPress={handleResetPassword} style={styles.resetButton}>
-            <Text style={styles.resetButtonText}>Reset Password</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <StatusBar style="dark" />
+        <View style={styles.content}>
+          <TouchableOpacity style={styles.backButton} onPress={navigateToLogin}>
+            <Ionicons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
           
-          <TouchableOpacity onPress={navigateToLogin} style={styles.backToLoginContainer}>
-            <Text style={styles.backToLoginText}>Back to Login</Text>
-          </TouchableOpacity>
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('../../assets/images/app-icon.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.title}>Trivia Universe</Text>
+          </View>
+
+          <View style={styles.formContainer}>
+            <Text style={styles.subtitle}>Forgot Password</Text>
+            <Text style={styles.description}>Enter your email address and we'll send you instructions to reset your password</Text>
+
+            <View style={styles.inputContainer}>
+              <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+              />
+            </View>
+
+            <TouchableOpacity onPress={handleResetPassword} style={styles.resetButton}>
+              <Text style={styles.resetButtonText}>Reset Password</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity onPress={navigateToLogin} style={styles.backToLoginContainer}>
+              <Text style={styles.backToLoginText}>Back to Login</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -126,11 +133,11 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'ios' ? 20 : 60,
   },
   backButton: {
     position: 'absolute',
-    top: 60,
+    top: Platform.OS === 'ios' ? 10 : 60,
     left: 20,
     zIndex: 10,
   },
@@ -165,6 +172,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     textAlign: 'center',
     paddingHorizontal: 20,
+    lineHeight: 22,
   },
   inputContainer: {
     flexDirection: 'row',
